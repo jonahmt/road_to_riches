@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "road_to_riches",
+  "project_id": "c9624775-be0e-4c38-8a4b-9db55896479f"
+}
