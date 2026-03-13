@@ -4,6 +4,12 @@ This document defines the technical standards, build processes, and contribution
 
 ## Environment Setup
 
+### Style and formatting
+
+* For consistency, we will use a automatic formatter and style checker. For python, this will be ruff (both the linter and formatter).
+* For JS choose whatever you feel fits.
+* Use a type checker in python.
+
 ### Python Backend
 The core game logic is implemented in Python 3.10+.
 1. Create a virtual environment: `python3 -m venv venv`
@@ -58,7 +64,7 @@ Do not push directly to the main branch.
 - Validate state mutations against the definitions in `gamestate.py`.
 
 ### 3. Submission (Pull Requests)
-Significant changes must be submitted via the GitHub CLI (gh):
+ALL changes that are ready to merge MUST be submitted via the GitHub CLI (gh) as a pull request:
 1. Push the branch: `git push -u origin <branch-name>`.
 2. Create the PR: `gh pr create --title "Work Summary" --body "Detailed explanation"`.
 

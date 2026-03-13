@@ -26,6 +26,11 @@ The game **will** be implemented with a client server model. This cannot be chan
 * Some logic has to be implemented twice  
 * Syncing game state between players needs to be continuous, so other players can see what another is thinking, not just the result at the end of their turn
 
+# Library/Binary Model
+
+* Most code (pretty much all code) should be implemented as library code. Library files should also have unit tests to verify correctness. 
+* Main files will only be a very thin wrapper around the main library code.
+
 # Game State
 
 The state of the game is relatively easy to represent. It has these components:
@@ -300,6 +305,8 @@ The script will be wrapped in a ScriptRunner object that runs the yielded events
 
 This section describes how each component starts up, plays the game, and shuts down. Note that for P0,1,2 only local play needs to be supported (i.e. the server and clients are just different processes running on the same machine. Network play is P3. However, the architecture should still be built with eventual network play in mind to make that transition as seamless as possible. Therefore WebSocket must be the standard communication method between clients and servers, from the very beginning. 
 
+The server should log all events it executes. Not in full json format, but an abbreviated string version. 
+
 ## Start Up
 
 A single server is capable of running multiple games. On startup, the server simply initializes itself with an empty dictionary of game instances, and waits for a client to send a start game request. Once a start game request is received, the server initializes a Game object with a random (unique) game id, adds it to the map, and returns the game id to the client. It adds the client that requested the game (from now on called the host) to the game and waits for the host to configure the game. Possible configurations are:
@@ -347,6 +354,7 @@ In contrast, NPC players are controlled directly by the server, through events. 
 
 ## Error Handling
 
+- The server should ideally log all events it process, and communications with clients. This way we have maximum observability into its operations. 
 - If a client disconnects or loses a message, it will not be able to recover. In that case, the client can send a sync request to the server. The server will respond with the complete game state, and the client can jump to that point and continue from there. This also takes place during the start of the game.  
 - If a client somehow sends an invalid response to the server, the server should give the client another try by sending a “please try again” response.   
   - If the client fails again, the server should respond with a state sync for that client  
