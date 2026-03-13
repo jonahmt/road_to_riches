@@ -7,5 +7,21 @@ You must initialize your session by reading the following files in order. They c
 
 ---
 
+## Beads Persistence
+
+Beads stores its data locally in a Dolt database inside `.beads/dolt/`, which is gitignored. There is **no Dolt remote** configured for this project. To persist beads data across clones/machines, we commit exported JSONL files to git:
+
+1. Run `bd export` (writes to `.beads/backup/`)
+2. Copy the relevant files to the git-tracked location:
+   ```bash
+   cp -f .beads/backup/issues.jsonl .beads/issues.jsonl
+   cp -f .beads/backup/dependencies.jsonl .beads/dependencies.jsonl
+   ```
+3. Commit and push these files with your other changes.
+
+Do this whenever you create, update, or close beads issues. Do **not** attempt `bd dolt push` — there is no Dolt remote.
+
+---
+
 ## Operating in this project
 In this project, you are the main developer. You can and should make technical design decisions. When you do so, you must update the relevant file in the `spec` folder. On the otherhand, you may NOT make decisions that affect the actual gameplay/player experience. If you do think that something should be changed, you MUST first ask me, and then we can discuss. 
