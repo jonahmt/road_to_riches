@@ -1,0 +1,29 @@
+from enum import Enum
+
+
+class SquareType(str, Enum):
+    CUSTOM = "CUSTOM"
+
+    BANK = "BANK"
+    STOCKBROKER = "STOCKBROKER"
+
+    SHOP = "SHOP"
+    VACANT_PLOT = "VACANT_PLOT"
+    VP_CHECKPOINT = "VP_CHECKPOINT"
+    VP_TAX_OFFICE = "VP_TAX_OFFICE"
+
+    SUIT = "SUIT"
+    CHANGE_OF_SUIT = "CHANGE_OF_SUIT"
+    SUIT_YOURSELF = "SUIT_YOURSELF"
+    VENTURE = "VENTURE"
+
+    TAKE_A_BREAK = "TAKE_A_BREAK"
+    BOON = "BOON"
+    BOOM = "BOOM"
+    ARCADE = "ARCADE"
+    ROLL_ON = "ROLL_ON"
+
+    BACKSTREET = "BACKSTREET"
+    DOORWAY = "DOORWAY"
+    CANNON = "CANNON"
+    SWITCH = "SWITCH"

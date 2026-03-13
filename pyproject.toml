@@ -1,0 +1,31 @@
+[project]
+name = "road-to-riches"
+version = "0.1.0"
+description = "A Fortune Street inspired economic strategy board game"
+requires-python = ">=3.10"
+dependencies = [
+    "textual>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+    "pyright>=1.1.0",
+    "pytest>=8.0.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.pyright]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = "venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
