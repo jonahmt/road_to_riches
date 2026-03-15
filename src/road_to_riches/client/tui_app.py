@@ -1,7 +1,7 @@
 """Textual TUI application for Road to Riches.
 
-P0 TUI: scrollable game log (bottom), command input with validation,
-info system, dice display widget. Minimum 140x35 terminal.
+Log-focused TUI: scrollable game log takes most of the screen,
+dice widget in top-left, prompt bar and input at the bottom.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from typing import ClassVar
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Input, RichLog, Static
@@ -31,62 +31,20 @@ class DiceWidget(Static):
     remaining: reactive[int] = reactive(0)
 
     DICE_FACES: ClassVar[dict[int, list[str]]] = {
-        0: [
-            "┌───┐",
-            "│   │",
-            "│   │",
-            "│   │",
-            "└───┘",
-        ],
-        1: [
-            "┌───┐",
-            "│   │",
-            "│ ● │",
-            "│   │",
-            "└───┘",
-        ],
-        2: [
-            "┌───┐",
-            "│  ●│",
-            "│   │",
-            "│●  │",
-            "└───┘",
-        ],
-        3: [
-            "┌───┐",
-            "│  ●│",
-            "│ ● │",
-            "│●  │",
-            "└───┘",
-        ],
-        4: [
-            "┌───┐",
-            "│● ●│",
-            "│   │",
-            "│● ●│",
-            "└───┘",
-        ],
-        5: [
-            "┌───┐",
-            "│● ●│",
-            "│ ● │",
-            "│● ●│",
-            "└───┘",
-        ],
-        6: [
-            "┌───┐",
-            "│● ●│",
-            "│● ●│",
-            "│● ●│",
-            "└───┘",
-        ],
+        0: ["┌───┐", "│   │", "│   │", "│   │", "└───┘"],
+        1: ["┌───┐", "│   │", "│ ● │", "│   │", "└───┘"],
+        2: ["┌───┐", "│  ●│", "│   │", "│●  │", "└───┘"],
+        3: ["┌───┐", "│  ●│", "│ ● │", "│●  │", "└───┘"],
+        4: ["┌───┐", "│● ●│", "│   │", "│● ●│", "└───┘"],
+        5: ["┌───┐", "│● ●│", "│ ● │", "│● ●│", "└───┘"],
+        6: ["┌───┐", "│● ●│", "│● ●│", "│● ●│", "└───┘"],
     }
 
     def render(self) -> str:
         face = self.DICE_FACES.get(self.value, self.DICE_FACES[0])
         lines = list(face)
         if self.remaining > 0:
-            lines.append(f" [{self.remaining}]")
+            lines.append(f" \\[{self.remaining}]")
         return "\n".join(lines)
 
 
@@ -107,36 +65,34 @@ class GameApp(App):
         layout: vertical;
     }
 
-    #game-area {
-        height: 1fr;
+    #top-bar {
+        height: 7;
         layout: horizontal;
-    }
-
-    #main-area {
-        width: 1fr;
     }
 
     #dice-panel {
         width: 8;
         height: 7;
-        dock: left;
-        margin: 1;
+        margin: 0 1;
     }
 
-    #info-area {
-        height: auto;
-        max-height: 15;
-        border: solid $accent;
-        display: none;
-    }
-
-    #log-area {
-        height: 10;
-        border-top: solid $primary;
+    #status-panel {
+        width: 1fr;
+        height: 7;
+        padding: 1;
     }
 
     #game-log {
         height: 1fr;
+        border-top: solid $primary;
+        border-bottom: solid $primary;
+    }
+
+    #info-area {
+        height: auto;
+        max-height: 12;
+        border: solid $accent;
+        display: none;
     }
 
     #prompt-bar {
@@ -146,7 +102,6 @@ class GameApp(App):
     }
 
     #command-input {
-        dock: bottom;
         height: 1;
     }
     """
@@ -180,14 +135,13 @@ class GameApp(App):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            with Vertical(id="game-area"):
+            with Horizontal(id="top-bar"):
                 yield DiceWidget(id="dice-panel")
-                yield Static("", id="main-area")
-            yield RichLog(id="info-area", wrap=True)
-            with Vertical(id="log-area"):
-                yield RichLog(id="game-log", wrap=True, highlight=True)
-                yield PromptBar(id="prompt-bar")
-                yield Input(placeholder="Enter command...", id="command-input")
+                yield Static("Road to Riches", id="status-panel")
+            yield RichLog(id="game-log", wrap=True, markup=True)
+            yield RichLog(id="info-area", wrap=True, markup=True)
+            yield PromptBar(id="prompt-bar")
+            yield Input(placeholder="Enter command...", id="command-input")
 
     def on_mount(self) -> None:
         self.player_input.set_log_callback(self._on_game_log)
@@ -200,7 +154,7 @@ class GameApp(App):
     @on(LogMessage)
     def handle_log_message(self, event: LogMessage) -> None:
         log_widget = self.query_one("#game-log", RichLog)
-        log_widget.write(f"[LOG] {event.text}")
+        log_widget.write(event.text)
 
     @on(InputReady)
     def handle_input_ready(self, event: InputReady) -> None:
@@ -211,7 +165,9 @@ class GameApp(App):
     def handle_game_over(self, event: GameOver) -> None:
         log_widget = self.query_one("#game-log", RichLog)
         if event.winner is not None:
-            log_widget.write(f"\n[bold green]Game Over! Player {event.winner} wins![/]")
+            log_widget.write(
+                f"\n[bold green]Game Over! Player {event.winner} wins![/]"
+            )
         else:
             log_widget.write("\n[bold red]Game Over! No winner.[/]")
         prompt = self.query_one("#prompt-bar", PromptBar)
@@ -224,29 +180,31 @@ class GameApp(App):
         inp.value = ""
 
         if req.type == InputRequestType.PRE_ROLL:
-            options = "[R]oll"
+            options = "\\[R]oll"
             if req.data.get("has_stock"):
-                options += ", [S]ell Stock"
+                options += ", \\[S]ell Stock"
             if req.data.get("has_shops"):
-                options += ", [A]uction, Sell S[h]op, [T]rade"
-            options += ", [B]uy Shop, [I]nfo"
+                options += ", \\[A]uction, Sell S\\[h]op, \\[T]rade"
+            options += ", \\[B]uy Shop, \\[I]nfo"
             prompt.prompt_text = (
-                f"  Player {req.player_id} | "
+                f"P{req.player_id} | "
                 f"Cash: {req.data['cash']}G | "
-                f"Level: {req.data['level']} | "
-                f"Options: {options}"
+                f"Lv{req.data['level']} | "
+                f"{options}"
             )
             inp.placeholder = "R / S / A / H / T / B / I"
 
         elif req.type == InputRequestType.CHOOSE_PATH:
             choices = req.data["choices"]
             parts = [f"{c['square_id']} ({c['type']})" for c in choices]
-            prompt.prompt_text = f"  Select path: {', '.join(parts)}"
+            prompt.prompt_text = (
+                f"Select path: {', '.join(parts)}"
+            )
             inp.placeholder = "Enter square ID"
 
         elif req.type == InputRequestType.BUY_SHOP:
             prompt.prompt_text = (
-                f"  Buy shop at square {req.data['square_id']}? "
+                f"Buy shop at sq{req.data['square_id']}? "
                 f"Cost: {req.data['cost']}G | Cash: {req.data['cash']}G"
             )
             inp.placeholder = "Y / N"
@@ -254,11 +212,12 @@ class GameApp(App):
         elif req.type == InputRequestType.INVEST:
             shops = req.data.get("investable", [])
             parts = [
-                f"sq{s['square_id']}(val={s['current_value']},max={s['max_capital']})"
+                f"sq{s['square_id']}(val={s['current_value']},"
+                f"max={s['max_capital']})"
                 for s in shops
             ]
             prompt.prompt_text = (
-                f"  Invest? Cash: {req.data['cash']}G | "
+                f"Invest? Cash: {req.data['cash']}G | "
                 f"Shops: {', '.join(parts)}"
             )
             inp.placeholder = "square_id amount / N"
@@ -267,7 +226,7 @@ class GameApp(App):
             stocks = req.data.get("stocks", [])
             parts = [f"d{s['district_id']}@{s['price']}G" for s in stocks]
             prompt.prompt_text = (
-                f"  Buy stock? Cash: {req.data['cash']}G | "
+                f"Buy stock? Cash: {req.data['cash']}G | "
                 f"{', '.join(parts)}"
             )
             inp.placeholder = "district_id quantity / N"
@@ -278,36 +237,40 @@ class GameApp(App):
                 f"d{d}:{h['quantity']}@{h['price']}G"
                 for d, h in holdings.items()
             ]
-            prompt.prompt_text = f"  Sell stock? {', '.join(parts)}"
+            prompt.prompt_text = f"Sell stock? {', '.join(parts)}"
             inp.placeholder = "district_id quantity / N"
 
         elif req.type == InputRequestType.CANNON_TARGET:
             targets = req.data.get("targets", [])
-            parts = [f"P{t['player_id']}(sq{t['position']})" for t in targets]
+            parts = [
+                f"P{t['player_id']}(sq{t['position']})" for t in targets
+            ]
             prompt.prompt_text = (
-                f"  Cannon! Choose target: {', '.join(parts)}"
+                f"Cannon! Choose target: {', '.join(parts)}"
             )
             inp.placeholder = "Player ID"
 
         elif req.type == InputRequestType.VACANT_PLOT_TYPE:
             options = req.data.get("options", [])
-            parts = [f"[{i + 1}] {o}" for i, o in enumerate(options)]
+            parts = [
+                f"\\[{i + 1}] {o}" for i, o in enumerate(options)
+            ]
             prompt.prompt_text = (
-                f"  Build on square {req.data['square_id']}: "
+                f"Build on sq{req.data['square_id']}: "
                 f"{', '.join(parts)}"
             )
             inp.placeholder = "Enter number"
 
         elif req.type == InputRequestType.FORCED_BUYOUT:
             prompt.prompt_text = (
-                f"  Force-buy square {req.data['square_id']} "
+                f"Force-buy sq{req.data['square_id']} "
                 f"for {req.data['cost']}G?"
             )
             inp.placeholder = "Y / N"
 
         elif req.type == InputRequestType.AUCTION_BID:
             prompt.prompt_text = (
-                f"  P{req.player_id}: Bid on square "
+                f"P{req.player_id}: Bid on sq"
                 f"{req.data['square_id']}? "
                 f"Min: {req.data['min_bid']}G | "
                 f"Cash: {req.data['cash']}G"
@@ -320,13 +283,13 @@ class GameApp(App):
                 f"sq{s['square_id']}({s['value']}G)" for s in shops
             ]
             prompt.prompt_text = (
-                f"  Auction which shop? {', '.join(parts)}"
+                f"Auction which shop? {', '.join(parts)}"
             )
             inp.placeholder = "Square ID / N"
 
         elif req.type == InputRequestType.CHOOSE_SHOP_BUY:
             prompt.prompt_text = (
-                f"  Buy a shop. Cash: {req.data['cash']}G"
+                f"Buy a shop. Cash: {req.data['cash']}G"
             )
             inp.placeholder = "player_id square_id price / N"
 
@@ -335,9 +298,7 @@ class GameApp(App):
             parts = [
                 f"sq{s['square_id']}({s['value']}G)" for s in shops
             ]
-            prompt.prompt_text = (
-                f"  Sell a shop: {', '.join(parts)}"
-            )
+            prompt.prompt_text = f"Sell a shop: {', '.join(parts)}"
             inp.placeholder = "target_player square_id price / N"
 
         elif req.type == InputRequestType.ACCEPT_OFFER:
@@ -346,30 +307,32 @@ class GameApp(App):
             sq_id = offer.get("square_id", "?")
             price = offer.get("price", offer.get("gold_offer", "?"))
             prompt.prompt_text = (
-                f"  P{req.player_id}: {otype} offer for "
+                f"P{req.player_id}: {otype} offer for "
                 f"sq{sq_id} at {price}G"
             )
-            inp.placeholder = "[A]ccept / [R]eject / [C]ounter"
+            inp.placeholder = "A(ccept) / R(eject) / C(ounter)"
 
         elif req.type == InputRequestType.COUNTER_PRICE:
             prompt.prompt_text = (
-                f"  Original price: "
-                f"{req.data['original_price']}G. Counter-offer:"
+                f"Original: {req.data['original_price']}G. "
+                f"Counter-offer:"
             )
             inp.placeholder = "Enter amount"
 
         elif req.type == InputRequestType.RENOVATE:
             options = req.data.get("options", [])
-            parts = [f"[{i + 1}] {o}" for i, o in enumerate(options)]
+            parts = [
+                f"\\[{i + 1}] {o}" for i, o in enumerate(options)
+            ]
             prompt.prompt_text = (
-                f"  Renovate square {req.data['square_id']}? "
+                f"Renovate sq{req.data['square_id']}? "
                 f"{', '.join(parts)}"
             )
             inp.placeholder = "Enter number / N"
 
         elif req.type == InputRequestType.TRADE:
             prompt.prompt_text = (
-                f"  Propose trade. Cash: {req.data['cash']}G"
+                f"Propose trade. Cash: {req.data['cash']}G"
             )
             inp.placeholder = (
                 "target_pid your_shops their_shops gold / N"
@@ -377,7 +340,7 @@ class GameApp(App):
 
         elif req.type == InputRequestType.LIQUIDATION:
             prompt.prompt_text = (
-                f"  Must sell assets! Cash: {req.data['cash']}G"
+                f"Must sell assets! Cash: {req.data['cash']}G"
             )
             inp.placeholder = "sell shop <id> / sell stock <id>"
 
@@ -386,18 +349,18 @@ class GameApp(App):
     @on(Input.Submitted, "#command-input")
     def handle_command(self, event: Input.Submitted) -> None:
         value = event.value.strip()
-        if not value:
-            return
-
         inp = self.query_one("#command-input", Input)
         inp.value = ""
+
+        if not value:
+            return
 
         if self._current_request is None:
             return
 
         req = self._current_request
 
-        # Handle info command from any prompt
+        # Handle info command from pre-roll
         if value.upper() in ("I", "INFO") and req.type == InputRequestType.PRE_ROLL:
             self._show_info()
             return
@@ -405,7 +368,7 @@ class GameApp(App):
         response = self._validate_and_parse(req, value)
         if response is None:
             log_widget = self.query_one("#game-log", RichLog)
-            log_widget.write("[red][ERROR] Invalid input.[/]")
+            log_widget.write("[red]Invalid input. Try again.[/]")
             return
 
         self._current_request = None
@@ -433,7 +396,9 @@ class GameApp(App):
         if req.type == InputRequestType.CHOOSE_PATH:
             try:
                 sq_id = int(value)
-                valid_ids = [c["square_id"] for c in req.data["choices"]]
+                valid_ids = [
+                    c["square_id"] for c in req.data["choices"]
+                ]
                 if sq_id in valid_ids:
                     return sq_id
             except ValueError:
@@ -460,7 +425,9 @@ class GameApp(App):
                 if sq_id not in valid_ids:
                     return None
                 amount = (
-                    int(parts[1]) if len(parts) > 1 else req.data["cash"]
+                    int(parts[1])
+                    if len(parts) > 1
+                    else req.data["cash"]
                 )
                 return (sq_id, amount)
             except (ValueError, IndexError):
@@ -487,9 +454,9 @@ class GameApp(App):
                 parts = value.split()
                 district_id = int(parts[0])
                 holdings = req.data.get("holdings", {})
-                max_qty = (
-                    holdings.get(str(district_id), {}).get("quantity", 0)
-                )
+                max_qty = holdings.get(
+                    str(district_id), {}
+                ).get("quantity", 0)
                 qty = int(parts[1]) if len(parts) > 1 else max_qty
                 if qty > 0:
                     return (district_id, qty)
@@ -546,7 +513,8 @@ class GameApp(App):
             try:
                 sq_id = int(value)
                 valid_ids = [
-                    s["square_id"] for s in req.data.get("shops", [])
+                    s["square_id"]
+                    for s in req.data.get("shops", [])
                 ]
                 if sq_id in valid_ids:
                     return sq_id
@@ -623,7 +591,9 @@ class GameApp(App):
                     if parts[2] != "-"
                     else []
                 )
-                gold_offer = int(parts[3]) if len(parts) > 3 else 0
+                gold_offer = (
+                    int(parts[3]) if len(parts) > 3 else 0
+                )
                 return {
                     "target_player_id": target_pid,
                     "offer_shops": offer_shops,
@@ -665,9 +635,13 @@ class GameApp(App):
 
         state = self.game_loop.state
         info_widget.write("[bold]=== Game Info ===[/]")
-        info_widget.write(f"Target net worth: {state.board.target_networth}G")
+        info_widget.write(
+            f"Target net worth: {state.board.target_networth}G"
+        )
         info_widget.write(f"Max dice roll: {state.board.max_dice_roll}")
         info_widget.write("")
+
+        from road_to_riches.engine.property import current_rent, max_capital
 
         for p in state.players:
             if p.bankrupt:
@@ -682,13 +656,12 @@ class GameApp(App):
             )
             for sq_id in p.owned_properties:
                 sq = state.board.squares[sq_id]
-                from road_to_riches.engine.property import current_rent, max_capital
-
                 rent = current_rent(state.board, sq)
                 mc = max_capital(state.board, sq)
                 info_widget.write(
                     f"  Shop sq{sq_id} d{sq.property_district}: "
-                    f"val={sq.shop_current_value}, rent={rent}, max_cap={mc}"
+                    f"val={sq.shop_current_value}, "
+                    f"rent={rent}, max_cap={mc}"
                 )
 
         info_widget.write("")
@@ -712,9 +685,10 @@ class GameApp(App):
 
     @work(thread=True)
     def _poll_for_requests(self) -> None:
-        """Poll for input requests from the game thread and post them to UI."""
-        # Start actual game in yet another thread
-        game_thread = threading.Thread(target=self._run_game, daemon=True)
+        """Poll for input requests from the game thread."""
+        game_thread = threading.Thread(
+            target=self._run_game, daemon=True
+        )
         game_thread.start()
 
         while game_thread.is_alive():
@@ -730,7 +704,10 @@ class GameApp(App):
         self.post_message(self.GameOver(winner))
 
 
-def run_tui(board_path: str = "boards/test_board.json", num_players: int = 4) -> None:
+def run_tui(
+    board_path: str = "boards/test_board.json",
+    num_players: int = 4,
+) -> None:
     config = GameConfig(
         board_path=board_path,
         num_players=num_players,
