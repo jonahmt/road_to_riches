@@ -1,7 +1,8 @@
 """Textual TUI application for Road to Riches.
 
-Log-focused TUI: scrollable game log takes most of the screen,
-dice widget in top-left, prompt bar and input at the bottom.
+Board-focused TUI: board view takes most of the screen,
+dice widget top-left, scrollable game log at the bottom,
+prompt bar and input pinned at the very bottom.
 """
 
 from __future__ import annotations
@@ -82,10 +83,16 @@ class GameApp(App):
         padding: 1;
     }
 
-    #game-log {
+    #board-view {
         height: 1fr;
+        overflow-y: auto;
+        overflow-x: auto;
+        padding: 0 1;
+    }
+
+    #game-log {
+        height: 10;
         border-top: solid $primary;
-        border-bottom: solid $primary;
     }
 
     #info-area {
@@ -102,7 +109,7 @@ class GameApp(App):
     }
 
     #command-input {
-        height: 1;
+        height: 3;
     }
     """
 
@@ -138,6 +145,7 @@ class GameApp(App):
             with Horizontal(id="top-bar"):
                 yield DiceWidget(id="dice-panel")
                 yield Static("Road to Riches", id="status-panel")
+            yield Static("(loading board...)", id="board-view")
             yield RichLog(id="game-log", wrap=True, markup=True)
             yield RichLog(id="info-area", wrap=True, markup=True)
             yield PromptBar(id="prompt-bar")
@@ -155,6 +163,7 @@ class GameApp(App):
     def handle_log_message(self, event: LogMessage) -> None:
         log_widget = self.query_one("#game-log", RichLog)
         log_widget.write(event.text)
+        self._refresh_board()
 
     @on(InputReady)
     def handle_input_ready(self, event: InputReady) -> None:
@@ -617,6 +626,16 @@ class GameApp(App):
             return None
 
         return None
+
+    def _refresh_board(self) -> None:
+        """Re-render the board view from current game state."""
+        if self.game_loop is None:
+            return
+        from road_to_riches.client.board_renderer import render_board
+
+        board_text = render_board(self.game_loop.state)
+        board_widget = self.query_one("#board-view", Static)
+        board_widget.update(board_text)
 
     def _show_info(self) -> None:
         """Toggle the info panel with game state."""
