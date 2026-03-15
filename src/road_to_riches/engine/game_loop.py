@@ -28,6 +28,7 @@ from road_to_riches.events.game_events import (
     BuyVacantPlotEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
+    RenovatePropertyEvent,
     SellStockEvent,
     WarpEvent,
 )
@@ -154,6 +155,23 @@ class PlayerInput(ABC):
         self, state: GameState, player_id: int, original_price: int, log: GameLog
     ) -> int:
         """Choose a counter-offer price."""
+
+    @abstractmethod
+    def choose_renovation(
+        self, state: GameState, player_id: int, square_id: int, options: list[str], log: GameLog
+    ) -> str | None:
+        """Choose whether to renovate a VP property and what type. Return new type or None."""
+
+    @abstractmethod
+    def choose_trade(
+        self, state: GameState, player_id: int, log: GameLog
+    ) -> dict | None:
+        """Propose a multi-shop trade.
+
+        Return dict with keys: target_player_id, offer_shops (list of sq_ids),
+        request_shops (list of sq_ids), gold_offer (int, positive = giving gold),
+        or None to cancel.
+        """
 
     @abstractmethod
     def choose_liquidation(
@@ -309,7 +327,8 @@ class GameLoop:
                 self._handle_buy_negotiation(player_id)
             elif action == "sell_shop":
                 self._handle_sell_negotiation(player_id)
-            # 'info' and 'trade' handled by frontend or not yet implemented
+            elif action == "trade":
+                self._handle_trade(player_id)
 
     def _movement_phase(self, player_id: int) -> None:
         assert self.engine.turn is not None
@@ -389,6 +408,22 @@ class GameLoop:
                 self.pipeline.enqueue(event)
                 self.pipeline.process_all(self.state)
                 self._report_auto_events()
+
+        if PlayerAction.RENOVATE in result.available_actions:
+            sq_id = result.info["square_id"]
+            options = result.info.get("renovate_options", [])
+            if options:
+                choice = self.input.choose_renovation(
+                    self.state, player_id, sq_id, options, self.log
+                )
+                if choice is not None:
+                    event = RenovatePropertyEvent(
+                        player_id=player_id, square_id=sq_id, new_type=choice
+                    )
+                    self.pipeline.enqueue(event)
+                    self.pipeline.process_all(self.state)
+                    self.log.log(f"Player {player_id} renovated square {sq_id} to {choice}!")
+                    self._report_auto_events()
 
         if PlayerAction.CHOOSE_CANNON_TARGET in result.available_actions:
             targets = result.info.get("cannon_targets", [])
@@ -583,6 +618,110 @@ class GameLoop:
         else:
             self.log.log("Offer rejected.")
         self._report_auto_events()
+
+    def _handle_trade(self, player_id: int) -> None:
+        """Player proposes a multi-shop trade with another player."""
+        proposal = self.input.choose_trade(self.state, player_id, self.log)
+        if proposal is None:
+            return
+
+        target_pid = proposal["target_player_id"]
+        offer_shops = proposal.get("offer_shops", [])
+        request_shops = proposal.get("request_shops", [])
+        gold_offer = proposal.get("gold_offer", 0)
+
+        # Build description for target
+        desc_parts = []
+        if offer_shops:
+            desc_parts.append(f"giving shops {offer_shops}")
+        if request_shops:
+            desc_parts.append(f"requesting shops {request_shops}")
+        if gold_offer > 0:
+            desc_parts.append(f"offering {gold_offer}G")
+        elif gold_offer < 0:
+            desc_parts.append(f"requesting {-gold_offer}G")
+        self.log.log(
+            f"Player {player_id} proposes trade with Player {target_pid}: "
+            + ", ".join(desc_parts)
+        )
+        self.input.notify(self.state, self.log)
+
+        offer = {
+            "type": "trade",
+            "proposer_id": player_id,
+            "target_id": target_pid,
+            "offer_shops": offer_shops,
+            "request_shops": request_shops,
+            "gold_offer": gold_offer,
+        }
+        response = self.input.choose_accept_offer(self.state, target_pid, offer, self.log)
+        if response == "accept":
+            self._execute_trade(player_id, target_pid, offer_shops, request_shops, gold_offer)
+            self.log.log("Trade accepted!")
+        elif response == "counter":
+            # Counter: target can adjust gold amount
+            counter_gold = self.input.choose_counter_price(
+                self.state, target_pid, gold_offer, self.log
+            )
+            self.log.log(
+                f"Player {target_pid} counter-offers with gold: {counter_gold}G."
+            )
+            offer["gold_offer"] = counter_gold
+            final = self.input.choose_accept_offer(self.state, player_id, offer, self.log)
+            if final == "accept":
+                self._execute_trade(player_id, target_pid, offer_shops, request_shops, counter_gold)
+                self.log.log("Counter-trade accepted!")
+            else:
+                self.log.log("Trade rejected.")
+        else:
+            self.log.log("Trade rejected.")
+        self._report_auto_events()
+
+    def _execute_trade(
+        self,
+        proposer_id: int,
+        target_id: int,
+        offer_shops: list[int],
+        request_shops: list[int],
+        gold_offer: int,
+    ) -> None:
+        """Execute a trade by transferring shops and gold."""
+        from road_to_riches.events.game_events import TransferPropertyEvent
+
+        # Transfer proposer's shops to target (price=0, gold handled separately)
+        for sq_id in offer_shops:
+            event = TransferPropertyEvent(
+                from_player_id=proposer_id,
+                to_player_id=target_id,
+                square_id=sq_id,
+                price=0,
+            )
+            self.pipeline.enqueue(event)
+
+        # Transfer target's shops to proposer (price=0)
+        for sq_id in request_shops:
+            event = TransferPropertyEvent(
+                from_player_id=target_id,
+                to_player_id=proposer_id,
+                square_id=sq_id,
+                price=0,
+            )
+            self.pipeline.enqueue(event)
+
+        # Handle gold transfer
+        if gold_offer != 0:
+            proposer = self.state.get_player(proposer_id)
+            target = self.state.get_player(target_id)
+            if gold_offer > 0:
+                # Proposer gives gold to target
+                proposer.ready_cash -= gold_offer
+                target.ready_cash += gold_offer
+            else:
+                # Target gives gold to proposer
+                target.ready_cash += gold_offer  # gold_offer is negative
+                proposer.ready_cash -= gold_offer
+
+        self.pipeline.process_all(self.state)
 
     def _report_auto_events(self) -> None:
         """Log recently executed auto events from the pipeline history."""

@@ -21,7 +21,7 @@ class TextPlayerInput(PlayerInput):
         if has_stock:
             options += ", [S]ell Stock"
         if has_shops:
-            options += ", [A]uction, Sell S[h]op"
+            options += ", [A]uction, Sell S[h]op, [T]rade"
         options += ", [B]uy Shop, [I]nfo"
         while True:
             choice = input(f"  > {options}: ").strip().upper()
@@ -33,6 +33,8 @@ class TextPlayerInput(PlayerInput):
                 return "auction"
             elif choice in ("H",) and has_shops:
                 return "sell_shop"
+            elif choice in ("T", "TRADE") and has_shops:
+                return "trade"
             elif choice in ("B", "BUY"):
                 return "buy_shop"
             elif choice in ("I", "INFO"):
@@ -324,6 +326,74 @@ class TextPlayerInput(PlayerInput):
                 return int(input("  > ").strip())
             except ValueError:
                 print("  Invalid amount.")
+
+    def choose_renovation(
+        self,
+        state: GameState,
+        player_id: int,
+        square_id: int,
+        options: list[str],
+        log: GameLog,
+    ) -> str | None:
+        self.notify(state, log)
+        sq = state.board.squares[square_id]
+        print(f"  Renovate square {square_id} (currently {sq.type.value})?")
+        for i, opt in enumerate(options):
+            print(f"    [{i + 1}] {opt}")
+        print("    [N] No, keep current type")
+        while True:
+            choice = input("  > ").strip().upper()
+            if choice in ("N", "NO", ""):
+                return None
+            try:
+                idx = int(choice)
+                if 1 <= idx <= len(options):
+                    return options[idx - 1]
+            except ValueError:
+                pass
+            print("  Invalid choice.")
+
+    def choose_trade(
+        self, state: GameState, player_id: int, log: GameLog
+    ) -> dict | None:
+        self.notify(state, log)
+        player = state.get_player(player_id)
+        print("  Propose a trade.")
+        print("  Your shops:")
+        for sq_id in player.owned_properties:
+            sq = state.board.squares[sq_id]
+            print(f"    sq{sq_id}: value={sq.shop_current_value}G, d{sq.property_district}")
+        print("  Other players' shops:")
+        for p in state.active_players:
+            if p.player_id == player_id:
+                continue
+            for sq_id in p.owned_properties:
+                sq = state.board.squares[sq_id]
+                print(
+                    f"    P{p.player_id} sq{sq_id}: "
+                    f"value={sq.shop_current_value}G, d{sq.property_district}"
+                )
+        print("  Enter: target_pid your_shops(comma-sep) their_shops(comma-sep) gold_offer, or 'n'")
+        print("  Example: 2 5,10 12,15 100  (give shops 5,10 + 100G for shops 12,15)")
+        choice = input("  > ").strip()
+        if choice.lower() in ("n", "no", ""):
+            return None
+        try:
+            parts = choice.split()
+            target_pid = int(parts[0])
+            offer_shops = [int(x) for x in parts[1].split(",")] if parts[1] != "-" else []
+            request_shops = [int(x) for x in parts[2].split(",")] if parts[2] != "-" else []
+            gold_offer = int(parts[3]) if len(parts) > 3 else 0
+            return {
+                "target_player_id": target_pid,
+                "offer_shops": offer_shops,
+                "request_shops": request_shops,
+                "gold_offer": gold_offer,
+            }
+        except (ValueError, IndexError):
+            pass
+        print("  Invalid input.")
+        return None
 
     def choose_liquidation(
         self, state: GameState, player_id: int, options: dict, log: GameLog

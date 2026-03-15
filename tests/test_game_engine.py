@@ -13,7 +13,7 @@ from road_to_riches.engine.bankruptcy import (
     needs_liquidation,
 )
 from road_to_riches.engine.property import current_rent, max_capital
-from road_to_riches.engine.square_handler import handle_land, handle_pass
+from road_to_riches.engine.square_handler import PlayerAction, handle_land, handle_pass
 from road_to_riches.engine.turn import TurnEngine, TurnPhase
 from road_to_riches.events.game_events import (
     AuctionSellEvent,
@@ -27,6 +27,7 @@ from road_to_riches.events.game_events import (
     PayTaxEvent,
     PromotionEvent,
     RaiseCheckpointTollEvent,
+    RenovatePropertyEvent,
     RotateSuitEvent,
     SellStockEvent,
     TaxOfficeOwnerBonusEvent,
@@ -381,7 +382,6 @@ class TestP1SquareTypes:
         game.players[2].position = 12
         sq = SquareInfo(id=99, position=(0, 0), type=SquareType.CANNON)
         result = handle_land(game, 0, sq)
-        from road_to_riches.engine.square_handler import PlayerAction
 
         assert PlayerAction.CHOOSE_CANNON_TARGET in result.available_actions
         targets = result.info["cannon_targets"]
@@ -556,7 +556,6 @@ class TestShopExchanges:
         game.players[1].ready_cash = 5000
 
         result = handle_land(game, 1, game.board.squares[1])
-        from road_to_riches.engine.square_handler import PlayerAction
 
         assert PlayerAction.FORCED_BUYOUT in result.available_actions
         assert result.info["buyout_cost"] == 1000
@@ -568,6 +567,110 @@ class TestShopExchanges:
         game.players[1].ready_cash = 100
 
         result = handle_land(game, 1, game.board.squares[1])
-        from road_to_riches.engine.square_handler import PlayerAction
 
         assert PlayerAction.FORCED_BUYOUT not in result.available_actions
+
+
+class TestRenovation:
+    def test_renovate_checkpoint_to_tax_office(self):
+        game, _ = _make_game()
+        sq = game.board.squares[5]
+        sq.type = SquareType.VP_CHECKPOINT
+        sq.property_owner = 0
+        sq.property_district = 0
+        sq.shop_base_value = 200
+        sq.shop_current_value = 300
+        sq.checkpoint_toll = 40
+        game.players[0].owned_properties.append(5)
+        game.players[0].ready_cash = 1000
+
+        RenovatePropertyEvent(player_id=0, square_id=5, new_type="VP_TAX_OFFICE").execute(game)
+
+        assert sq.type == SquareType.VP_TAX_OFFICE
+        assert sq.checkpoint_toll == 0
+        assert sq.shop_current_value == 200  # Reset to base
+        # Refund 75% of 300 = 225, cost 200 => net +25
+        assert game.players[0].ready_cash == 1025
+
+    def test_renovate_tax_office_to_checkpoint(self):
+        game, _ = _make_game()
+        sq = game.board.squares[5]
+        sq.type = SquareType.VP_TAX_OFFICE
+        sq.property_owner = 0
+        sq.property_district = 0
+        sq.shop_base_value = 200
+        sq.shop_current_value = 200
+        game.players[0].owned_properties.append(5)
+        game.players[0].ready_cash = 1000
+
+        RenovatePropertyEvent(player_id=0, square_id=5, new_type="VP_CHECKPOINT").execute(game)
+
+        assert sq.type == SquareType.VP_CHECKPOINT
+        assert sq.checkpoint_toll == 10
+        # Refund 75% of 200 = 150, cost 200 => net -50
+        assert game.players[0].ready_cash == 950
+
+    def test_renovate_action_offered_on_owner_checkpoint_land(self):
+        game, _ = _make_game()
+        sq = game.board.squares[5]
+        sq.type = SquareType.VP_CHECKPOINT
+        sq.property_owner = 0
+        sq.checkpoint_toll = 20
+
+        result = handle_land(game, 0, sq)
+
+        assert PlayerAction.RENOVATE in result.available_actions
+        assert "VP_TAX_OFFICE" in result.info["renovate_options"]
+
+    def test_renovate_action_offered_on_owner_tax_office_land(self):
+        game, _ = _make_game()
+        sq = game.board.squares[5]
+        sq.type = SquareType.VP_TAX_OFFICE
+        sq.property_owner = 0
+
+        result = handle_land(game, 0, sq)
+
+        assert PlayerAction.RENOVATE in result.available_actions
+        assert "VP_CHECKPOINT" in result.info["renovate_options"]
+
+
+class TestTrade:
+    def test_trade_shops_swap(self):
+        """Two players swap shops via TransferPropertyEvent (no gold)."""
+        game, _ = _make_game()
+        # Player 0 owns sq 1, player 1 owns sq 4
+        BuyShopEvent(player_id=0, square_id=1).execute(game)
+        BuyShopEvent(player_id=1, square_id=4).execute(game)
+        p0_cash_after = game.players[0].ready_cash
+        p1_cash_after = game.players[1].ready_cash
+
+        # Transfer sq 1 from P0 to P1 (price=0)
+        TransferPropertyEvent(from_player_id=0, to_player_id=1, square_id=1, price=0).execute(game)
+        # Transfer sq 4 from P1 to P0 (price=0)
+        TransferPropertyEvent(from_player_id=1, to_player_id=0, square_id=4, price=0).execute(game)
+
+        assert 1 in game.players[1].owned_properties
+        assert 4 in game.players[0].owned_properties
+        assert 1 not in game.players[0].owned_properties
+        assert 4 not in game.players[1].owned_properties
+        # No gold exchanged
+        assert game.players[0].ready_cash == p0_cash_after
+        assert game.players[1].ready_cash == p1_cash_after
+
+    def test_trade_with_gold(self):
+        """Trade with gold offset: P0 gives shop + gold for P1's shop."""
+        game, _ = _make_game()
+        BuyShopEvent(player_id=0, square_id=1).execute(game)
+        BuyShopEvent(player_id=1, square_id=4).execute(game)
+        p0_cash = game.players[0].ready_cash
+        p1_cash = game.players[1].ready_cash
+
+        # Swap shops + P0 gives 100G
+        TransferPropertyEvent(from_player_id=0, to_player_id=1, square_id=1, price=0).execute(game)
+        TransferPropertyEvent(from_player_id=1, to_player_id=0, square_id=4, price=0).execute(game)
+        # Gold transfer
+        game.players[0].ready_cash -= 100
+        game.players[1].ready_cash += 100
+
+        assert game.players[0].ready_cash == p0_cash - 100
+        assert game.players[1].ready_cash == p1_cash + 100

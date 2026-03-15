@@ -40,6 +40,7 @@ class PlayerAction(str, Enum):
     SELL_STOCK = "SELL_STOCK"
     FORCED_BUYOUT = "FORCED_BUYOUT"
     CHOOSE_CANNON_TARGET = "CHOOSE_CANNON_TARGET"
+    RENOVATE = "RENOVATE"
     NONE = "NONE"
 
 
@@ -133,12 +134,14 @@ def handle_land(state: GameState, player_id: int, square: SquareInfo) -> SquareR
     elif square.type == SquareType.VP_CHECKPOINT:
         if square.property_owner is not None:
             if square.property_owner == player_id:
-                # Owner land: raise toll + may invest
+                # Owner land: raise toll + may invest or renovate
                 auto_events.append(RaiseCheckpointTollEvent(square_id=square.id))
                 actions.append(PlayerAction.INVEST)
                 investable = _get_investable_shops(state, player_id)
                 info["investable_shops"] = investable
                 info["toll_raised"] = True
+                actions.append(PlayerAction.RENOVATE)
+                info["renovate_options"] = [SquareType.VP_TAX_OFFICE.value]
             else:
                 # Other player land: pay toll (toll raised inside event)
                 auto_events.append(
@@ -154,8 +157,10 @@ def handle_land(state: GameState, player_id: int, square: SquareInfo) -> SquareR
     elif square.type == SquareType.VP_TAX_OFFICE:
         if square.property_owner is not None:
             if square.property_owner == player_id:
-                # Owner land: receive 4% of own net worth
+                # Owner land: receive 4% of own net worth + may renovate
                 auto_events.append(TaxOfficeOwnerBonusEvent(player_id=player_id))
+                actions.append(PlayerAction.RENOVATE)
+                info["renovate_options"] = [SquareType.VP_CHECKPOINT.value]
             else:
                 # Other player land: pay 4% net worth to owner
                 auto_events.append(

@@ -33,6 +33,8 @@ class InputRequestType(str, Enum):
     CHOOSE_SHOP_SELL = "CHOOSE_SHOP_SELL"
     ACCEPT_OFFER = "ACCEPT_OFFER"
     COUNTER_PRICE = "COUNTER_PRICE"
+    RENOVATE = "RENOVATE"
+    TRADE = "TRADE"
     LIQUIDATION = "LIQUIDATION"
 
 
@@ -307,6 +309,35 @@ class TuiPlayerInput(PlayerInput):
                 type=InputRequestType.COUNTER_PRICE,
                 player_id=player_id,
                 data={"original_price": original_price},
+            )
+        )
+
+    def choose_renovation(
+        self, state: GameState, player_id: int, square_id: int, options: list[str], log: GameLog
+    ) -> str | None:
+        self._flush_log(log)
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.RENOVATE,
+                player_id=player_id,
+                data={"square_id": square_id, "options": options},
+            )
+        )
+
+    def choose_trade(
+        self, state: GameState, player_id: int, log: GameLog
+    ) -> dict | None:
+        self._flush_log(log)
+        player = state.get_player(player_id)
+        shops = []
+        for sq_id in player.owned_properties:
+            sq = state.board.squares[sq_id]
+            shops.append({"square_id": sq_id, "value": sq.shop_current_value})
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.TRADE,
+                player_id=player_id,
+                data={"shops": shops, "cash": player.ready_cash},
             )
         )
 
