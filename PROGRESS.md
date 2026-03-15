@@ -4,7 +4,7 @@ Last updated: 2026-03-14
 
 ## Overall Status
 
-**45 / 81** issues closed (55%)
+**46 / 82** issues closed (56%)
 
 ### P0 Epics
 
@@ -21,6 +21,7 @@ Last updated: 2026-03-14
 | Promotion System | **Done** | Suit collection, promotion bonus (base + level + shop + comeback) |
 | P0 Square Types | **Done** | Bank, Shop, Suit, Venture, Take a Break, Boon, Boom, Roll On, Stockbroker |
 | Bankruptcy & Victory | **Done** | Bankruptcy detection, forced liquidation, victory at bank, game-over check |
+| Game Loop & PlayerInput | **Done** | GameLoop orchestrator, PlayerInput ABC, TextPlayerInput, main.py |
 | Terminal UI Client (P0) | Not started | Textual TUI: log, command input, info system, dice widget |
 
 ### P1 Epics
@@ -50,9 +51,12 @@ src/road_to_riches/
 │   ├── property.py      # Rent/max capital formulas
 │   ├── lut.py           # Lookup tables for rent/max cap multipliers
 │   ├── statuses.py      # Status effect processing
+│   ├── game_loop.py     # Central game loop orchestrator
 │   ├── bankruptcy.py    # Bankruptcy, liquidation, victory
 │   └── dice.py          # Dice rolling
-└── client/       # TUI client (not yet implemented)
+├── client/
+│   └── text_input.py    # Stdin/stdout PlayerInput for testing
+└── main.py              # Entry point
 
 boards/            # Board definition JSON files
 tests/             # 25 tests covering all game systems
@@ -81,3 +85,6 @@ All P0 backend epics are complete. Remaining work:
 - Turn engine auto-executes pass events during movement and land events on arrival
 - 25 tests covering: shop buy/rent/invest, stock buy/sell/fluctuation, suit collection, promotion bonus, bankruptcy, victory, forced liquidation, turn engine integration
 - **All 11 P0 backend epics are now complete** — only TUI remains for P0
+- Built central game loop: GameLoop orchestrator, PlayerInput ABC, TextPlayerInput (stdin/stdout), main.py entry point
+- Refactored TurnEngine to route ALL events through EventPipeline (was executing inline)
+- Game is now playable end-to-end via `python -m road_to_riches.main`
