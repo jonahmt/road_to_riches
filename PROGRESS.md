@@ -4,7 +4,7 @@ Last updated: 2026-03-14
 
 ## Overall Status
 
-**54 / 82** issues closed (66%)
+**61 / 82** issues closed (74%)
 
 ### P0 Epics — ALL COMPLETE
 
@@ -29,8 +29,8 @@ Last updated: 2026-03-14
 | Epic | Status | Notes |
 |------|--------|-------|
 | Terminal UI Client (P0.5) | Not started | Game view grid, player info panel, stock overlay, board browsing |
-| Shop Exchanges & Forced Buyouts | Not started | Buy/sell/auction/trade, forced buyout at 5x |
-| Vacant Plots | Not started | Checkpoint, Tax Office, renovation |
+| Shop Exchanges & Forced Buyouts | **Mostly done** | Forced buyout, auction, buy/sell negotiation done. Multi-shop trade in progress. |
+| Vacant Plots | **Mostly done** | Checkpoint and Tax Office done. Renovation not yet wired up. |
 | P1 Square Types | **Done** | Change of Suit, Suit Yourself, Backstreet, Doorway, Cannon, Switch |
 | Stock Market P1 | Not started | Dividends, stock info viewing UI, price change animation |
 | Venture Card System | Not started | Card framework, starter deck of 15-20 cards |
@@ -61,7 +61,7 @@ src/road_to_riches/
 └── main.py              # Entry point (--tui default, --text for stdin)
 
 boards/            # Board definition JSON files
-tests/             # 35 tests covering all game systems
+tests/             # 49 tests covering all game systems
 starter_code/      # Reference code (not used at runtime)
 ```
 
@@ -105,3 +105,14 @@ All P0 epics complete. P1 priority order:
 - main.py supports --tui (default) and --text modes
 - **All P0 epics now complete** — 54/82 issues closed (66%)
 - 35 tests passing
+
+### Session 4 (2026-03-14)
+- Implemented vacant plot purchase with Checkpoint and Tax Office development types
+- Checkpoint: toll paid on pass AND land, increases by 10 each interaction
+- Tax Office: landing player pays 4% net worth to owner; owner receives 4% own net worth
+- Implemented forced buyout (5x value: owner gets 3x, 2x to bank)
+- Implemented buy/sell shop negotiation with counter-offer flow
+- Implemented auction system: sequential bids from all players, highest wins
+- Added all new PlayerInput methods to TextPlayerInput and TuiPlayerInput
+- 14 new tests (49 total): vacant plots (8), shop exchanges (6)
+- **61/82 issues closed (74%)**
