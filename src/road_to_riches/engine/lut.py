@@ -1,10 +1,7 @@
 """Lookup tables for rent and max capital multipliers.
 
 Tables are keyed by (num_shops_owned_in_district, num_shops_in_district).
-Values sourced from Fortune Street CSMM tables (prices_table_csmm / maxcap_table_csmm).
 Original values are fractions of 256, rounded to nearest 0.05.
-
-Source: https://github.com/FortuneStreetModding/fortunestreetmodding.github.io/blob/791dac7b/src/pages/simulator.js#L29
 """
 
 from __future__ import annotations

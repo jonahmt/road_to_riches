@@ -69,7 +69,7 @@ class TestRent:
             BuyShopEvent(player_id=0, square_id=sq_id).execute(game)
 
         rent_sq1 = current_rent(game.board, game.board.squares[1])
-        # 3 of 3 owned: CSMM multiplier is 3.75
+        # 3 of 3 owned: multiplier is 3.75
         assert rent_sq1 == 112  # int(3.75 * 30)
 
 
