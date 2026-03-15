@@ -26,6 +26,7 @@ from road_to_riches.events.game_events import (
     BuyStockEvent,
     InvestInShopEvent,
     SellStockEvent,
+    WarpEvent,
 )
 from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.models.game_state import GameState
@@ -88,6 +89,12 @@ class PlayerInput(ABC):
         self, state: GameState, player_id: int, log: GameLog
     ) -> tuple[int, int] | None:
         """Choose a district and quantity of stock to sell. Return (district_id, qty) or None."""
+
+    @abstractmethod
+    def choose_cannon_target(
+        self, state: GameState, player_id: int, targets: list[dict], log: GameLog
+    ) -> int:
+        """Choose a player to warp to via cannon. Return target player_id."""
 
     @abstractmethod
     def choose_liquidation(
@@ -288,6 +295,22 @@ class GameLoop:
                 event = BuyStockEvent(player_id=player_id, district_id=district_id, quantity=qty)
                 self.pipeline.enqueue(event)
                 self.pipeline.process_all(self.state)
+                self._report_auto_events()
+
+        if PlayerAction.CHOOSE_CANNON_TARGET in result.available_actions:
+            targets = result.info.get("cannon_targets", [])
+            if targets:
+                target_pid = self.input.choose_cannon_target(
+                    self.state, player_id, targets, self.log
+                )
+                target = self.state.get_player(target_pid)
+                event = WarpEvent(player_id=player_id, target_square_id=target.position)
+                self.pipeline.enqueue(event)
+                self.pipeline.process_all(self.state)
+                self.log.log(
+                    f"Player {player_id} cannons to Player {target_pid}'s "
+                    f"position (square {target.position})!"
+                )
                 self._report_auto_events()
 
     def _liquidation_phase(self, player_id: int) -> None:

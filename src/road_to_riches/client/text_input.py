@@ -136,6 +136,24 @@ class TextPlayerInput(PlayerInput):
             pass
         return None
 
+    def choose_cannon_target(
+        self, state: GameState, player_id: int, targets: list[dict], log: GameLog
+    ) -> int:
+        self.notify(state, log)
+        print("  Cannon! Choose a player to warp to:")
+        for t in targets:
+            sq = state.board.squares[t["position"]]
+            print(f"    Player {t['player_id']} at square {t['position']} ({sq.type.value})")
+        while True:
+            try:
+                choice = int(input("  > Player ID: ").strip())
+                valid_ids = [t["player_id"] for t in targets]
+                if choice in valid_ids:
+                    return choice
+            except ValueError:
+                pass
+            print("  Invalid choice.")
+
     def choose_liquidation(
         self, state: GameState, player_id: int, options: dict, log: GameLog
     ) -> tuple[str, int]:

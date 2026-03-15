@@ -13,6 +13,7 @@ from road_to_riches.engine.bankruptcy import (
     needs_liquidation,
 )
 from road_to_riches.engine.property import current_rent, max_capital
+from road_to_riches.engine.square_handler import handle_land, handle_pass
 from road_to_riches.engine.turn import TurnEngine, TurnPhase
 from road_to_riches.events.game_events import (
     BuyShopEvent,
@@ -20,11 +21,15 @@ from road_to_riches.events.game_events import (
     CollectSuitEvent,
     InvestInShopEvent,
     PromotionEvent,
+    RotateSuitEvent,
     SellStockEvent,
+    WarpEvent,
 )
 from road_to_riches.events.pipeline import EventPipeline
+from road_to_riches.models.board_state import SquareInfo
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
+from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.suit import Suit
 
 
@@ -177,6 +182,40 @@ class TestPromotion:
         # Base salary (250) + level bonus (150 * 1) = 400
         assert game.players[0].ready_cash == 1500 + 400
 
+    def test_promotion_keeps_excess_wilds(self):
+        game, _ = _make_game()
+        # 4 real suits + 1 wild -> 1 wild leftover
+        for suit in [Suit.SPADE, Suit.HEART, Suit.DIAMOND, Suit.CLUB]:
+            CollectSuitEvent(player_id=0, suit=suit.value).execute(game)
+        CollectSuitEvent(player_id=0, suit=Suit.WILD.value).execute(game)
+
+        PromotionEvent(player_id=0).execute(game)
+
+        assert game.players[0].suits == {Suit.WILD: 1}
+
+    def test_promotion_wild_substitutes_and_keeps_excess(self):
+        game, _ = _make_game()
+        # 3 real suits + 2 wilds -> 1 wild leftover (1 wild used as substitute)
+        for suit in [Suit.SPADE, Suit.HEART, Suit.DIAMOND]:
+            CollectSuitEvent(player_id=0, suit=suit.value).execute(game)
+        CollectSuitEvent(player_id=0, suit=Suit.WILD.value).execute(game)
+        CollectSuitEvent(player_id=0, suit=Suit.WILD.value).execute(game)
+
+        PromotionEvent(player_id=0).execute(game)
+
+        assert game.players[0].suits == {Suit.WILD: 1}
+
+    def test_promotion_wild_exact_substitution(self):
+        game, _ = _make_game()
+        # 3 real suits + 1 wild -> nothing left (wild used as substitute)
+        for suit in [Suit.SPADE, Suit.HEART, Suit.DIAMOND]:
+            CollectSuitEvent(player_id=0, suit=suit.value).execute(game)
+        CollectSuitEvent(player_id=0, suit=Suit.WILD.value).execute(game)
+
+        PromotionEvent(player_id=0).execute(game)
+
+        assert len(game.players[0].suits) == 0
+
 
 class TestTurnEngine:
     def test_full_turn_cycle(self):
@@ -268,3 +307,84 @@ class TestBankruptcyAndVictory:
         game, _ = _make_game()
         # 1500 cash, target is 10000
         assert not check_victory(game, 0)
+
+
+class TestP1SquareTypes:
+    def test_change_of_suit_pass_collects_and_rotates(self):
+        game, _ = _make_game()
+        # Repurpose an existing square in the test board for this test
+        sq = game.board.squares[3]  # suit square on test board
+        original_type = sq.type
+        sq.type = SquareType.CHANGE_OF_SUIT
+        sq.suit = Suit.SPADE
+
+        result = handle_pass(game, 0, sq)
+        assert len(result.auto_events) == 2
+        assert isinstance(result.auto_events[0], CollectSuitEvent)
+        assert result.auto_events[0].suit == Suit.SPADE
+        assert isinstance(result.auto_events[1], RotateSuitEvent)
+
+        for e in result.auto_events:
+            e.execute(game)
+        assert game.players[0].suits[Suit.SPADE] == 1
+        assert sq.suit == Suit.HEART
+
+        sq.type = original_type
+
+    def test_change_of_suit_full_rotation(self):
+        assert Suit.SPADE.next() == Suit.HEART
+        assert Suit.HEART.next() == Suit.DIAMOND
+        assert Suit.DIAMOND.next() == Suit.CLUB
+        assert Suit.CLUB.next() == Suit.SPADE
+
+    def test_suit_yourself_grants_wild(self):
+        game, _ = _make_game()
+        sq = SquareInfo(id=99, position=(0, 0), type=SquareType.SUIT_YOURSELF)
+        result = handle_pass(game, 0, sq)
+        assert len(result.auto_events) == 1
+        assert isinstance(result.auto_events[0], CollectSuitEvent)
+        assert result.auto_events[0].suit == Suit.WILD.value
+        result.auto_events[0].execute(game)
+        assert game.players[0].suits[Suit.WILD] == 1
+
+    def test_backstreet_land_warps(self):
+        game, _ = _make_game()
+        sq = SquareInfo(
+            id=99, position=(0, 0), type=SquareType.BACKSTREET, backstreet_destination=5
+        )
+        result = handle_land(game, 0, sq)
+        assert len(result.auto_events) == 1
+        assert isinstance(result.auto_events[0], WarpEvent)
+        assert result.auto_events[0].target_square_id == 5
+        result.auto_events[0].execute(game)
+        assert game.players[0].position == 5
+
+    def test_doorway_pass_warps(self):
+        game, _ = _make_game()
+        sq = SquareInfo(id=99, position=(0, 0), type=SquareType.DOORWAY, doorway_destination=10)
+        result = handle_pass(game, 0, sq)
+        assert len(result.auto_events) == 1
+        assert isinstance(result.auto_events[0], WarpEvent)
+        assert result.auto_events[0].target_square_id == 10
+
+    def test_cannon_land_offers_targets(self):
+        game, _ = _make_game()
+        game.players[1].position = 7
+        game.players[2].position = 12
+        sq = SquareInfo(id=99, position=(0, 0), type=SquareType.CANNON)
+        result = handle_land(game, 0, sq)
+        from road_to_riches.engine.square_handler import PlayerAction
+
+        assert PlayerAction.CHOOSE_CANNON_TARGET in result.available_actions
+        targets = result.info["cannon_targets"]
+        target_pids = [t["player_id"] for t in targets]
+        assert 1 in target_pids
+        assert 2 in target_pids
+        assert 0 not in target_pids  # self excluded
+
+    def test_warp_event(self):
+        game, _ = _make_game()
+        game.players[0].position = 3
+        WarpEvent(player_id=0, target_square_id=15).execute(game)
+        assert game.players[0].position == 15
+        assert game.players[0].from_square == 3

@@ -17,6 +17,7 @@ from road_to_riches.engine.statuses import tick_board_statuses, tick_player_stat
 from road_to_riches.events.game_events import apply_pending_stock_fluctuations
 from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.models.game_state import GameState
+from road_to_riches.models.square_type import SquareType
 
 
 class TurnPhase(str, Enum):
@@ -193,13 +194,24 @@ class TurnEngine:
 
         player.from_square = player.position
         player.position = square_id
-        self.turn.remaining_moves -= 1
+
+        square = self.state.board.squares[square_id]
+
+        # Doorways don't consume a move step
+        if square.type != SquareType.DOORWAY:
+            self.turn.remaining_moves -= 1
 
         # Trigger pass effects on the new square
-        square = self.state.board.squares[square_id]
         pass_result = handle_pass(self.state, self.turn.player_id, square)
         for event in pass_result.auto_events:
             self.pipeline.enqueue(event)
         self.pipeline.process_all(self.state)
+
+        # If doorway warped the player, update position tracking
+        if square.type == SquareType.DOORWAY and square.doorway_destination is not None:
+            # Player was warped by WarpEvent in pass effects
+            # Continue movement from the destination
+            pass
+
         if pass_result.auto_events or pass_result.available_actions:
             self.pass_results.append(pass_result)

@@ -17,10 +17,13 @@ from road_to_riches.events.game_events import (
     GainCommissionEvent,
     PayRentEvent,
     PromotionEvent,
+    RotateSuitEvent,
+    WarpEvent,
 )
 from road_to_riches.models.board_state import SquareInfo
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.square_type import SquareType
+from road_to_riches.models.suit import Suit
 
 
 class PlayerAction(str, Enum):
@@ -30,6 +33,7 @@ class PlayerAction(str, Enum):
     INVEST = "INVEST"
     BUY_STOCK = "BUY_STOCK"
     SELL_STOCK = "SELL_STOCK"
+    CHOOSE_CANNON_TARGET = "CHOOSE_CANNON_TARGET"
     NONE = "NONE"
 
 
@@ -59,6 +63,21 @@ def handle_pass(state: GameState, player_id: int, square: SquareInfo) -> SquareR
     elif square.type == SquareType.SUIT:
         if square.suit is not None:
             auto_events.append(CollectSuitEvent(player_id=player_id, suit=square.suit))
+
+    elif square.type == SquareType.CHANGE_OF_SUIT:
+        if square.suit is not None:
+            auto_events.append(CollectSuitEvent(player_id=player_id, suit=square.suit))
+            auto_events.append(RotateSuitEvent(square_id=square.id))
+
+    elif square.type == SquareType.SUIT_YOURSELF:
+        auto_events.append(CollectSuitEvent(player_id=player_id, suit=Suit.WILD.value))
+
+    elif square.type == SquareType.DOORWAY:
+        if square.doorway_destination is not None:
+            auto_events.append(
+                WarpEvent(player_id=player_id, target_square_id=square.doorway_destination)
+            )
+            info["warped_to"] = square.doorway_destination
 
     return SquareResult(auto_events=auto_events, available_actions=actions, info=info)
 
@@ -125,6 +144,27 @@ def handle_land(state: GameState, player_id: int, square: SquareInfo) -> SquareR
 
     elif square.type == SquareType.STOCKBROKER:
         actions.append(PlayerAction.BUY_STOCK)
+
+    elif square.type == SquareType.CHANGE_OF_SUIT:
+        info["venture_card"] = True
+
+    elif square.type == SquareType.SUIT_YOURSELF:
+        info["venture_card"] = True
+
+    elif square.type == SquareType.BACKSTREET:
+        if square.backstreet_destination is not None:
+            auto_events.append(
+                WarpEvent(player_id=player_id, target_square_id=square.backstreet_destination)
+            )
+            info["warped_to"] = square.backstreet_destination
+
+    elif square.type == SquareType.CANNON:
+        other_players = [p for p in state.active_players if p.player_id != player_id]
+        if other_players:
+            actions.append(PlayerAction.CHOOSE_CANNON_TARGET)
+            info["cannon_targets"] = [
+                {"player_id": p.player_id, "position": p.position} for p in other_players
+            ]
 
     return SquareResult(auto_events=auto_events, available_actions=actions, info=info)
 

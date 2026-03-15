@@ -244,8 +244,20 @@ class PromotionEvent(GameEvent):
         self._bonus = bonus
         player.level = next_level
 
-        # Reset suits
-        player.suits.clear()
+        # Consume exactly 4 suits: prioritize real suits, then wilds
+        standard = [Suit.SPADE, Suit.HEART, Suit.DIAMOND, Suit.CLUB]
+        wilds_used = 0
+        for s in standard:
+            if player.suits.get(s, 0) > 0:
+                del player.suits[s]
+            else:
+                wilds_used += 1
+        wild_count = player.suits.get(Suit.WILD, 0)
+        remaining_wilds = wild_count - wilds_used
+        if remaining_wilds > 0:
+            player.suits[Suit.WILD] = remaining_wilds
+        elif Suit.WILD in player.suits:
+            del player.suits[Suit.WILD]
 
     def get_result(self) -> int:
         return self._bonus
@@ -306,6 +318,40 @@ class TransferCashEvent(GameEvent):
             state.get_player(self.from_player_id).ready_cash -= self.amount
         if self.to_player_id is not None:
             state.get_player(self.to_player_id).ready_cash += self.amount
+
+
+# =============================================================================
+# Movement Events
+# =============================================================================
+
+
+@register_event
+@dataclass
+class WarpEvent(GameEvent):
+    """Warp a player to a target square without triggering pass/land effects."""
+
+    player_id: int
+    target_square_id: int
+
+    def execute(self, state: GameState) -> None:
+        player = state.get_player(self.player_id)
+        player.from_square = player.position
+        player.position = self.target_square_id
+
+
+@register_event
+@dataclass
+class RotateSuitEvent(GameEvent):
+    """Rotate the suit on a Change of Suit square to the next suit."""
+
+    square_id: int
+
+    def execute(self, state: GameState) -> None:
+        square = state.board.squares[self.square_id]
+        if square.suit is not None:
+            next_suit = Suit(square.suit).next()
+            if next_suit is not None:
+                square.suit = next_suit
 
 
 # =============================================================================
