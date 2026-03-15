@@ -580,6 +580,37 @@ class AuctionSellEvent(GameEvent):
 
 
 # =============================================================================
+# Script Events
+# =============================================================================
+
+
+@register_event
+@dataclass
+class ScriptEvent(GameEvent):
+    """Execute an external Python script to modify game state.
+
+    The script must define a run(state, player_id) function that
+    returns a message string.
+    """
+
+    player_id: int
+    script_path: str
+    _message: str = ""
+
+    def execute(self, state: GameState) -> None:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("script", self.script_path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self._message = module.run(state, self.player_id)
+
+    def get_result(self) -> str:
+        return self._message
+
+
+# =============================================================================
 # Movement Events
 # =============================================================================
 

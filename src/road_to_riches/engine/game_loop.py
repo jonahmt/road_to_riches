@@ -29,6 +29,7 @@ from road_to_riches.events.game_events import (
     ForcedBuyoutEvent,
     InvestInShopEvent,
     RenovatePropertyEvent,
+    ScriptEvent,
     SellStockEvent,
     WarpEvent,
 )
@@ -42,6 +43,7 @@ class GameConfig:
     board_path: str
     num_players: int = 4
     starting_cash: int = 1500
+    venture_script: str = "scripts/venture_placeholder.py"
 
 
 class GameLog:
@@ -441,6 +443,9 @@ class GameLoop:
                 )
                 self._report_auto_events()
 
+        if result.info.get("venture_card"):
+            self._handle_venture_card(player_id)
+
     def _liquidation_phase(self, player_id: int) -> None:
         self.log.log(f"Player {player_id} has negative cash! Must sell assets.")
         self.input.notify(self.state, self.log)
@@ -465,6 +470,25 @@ class GameLoop:
                     self.pipeline.process_all(self.state)
                     self.log.log(f"Player {player_id} sold {qty} stock in district {asset_id}.")
             self.input.notify(self.state, self.log)
+
+    def _handle_venture_card(self, player_id: int) -> None:
+        """Execute the venture card script for this player."""
+        import os
+
+        script_path = self.config.venture_script
+        if not os.path.isabs(script_path):
+            # Resolve relative to cwd
+            script_path = os.path.join(os.getcwd(), script_path)
+        if not os.path.exists(script_path):
+            self.log.log("No venture card script found, skipping.")
+            return
+        event = ScriptEvent(player_id=player_id, script_path=script_path)
+        self.pipeline.enqueue(event)
+        self.pipeline.process_all(self.state)
+        msg = event.get_result()
+        if msg:
+            self.log.log(msg)
+        self._report_auto_events()
 
     def _handle_auction(self, player_id: int) -> None:
         """Player auctions one of their shops."""

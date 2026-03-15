@@ -227,14 +227,16 @@ class GameApp(App):
             options = "[R]oll"
             if req.data.get("has_stock"):
                 options += ", [S]ell Stock"
-            options += ", [I]nfo"
+            if req.data.get("has_shops"):
+                options += ", [A]uction, Sell S[h]op, [T]rade"
+            options += ", [B]uy Shop, [I]nfo"
             prompt.prompt_text = (
                 f"  Player {req.player_id} | "
                 f"Cash: {req.data['cash']}G | "
                 f"Level: {req.data['level']} | "
                 f"Options: {options}"
             )
-            inp.placeholder = "R / S / I"
+            inp.placeholder = "R / S / A / H / T / B / I"
 
         elif req.type == InputRequestType.CHOOSE_PATH:
             choices = req.data["choices"]
@@ -255,29 +257,128 @@ class GameApp(App):
                 f"sq{s['square_id']}(val={s['current_value']},max={s['max_capital']})"
                 for s in shops
             ]
-            prompt.prompt_text = f"  Invest? Cash: {req.data['cash']}G | Shops: {', '.join(parts)}"
+            prompt.prompt_text = (
+                f"  Invest? Cash: {req.data['cash']}G | "
+                f"Shops: {', '.join(parts)}"
+            )
             inp.placeholder = "square_id amount / N"
 
         elif req.type == InputRequestType.BUY_STOCK:
             stocks = req.data.get("stocks", [])
             parts = [f"d{s['district_id']}@{s['price']}G" for s in stocks]
-            prompt.prompt_text = f"  Buy stock? Cash: {req.data['cash']}G | {', '.join(parts)}"
+            prompt.prompt_text = (
+                f"  Buy stock? Cash: {req.data['cash']}G | "
+                f"{', '.join(parts)}"
+            )
             inp.placeholder = "district_id quantity / N"
 
         elif req.type == InputRequestType.SELL_STOCK:
             holdings = req.data.get("holdings", {})
-            parts = [f"d{d}:{h['quantity']}@{h['price']}G" for d, h in holdings.items()]
+            parts = [
+                f"d{d}:{h['quantity']}@{h['price']}G"
+                for d, h in holdings.items()
+            ]
             prompt.prompt_text = f"  Sell stock? {', '.join(parts)}"
             inp.placeholder = "district_id quantity / N"
 
         elif req.type == InputRequestType.CANNON_TARGET:
             targets = req.data.get("targets", [])
             parts = [f"P{t['player_id']}(sq{t['position']})" for t in targets]
-            prompt.prompt_text = f"  Cannon! Choose target: {', '.join(parts)}"
+            prompt.prompt_text = (
+                f"  Cannon! Choose target: {', '.join(parts)}"
+            )
             inp.placeholder = "Player ID"
 
+        elif req.type == InputRequestType.VACANT_PLOT_TYPE:
+            options = req.data.get("options", [])
+            parts = [f"[{i + 1}] {o}" for i, o in enumerate(options)]
+            prompt.prompt_text = (
+                f"  Build on square {req.data['square_id']}: "
+                f"{', '.join(parts)}"
+            )
+            inp.placeholder = "Enter number"
+
+        elif req.type == InputRequestType.FORCED_BUYOUT:
+            prompt.prompt_text = (
+                f"  Force-buy square {req.data['square_id']} "
+                f"for {req.data['cost']}G?"
+            )
+            inp.placeholder = "Y / N"
+
+        elif req.type == InputRequestType.AUCTION_BID:
+            prompt.prompt_text = (
+                f"  P{req.player_id}: Bid on square "
+                f"{req.data['square_id']}? "
+                f"Min: {req.data['min_bid']}G | "
+                f"Cash: {req.data['cash']}G"
+            )
+            inp.placeholder = "Bid amount / N"
+
+        elif req.type == InputRequestType.CHOOSE_SHOP_AUCTION:
+            shops = req.data.get("shops", [])
+            parts = [
+                f"sq{s['square_id']}({s['value']}G)" for s in shops
+            ]
+            prompt.prompt_text = (
+                f"  Auction which shop? {', '.join(parts)}"
+            )
+            inp.placeholder = "Square ID / N"
+
+        elif req.type == InputRequestType.CHOOSE_SHOP_BUY:
+            prompt.prompt_text = (
+                f"  Buy a shop. Cash: {req.data['cash']}G"
+            )
+            inp.placeholder = "player_id square_id price / N"
+
+        elif req.type == InputRequestType.CHOOSE_SHOP_SELL:
+            shops = req.data.get("shops", [])
+            parts = [
+                f"sq{s['square_id']}({s['value']}G)" for s in shops
+            ]
+            prompt.prompt_text = (
+                f"  Sell a shop: {', '.join(parts)}"
+            )
+            inp.placeholder = "target_player square_id price / N"
+
+        elif req.type == InputRequestType.ACCEPT_OFFER:
+            offer = req.data.get("offer", {})
+            otype = offer.get("type", "?")
+            sq_id = offer.get("square_id", "?")
+            price = offer.get("price", offer.get("gold_offer", "?"))
+            prompt.prompt_text = (
+                f"  P{req.player_id}: {otype} offer for "
+                f"sq{sq_id} at {price}G"
+            )
+            inp.placeholder = "[A]ccept / [R]eject / [C]ounter"
+
+        elif req.type == InputRequestType.COUNTER_PRICE:
+            prompt.prompt_text = (
+                f"  Original price: "
+                f"{req.data['original_price']}G. Counter-offer:"
+            )
+            inp.placeholder = "Enter amount"
+
+        elif req.type == InputRequestType.RENOVATE:
+            options = req.data.get("options", [])
+            parts = [f"[{i + 1}] {o}" for i, o in enumerate(options)]
+            prompt.prompt_text = (
+                f"  Renovate square {req.data['square_id']}? "
+                f"{', '.join(parts)}"
+            )
+            inp.placeholder = "Enter number / N"
+
+        elif req.type == InputRequestType.TRADE:
+            prompt.prompt_text = (
+                f"  Propose trade. Cash: {req.data['cash']}G"
+            )
+            inp.placeholder = (
+                "target_pid your_shops their_shops gold / N"
+            )
+
         elif req.type == InputRequestType.LIQUIDATION:
-            prompt.prompt_text = f"  Must sell assets! Cash: {req.data['cash']}G"
+            prompt.prompt_text = (
+                f"  Must sell assets! Cash: {req.data['cash']}G"
+            )
             inp.placeholder = "sell shop <id> / sell stock <id>"
 
         inp.focus()
@@ -319,6 +420,14 @@ class GameApp(App):
                 return "roll"
             if v in ("S", "SELL") and req.data.get("has_stock"):
                 return "sell_stock"
+            if v in ("A", "AUCTION") and req.data.get("has_shops"):
+                return "auction"
+            if v in ("H",) and req.data.get("has_shops"):
+                return "sell_shop"
+            if v in ("B", "BUY"):
+                return "buy_shop"
+            if v in ("T", "TRADE") and req.data.get("has_shops"):
+                return "trade"
             return None
 
         if req.type == InputRequestType.CHOOSE_PATH:
@@ -340,15 +449,19 @@ class GameApp(App):
 
         if req.type == InputRequestType.INVEST:
             if v in ("N", "NO", ""):
-                return None  # None means skip
+                return None
             try:
                 parts = value.split()
                 sq_id = int(parts[0])
-                valid_ids = [s["square_id"] for s in req.data.get("investable", [])]
+                valid_ids = [
+                    s["square_id"]
+                    for s in req.data.get("investable", [])
+                ]
                 if sq_id not in valid_ids:
-                    return None  # invalid id, signal error
-                amount = int(parts[1]) if len(parts) > 1 else req.data["cash"]
-                # Return a sentinel to distinguish "skip" from "invalid"
+                    return None
+                amount = (
+                    int(parts[1]) if len(parts) > 1 else req.data["cash"]
+                )
                 return (sq_id, amount)
             except (ValueError, IndexError):
                 pass
@@ -374,7 +487,9 @@ class GameApp(App):
                 parts = value.split()
                 district_id = int(parts[0])
                 holdings = req.data.get("holdings", {})
-                max_qty = holdings.get(str(district_id), {}).get("quantity", 0)
+                max_qty = (
+                    holdings.get(str(district_id), {}).get("quantity", 0)
+                )
                 qty = int(parts[1]) if len(parts) > 1 else max_qty
                 if qty > 0:
                     return (district_id, qty)
@@ -385,10 +500,137 @@ class GameApp(App):
         if req.type == InputRequestType.CANNON_TARGET:
             try:
                 pid = int(value)
-                valid_ids = [t["player_id"] for t in req.data.get("targets", [])]
+                valid_ids = [
+                    t["player_id"]
+                    for t in req.data.get("targets", [])
+                ]
                 if pid in valid_ids:
                     return pid
             except ValueError:
+                pass
+            return None
+
+        if req.type == InputRequestType.VACANT_PLOT_TYPE:
+            try:
+                idx = int(value)
+                options = req.data.get("options", [])
+                if 1 <= idx <= len(options):
+                    return options[idx - 1]
+            except ValueError:
+                pass
+            return None
+
+        if req.type == InputRequestType.FORCED_BUYOUT:
+            if v in ("Y", "YES"):
+                return True
+            if v in ("N", "NO"):
+                return False
+            return None
+
+        if req.type == InputRequestType.AUCTION_BID:
+            if v in ("N", "NO", ""):
+                return None
+            try:
+                bid = int(value)
+                min_bid = req.data.get("min_bid", 1)
+                cash = req.data.get("cash", 0)
+                if bid >= min_bid and bid <= cash:
+                    return bid
+            except ValueError:
+                pass
+            return None
+
+        if req.type == InputRequestType.CHOOSE_SHOP_AUCTION:
+            if v in ("N", "NO", ""):
+                return None
+            try:
+                sq_id = int(value)
+                valid_ids = [
+                    s["square_id"] for s in req.data.get("shops", [])
+                ]
+                if sq_id in valid_ids:
+                    return sq_id
+            except ValueError:
+                pass
+            return None
+
+        if req.type == InputRequestType.CHOOSE_SHOP_BUY:
+            if v in ("N", "NO", ""):
+                return None
+            try:
+                parts = value.split()
+                target_pid = int(parts[0])
+                sq_id = int(parts[1])
+                price = int(parts[2])
+                return (target_pid, sq_id, price)
+            except (ValueError, IndexError):
+                pass
+            return None
+
+        if req.type == InputRequestType.CHOOSE_SHOP_SELL:
+            if v in ("N", "NO", ""):
+                return None
+            try:
+                parts = value.split()
+                target_pid = int(parts[0])
+                sq_id = int(parts[1])
+                price = int(parts[2])
+                return (target_pid, sq_id, price)
+            except (ValueError, IndexError):
+                pass
+            return None
+
+        if req.type == InputRequestType.ACCEPT_OFFER:
+            if v in ("A", "ACCEPT"):
+                return "accept"
+            if v in ("R", "REJECT"):
+                return "reject"
+            if v in ("C", "COUNTER"):
+                return "counter"
+            return None
+
+        if req.type == InputRequestType.COUNTER_PRICE:
+            try:
+                return int(value)
+            except ValueError:
+                return None
+
+        if req.type == InputRequestType.RENOVATE:
+            if v in ("N", "NO", ""):
+                return None
+            try:
+                idx = int(value)
+                options = req.data.get("options", [])
+                if 1 <= idx <= len(options):
+                    return options[idx - 1]
+            except ValueError:
+                pass
+            return None
+
+        if req.type == InputRequestType.TRADE:
+            if v in ("N", "NO", ""):
+                return None
+            try:
+                parts = value.split()
+                target_pid = int(parts[0])
+                offer_shops = (
+                    [int(x) for x in parts[1].split(",")]
+                    if parts[1] != "-"
+                    else []
+                )
+                request_shops = (
+                    [int(x) for x in parts[2].split(",")]
+                    if parts[2] != "-"
+                    else []
+                )
+                gold_offer = int(parts[3]) if len(parts) > 3 else 0
+                return {
+                    "target_player_id": target_pid,
+                    "offer_shops": offer_shops,
+                    "request_shops": request_shops,
+                    "gold_offer": gold_offer,
+                }
+            except (ValueError, IndexError):
                 pass
             return None
 

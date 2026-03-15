@@ -29,6 +29,7 @@ from road_to_riches.events.game_events import (
     RaiseCheckpointTollEvent,
     RenovatePropertyEvent,
     RotateSuitEvent,
+    ScriptEvent,
     SellStockEvent,
     TaxOfficeOwnerBonusEvent,
     TransferPropertyEvent,
@@ -674,3 +675,42 @@ class TestTrade:
 
         assert game.players[0].ready_cash == p0_cash - 100
         assert game.players[1].ready_cash == p1_cash + 100
+
+
+class TestScriptEvent:
+    def test_venture_placeholder_script(self):
+        """ScriptEvent executes a Python script that modifies game state."""
+        import os
+
+        game, _ = _make_game()
+        script_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "scripts",
+            "venture_placeholder.py",
+        )
+        event = ScriptEvent(player_id=0, script_path=script_path)
+        event.execute(game)
+
+        assert game.players[0].ready_cash == 1600  # 1500 + 100
+        msg = event.get_result()
+        assert "100G" in msg
+        assert "Player 0" in msg
+
+    def test_venture_card_on_suit_square(self):
+        """Landing on a Suit square should trigger venture_card flag."""
+        game, _ = _make_game()
+        # Square 3 is a Suit square in test_board
+        sq = game.board.squares[3]
+        assert sq.type == SquareType.SUIT
+
+        result = handle_land(game, 0, sq)
+        assert result.info.get("venture_card") is True
+
+    def test_venture_card_on_venture_square(self):
+        """Landing on a Venture square should trigger venture_card flag."""
+        game, _ = _make_game()
+        sq = game.board.squares[5]
+        assert sq.type == SquareType.VENTURE
+
+        result = handle_land(game, 0, sq)
+        assert result.info.get("venture_card") is True

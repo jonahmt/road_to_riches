@@ -99,6 +99,7 @@ class TuiPlayerInput(PlayerInput):
         self._flush_log(log)
         player = state.get_player(player_id)
         has_stock = bool(player.owned_stock)
+        has_shops = bool(player.owned_properties)
         return self._request_input(
             InputRequest(
                 type=InputRequestType.PRE_ROLL,
@@ -107,6 +108,7 @@ class TuiPlayerInput(PlayerInput):
                     "cash": player.ready_cash,
                     "level": player.level,
                     "has_stock": has_stock,
+                    "has_shops": has_shops,
                 },
             )
         )
