@@ -16,16 +16,25 @@ class TextPlayerInput(PlayerInput):
         print(f"  Cash: {player.ready_cash}G | Level: {player.level}")
         print(f"  Suits: {_fmt_suits(player)}")
         has_stock = bool(player.owned_stock)
+        has_shops = bool(player.owned_properties)
         options = "[R]oll"
         if has_stock:
             options += ", [S]ell Stock"
-        options += ", [I]nfo"
+        if has_shops:
+            options += ", [A]uction, Sell S[h]op"
+        options += ", [B]uy Shop, [I]nfo"
         while True:
             choice = input(f"  > {options}: ").strip().upper()
             if choice in ("R", "ROLL"):
                 return "roll"
             elif choice in ("S", "SELL") and has_stock:
                 return "sell_stock"
+            elif choice in ("A", "AUCTION") and has_shops:
+                return "auction"
+            elif choice in ("H",) and has_shops:
+                return "sell_shop"
+            elif choice in ("B", "BUY"):
+                return "buy_shop"
             elif choice in ("I", "INFO"):
                 self._show_info(state, player_id)
             else:
@@ -154,6 +163,168 @@ class TextPlayerInput(PlayerInput):
                 pass
             print("  Invalid choice.")
 
+    def choose_vacant_plot_type(
+        self,
+        state: GameState,
+        player_id: int,
+        square_id: int,
+        options: list[str],
+        log: GameLog,
+    ) -> str:
+        self.notify(state, log)
+        print(f"  Choose development type for vacant plot {square_id}:")
+        for i, opt in enumerate(options):
+            print(f"    [{i + 1}] {opt}")
+        while True:
+            try:
+                choice = int(input("  > ").strip())
+                if 1 <= choice <= len(options):
+                    return options[choice - 1]
+            except ValueError:
+                pass
+            print("  Invalid choice.")
+
+    def choose_forced_buyout(
+        self, state: GameState, player_id: int, square_id: int, cost: int, log: GameLog
+    ) -> bool:
+        self.notify(state, log)
+        player = state.get_player(player_id)
+        print(f"  Force-buy square {square_id} for {cost}G? (Cash: {player.ready_cash}G)")
+        choice = input("  > [Y]es / [N]o: ").strip().upper()
+        return choice in ("Y", "YES")
+
+    def choose_auction_bid(
+        self,
+        state: GameState,
+        player_id: int,
+        square_id: int,
+        min_bid: int,
+        log: GameLog,
+    ) -> int | None:
+        self.notify(state, log)
+        player = state.get_player(player_id)
+        sq = state.board.squares[square_id]
+        print(f"  Player {player_id}: Bid on square {square_id} (value={sq.shop_current_value}G)?")
+        print(f"  Minimum bid: {min_bid}G | Your cash: {player.ready_cash}G")
+        choice = input("  > Bid amount or 'n': ").strip()
+        if choice.lower() in ("n", "no", ""):
+            return None
+        try:
+            bid = int(choice)
+            if bid >= min_bid and bid <= player.ready_cash:
+                return bid
+            print("  Invalid bid.")
+        except ValueError:
+            pass
+        return None
+
+    def choose_shop_to_auction(self, state: GameState, player_id: int, log: GameLog) -> int | None:
+        self.notify(state, log)
+        player = state.get_player(player_id)
+        print("  Choose a shop to auction:")
+        for sq_id in player.owned_properties:
+            sq = state.board.squares[sq_id]
+            print(
+                f"    Square {sq_id}: value={sq.shop_current_value}G, "
+                f"district={sq.property_district}"
+            )
+        choice = input("  > Square ID or 'n': ").strip()
+        if choice.lower() in ("n", "no", ""):
+            return None
+        try:
+            sq_id = int(choice)
+            if sq_id in player.owned_properties:
+                return sq_id
+        except ValueError:
+            pass
+        print("  Invalid choice.")
+        return None
+
+    def choose_shop_to_buy(
+        self, state: GameState, player_id: int, log: GameLog
+    ) -> tuple[int, int, int] | None:
+        self.notify(state, log)
+        print("  Buy a shop from another player.")
+        print("  Other players' shops:")
+        for p in state.active_players:
+            if p.player_id == player_id:
+                continue
+            for sq_id in p.owned_properties:
+                sq = state.board.squares[sq_id]
+                print(
+                    f"    P{p.player_id} sq{sq_id}: "
+                    f"value={sq.shop_current_value}G, "
+                    f"district={sq.property_district}"
+                )
+        print("  Enter: player_id square_id offer_price, or 'n'")
+        choice = input("  > ").strip()
+        if choice.lower() in ("n", "no", ""):
+            return None
+        try:
+            parts = choice.split()
+            target_pid = int(parts[0])
+            sq_id = int(parts[1])
+            price = int(parts[2])
+            return (target_pid, sq_id, price)
+        except (ValueError, IndexError):
+            pass
+        print("  Invalid input.")
+        return None
+
+    def choose_shop_to_sell(
+        self, state: GameState, player_id: int, log: GameLog
+    ) -> tuple[int, int, int] | None:
+        self.notify(state, log)
+        player = state.get_player(player_id)
+        print("  Sell one of your shops to another player.")
+        for sq_id in player.owned_properties:
+            sq = state.board.squares[sq_id]
+            print(
+                f"    Square {sq_id}: value={sq.shop_current_value}G, "
+                f"district={sq.property_district}"
+            )
+        print("  Enter: target_player_id square_id asking_price, or 'n'")
+        choice = input("  > ").strip()
+        if choice.lower() in ("n", "no", ""):
+            return None
+        try:
+            parts = choice.split()
+            target_pid = int(parts[0])
+            sq_id = int(parts[1])
+            price = int(parts[2])
+            if sq_id in player.owned_properties:
+                return (target_pid, sq_id, price)
+        except (ValueError, IndexError):
+            pass
+        print("  Invalid input.")
+        return None
+
+    def choose_accept_offer(
+        self, state: GameState, player_id: int, offer: dict, log: GameLog
+    ) -> str:
+        self.notify(state, log)
+        otype = offer["type"]
+        sq_id = offer["square_id"]
+        price = offer["price"]
+        print(f"  Player {player_id}: {otype} offer for square {sq_id} at {price}G")
+        choice = input("  > [A]ccept / [R]eject / [C]ounter: ").strip().upper()
+        if choice in ("A", "ACCEPT"):
+            return "accept"
+        if choice in ("C", "COUNTER"):
+            return "counter"
+        return "reject"
+
+    def choose_counter_price(
+        self, state: GameState, player_id: int, original_price: int, log: GameLog
+    ) -> int:
+        self.notify(state, log)
+        print(f"  Original price: {original_price}G. Enter counter-offer:")
+        while True:
+            try:
+                return int(input("  > ").strip())
+            except ValueError:
+                print("  Invalid amount.")
+
     def choose_liquidation(
         self, state: GameState, player_id: int, options: dict, log: GameLog
     ) -> tuple[str, int]:
@@ -233,7 +404,13 @@ class TextPlayerInput(PlayerInput):
 def _fmt_suits(player) -> str:
     from road_to_riches.models.suit import Suit
 
-    symbols = {Suit.SPADE: "S", Suit.HEART: "H", Suit.DIAMOND: "D", Suit.CLUB: "C", Suit.WILD: "W"}
+    symbols = {
+        Suit.SPADE: "S",
+        Suit.HEART: "H",
+        Suit.DIAMOND: "D",
+        Suit.CLUB: "C",
+        Suit.WILD: "W",
+    }
     parts = []
     for suit, sym in symbols.items():
         count = player.suits.get(suit, 0)

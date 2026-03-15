@@ -321,6 +321,265 @@ class TransferCashEvent(GameEvent):
 
 
 # =============================================================================
+# Vacant Plot Events
+# =============================================================================
+
+
+@register_event
+@dataclass
+class BuyVacantPlotEvent(GameEvent):
+    """Player buys a vacant plot and develops it into a property type."""
+
+    player_id: int
+    square_id: int
+    development_type: str  # "VP_CHECKPOINT" or "VP_TAX_OFFICE"
+
+    def execute(self, state: GameState) -> None:
+        from road_to_riches.models.square_type import SquareType
+
+        player = state.get_player(self.player_id)
+        square = state.board.squares[self.square_id]
+        assert square.shop_base_value is not None
+        assert square.property_owner is None
+
+        cost = square.shop_base_value
+        player.ready_cash -= cost
+        square.property_owner = self.player_id
+        player.owned_properties.append(self.square_id)
+        square.type = SquareType(self.development_type)
+
+        if square.type == SquareType.VP_CHECKPOINT:
+            square.checkpoint_toll = 10
+
+        if square.property_district is not None:
+            _update_district_stock_value(state, square.property_district)
+
+
+@register_event
+@dataclass
+class PayCheckpointTollEvent(GameEvent):
+    """Player pays toll at a checkpoint and toll increases."""
+
+    payer_id: int
+    owner_id: int
+    square_id: int
+    _toll_amount: int = 0
+
+    def execute(self, state: GameState) -> None:
+        square = state.board.squares[self.square_id]
+        from road_to_riches.engine.statuses import is_shop_closed
+
+        if is_shop_closed(square.statuses):
+            self._toll_amount = 0
+            return
+
+        self._toll_amount = square.checkpoint_toll
+        payer = state.get_player(self.payer_id)
+        owner = state.get_player(self.owner_id)
+        payer.ready_cash -= self._toll_amount
+        owner.ready_cash += self._toll_amount
+        square.checkpoint_toll += 10
+
+    def get_result(self) -> int:
+        return self._toll_amount
+
+
+@register_event
+@dataclass
+class RaiseCheckpointTollEvent(GameEvent):
+    """Owner passes/lands on own checkpoint — raise toll by 10."""
+
+    square_id: int
+
+    def execute(self, state: GameState) -> None:
+        state.board.squares[self.square_id].checkpoint_toll += 10
+
+
+@register_event
+@dataclass
+class PayTaxEvent(GameEvent):
+    """Tax office: player pays 4% of net worth to owner."""
+
+    payer_id: int
+    owner_id: int
+    _tax_amount: int = 0
+
+    def execute(self, state: GameState) -> None:
+        payer = state.get_player(self.payer_id)
+        owner = state.get_player(self.owner_id)
+        nw = state.net_worth(payer)
+        self._tax_amount = max(0, int(nw * 0.04))
+        payer.ready_cash -= self._tax_amount
+        owner.ready_cash += self._tax_amount
+
+    def get_result(self) -> int:
+        return self._tax_amount
+
+
+@register_event
+@dataclass
+class TaxOfficeOwnerBonusEvent(GameEvent):
+    """Tax office owner lands on own tax office — receive 4% of own net worth."""
+
+    player_id: int
+    _bonus: int = 0
+
+    def execute(self, state: GameState) -> None:
+        player = state.get_player(self.player_id)
+        nw = state.net_worth(player)
+        self._bonus = max(0, int(nw * 0.04))
+        player.ready_cash += self._bonus
+
+    def get_result(self) -> int:
+        return self._bonus
+
+
+@register_event
+@dataclass
+class RenovatePropertyEvent(GameEvent):
+    """Owner renovates a vacant plot property into a different type.
+
+    Receives 75% of current value back, pays 100% of new type's base price.
+    """
+
+    player_id: int
+    square_id: int
+    new_type: str  # "VP_CHECKPOINT" or "VP_TAX_OFFICE"
+
+    def execute(self, state: GameState) -> None:
+        from road_to_riches.models.square_type import SquareType
+
+        player = state.get_player(self.player_id)
+        square = state.board.squares[self.square_id]
+        assert square.property_owner == self.player_id
+        assert square.shop_current_value is not None
+        assert square.shop_base_value is not None
+
+        refund = int(square.shop_current_value * 0.75)
+        cost = square.shop_base_value
+        player.ready_cash += refund - cost
+
+        square.type = SquareType(self.new_type)
+        square.shop_current_value = square.shop_base_value
+        square.checkpoint_toll = 0
+        if square.type == SquareType.VP_CHECKPOINT:
+            square.checkpoint_toll = 10
+
+        if square.property_district is not None:
+            _update_district_stock_value(state, square.property_district)
+
+
+# =============================================================================
+# Shop Exchange Events
+# =============================================================================
+
+
+@register_event
+@dataclass
+class ForcedBuyoutEvent(GameEvent):
+    """Player forcibly buys another player's shop for 5x value.
+
+    Owner receives 3x value, 2x goes to bank.
+    """
+
+    buyer_id: int
+    square_id: int
+    _cost: int = 0
+
+    def execute(self, state: GameState) -> None:
+        buyer = state.get_player(self.buyer_id)
+        square = state.board.squares[self.square_id]
+        assert square.property_owner is not None
+        assert square.property_owner != self.buyer_id
+        assert square.shop_current_value is not None
+
+        owner = state.get_player(square.property_owner)
+        value = square.shop_current_value
+        self._cost = value * 5
+
+        buyer.ready_cash -= self._cost
+        owner.ready_cash += value * 3
+        # 2x goes to bank (removed from economy)
+
+        # Transfer ownership
+        owner.owned_properties.remove(self.square_id)
+        square.property_owner = self.buyer_id
+        buyer.owned_properties.append(self.square_id)
+
+        if square.property_district is not None:
+            _update_district_stock_value(state, square.property_district)
+
+    def get_result(self) -> int:
+        return self._cost
+
+
+@register_event
+@dataclass
+class TransferPropertyEvent(GameEvent):
+    """Transfer a shop from one player to another at a given price.
+
+    Used for buy/sell negotiation and trade settlements.
+    """
+
+    from_player_id: int
+    to_player_id: int
+    square_id: int
+    price: int
+
+    def execute(self, state: GameState) -> None:
+        seller = state.get_player(self.from_player_id)
+        buyer = state.get_player(self.to_player_id)
+        square = state.board.squares[self.square_id]
+        assert square.property_owner == self.from_player_id
+
+        buyer.ready_cash -= self.price
+        seller.ready_cash += self.price
+
+        seller.owned_properties.remove(self.square_id)
+        square.property_owner = self.to_player_id
+        buyer.owned_properties.append(self.square_id)
+
+        if square.property_district is not None:
+            _update_district_stock_value(state, square.property_district)
+
+
+@register_event
+@dataclass
+class AuctionSellEvent(GameEvent):
+    """Auction result: shop sold to highest bidder or returned to bank.
+
+    If winner_id is None, no bids — seller gets base value, shop becomes unowned.
+    """
+
+    seller_id: int
+    square_id: int
+    winner_id: int | None = None
+    winning_bid: int = 0
+
+    def execute(self, state: GameState) -> None:
+        seller = state.get_player(self.seller_id)
+        square = state.board.squares[self.square_id]
+        assert square.property_owner == self.seller_id
+
+        seller.owned_properties.remove(self.square_id)
+
+        if self.winner_id is not None:
+            winner = state.get_player(self.winner_id)
+            winner.ready_cash -= self.winning_bid
+            seller.ready_cash += self.winning_bid
+            square.property_owner = self.winner_id
+            winner.owned_properties.append(self.square_id)
+        else:
+            # No bids: seller gets base value, shop becomes unowned
+            assert square.shop_base_value is not None
+            seller.ready_cash += square.shop_base_value
+            square.property_owner = None
+
+        if square.property_district is not None:
+            _update_district_stock_value(state, square.property_district)
+
+
+# =============================================================================
 # Movement Events
 # =============================================================================
 

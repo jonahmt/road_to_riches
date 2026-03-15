@@ -47,8 +47,10 @@ class SquareInfo:
     suit: Suit | None = None
     """For SUIT squares: which suit this provides. For CHANGE_OF_SUIT: the current rotating suit."""
 
-    # Vacant plot
+    # Vacant plot / checkpoint
     vacant_plot_options: list[SquareType] = field(default_factory=list)
+    checkpoint_toll: int = 0
+    """Current toll for checkpoint properties. Increases by 10 each interaction."""
 
     # Backstreet
     backstreet_destination: int | None = None

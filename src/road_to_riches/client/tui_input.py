@@ -25,6 +25,14 @@ class InputRequestType(str, Enum):
     BUY_STOCK = "BUY_STOCK"
     SELL_STOCK = "SELL_STOCK"
     CANNON_TARGET = "CANNON_TARGET"
+    VACANT_PLOT_TYPE = "VACANT_PLOT_TYPE"
+    FORCED_BUYOUT = "FORCED_BUYOUT"
+    AUCTION_BID = "AUCTION_BID"
+    CHOOSE_SHOP_AUCTION = "CHOOSE_SHOP_AUCTION"
+    CHOOSE_SHOP_BUY = "CHOOSE_SHOP_BUY"
+    CHOOSE_SHOP_SELL = "CHOOSE_SHOP_SELL"
+    ACCEPT_OFFER = "ACCEPT_OFFER"
+    COUNTER_PRICE = "COUNTER_PRICE"
     LIQUIDATION = "LIQUIDATION"
 
 
@@ -191,6 +199,114 @@ class TuiPlayerInput(PlayerInput):
                 type=InputRequestType.CANNON_TARGET,
                 player_id=player_id,
                 data={"targets": targets},
+            )
+        )
+
+    def choose_vacant_plot_type(
+        self, state: GameState, player_id: int, square_id: int, options: list[str], log: GameLog
+    ) -> str:
+        self._flush_log(log)
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.VACANT_PLOT_TYPE,
+                player_id=player_id,
+                data={"square_id": square_id, "options": options},
+            )
+        )
+
+    def choose_forced_buyout(
+        self, state: GameState, player_id: int, square_id: int, cost: int, log: GameLog
+    ) -> bool:
+        self._flush_log(log)
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.FORCED_BUYOUT,
+                player_id=player_id,
+                data={"square_id": square_id, "cost": cost},
+            )
+        )
+
+    def choose_auction_bid(
+        self, state: GameState, player_id: int, square_id: int, min_bid: int, log: GameLog
+    ) -> int | None:
+        self._flush_log(log)
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.AUCTION_BID,
+                player_id=player_id,
+                data={
+                    "square_id": square_id,
+                    "min_bid": min_bid,
+                    "cash": state.get_player(player_id).ready_cash,
+                },
+            )
+        )
+
+    def choose_shop_to_auction(self, state: GameState, player_id: int, log: GameLog) -> int | None:
+        self._flush_log(log)
+        player = state.get_player(player_id)
+        shops = []
+        for sq_id in player.owned_properties:
+            sq = state.board.squares[sq_id]
+            shops.append({"square_id": sq_id, "value": sq.shop_current_value})
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.CHOOSE_SHOP_AUCTION,
+                player_id=player_id,
+                data={"shops": shops},
+            )
+        )
+
+    def choose_shop_to_buy(
+        self, state: GameState, player_id: int, log: GameLog
+    ) -> tuple[int, int, int] | None:
+        self._flush_log(log)
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.CHOOSE_SHOP_BUY,
+                player_id=player_id,
+                data={"cash": state.get_player(player_id).ready_cash},
+            )
+        )
+
+    def choose_shop_to_sell(
+        self, state: GameState, player_id: int, log: GameLog
+    ) -> tuple[int, int, int] | None:
+        self._flush_log(log)
+        player = state.get_player(player_id)
+        shops = []
+        for sq_id in player.owned_properties:
+            sq = state.board.squares[sq_id]
+            shops.append({"square_id": sq_id, "value": sq.shop_current_value})
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.CHOOSE_SHOP_SELL,
+                player_id=player_id,
+                data={"shops": shops},
+            )
+        )
+
+    def choose_accept_offer(
+        self, state: GameState, player_id: int, offer: dict, log: GameLog
+    ) -> str:
+        self._flush_log(log)
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.ACCEPT_OFFER,
+                player_id=player_id,
+                data={"offer": offer},
+            )
+        )
+
+    def choose_counter_price(
+        self, state: GameState, player_id: int, original_price: int, log: GameLog
+    ) -> int:
+        self._flush_log(log)
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.COUNTER_PRICE,
+                player_id=player_id,
+                data={"original_price": original_price},
             )
         )
 

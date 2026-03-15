@@ -15,9 +15,13 @@ from road_to_riches.events.game_events import (
     CloseShopsEvent,
     CollectSuitEvent,
     GainCommissionEvent,
+    PayCheckpointTollEvent,
     PayRentEvent,
+    PayTaxEvent,
     PromotionEvent,
+    RaiseCheckpointTollEvent,
     RotateSuitEvent,
+    TaxOfficeOwnerBonusEvent,
     WarpEvent,
 )
 from road_to_riches.models.board_state import SquareInfo
@@ -30,9 +34,11 @@ class PlayerAction(str, Enum):
     """An action the player can choose (not automatic)."""
 
     BUY_SHOP = "BUY_SHOP"
+    BUY_VACANT_PLOT = "BUY_VACANT_PLOT"
     INVEST = "INVEST"
     BUY_STOCK = "BUY_STOCK"
     SELL_STOCK = "SELL_STOCK"
+    FORCED_BUYOUT = "FORCED_BUYOUT"
     CHOOSE_CANNON_TARGET = "CHOOSE_CANNON_TARGET"
     NONE = "NONE"
 
@@ -54,10 +60,8 @@ def handle_pass(state: GameState, player_id: int, square: SquareInfo) -> SquareR
 
     if square.type == SquareType.BANK:
         player = state.get_player(player_id)
-        # Promotion check
         if player.has_all_suits:
             auto_events.append(PromotionEvent(player_id=player_id))
-        # Stock buying opportunity
         actions.append(PlayerAction.BUY_STOCK)
 
     elif square.type == SquareType.SUIT:
@@ -79,6 +83,24 @@ def handle_pass(state: GameState, player_id: int, square: SquareInfo) -> SquareR
             )
             info["warped_to"] = square.doorway_destination
 
+    elif square.type == SquareType.VP_CHECKPOINT:
+        if square.property_owner is not None:
+            if square.property_owner == player_id:
+                # Owner pass: raise toll
+                auto_events.append(RaiseCheckpointTollEvent(square_id=square.id))
+                info["toll_raised"] = True
+            else:
+                # Other player pass: pay toll (toll also raised inside event)
+                auto_events.append(
+                    PayCheckpointTollEvent(
+                        payer_id=player_id,
+                        owner_id=square.property_owner,
+                        square_id=square.id,
+                    )
+                )
+                info["toll"] = square.checkpoint_toll
+                info["owner_id"] = square.property_owner
+
     return SquareResult(auto_events=auto_events, available_actions=actions, info=info)
 
 
@@ -89,42 +111,62 @@ def handle_land(state: GameState, player_id: int, square: SquareInfo) -> SquareR
     info: dict = {"square_id": square.id, "square_type": square.type.value}
 
     if square.type == SquareType.BANK:
-        # Landing on bank also triggers pass effects (choose direction)
         player = state.get_player(player_id)
-        # Check win condition
         if state.net_worth(player) >= state.board.target_networth:
             info["can_win"] = True
 
     elif square.type == SquareType.SHOP:
+        _handle_shop_land(state, player_id, square, auto_events, actions, info)
+
+    elif square.type == SquareType.VACANT_PLOT:
         if square.property_owner is None:
-            # Unowned shop: player may buy it
             if square.shop_base_value is not None:
                 player = state.get_player(player_id)
                 if player.ready_cash >= square.shop_base_value:
-                    actions.append(PlayerAction.BUY_SHOP)
+                    actions.append(PlayerAction.BUY_VACANT_PLOT)
                     info["cost"] = square.shop_base_value
+                    info["options"] = [t.value for t in square.vacant_plot_options] or [
+                        SquareType.VP_CHECKPOINT.value,
+                        SquareType.VP_TAX_OFFICE.value,
+                    ]
 
-        elif square.property_owner == player_id:
-            # Own shop: may invest in any owned shop
-            actions.append(PlayerAction.INVEST)
-            investable = _get_investable_shops(state, player_id)
-            info["investable_shops"] = investable
-
-        else:
-            # Opponent's shop: pay rent
-            rent = current_rent(state.board, square)
-            auto_events.append(
-                PayRentEvent(
-                    payer_id=player_id,
-                    owner_id=square.property_owner,
-                    square_id=square.id,
+    elif square.type == SquareType.VP_CHECKPOINT:
+        if square.property_owner is not None:
+            if square.property_owner == player_id:
+                # Owner land: raise toll + may invest
+                auto_events.append(RaiseCheckpointTollEvent(square_id=square.id))
+                actions.append(PlayerAction.INVEST)
+                investable = _get_investable_shops(state, player_id)
+                info["investable_shops"] = investable
+                info["toll_raised"] = True
+            else:
+                # Other player land: pay toll (toll raised inside event)
+                auto_events.append(
+                    PayCheckpointTollEvent(
+                        payer_id=player_id,
+                        owner_id=square.property_owner,
+                        square_id=square.id,
+                    )
                 )
-            )
-            info["rent"] = rent
-            info["owner_id"] = square.property_owner
+                info["toll"] = square.checkpoint_toll
+                info["owner_id"] = square.property_owner
+
+    elif square.type == SquareType.VP_TAX_OFFICE:
+        if square.property_owner is not None:
+            if square.property_owner == player_id:
+                # Owner land: receive 4% of own net worth
+                auto_events.append(TaxOfficeOwnerBonusEvent(player_id=player_id))
+            else:
+                # Other player land: pay 4% net worth to owner
+                auto_events.append(
+                    PayTaxEvent(
+                        payer_id=player_id,
+                        owner_id=square.property_owner,
+                    )
+                )
+                info["owner_id"] = square.property_owner
 
     elif square.type == SquareType.SUIT:
-        # Landing on suit square: draw venture card (P1, placeholder)
         info["venture_card"] = True
 
     elif square.type == SquareType.VENTURE:
@@ -167,6 +209,52 @@ def handle_land(state: GameState, player_id: int, square: SquareInfo) -> SquareR
             ]
 
     return SquareResult(auto_events=auto_events, available_actions=actions, info=info)
+
+
+def _handle_shop_land(
+    state: GameState,
+    player_id: int,
+    square: SquareInfo,
+    auto_events: list,
+    actions: list[PlayerAction],
+    info: dict,
+) -> None:
+    """Handle landing on a SHOP square."""
+    if square.property_owner is None:
+        if square.shop_base_value is not None:
+            player = state.get_player(player_id)
+            if player.ready_cash >= square.shop_base_value:
+                actions.append(PlayerAction.BUY_SHOP)
+                info["cost"] = square.shop_base_value
+
+    elif square.property_owner == player_id:
+        actions.append(PlayerAction.INVEST)
+        investable = _get_investable_shops(state, player_id)
+        info["investable_shops"] = investable
+
+    else:
+        # Opponent's shop: pay rent
+        rent = current_rent(state.board, square)
+        auto_events.append(
+            PayRentEvent(
+                payer_id=player_id,
+                owner_id=square.property_owner,
+                square_id=square.id,
+            )
+        )
+        info["rent"] = rent
+        info["owner_id"] = square.property_owner
+
+        # Forced buyout option: 5x value
+        if square.shop_current_value is not None:
+            buyout_cost = square.shop_current_value * 5
+            player = state.get_player(player_id)
+            # Check affordability after rent (cash may go negative from rent,
+            # but forced buyout is checked against current cash)
+            if player.ready_cash - rent >= buyout_cost:
+                actions.append(PlayerAction.FORCED_BUYOUT)
+                info["buyout_cost"] = buyout_cost
+                info["buyout_value"] = square.shop_current_value
 
 
 def _get_investable_shops(state: GameState, player_id: int) -> list[dict]:
