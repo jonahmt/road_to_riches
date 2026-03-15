@@ -4,7 +4,7 @@ Last updated: 2026-03-14
 
 ## Overall Status
 
-**63 / 82** issues closed (77%)
+**65 / 82** issues closed (79%)
 
 ### P0 Epics — ALL COMPLETE
 
@@ -61,7 +61,7 @@ src/road_to_riches/
 └── main.py              # Entry point (--tui default, --text for stdin)
 
 boards/            # Board definition JSON files
-tests/             # 55 tests covering all game systems
+tests/             # 58 tests covering all game systems
 starter_code/      # Reference code (not used at runtime)
 ```
 
@@ -120,3 +120,9 @@ All P0 epics complete. P1 priority order:
 - Implemented multi-shop trade system with gold offset and counter-offer flow
 - 6 new tests (55 total): renovation (4), trade (2)
 - **63/82 issues closed (77%)**
+- Completed all TUI input handlers (vacant plot, forced buyout, auction, trade, renovation, etc.)
+- Added ScriptEvent system for extensible game effects via external Python scripts
+- Venture card placeholder: lands on venture/suit squares execute venture_placeholder.py (gives 100G)
+- Pre-roll menu now shows all options (auction, buy/sell shop, trade) in TUI
+- 3 new tests (58 total)
+- **65/82 issues closed (79%)** — game is now playable end-to-end via TUI
