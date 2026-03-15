@@ -4,9 +4,9 @@ Last updated: 2026-03-14
 
 ## Overall Status
 
-**46 / 82** issues closed (56%)
+**54 / 82** issues closed (66%)
 
-### P0 Epics
+### P0 Epics — ALL COMPLETE
 
 | Epic | Status | Notes |
 |------|--------|-------|
@@ -22,7 +22,7 @@ Last updated: 2026-03-14
 | P0 Square Types | **Done** | Bank, Shop, Suit, Venture, Take a Break, Boon, Boom, Roll On, Stockbroker |
 | Bankruptcy & Victory | **Done** | Bankruptcy detection, forced liquidation, victory at bank, game-over check |
 | Game Loop & PlayerInput | **Done** | GameLoop orchestrator, PlayerInput ABC, TextPlayerInput, main.py |
-| Terminal UI Client (P0) | Not started | Textual TUI: log, command input, info system, dice widget |
+| Terminal UI Client (P0) | **Done** | Textual TUI: scrollable log, command input, info panel, dice widget |
 
 ### P1 Epics
 
@@ -31,7 +31,7 @@ Last updated: 2026-03-14
 | Terminal UI Client (P0.5) | Not started | Game view grid, player info panel, stock overlay, board browsing |
 | Shop Exchanges & Forced Buyouts | Not started | Buy/sell/auction/trade, forced buyout at 5x |
 | Vacant Plots | Not started | Checkpoint, Tax Office, renovation |
-| P1 Square Types | Not started | Change of Suit, Suit Yourself, Backstreet, Doorway, Cannon, Switch |
+| P1 Square Types | **Done** | Change of Suit, Suit Yourself, Backstreet, Doorway, Cannon, Switch |
 | Stock Market P1 | Not started | Dividends, stock info viewing UI, price change animation |
 | Venture Card System | Not started | Card framework, starter deck of 15-20 cards |
 | Status Effects (P1) | Not started | Fixed Price X |
@@ -43,7 +43,7 @@ Last updated: 2026-03-14
 src/road_to_riches/
 ├── models/       # Data classes (GameState, PlayerState, BoardState, etc.)
 ├── events/       # Event system (registry, base class, pipeline)
-│   └── game_events.py  # All concrete events (buy, rent, invest, stock, promotion, etc.)
+│   └── game_events.py  # All concrete events (buy, rent, invest, stock, promotion, warp, etc.)
 ├── board/        # Board loading and pathfinding
 ├── engine/       # Game logic
 │   ├── turn.py          # Turn state machine + movement
@@ -55,20 +55,27 @@ src/road_to_riches/
 │   ├── bankruptcy.py    # Bankruptcy, liquidation, victory
 │   └── dice.py          # Dice rolling
 ├── client/
-│   └── text_input.py    # Stdin/stdout PlayerInput for testing
-└── main.py              # Entry point
+│   ├── text_input.py    # Stdin/stdout PlayerInput for testing
+│   ├── tui_input.py     # Threaded bridge between GameLoop and Textual
+│   └── tui_app.py       # Textual TUI application
+└── main.py              # Entry point (--tui default, --text for stdin)
 
 boards/            # Board definition JSON files
-tests/             # 25 tests covering all game systems
+tests/             # 35 tests covering all game systems
 starter_code/      # Reference code (not used at runtime)
 ```
 
 ## Next Up
 
-All P0 backend epics are complete. Remaining work:
+All P0 epics complete. P1 priority order:
 
-1. **Terminal UI Client (P0)** — Textual app with log, command input, info system, dice display
-2. **P1 features** — all unblocked and ready to implement
+1. **Venture Card System** — card framework + starter deck (many squares depend on this)
+2. **Vacant Plots** — Checkpoint, Tax Office, renovation
+3. **Shop Exchanges & Forced Buyouts** — trading, auction, forced buyout
+4. **Stock Market P1** — dividends, stock price animation
+5. **Status Effects (P1)** — Fixed Price X
+6. **Terminal UI Client (P0.5)** — game view grid, player info, stock overlay
+7. **Board Editor** — creation tool
 
 ## Session Log
 
@@ -88,3 +95,13 @@ All P0 backend epics are complete. Remaining work:
 - Built central game loop: GameLoop orchestrator, PlayerInput ABC, TextPlayerInput (stdin/stdout), main.py entry point
 - Refactored TurnEngine to route ALL events through EventPipeline (was executing inline)
 - Game is now playable end-to-end via `python -m road_to_riches.main`
+
+### Session 3 (2026-03-14)
+- Fixed promotion suit consumption: now consumes exactly 4 suits (real first, then wilds), keeping excess wilds
+- Implemented all P1 square types: Change of Suit, Suit Yourself, Backstreet, Doorway, Cannon
+- Added WarpEvent, RotateSuitEvent, CHOOSE_CANNON_TARGET action
+- Doorways don't consume move steps during movement
+- Built Textual TUI: threaded game loop bridge (TuiPlayerInput), scrollable log, command input with validation, info panel, dice widget
+- main.py supports --tui (default) and --text modes
+- **All P0 epics now complete** — 54/82 issues closed (66%)
+- 35 tests passing
