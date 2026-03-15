@@ -113,22 +113,25 @@ class TestRenderBoard:
         assert "BANK" in output
         assert "P0" in output
 
-    def test_connections_present(self):
-        """Board should have connecting lines between squares."""
+    def test_adjacent_cells_share_borders(self):
+        """Adjacent cells should share border characters (no gaps)."""
         state = self._make_state("boards/solo_board.json")
         output = render_board(state)
-        # Horizontal connections use ─
-        assert "─" in output
+        # Top-left corners merge: ┬ appears where horizontal cells meet
+        assert "┬" in output
+        # Side merges: ├ and ┤ appear where vertical cells meet
+        assert "├" in output
+        assert "┤" in output
 
     def test_board_dimensions_reasonable(self):
         state = self._make_state("boards/solo_board.json")
         output = render_board(state)
         lines = output.split("\n")
-        # Solo board is 4 columns x 4 rows of positions
-        # Should be roughly 4*CELL_W + 3*gap_h wide
         max_width = max(len(line) for line in lines)
-        assert max_width > CELL_W * 2  # at least 2 cells wide
-        assert max_width < 200  # not absurdly wide
+        # 4 cols: 4 * (CELL_W-1) + 1 = 33
+        assert max_width == 33
+        # 4 rows: 4 * (CELL_H-1) + 1 = 17
+        assert len(lines) == 17
 
     def test_ownership_shown_after_purchase(self):
         state = self._make_state("boards/solo_board.json")
@@ -139,12 +142,12 @@ class TestRenderBoard:
         output = render_board(state)
         assert "O0" in output  # Owner 0 shown
 
-    def test_multiple_squares_have_connections(self):
-        """Vertical and horizontal connections should both exist."""
+    def test_shared_borders_vertically(self):
+        """Vertically adjacent cells share borders too."""
         state = self._make_state("boards/solo_board.json")
         output = render_board(state)
-        assert "─" in output  # horizontal
-        assert "│" in output  # vertical
+        # ┼ appears where 4 cells meet at a corner
+        assert "┼" in output
 
     def test_empty_board(self):
         board, stock = load_board("boards/solo_board.json")
