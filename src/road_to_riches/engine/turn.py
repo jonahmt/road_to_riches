@@ -15,6 +15,7 @@ from road_to_riches.engine.dice import roll_dice
 from road_to_riches.engine.square_handler import SquareResult, handle_land, handle_pass
 from road_to_riches.engine.statuses import tick_board_statuses, tick_player_statuses
 from road_to_riches.events.game_events import apply_pending_stock_fluctuations
+from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.models.game_state import GameState
 
 
@@ -52,8 +53,9 @@ class TurnState:
 class TurnEngine:
     """Manages the turn lifecycle for a game."""
 
-    def __init__(self, state: GameState) -> None:
+    def __init__(self, state: GameState, pipeline: EventPipeline) -> None:
         self.state = state
+        self.pipeline = pipeline
         self.turn: TurnState | None = None
         self.pass_results: list[SquareResult] = []
         """Pass effects accumulated during movement (for client to display)."""
@@ -143,7 +145,8 @@ class TurnEngine:
 
         # Check bankruptcy (net worth < 0 after liquidation opportunity)
         if check_bankruptcy(self.state, player_id):
-            BankruptcyEvent(player_id=player_id).execute(self.state)
+            self.pipeline.enqueue(BankruptcyEvent(player_id=player_id))
+            self.pipeline.process_all(self.state)
 
         # Apply pending stock fluctuations
         stock_changes = apply_pending_stock_fluctuations(self.state)
@@ -169,15 +172,16 @@ class TurnEngine:
         """Get the land effects for the square the player ended on.
 
         Call this after the phase transitions to LANDED.
+        Auto-events are enqueued to the pipeline and processed immediately.
         """
         assert self.turn is not None
         assert self.turn.phase == TurnPhase.LANDED
         player = self.state.get_player(self.turn.player_id)
         square = self.state.board.squares[player.position]
         result = handle_land(self.state, self.turn.player_id, square)
-        # Auto-execute automatic events
         for event in result.auto_events:
-            event.execute(self.state)
+            self.pipeline.enqueue(event)
+        self.pipeline.process_all(self.state)
         return result
 
     def _move_to(self, square_id: int) -> None:
@@ -194,8 +198,8 @@ class TurnEngine:
         # Trigger pass effects on the new square
         square = self.state.board.squares[square_id]
         pass_result = handle_pass(self.state, self.turn.player_id, square)
-        # Auto-execute pass events (e.g. suit collection, promotion)
         for event in pass_result.auto_events:
-            event.execute(self.state)
+            self.pipeline.enqueue(event)
+        self.pipeline.process_all(self.state)
         if pass_result.auto_events or pass_result.available_actions:
             self.pass_results.append(pass_result)

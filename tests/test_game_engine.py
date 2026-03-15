@@ -22,6 +22,7 @@ from road_to_riches.events.game_events import (
     PromotionEvent,
     SellStockEvent,
 )
+from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
 from road_to_riches.models.suit import Suit
@@ -31,7 +32,8 @@ def _make_game() -> tuple[GameState, TurnEngine]:
     board, stock = load_board("boards/test_board.json")
     players = [PlayerState(player_id=i, position=0, ready_cash=1500) for i in range(4)]
     game = GameState(board=board, stock=stock, players=players)
-    return game, TurnEngine(game)
+    pipeline = EventPipeline()
+    return game, TurnEngine(game, pipeline)
 
 
 class TestBuyShop:
