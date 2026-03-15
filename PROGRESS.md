@@ -1,10 +1,10 @@
 # Road to Riches — Progress Tracker
 
-Last updated: 2026-03-12
+Last updated: 2026-03-14
 
 ## Overall Status
 
-**24 / 81** issues closed (30%)
+**45 / 81** issues closed (55%)
 
 ### P0 Epics
 
@@ -16,11 +16,11 @@ Last updated: 2026-03-12
 | Board System | **Done** | JSON board loader, waypoint pathfinding, 18-square test board |
 | Turn & Movement Engine | **Done** | Dice, step-by-step movement, intersection choices, end-of-turn |
 | Status Effects (P0) | **Done** | Commission, Closed, Discount/PriceHike with duration tracking |
-| Property System (P0) | Not started | Buying, rent (LUT formula), investment |
-| Stock Market System (P0) | Not started | Buy/sell, price calculation (value + fluctuation) |
-| Promotion System | Not started | Suit collection, promotion bonus at bank |
-| P0 Square Types | Not started | Bank, Shop, Suit, Venture, Take a Break, Boon, Roll On |
-| Bankruptcy & Victory | Not started | Bankruptcy detection, victory at bank, forced liquidation |
+| Property System (P0) | **Done** | Shop buying, rent (LUT formula), investment, stock value updates |
+| Stock Market System (P0) | **Done** | Buy/sell, price calc (value + fluctuation), pending fluctuation at EOT |
+| Promotion System | **Done** | Suit collection, promotion bonus (base + level + shop + comeback) |
+| P0 Square Types | **Done** | Bank, Shop, Suit, Venture, Take a Break, Boon, Boom, Roll On, Stockbroker |
+| Bankruptcy & Victory | **Done** | Bankruptcy detection, forced liquidation, victory at bank, game-over check |
 | Terminal UI Client (P0) | Not started | Textual TUI: log, command input, info system, dice widget |
 
 ### P1 Epics
@@ -30,7 +30,7 @@ Last updated: 2026-03-12
 | Terminal UI Client (P0.5) | Not started | Game view grid, player info panel, stock overlay, board browsing |
 | Shop Exchanges & Forced Buyouts | Not started | Buy/sell/auction/trade, forced buyout at 5x |
 | Vacant Plots | Not started | Checkpoint, Tax Office, renovation |
-| P1 Square Types | Not started | Change of Suit, Suit Yourself, Boom, Backstreet, Doorway, Cannon, Switch, Stockbroker |
+| P1 Square Types | Not started | Change of Suit, Suit Yourself, Backstreet, Doorway, Cannon, Switch |
 | Stock Market P1 | Not started | Dividends, stock info viewing UI, price change animation |
 | Venture Card System | Not started | Card framework, starter deck of 15-20 cards |
 | Status Effects (P1) | Not started | Fixed Price X |
@@ -42,25 +42,29 @@ Last updated: 2026-03-12
 src/road_to_riches/
 ├── models/       # Data classes (GameState, PlayerState, BoardState, etc.)
 ├── events/       # Event system (registry, base class, pipeline)
+│   └── game_events.py  # All concrete events (buy, rent, invest, stock, promotion, etc.)
 ├── board/        # Board loading and pathfinding
-├── engine/       # Game logic (turn engine, dice, statuses)
+├── engine/       # Game logic
+│   ├── turn.py          # Turn state machine + movement
+│   ├── square_handler.py # Pass/land effects for each square type
+│   ├── property.py      # Rent/max capital formulas
+│   ├── lut.py           # Lookup tables for rent/max cap multipliers
+│   ├── statuses.py      # Status effect processing
+│   ├── bankruptcy.py    # Bankruptcy, liquidation, victory
+│   └── dice.py          # Dice rolling
 └── client/       # TUI client (not yet implemented)
 
 boards/            # Board definition JSON files
-tests/             # Test suite (not yet populated)
+tests/             # 25 tests covering all game systems
 starter_code/      # Reference code (not used at runtime)
 ```
 
 ## Next Up
 
-The following systems need to be built next, roughly in this order:
+All P0 backend epics are complete. Remaining work:
 
-1. **Property System** — shop buying, rent with LUT formulas, investment
-2. **Stock Market** — buy/sell mechanics, price calculation
-3. **Promotion System** — suit collection, promotion bonus
-4. **P0 Square Types** — wire up all the above into actual square behaviors
-5. **Bankruptcy & Victory** — game end conditions
-6. **Terminal UI** — make it playable
+1. **Terminal UI Client (P0)** — Textual app with log, command input, info system, dice display
+2. **P1 features** — all unblocked and ready to implement
 
 ## Session Log
 
@@ -69,3 +73,11 @@ The following systems need to be built next, roughly in this order:
 - Implemented 6 P0 epics: project setup, data models, event system, board system, turn engine, status effects
 - Created test board with 18 squares across 3 districts
 - All code passes ruff lint and format checks
+
+### Session 2 (2026-03-14)
+- Implemented 5 more P0 epics: property system, stock market, promotion, P0 square types, bankruptcy & victory
+- All game mechanics now event-driven via GameEvent subclasses
+- Square handler dispatches pass/land effects and produces events + player action choices
+- Turn engine auto-executes pass events during movement and land events on arrival
+- 25 tests covering: shop buy/rent/invest, stock buy/sell/fluctuation, suit collection, promotion bonus, bankruptcy, victory, forced liquidation, turn engine integration
+- **All 11 P0 backend epics are now complete** — only TUI remains for P0
