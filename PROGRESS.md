@@ -4,7 +4,7 @@ Last updated: 2026-03-14
 
 ## Overall Status
 
-**61 / 82** issues closed (74%)
+**63 / 82** issues closed (77%)
 
 ### P0 Epics — ALL COMPLETE
 
@@ -29,8 +29,8 @@ Last updated: 2026-03-14
 | Epic | Status | Notes |
 |------|--------|-------|
 | Terminal UI Client (P0.5) | Not started | Game view grid, player info panel, stock overlay, board browsing |
-| Shop Exchanges & Forced Buyouts | **Mostly done** | Forced buyout, auction, buy/sell negotiation done. Multi-shop trade in progress. |
-| Vacant Plots | **Mostly done** | Checkpoint and Tax Office done. Renovation not yet wired up. |
+| Shop Exchanges & Forced Buyouts | **Done** | Forced buyout, auction, buy/sell negotiation, multi-shop trade |
+| Vacant Plots | **Done** | Checkpoint, Tax Office, renovation |
 | P1 Square Types | **Done** | Change of Suit, Suit Yourself, Backstreet, Doorway, Cannon, Switch |
 | Stock Market P1 | Not started | Dividends, stock info viewing UI, price change animation |
 | Venture Card System | Not started | Card framework, starter deck of 15-20 cards |
@@ -61,7 +61,7 @@ src/road_to_riches/
 └── main.py              # Entry point (--tui default, --text for stdin)
 
 boards/            # Board definition JSON files
-tests/             # 49 tests covering all game systems
+tests/             # 55 tests covering all game systems
 starter_code/      # Reference code (not used at runtime)
 ```
 
@@ -116,3 +116,7 @@ All P0 epics complete. P1 priority order:
 - Added all new PlayerInput methods to TextPlayerInput and TuiPlayerInput
 - 14 new tests (49 total): vacant plots (8), shop exchanges (6)
 - **61/82 issues closed (74%)**
+- Implemented property renovation (checkpoint ↔ tax office) with 75% refund / 100% cost
+- Implemented multi-shop trade system with gold offset and counter-offer flow
+- 6 new tests (55 total): renovation (4), trade (2)
+- **63/82 issues closed (77%)**
