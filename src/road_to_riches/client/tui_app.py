@@ -217,7 +217,7 @@ class GameApp(App):
                 self.player_input.submit_response(response)
 
         elif req.type == InputRequestType.CONFIRM_STOP:
-            if key in ("s", " ", "\r", "\n"):
+            if key in ("y", " ", "\r", "\n"):
                 event.prevent_default()
                 event.stop()
                 self._current_request = None
@@ -328,7 +328,7 @@ class GameApp(App):
             self._enter_keypress_mode()
             prompt.prompt_text = (
                 f"Stop on sq{req.data['square_id']} ({sq_type})? "
-                f"\\[S]top{undo_hint}"
+                f"\\[Y]es{undo_hint}"
             )
             return  # skip inp.focus() — Input is hidden
 
