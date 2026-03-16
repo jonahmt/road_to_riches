@@ -145,6 +145,7 @@ class GameApp(App):
         self.game_loop: GameLoop | None = None
         self._current_request: InputRequest | None = None
         self._info_visible = False
+        self._log_messages: list[str] = []
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -172,8 +173,16 @@ class GameApp(App):
 
     @on(LogMessage)
     def handle_log_message(self, event: LogMessage) -> None:
+        self._log_messages.append(event.text)
         log_widget = self.query_one("#game-log", RichLog)
-        log_widget.write(event.text)
+        log_widget.clear()
+        # Show last N messages, highlight only the last one
+        visible = self._log_messages[-20:]
+        for i, msg in enumerate(visible):
+            if i == len(visible) - 1:
+                log_widget.write(f"[bold bright_white]{msg}[/]")
+            else:
+                log_widget.write(f"[dim]{msg}[/]")
         self._refresh_board()
         self._refresh_player_info()
 
@@ -695,7 +704,14 @@ class GameApp(App):
                 continue
             color = PLAYER_COLORS[p.player_id % len(PLAYER_COLORS)]
             nw = state.net_worth(p)
-            suit_str = " ".join(s[:1] for s in p.suits) if p.suits else "-"
+            suit_symbols = {
+                "SPADE": "♠", "HEART": "♥", "DIAMOND": "♦",
+                "CLUB": "♣", "WILD": "★",
+            }
+            suit_str = " ".join(
+                suit_symbols.get(s.value if hasattr(s, "value") else s, "?")
+                for s in p.suits
+            ) if p.suits else "-"
             parts.append(
                 f"[{color}]P{p.player_id}[/{color}] "
                 f"Lv{p.level} ${p.ready_cash} NW:{nw} "
