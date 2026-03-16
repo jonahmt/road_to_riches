@@ -156,8 +156,7 @@ class TurnEngine:
         # Restore player state that may have been changed by pass effects
         saved_player = snapshot.state_snapshot["player"]
         player.ready_cash = saved_player["ready_cash"]
-        player.suits = list(saved_player["suits"])
-        player.has_all_suits = saved_player["has_all_suits"]
+        player.suits = dict(saved_player["suits"])
         player.level = saved_player["level"]
 
         # Restore other players' state (e.g. if checkpoint toll was paid)
@@ -239,8 +238,7 @@ class TurnEngine:
         # Snapshot current player
         player_snap = {
             "ready_cash": player.ready_cash,
-            "suits": list(player.suits),
-            "has_all_suits": player.has_all_suits,
+            "suits": dict(player.suits),
             "level": player.level,
         }
 
