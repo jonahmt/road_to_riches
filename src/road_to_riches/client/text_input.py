@@ -43,21 +43,46 @@ class TextPlayerInput(PlayerInput):
                 print("  Invalid choice.")
 
     def choose_path(
-        self, state: GameState, player_id: int, choices: list[int], log: GameLog
-    ) -> int:
+        self, state: GameState, player_id: int, choices: list[int],
+        remaining: int, can_undo: bool, log: GameLog,
+    ) -> int | str:
         self.notify(state, log)
         descs = []
         for sq_id in choices:
             sq = state.board.squares[sq_id]
             descs.append(f"{sq_id} ({sq.type.value})")
-        print(f"  Choose path: {', '.join(descs)}")
+        print(f"  {remaining} moves remaining. Choose next square: {', '.join(descs)}")
+        if can_undo:
+            print("  (Type U to undo last move)")
         while True:
+            raw = input("  > Square ID: ").strip().upper()
+            if raw in ("U", "UNDO") and can_undo:
+                return "undo"
             try:
-                choice = int(input("  > Square ID: ").strip())
+                choice = int(raw)
                 if choice in choices:
                     return choice
             except ValueError:
                 pass
+            print("  Invalid choice.")
+
+    def confirm_stop(
+        self, state: GameState, player_id: int, square_id: int,
+        can_undo: bool, log: GameLog,
+    ) -> bool:
+        self.notify(state, log)
+        sq = state.board.squares[square_id]
+        print(f"  Stop on square {square_id} ({sq.type.value})?")
+        if can_undo:
+            print("  [S]top here / [U]ndo last move")
+        else:
+            print("  [S]top here")
+        while True:
+            raw = input("  > ").strip().upper()
+            if raw in ("S", "STOP", "Y", "YES", ""):
+                return True
+            if raw in ("U", "UNDO") and can_undo:
+                return False
             print("  Invalid choice.")
 
     def choose_buy_shop(

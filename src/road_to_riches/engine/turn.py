@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 from road_to_riches.board.pathfinding import get_next_squares
 from road_to_riches.engine.bankruptcy import (
@@ -39,6 +40,17 @@ class MoveStep:
 
 
 @dataclass
+class MoveSnapshot:
+    """Snapshot of state before a move step, used for undo."""
+
+    player_position: int
+    player_from_square: int | None
+    remaining_moves: int
+    pass_results_len: int
+    state_snapshot: Any  # deep copy of relevant state
+
+
+@dataclass
 class TurnState:
     """Tracks the state of the current turn."""
 
@@ -49,6 +61,8 @@ class TurnState:
     path_taken: list[MoveStep] = field(default_factory=list)
     pending_choices: list[int] = field(default_factory=list)
     """Square IDs the player can choose between at an intersection."""
+    move_snapshots: list[MoveSnapshot] = field(default_factory=list)
+    """Snapshots for undoing moves."""
 
 
 class TurnEngine:
@@ -71,7 +85,7 @@ class TurnEngine:
     def do_roll(self) -> int:
         """Roll the dice and transition to MOVING phase."""
         assert self.turn is not None
-        assert self.turn.phase == TurnPhase.PRE_ROLL
+        assert self.turn.phase in (TurnPhase.PRE_ROLL, TurnPhase.LANDED)
 
         result = roll_dice(self.state.board.max_dice_roll)
         self.turn.dice_roll = result
@@ -80,10 +94,9 @@ class TurnEngine:
         return result
 
     def advance_move(self) -> TurnPhase:
-        """Attempt to move one step. Returns the resulting phase.
+        """Present available next squares to the player.
 
-        If there's exactly one next square, move there automatically.
-        If there are multiple choices, transition to CHOOSING_PATH.
+        Always transitions to CHOOSING_PATH so the player picks each step.
         If no moves remain, transition to LANDED.
         """
         assert self.turn is not None
@@ -97,19 +110,12 @@ class TurnEngine:
         next_squares = get_next_squares(self.state.board, player.position, player.from_square)
 
         if len(next_squares) == 0:
-            # Dead end — shouldn't happen on a well-formed board
             self.turn.phase = TurnPhase.LANDED
             return TurnPhase.LANDED
-        elif len(next_squares) == 1:
-            self._move_to(next_squares[0])
-            if self.turn.remaining_moves <= 0:
-                self.turn.phase = TurnPhase.LANDED
-                return TurnPhase.LANDED
-            return TurnPhase.MOVING
-        else:
-            self.turn.pending_choices = next_squares
-            self.turn.phase = TurnPhase.CHOOSING_PATH
-            return TurnPhase.CHOOSING_PATH
+
+        self.turn.pending_choices = next_squares
+        self.turn.phase = TurnPhase.CHOOSING_PATH
+        return TurnPhase.CHOOSING_PATH
 
     def choose_path(self, square_id: int) -> TurnPhase:
         """Player chooses which direction to go at an intersection."""
@@ -127,12 +133,52 @@ class TurnEngine:
         self.turn.phase = TurnPhase.MOVING
         return TurnPhase.MOVING
 
-    def check_end_of_turn_liquidation(self) -> bool:
-        """Check if the current player needs to liquidate assets.
+    @property
+    def can_undo(self) -> bool:
+        """Whether the player can undo the last move step."""
+        if self.turn is None:
+            return False
+        return len(self.turn.move_snapshots) > 0
 
-        Call this before end_turn(). If True, the game loop should prompt
-        the player to sell assets until cash >= 0, then call end_turn().
-        """
+    def undo_move(self) -> None:
+        """Undo the last move step, restoring state from snapshot."""
+        assert self.turn is not None
+        assert self.can_undo
+
+        snapshot = self.turn.move_snapshots.pop()
+        self.turn.path_taken.pop()
+
+        player = self.state.get_player(self.turn.player_id)
+        player.position = snapshot.player_position
+        player.from_square = snapshot.player_from_square
+        self.turn.remaining_moves = snapshot.remaining_moves
+
+        # Restore player state that may have been changed by pass effects
+        saved_player = snapshot.state_snapshot["player"]
+        player.ready_cash = saved_player["ready_cash"]
+        player.suits = list(saved_player["suits"])
+        player.has_all_suits = saved_player["has_all_suits"]
+        player.level = saved_player["level"]
+
+        # Restore other players' state (e.g. if checkpoint toll was paid)
+        for p_snap in snapshot.state_snapshot.get("other_players", []):
+            other = self.state.get_player(p_snap["player_id"])
+            other.ready_cash = p_snap["ready_cash"]
+
+        # Restore board state (e.g. checkpoint tolls, suit rotations)
+        for sq_snap in snapshot.state_snapshot.get("squares", []):
+            sq = self.state.board.squares[sq_snap["id"]]
+            sq.checkpoint_toll = sq_snap["checkpoint_toll"]
+            if sq_snap.get("suit") is not None:
+                sq.suit = sq_snap["suit"]
+
+        # Trim pass_results back
+        self.pass_results = self.pass_results[:snapshot.pass_results_len]
+
+        self.turn.phase = TurnPhase.MOVING
+
+    def check_end_of_turn_liquidation(self) -> bool:
+        """Check if the current player needs to liquidate assets."""
         assert self.turn is not None
         return needs_liquidation(self.state, self.turn.player_id)
 
@@ -185,11 +231,58 @@ class TurnEngine:
         self.pipeline.process_all(self.state)
         return result
 
-    def _move_to(self, square_id: int) -> None:
-        """Move the player to a square, trigger pass effects, update tracking."""
+    def _snapshot_state(self) -> MoveSnapshot:
+        """Create a snapshot of current state before a move step."""
         assert self.turn is not None
         player = self.state.get_player(self.turn.player_id)
 
+        # Snapshot current player
+        player_snap = {
+            "ready_cash": player.ready_cash,
+            "suits": list(player.suits),
+            "has_all_suits": player.has_all_suits,
+            "level": player.level,
+        }
+
+        # Snapshot other players (for checkpoint tolls paid to them)
+        other_snaps = []
+        for p in self.state.players:
+            if p.player_id != self.turn.player_id:
+                other_snaps.append({
+                    "player_id": p.player_id,
+                    "ready_cash": p.ready_cash,
+                })
+
+        # Snapshot board squares (checkpoint tolls, suit rotations)
+        sq_snaps = []
+        for sq in self.state.board.squares:
+            sq_snaps.append({
+                "id": sq.id,
+                "checkpoint_toll": sq.checkpoint_toll,
+                "suit": sq.suit,
+            })
+
+        return MoveSnapshot(
+            player_position=player.position,
+            player_from_square=player.from_square,
+            remaining_moves=self.turn.remaining_moves,
+            pass_results_len=len(self.pass_results),
+            state_snapshot={
+                "player": player_snap,
+                "other_players": other_snaps,
+                "squares": sq_snaps,
+            },
+        )
+
+    def _move_to(self, square_id: int) -> None:
+        """Move the player to a square, trigger pass effects, update tracking."""
+        assert self.turn is not None
+
+        # Save snapshot before moving (for undo)
+        snapshot = self._snapshot_state()
+        self.turn.move_snapshots.append(snapshot)
+
+        player = self.state.get_player(self.turn.player_id)
         self.turn.path_taken.append(MoveStep(square_id=square_id, from_id=player.position))
 
         player.from_square = player.position
@@ -209,8 +302,6 @@ class TurnEngine:
 
         # If doorway warped the player, update position tracking
         if square.type == SquareType.DOORWAY and square.doorway_destination is not None:
-            # Player was warped by WarpEvent in pass effects
-            # Continue movement from the destination
             pass
 
         if pass_result.auto_events or pass_result.available_actions:

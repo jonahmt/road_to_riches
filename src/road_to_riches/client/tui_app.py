@@ -77,10 +77,10 @@ class GameApp(App):
         margin: 0 1;
     }
 
-    #status-panel {
+    #player-info {
         width: 1fr;
         height: 7;
-        padding: 1;
+        padding: 0 1;
     }
 
     #board-view {
@@ -132,6 +132,12 @@ class GameApp(App):
             super().__init__()
             self.winner = winner
 
+    class DiceUpdate(Message):
+        def __init__(self, value: int, remaining: int) -> None:
+            super().__init__()
+            self.value = value
+            self.remaining = remaining
+
     def __init__(self, config: GameConfig) -> None:
         super().__init__()
         self.config = config
@@ -144,8 +150,8 @@ class GameApp(App):
         with Vertical():
             with Horizontal(id="top-bar"):
                 yield DiceWidget(id="dice-panel")
-                yield Static("Road to Riches", id="status-panel")
-            yield Static("(loading board...)", id="board-view")
+                yield Static("", id="player-info")
+            yield RichLog(id="board-view", wrap=False, markup=True, auto_scroll=False)
             yield RichLog(id="game-log", wrap=True, markup=True)
             yield RichLog(id="info-area", wrap=True, markup=True)
             yield PromptBar(id="prompt-bar")
@@ -153,17 +159,29 @@ class GameApp(App):
 
     def on_mount(self) -> None:
         self.player_input.set_log_callback(self._on_game_log)
+        self.player_input.set_dice_callback(self._on_dice_update)
         self._start_game()
 
     def _on_game_log(self, msg: str) -> None:
         """Called from game thread — post message to UI thread."""
         self.post_message(self.LogMessage(msg))
 
+    def _on_dice_update(self, value: int, remaining: int) -> None:
+        """Called from game thread to update dice display."""
+        self.post_message(self.DiceUpdate(value, remaining))
+
     @on(LogMessage)
     def handle_log_message(self, event: LogMessage) -> None:
         log_widget = self.query_one("#game-log", RichLog)
         log_widget.write(event.text)
         self._refresh_board()
+        self._refresh_player_info()
+
+    @on(DiceUpdate)
+    def handle_dice_update(self, event: DiceUpdate) -> None:
+        dice = self.query_one("#dice-panel", DiceWidget)
+        dice.value = event.value
+        dice.remaining = event.remaining
 
     @on(InputReady)
     def handle_input_ready(self, event: InputReady) -> None:
@@ -205,11 +223,25 @@ class GameApp(App):
 
         elif req.type == InputRequestType.CHOOSE_PATH:
             choices = req.data["choices"]
+            remaining = req.data.get("remaining", 0)
+            can_undo = req.data.get("can_undo", False)
             parts = [f"{c['square_id']} ({c['type']})" for c in choices]
+            undo_hint = ", \\[U]ndo" if can_undo else ""
             prompt.prompt_text = (
-                f"Select path: {', '.join(parts)}"
+                f"\\[{remaining}] remaining | "
+                f"Move to: {', '.join(parts)}{undo_hint}"
             )
-            inp.placeholder = "Enter square ID"
+            inp.placeholder = "Square ID" + (" / U" if can_undo else "")
+
+        elif req.type == InputRequestType.CONFIRM_STOP:
+            can_undo = req.data.get("can_undo", False)
+            sq_type = req.data.get("square_type", "")
+            undo_hint = ", \\[U]ndo" if can_undo else ""
+            prompt.prompt_text = (
+                f"Stop on sq{req.data['square_id']} ({sq_type})? "
+                f"\\[S]top{undo_hint}"
+            )
+            inp.placeholder = "S" + (" / U" if can_undo else "")
 
         elif req.type == InputRequestType.BUY_SHOP:
             prompt.prompt_text = (
@@ -402,7 +434,16 @@ class GameApp(App):
                 return "trade"
             return None
 
+        if req.type == InputRequestType.CONFIRM_STOP:
+            if v in ("S", "STOP", "Y", "YES", ""):
+                return True
+            if v in ("U", "UNDO") and req.data.get("can_undo"):
+                return False
+            return None
+
         if req.type == InputRequestType.CHOOSE_PATH:
+            if v in ("U", "UNDO") and req.data.get("can_undo"):
+                return "undo"
             try:
                 sq_id = int(value)
                 valid_ids = [
@@ -631,11 +672,37 @@ class GameApp(App):
         """Re-render the board view from current game state."""
         if self.game_loop is None:
             return
-        from road_to_riches.client.board_renderer import render_board
+        try:
+            from road_to_riches.client.board_renderer import render_board
 
-        board_text = render_board(self.game_loop.state)
-        board_widget = self.query_one("#board-view", Static)
-        board_widget.update(board_text)
+            board_text = render_board(self.game_loop.state)
+            board_widget = self.query_one("#board-view", RichLog)
+            board_widget.clear()
+            for line in board_text.split("\n"):
+                board_widget.write(line)
+        except Exception as e:
+            log_widget = self.query_one("#game-log", RichLog)
+            log_widget.write(f"[red]Board render error: {e}[/red]")
+
+    def _refresh_player_info(self) -> None:
+        """Update the always-visible player info panel."""
+        if self.game_loop is None:
+            return
+        state = self.game_loop.state
+        parts = []
+        for p in state.players:
+            if p.bankrupt:
+                continue
+            color = PLAYER_COLORS[p.player_id % len(PLAYER_COLORS)]
+            nw = state.net_worth(p)
+            suit_str = " ".join(s[:1] for s in p.suits) if p.suits else "-"
+            parts.append(
+                f"[{color}]P{p.player_id}[/{color}] "
+                f"Lv{p.level} ${p.ready_cash} NW:{nw} "
+                f"Suits:{suit_str}"
+            )
+        info_widget = self.query_one("#player-info", Static)
+        info_widget.update("\n".join(parts))
 
     def _show_info(self) -> None:
         """Toggle the info panel with game state."""

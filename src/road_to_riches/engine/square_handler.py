@@ -227,10 +227,8 @@ def _handle_shop_land(
     """Handle landing on a SHOP square."""
     if square.property_owner is None:
         if square.shop_base_value is not None:
-            player = state.get_player(player_id)
-            if player.ready_cash >= square.shop_base_value:
-                actions.append(PlayerAction.BUY_SHOP)
-                info["cost"] = square.shop_base_value
+            actions.append(PlayerAction.BUY_SHOP)
+            info["cost"] = square.shop_base_value
 
     elif square.property_owner == player_id:
         actions.append(PlayerAction.INVEST)

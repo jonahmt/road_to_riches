@@ -227,6 +227,15 @@ class TestPromotion:
         assert len(game.players[0].suits) == 0
 
 
+def _auto_move(engine):
+    """Advance movement choosing the first path each step until landed."""
+    turn = engine.turn
+    while turn.phase == TurnPhase.MOVING:
+        phase = engine.advance_move()
+        if phase == TurnPhase.CHOOSING_PATH:
+            engine.choose_path(turn.pending_choices[0])
+
+
 class TestTurnEngine:
     def test_full_turn_cycle(self):
         random.seed(99)
@@ -239,8 +248,7 @@ class TestTurnEngine:
         roll = engine.do_roll()
         assert 1 <= roll <= 6
 
-        while turn.phase == TurnPhase.MOVING:
-            engine.advance_move()
+        _auto_move(engine)
 
         assert turn.phase == TurnPhase.LANDED
         land = engine.get_land_result()
@@ -252,11 +260,10 @@ class TestTurnEngine:
     def test_suit_collected_during_pass(self):
         random.seed(42)  # rolls 6, passes square 3 (spade suit)
         game, engine = _make_game()
-        turn = engine.start_turn()
+        engine.start_turn()
         engine.do_roll()
 
-        while turn.phase == TurnPhase.MOVING:
-            engine.advance_move()
+        _auto_move(engine)
 
         assert Suit.SPADE in game.players[0].suits
 

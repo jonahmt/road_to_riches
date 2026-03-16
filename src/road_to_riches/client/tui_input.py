@@ -35,6 +35,7 @@ class InputRequestType(str, Enum):
     COUNTER_PRICE = "COUNTER_PRICE"
     RENOVATE = "RENOVATE"
     TRADE = "TRADE"
+    CONFIRM_STOP = "CONFIRM_STOP"
     LIQUIDATION = "LIQUIDATION"
 
 
@@ -63,9 +64,17 @@ class TuiPlayerInput(PlayerInput):
         self._request_ready = threading.Event()
         self._response_ready = threading.Event()
         self._log_callback: Any = None  # set by the TUI app
+        self._dice_callback: Any = None
 
     def set_log_callback(self, callback: Any) -> None:
         self._log_callback = callback
+
+    def set_dice_callback(self, callback: Any) -> None:
+        self._dice_callback = callback
+
+    def _notify_dice(self, value: int, remaining: int) -> None:
+        if self._dice_callback:
+            self._dice_callback(value, remaining)
 
     def _flush_log(self, log: GameLog) -> None:
         if self._log_callback and log.messages:
@@ -114,8 +123,9 @@ class TuiPlayerInput(PlayerInput):
         )
 
     def choose_path(
-        self, state: GameState, player_id: int, choices: list[int], log: GameLog
-    ) -> int:
+        self, state: GameState, player_id: int, choices: list[int],
+        remaining: int, can_undo: bool, log: GameLog,
+    ) -> int | str:
         self._flush_log(log)
         descs = []
         for sq_id in choices:
@@ -125,7 +135,11 @@ class TuiPlayerInput(PlayerInput):
             InputRequest(
                 type=InputRequestType.CHOOSE_PATH,
                 player_id=player_id,
-                data={"choices": descs},
+                data={
+                    "choices": descs,
+                    "remaining": remaining,
+                    "can_undo": can_undo,
+                },
             )
         )
 
@@ -355,5 +369,26 @@ class TuiPlayerInput(PlayerInput):
             )
         )
 
+    def confirm_stop(
+        self, state: GameState, player_id: int, square_id: int,
+        can_undo: bool, log: GameLog,
+    ) -> bool:
+        self._flush_log(log)
+        sq = state.board.squares[square_id]
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.CONFIRM_STOP,
+                player_id=player_id,
+                data={
+                    "square_id": square_id,
+                    "square_type": sq.type.value,
+                    "can_undo": can_undo,
+                },
+            )
+        )
+
     def notify(self, state: GameState, log: GameLog) -> None:
         self._flush_log(log)
+
+    def notify_dice(self, value: int, remaining: int) -> None:
+        self._notify_dice(value, remaining)

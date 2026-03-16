@@ -69,9 +69,17 @@ class PlayerInput(ABC):
 
     @abstractmethod
     def choose_path(
-        self, state: GameState, player_id: int, choices: list[int], log: GameLog
-    ) -> int:
-        """Choose which square to move to at an intersection. Return a square_id."""
+        self, state: GameState, player_id: int, choices: list[int],
+        remaining: int, can_undo: bool, log: GameLog,
+    ) -> int | str:
+        """Choose which square to move to. Return a square_id or 'undo'."""
+
+    @abstractmethod
+    def confirm_stop(
+        self, state: GameState, player_id: int, square_id: int,
+        can_undo: bool, log: GameLog,
+    ) -> bool:
+        """Confirm stopping on this square. Return True to stop, False to undo."""
 
     @abstractmethod
     def choose_buy_shop(
@@ -185,11 +193,15 @@ class PlayerInput(ABC):
     def notify(self, state: GameState, log: GameLog) -> None:
         """Display accumulated log messages to the player."""
 
+    def notify_dice(self, value: int, remaining: int) -> None:
+        """Notify the UI of dice roll / remaining moves. Override if needed."""
+
 
 class GameLoop:
     """Central game orchestrator. Drives everything through the event pipeline."""
 
     def __init__(self, config: GameConfig, player_input: PlayerInput) -> None:
+        self.config = config
         board, stock = load_board(config.board_path)
         players = [
             PlayerState(
@@ -231,6 +243,7 @@ class GameLoop:
         # Roll dice
         roll = self.engine.do_roll()
         self.log.log(f"Player {turn.player_id} rolls a {roll}!")
+        self.input.notify_dice(roll, roll)
         self.input.notify(self.state, self.log)
 
         # Movement phase
@@ -256,6 +269,7 @@ class GameLoop:
             self.input.notify(self.state, self.log)
             roll = self.engine.do_roll()
             self.log.log(f"Player {turn.player_id} rolls a {roll}!")
+            self.input.notify_dice(roll, roll)
             self.input.notify(self.state, self.log)
             self._movement_phase(turn.player_id)
 
@@ -334,12 +348,55 @@ class GameLoop:
 
     def _movement_phase(self, player_id: int) -> None:
         assert self.engine.turn is not None
-        while self.engine.turn.phase == TurnPhase.MOVING:
-            phase = self.engine.advance_move()
-            if phase == TurnPhase.CHOOSING_PATH:
-                choices = self.engine.turn.pending_choices
-                choice = self.input.choose_path(self.state, player_id, choices, self.log)
-                self.engine.choose_path(choice)
+        while True:
+            turn = self.engine.turn
+            if turn.phase == TurnPhase.MOVING:
+                phase = self.engine.advance_move()
+                if phase == TurnPhase.CHOOSING_PATH:
+                    choices = turn.pending_choices
+                    remaining = turn.remaining_moves
+                    can_undo = self.engine.can_undo
+                    choice = self.input.choose_path(
+                        self.state, player_id, choices, remaining, can_undo,
+                        self.log,
+                    )
+                    if choice == "undo":
+                        self.engine.undo_move()
+                        self.log.log("Move undone.")
+                        self.input.notify_dice(turn.dice_roll, turn.remaining_moves)
+                        self.input.notify(self.state, self.log)
+                    else:
+                        self.engine.choose_path(choice)
+                        player = self.state.get_player(player_id)
+                        sq = self.state.board.squares[player.position]
+                        self.log.log(
+                            f"Moved to square {sq.id} ({sq.type.value}). "
+                            f"{turn.remaining_moves} remaining."
+                        )
+                        self.input.notify_dice(turn.dice_roll, turn.remaining_moves)
+                        self.input.notify(self.state, self.log)
+                elif phase == TurnPhase.LANDED:
+                    # 0 moves remaining — ask player to confirm or undo
+                    pass  # fall through to confirmation below
+                else:
+                    break
+
+            if turn.phase == TurnPhase.LANDED:
+                can_undo = self.engine.can_undo
+                if not can_undo:
+                    break  # nothing to undo, auto-confirm
+                player = self.state.get_player(player_id)
+                sq = self.state.board.squares[player.position]
+                confirmed = self.input.confirm_stop(
+                    self.state, player_id, sq.id, can_undo, self.log,
+                )
+                if confirmed:
+                    break
+                else:
+                    self.engine.undo_move()
+                    self.log.log("Move undone.")
+                    self.input.notify_dice(turn.dice_roll, turn.remaining_moves)
+                    self.input.notify(self.state, self.log)
 
     def _handle_pass_actions(self, player_id: int, result: SquareResult) -> None:
         if PlayerAction.BUY_STOCK in result.available_actions:

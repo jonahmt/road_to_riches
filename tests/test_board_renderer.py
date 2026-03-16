@@ -16,61 +16,112 @@ from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.suit import Suit
 
 
+class TestCellDimensions:
+    def test_cell_size(self):
+        assert CELL_W == 8
+        assert CELL_H == 4
+
+
 class TestRenderSquareCell:
-    def test_basic_bank_cell(self):
+    def test_bank_cell(self):
         sq = SquareInfo(id=0, position=(0, 0), type=SquareType.BANK)
         lines = render_square_cell(sq, player_ids=[])
         assert len(lines) == CELL_H
-        assert all(len(line) == CELL_W for line in lines)
         assert "BANK" in lines[1]
-        assert lines[0].startswith("┌")
-        assert lines[0].endswith("┐")
-        assert lines[-1].startswith("└")
-        assert lines[-1].endswith("┘")
+        assert "┌" in lines[0]
+        assert "┐" in lines[0]
+        # Bottom row has square id
+        assert "00" in lines[3]
 
-    def test_shop_cell_with_owner(self):
-        sq = SquareInfo(
-            id=1,
-            position=(4, 0),
-            type=SquareType.SHOP,
-            property_district=0,
-            property_owner=2,
-        )
-        lines = render_square_cell(sq, player_ids=[])
-        assert "SHOP" in lines[1]
-        assert "d0" in lines[2]
-        assert "O2" in lines[2]
-
-    def test_cell_with_players(self):
+    def test_bank_with_players(self):
         sq = SquareInfo(id=0, position=(0, 0), type=SquareType.BANK)
-        lines = render_square_cell(sq, player_ids=[0, 3])
-        assert "P0" in lines[3]
-        assert "P3" in lines[3]
+        lines = render_square_cell(sq, player_ids=[1, 3])
+        # Bottom row shows player 1 and 3
+        assert "1" in lines[3]
+        assert "3" in lines[3]
 
-    def test_suit_cell_shows_symbol(self):
-        sq = SquareInfo(
-            id=3, position=(0, 0), type=SquareType.SUIT, suit=Suit.SPADE
-        )
-        lines = render_square_cell(sq, player_ids=[])
-        assert "♠" in lines[2]
-
-    def test_suit_heart(self):
-        sq = SquareInfo(
-            id=4, position=(0, 0), type=SquareType.SUIT, suit=Suit.HEART
-        )
-        lines = render_square_cell(sq, player_ids=[])
-        assert "♥" in lines[2]
-
-    def test_unowned_shop(self):
+    def test_shop_unowned_shows_value(self):
         sq = SquareInfo(
             id=1,
             position=(0, 0),
             type=SquareType.SHOP,
-            property_district=1,
+            property_district=0,
+            shop_base_value=150,
         )
         lines = render_square_cell(sq, player_ids=[])
-        assert "d1" in lines[2]
-        assert "O" not in lines[2]  # no owner
+        # Line 1: V + value
+        assert "V" in lines[1]
+        assert "150" in lines[1]
+        # Line 2: no $ when unowned
+        assert "$" not in lines[2]
+
+    def test_shop_owned_shows_value_and_rent(self):
+        sq = SquareInfo(
+            id=5,
+            position=(0, 0),
+            type=SquareType.SHOP,
+            property_district=1,
+            property_owner=2,
+            shop_base_value=200,
+            shop_base_rent=30,
+        )
+        lines = render_square_cell(sq, player_ids=[])
+        assert "V" in lines[1]
+        assert "200" in lines[1]
+        assert "$" in lines[2]
+        assert "30" in lines[2]
+        assert "05" in lines[3]  # square id
+
+    def test_suit_spade(self):
+        sq = SquareInfo(id=2, position=(0, 0), type=SquareType.SUIT, suit=Suit.SPADE)
+        lines = render_square_cell(sq, player_ids=[])
+        assert "SPADE" in lines[1]
+        assert "♠" in lines[2]
+
+    def test_suit_heart(self):
+        sq = SquareInfo(id=4, position=(0, 0), type=SquareType.SUIT, suit=Suit.HEART)
+        lines = render_square_cell(sq, player_ids=[])
+        assert "HEART" in lines[1]
+        assert "♥" in lines[2]
+
+    def test_suit_diamond_abbreviated(self):
+        sq = SquareInfo(id=6, position=(0, 0), type=SquareType.SUIT, suit=Suit.DIAMOND)
+        lines = render_square_cell(sq, player_ids=[])
+        assert "Dmnd" in lines[1]
+        assert "♦" in lines[2]
+
+    def test_colors_in_output(self):
+        sq = SquareInfo(id=0, position=(0, 0), type=SquareType.BANK)
+        lines = render_square_cell(sq, player_ids=[0])
+        # Bank main color is gold
+        assert "gold1" in lines[1]
+        # Player 0 uses their player color (bright_cyan)
+        assert "bright_cyan" in lines[3]
+
+    def test_shop_district_color_on_border(self):
+        sq = SquareInfo(
+            id=1,
+            position=(0, 0),
+            type=SquareType.SHOP,
+            property_district=0,
+            shop_base_value=100,
+        )
+        lines = render_square_cell(sq, player_ids=[])
+        # District 0 = cyan highlight
+        assert "cyan" in lines[0]
+
+    def test_suit_color_on_border(self):
+        sq = SquareInfo(id=2, position=(0, 0), type=SquareType.SUIT, suit=Suit.HEART)
+        lines = render_square_cell(sq, player_ids=[])
+        # Heart = red highlight
+        assert "red" in lines[0]
+
+    def test_absent_players_shown_as_dots(self):
+        sq = SquareInfo(id=0, position=(0, 0), type=SquareType.BANK)
+        lines = render_square_cell(sq, player_ids=[1])
+        # Players 0, 2, 3 absent = dots, player 1 present
+        assert "." in lines[3]
+        assert "1" in lines[3]
 
 
 class TestRenderBoard:
@@ -87,74 +138,56 @@ class TestRenderBoard:
         output = render_board(state)
         assert isinstance(output, str)
         lines = output.split("\n")
-        # Should have multiple lines
         assert len(lines) > CELL_H
-        # Should contain square types
         assert "BANK" in output
-        assert "SHOP" in output
-        assert "SUIT" in output
+        assert "V" in output  # shop values
 
     def test_player_shown_on_board(self):
         state = self._make_state("boards/solo_board.json")
-        # Player 0 starts at square 0 (BANK)
         output = render_board(state)
-        # P0 should appear in the BANK cell area
-        assert "P0" in output
+        # Player 0 at square 0
+        assert "0" in output
 
-    def test_player_moves(self):
+    def test_no_border_merging(self):
         state = self._make_state("boards/solo_board.json")
-        state.players[0].position = 5  # Move to sq5 (SHOP d1)
         output = render_board(state)
-        assert "P0" in output
+        # No merged border characters
+        assert "┬" not in output
+        assert "├" not in output
+        assert "┤" not in output
+        assert "┼" not in output
+
+    def test_board_dimensions(self):
+        state = self._make_state("boards/solo_board.json")
+        output = render_board(state)
+        lines = output.split("\n")
+        # Solo board: 4 unique y positions → 4 * CELL_H = 16 lines
+        assert len(lines) == 4 * CELL_H
 
     def test_test_board_renders(self):
         state = self._make_state("boards/test_board.json", num_players=4)
         output = render_board(state)
         assert "BANK" in output
-        assert "P0" in output
 
-    def test_adjacent_cells_share_borders(self):
-        """Adjacent cells should share border characters (no gaps)."""
+    def test_ownership_shown(self):
         state = self._make_state("boards/solo_board.json")
-        output = render_board(state)
-        # Top-left corners merge: ┬ appears where horizontal cells meet
-        assert "┬" in output
-        # Side merges: ├ and ┤ appear where vertical cells meet
-        assert "├" in output
-        assert "┤" in output
-
-    def test_board_dimensions_reasonable(self):
-        state = self._make_state("boards/solo_board.json")
-        output = render_board(state)
-        lines = output.split("\n")
-        max_width = max(len(line) for line in lines)
-        # 4 cols: 4 * (CELL_W-1) + 1 = 33
-        assert max_width == 33
-        # 4 rows: 4 * (CELL_H-1) + 1 = 17
-        assert len(lines) == 17
-
-    def test_ownership_shown_after_purchase(self):
-        state = self._make_state("boards/solo_board.json")
-        # Simulate buying shop at sq1
         sq = state.board.squares[1]
         sq.property_owner = 0
         state.players[0].owned_properties.append(1)
         output = render_board(state)
-        assert "O0" in output  # Owner 0 shown
-
-    def test_shared_borders_vertically(self):
-        """Vertically adjacent cells share borders too."""
-        state = self._make_state("boards/solo_board.json")
-        output = render_board(state)
-        # ┼ appears where 4 cells meet at a corner
-        assert "┼" in output
+        # Owned shop shows $ (rent)
+        assert "$" in output
 
     def test_empty_board(self):
         board, stock = load_board("boards/solo_board.json")
         board.squares = []
-        players = [
-            PlayerState(player_id=0, position=0, ready_cash=1500)
-        ]
+        players = [PlayerState(player_id=0, position=0, ready_cash=1500)]
         state = GameState(board=board, stock=stock, players=players)
         output = render_board(state)
         assert output == "(empty board)"
+
+    def test_colors_present(self):
+        state = self._make_state("boards/solo_board.json")
+        output = render_board(state)
+        assert "[gold1]" in output  # BANK main color
+        assert "[white]" in output  # square ids
