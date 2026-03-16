@@ -127,10 +127,20 @@ class TuiPlayerInput(PlayerInput):
         remaining: int, can_undo: bool, log: GameLog,
     ) -> int | str:
         self._flush_log(log)
+        player = state.get_player(player_id)
+        current_sq = state.board.squares[player.position]
         descs = []
         for sq_id in choices:
             sq = state.board.squares[sq_id]
-            descs.append({"square_id": sq_id, "type": sq.type.value})
+            descs.append({
+                "square_id": sq_id,
+                "type": sq.type.value,
+                "position": list(sq.position),
+            })
+        from_pos = None
+        if can_undo and player.from_square is not None:
+            from_sq = state.board.squares[player.from_square]
+            from_pos = list(from_sq.position)
         return self._request_input(
             InputRequest(
                 type=InputRequestType.CHOOSE_PATH,
@@ -139,6 +149,8 @@ class TuiPlayerInput(PlayerInput):
                     "choices": descs,
                     "remaining": remaining,
                     "can_undo": can_undo,
+                    "current_position": list(current_sq.position),
+                    "undo_position": from_pos,
                 },
             )
         )
@@ -374,7 +386,12 @@ class TuiPlayerInput(PlayerInput):
         can_undo: bool, log: GameLog,
     ) -> bool:
         self._flush_log(log)
+        player = state.get_player(player_id)
         sq = state.board.squares[square_id]
+        undo_pos = None
+        if can_undo and player.from_square is not None:
+            from_sq = state.board.squares[player.from_square]
+            undo_pos = list(from_sq.position)
         return self._request_input(
             InputRequest(
                 type=InputRequestType.CONFIRM_STOP,
@@ -383,6 +400,8 @@ class TuiPlayerInput(PlayerInput):
                     "square_id": square_id,
                     "square_type": sq.type.value,
                     "can_undo": can_undo,
+                    "current_position": list(sq.position),
+                    "undo_position": undo_pos,
                 },
             )
         )

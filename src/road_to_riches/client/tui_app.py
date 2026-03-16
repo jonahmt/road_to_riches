@@ -18,6 +18,7 @@ from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Input, RichLog, Static
 
+from road_to_riches.client.direction import compute_direction_keys, format_key_hints
 from road_to_riches.client.tui_input import InputRequest, InputRequestType, TuiPlayerInput
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
 
@@ -146,6 +147,8 @@ class GameApp(App):
         self._current_request: InputRequest | None = None
         self._info_visible = False
         self._log_messages: list[str] = []
+        self._keypress_mode = False
+        self._keypress_mapping: dict[str, int | str] = {}
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -192,6 +195,54 @@ class GameApp(App):
         dice.value = event.value
         dice.remaining = event.remaining
 
+    def on_key(self, event) -> None:
+        """Handle raw keypresses for WASD movement and confirm-stop."""
+        if not self._keypress_mode or self._current_request is None:
+            return
+
+        key = event.character
+        if key is None:
+            return
+        key = key.lower()
+
+        req = self._current_request
+
+        if req.type == InputRequestType.CHOOSE_PATH:
+            if key in self._keypress_mapping:
+                event.prevent_default()
+                event.stop()
+                response = self._keypress_mapping[key]
+                self._current_request = None
+                self._exit_keypress_mode()
+                self.player_input.submit_response(response)
+
+        elif req.type == InputRequestType.CONFIRM_STOP:
+            if key in ("s", " ", "\r", "\n"):
+                event.prevent_default()
+                event.stop()
+                self._current_request = None
+                self._exit_keypress_mode()
+                self.player_input.submit_response(True)
+            elif key in self._keypress_mapping:
+                event.prevent_default()
+                event.stop()
+                self._current_request = None
+                self._exit_keypress_mode()
+                self.player_input.submit_response(False)
+
+    def _enter_keypress_mode(self) -> None:
+        """Switch to keypress mode: hide Input, capture raw keys."""
+        self._keypress_mode = True
+        inp = self.query_one("#command-input", Input)
+        inp.display = False
+
+    def _exit_keypress_mode(self) -> None:
+        """Switch back to normal input mode."""
+        self._keypress_mode = False
+        self._keypress_mapping = {}
+        inp = self.query_one("#command-input", Input)
+        inp.display = True
+
     @on(InputReady)
     def handle_input_ready(self, event: InputReady) -> None:
         self._current_request = event.request
@@ -211,6 +262,9 @@ class GameApp(App):
         self._current_request = None
 
     def _show_prompt(self, req: InputRequest) -> None:
+        # Exit keypress mode if switching to a typed-input prompt
+        if self._keypress_mode:
+            self._exit_keypress_mode()
         prompt = self.query_one("#prompt-bar", PromptBar)
         inp = self.query_one("#command-input", Input)
         inp.value = ""
@@ -233,24 +287,50 @@ class GameApp(App):
         elif req.type == InputRequestType.CHOOSE_PATH:
             choices = req.data["choices"]
             remaining = req.data.get("remaining", 0)
-            can_undo = req.data.get("can_undo", False)
-            parts = [f"{c['square_id']} ({c['type']})" for c in choices]
-            undo_hint = ", \\[U]ndo" if can_undo else ""
-            prompt.prompt_text = (
-                f"\\[{remaining}] remaining | "
-                f"Move to: {', '.join(parts)}{undo_hint}"
+            current_pos = tuple(req.data.get("current_position", (0, 0)))
+            undo_pos = req.data.get("undo_position")
+
+            choice_targets = [
+                (c["square_id"], tuple(c["position"]))
+                for c in choices
+            ]
+            undo_pos_t = tuple(undo_pos) if undo_pos else None
+            mapping = compute_direction_keys(
+                current_pos, choice_targets, undo_pos_t
             )
-            inp.placeholder = "Square ID" + (" / U" if can_undo else "")
+
+            sq_types = {c["square_id"]: c["type"] for c in choices}
+            hints = format_key_hints(mapping, sq_types)
+
+            self._keypress_mapping = mapping
+            self._enter_keypress_mode()
+            prompt.prompt_text = f"\\[{remaining}] remaining | {hints}"
+            return  # skip inp.focus() — Input is hidden
 
         elif req.type == InputRequestType.CONFIRM_STOP:
             can_undo = req.data.get("can_undo", False)
             sq_type = req.data.get("square_type", "")
-            undo_hint = ", \\[U]ndo" if can_undo else ""
+            current_pos = tuple(req.data.get("current_position", (0, 0)))
+            undo_pos = req.data.get("undo_position")
+
+            undo_hint = ""
+            self._keypress_mapping = {}
+            if can_undo and undo_pos:
+                undo_pos_t = tuple(undo_pos)
+                mapping = compute_direction_keys(current_pos, [], undo_pos_t)
+                self._keypress_mapping = mapping
+                undo_keys = [
+                    k.upper() for k, v in mapping.items() if v == "undo"
+                ]
+                if undo_keys:
+                    undo_hint = f", \\[{undo_keys[0]}] Undo"
+
+            self._enter_keypress_mode()
             prompt.prompt_text = (
                 f"Stop on sq{req.data['square_id']} ({sq_type})? "
                 f"\\[S]top{undo_hint}"
             )
-            inp.placeholder = "S" + (" / U" if can_undo else "")
+            return  # skip inp.focus() — Input is hidden
 
         elif req.type == InputRequestType.BUY_SHOP:
             prompt.prompt_text = (
