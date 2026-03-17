@@ -20,7 +20,7 @@ CELL_H = 4
 
 # Suit symbols and colors
 SUIT_SYMBOLS = {"SPADE": "♠", "HEART": "♥", "DIAMOND": "♦", "CLUB": "♣"}
-SUIT_COLORS = {"SPADE": "bright_blue", "HEART": "red", "DIAMOND": "yellow", "CLUB": "green"}
+SUIT_COLORS = {"SPADE": "bright_blue", "HEART": "bright_red", "DIAMOND": "yellow", "CLUB": "green"}
 SUIT_ABBR = {"SPADE": "SPADE", "HEART": "HEART", "DIAMOND": "Dmnd", "CLUB": "CLUB"}
 
 # District border colors
@@ -29,7 +29,7 @@ DISTRICT_COLORS = [
 ]
 
 # Player text colors
-PLAYER_COLORS = ["bright_cyan", "bright_magenta", "bright_yellow", "bright_green"]
+PLAYER_COLORS = ["bright_cyan", "orchid1", "bright_yellow", "bright_green"]
 
 # Square type display config: (line1_text, line2_text, main_color, highlight_color)
 # None for lines means use type-specific logic
@@ -55,15 +55,19 @@ def _color(text: str, color: str) -> str:
     return f"[{color}]{text}[/{color}]"
 
 
-def _render_cell(sq: SquareInfo, player_ids: list[int]) -> list[str]:
+def _render_cell(
+    sq: SquareInfo,
+    player_ids: list[int],
+    active_player_id: int | None = None,
+) -> list[str]:
     """Render a single square as 4 lines of 8 visible characters.
 
     Lines contain Rich markup but visible width is always 8.
     Format:
-      ┌──────┐   (highlight color)
+      ┌──────┐   (highlight color, or active player color)
       │ TEXT │   (border=highlight, text=main)
       │ TEXT │   (border=highlight, text=main)
-      .1..──00   (players=white, ──=highlight, id=white)
+      .1..──00   (players=colored, ──=highlight, id=white)
     """
     from road_to_riches.models.suit import Suit
 
@@ -72,6 +76,8 @@ def _render_cell(sq: SquareInfo, player_ids: list[int]) -> list[str]:
     line1_text = ""
     line2_text = ""
 
+    bg_color: str | None = None
+
     if sq.type == SquareType.SHOP:
         # Shop: V + value on line 1, $ + rent on line 2 (if owned)
         val = sq.shop_current_value or sq.shop_base_value or 0
@@ -79,7 +85,8 @@ def _render_cell(sq: SquareInfo, player_ids: list[int]) -> list[str]:
         if sq.property_owner is not None:
             rent = sq.shop_base_rent or 0
             line2_text = f"${rent:>5}"
-            main_color = PLAYER_COLORS[sq.property_owner % len(PLAYER_COLORS)]
+            main_color = "white"
+            bg_color = PLAYER_COLORS[sq.property_owner % len(PLAYER_COLORS)]
         else:
             line2_text = ""
             main_color = "white"
@@ -117,15 +124,26 @@ def _render_cell(sq: SquareInfo, player_ids: list[int]) -> list[str]:
         main_color = "white"
         highlight_color = "white"
 
+    # Use double-line border if the active player is on this square
+    is_active_square = active_player_id is not None and active_player_id in player_ids
+
     # Center content within INNER_W
     l1 = line1_text.center(INNER_W) if len(line1_text) < INNER_W else line1_text[:INNER_W]
     l2 = line2_text.center(INNER_W) if len(line2_text) < INNER_W else line2_text[:INNER_W]
 
     # Build the 4 lines
-    border_h = _color("┌" + "─" * INNER_W + "┐", highlight_color)
-    vbar = _color("│", highlight_color)
-    content1 = vbar + _color(l1, main_color) + vbar
-    content2 = vbar + _color(l2, main_color) + vbar
+    if is_active_square:
+        border_h = _color("╔" + "═" * INNER_W + "╗", highlight_color)
+        vbar = _color("║", highlight_color)
+    else:
+        border_h = _color("┌" + "─" * INNER_W + "┐", highlight_color)
+        vbar = _color("│", highlight_color)
+    if bg_color:
+        content1 = vbar + f"[black on {bg_color}]{l1}[/]" + vbar
+        content2 = vbar + f"[black on {bg_color}]{l2}[/]" + vbar
+    else:
+        content1 = vbar + _color(l1, main_color) + vbar
+        content2 = vbar + _color(l2, main_color) + vbar
 
     # Bottom row: player slots (4 chars) + ── (2 chars) + square id (2 chars)
     player_slots = ""
@@ -135,7 +153,7 @@ def _render_cell(sq: SquareInfo, player_ids: list[int]) -> list[str]:
             player_slots += _color(str(pid), p_color)
         else:
             player_slots += _color(".", "grey37")
-    sep = _color("──", highlight_color)
+    sep = _color("══" if is_active_square else "──", highlight_color)
     sq_id = _color(f"{sq.id:02d}", "white")
     bottom = player_slots + sep + sq_id
 
@@ -147,7 +165,7 @@ def render_square_cell(sq: SquareInfo, player_ids: list[int]) -> list[str]:
     return _render_cell(sq, player_ids)
 
 
-def render_board(state: GameState) -> str:
+def render_board(state: GameState, active_player_id: int | None = None) -> str:
     """Render the full board as a multi-line string with Rich markup.
 
     Squares are placed on a grid based on their (x, y) positions.
@@ -193,7 +211,7 @@ def render_board(state: GameState) -> str:
                 row_cells.append(None)
             else:
                 pids = player_positions.get(sq.id, [])
-                row_cells.append(_render_cell(sq, pids))
+                row_cells.append(_render_cell(sq, pids, active_player_id))
 
         # Combine cells horizontally for each of CELL_H lines
         for line_idx in range(CELL_H):

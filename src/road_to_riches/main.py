@@ -2,33 +2,64 @@
 
 from __future__ import annotations
 
-import sys
+import argparse
+import logging
 
 
 def main() -> None:
-    args = sys.argv[1:]
-    mode = "tui"
+    parser = argparse.ArgumentParser(description="Road to Riches")
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        default="local",
+        choices=["local", "server", "client", "text"],
+        help="Run mode (default: local)",
+    )
+    parser.add_argument(
+        "board", nargs="?", default="boards/test_board.json", help="Board file path",
+    )
+    parser.add_argument("players", nargs="?", type=int, default=4)
+    parser.add_argument("--host", default="localhost")
+    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
-    if "--text" in args:
-        mode = "text"
-        args.remove("--text")
-    elif "--tui" in args:
-        args.remove("--tui")
+    args = parser.parse_args()
 
-    board_path = args[0] if args else "boards/test_board.json"
-    num_players = int(args[1]) if len(args) > 1 else 4
+    if args.debug:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="[%(name)s] %(levelname)s %(message)s",
+        )
 
-    if mode == "tui":
+    if args.mode == "server":
+        from road_to_riches.server.server import run_server
+
+        run_server(
+            board_path=args.board,
+            num_players=args.players,
+            host=args.host,
+            port=args.port,
+            debug=args.debug,
+        )
+
+    elif args.mode == "client":
+        from road_to_riches.client.tui_app import run_tui_client
+
+        uri = f"ws://{args.host}:{args.port}"
+        run_tui_client(uri=uri)
+
+    elif args.mode == "local":
         from road_to_riches.client.tui_app import run_tui
 
-        run_tui(board_path, num_players)
-    else:
+        run_tui(args.board, args.players)
+
+    else:  # text
         from road_to_riches.client.text_input import TextPlayerInput
         from road_to_riches.engine.game_loop import GameConfig, GameLoop
 
         config = GameConfig(
-            board_path=board_path,
-            num_players=num_players,
+            board_path=args.board,
+            num_players=args.players,
             starting_cash=1500,
         )
         player_input = TextPlayerInput()
@@ -37,8 +68,8 @@ def main() -> None:
         print("=" * 60)
         print("  ROAD TO RICHES")
         print("=" * 60)
-        print(f"  Board: {board_path}")
-        print(f"  Players: {num_players}")
+        print(f"  Board: {args.board}")
+        print(f"  Players: {args.players}")
         print(f"  Target: {game.state.board.target_networth}G")
         print("=" * 60)
         print()

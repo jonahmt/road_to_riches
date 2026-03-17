@@ -7,8 +7,9 @@ prompt bar and input pinned at the very bottom.
 
 from __future__ import annotations
 
+import re
 import threading
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -22,31 +23,67 @@ from road_to_riches.client.direction import compute_direction_keys, format_key_h
 from road_to_riches.client.tui_input import InputRequest, InputRequestType, TuiPlayerInput
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
 
+# Type alias for the input source — either local or networked
+PlayerInputSource = Any
+
 # Player colors
-PLAYER_COLORS = ["bright_cyan", "bright_magenta", "bright_yellow", "bright_green"]
+PLAYER_COLORS = ["bright_cyan", "orchid1", "bright_yellow", "bright_green"]
+
+# Suit display
+SUIT_SYMBOLS = {"SPADE": "♠", "HEART": "♥", "DIAMOND": "♦", "CLUB": "♣", "WILD": "★"}
+SUIT_COLORS = {
+    "SPADE": "bright_blue", "HEART": "bright_red",
+    "DIAMOND": "yellow", "CLUB": "green", "WILD": "white",
+}
+
+
+_PLAYER_RE = re.compile(r"\bPlayer (\d)\b")
+_GOLD_RE = re.compile(r"\b(\d+)G\b")
+
+
+def _colorize_log(text: str) -> str:
+    """Colorize player names and gold amounts in log messages."""
+    def _player_repl(m: re.Match) -> str:
+        pid = int(m.group(1))
+        color = PLAYER_COLORS[pid % len(PLAYER_COLORS)]
+        return f"[{color}]Player {pid}[/{color}]"
+
+    def _gold_repl(m: re.Match) -> str:
+        return f"[gold1]{m.group(1)}G[/gold1]"
+
+    text = _PLAYER_RE.sub(_player_repl, text)
+    text = _GOLD_RE.sub(_gold_repl, text)
+    return text
 
 
 class DiceWidget(Static):
-    """Displays a dice face in a 5x5 ASCII art block."""
+    """Displays a dice face in a 9x5 ASCII art block."""
 
     value: reactive[int] = reactive(0)
     remaining: reactive[int] = reactive(0)
 
+    # 9 wide x 5 tall (inner 7x3) — looks square in monospace
     DICE_FACES: ClassVar[dict[int, list[str]]] = {
-        0: ["┌───┐", "│   │", "│   │", "│   │", "└───┘"],
-        1: ["┌───┐", "│   │", "│ ● │", "│   │", "└───┘"],
-        2: ["┌───┐", "│  ●│", "│   │", "│●  │", "└───┘"],
-        3: ["┌───┐", "│  ●│", "│ ● │", "│●  │", "└───┘"],
-        4: ["┌───┐", "│● ●│", "│   │", "│● ●│", "└───┘"],
-        5: ["┌───┐", "│● ●│", "│ ● │", "│● ●│", "└───┘"],
-        6: ["┌───┐", "│● ●│", "│● ●│", "│● ●│", "└───┘"],
+        0: ["┌───────┐", "│       │", "│       │", "│       │", "└───────┘"],
+        1: ["┌───────┐", "│       │", "│   ●   │", "│       │", "└───────┘"],
+        2: ["┌───────┐", "│     ● │", "│       │", "│ ●     │", "└───────┘"],
+        3: ["┌───────┐", "│     ● │", "│   ●   │", "│ ●     │", "└───────┘"],
+        4: ["┌───────┐", "│ ●   ● │", "│       │", "│ ●   ● │", "└───────┘"],
+        5: ["┌───────┐", "│ ●   ● │", "│   ●   │", "│ ●   ● │", "└───────┘"],
+        6: ["┌───────┐", "│ ●   ● │", "│ ●   ● │", "│ ●   ● │", "└───────┘"],
+        7: ["┌───────┐", "│ ●   ● │", "│ ● ● ● │", "│ ●   ● │", "└───────┘"],
+        8: ["┌───────┐", "│ ● ● ● │", "│ ●   ● │", "│ ● ● ● │", "└───────┘"],
+        9: ["┌───────┐", "│ ● ● ● │", "│ ● ● ● │", "│ ● ● ● │", "└───────┘"],
     }
 
     def render(self) -> str:
-        face = self.DICE_FACES.get(self.value, self.DICE_FACES[0])
+        # Face shows remaining moves (counting down), empty at 0
+        display_val = self.remaining if self.remaining > 0 else 0
+        face = self.DICE_FACES.get(display_val, self.DICE_FACES[0])
         lines = list(face)
-        if self.remaining > 0:
-            lines.append(f" \\[{self.remaining}]")
+        # Counter below shows the original roll (fixed)
+        if self.value > 0:
+            lines.append(f"  Roll:{self.value}")
         return "\n".join(lines)
 
 
@@ -73,7 +110,7 @@ class GameApp(App):
     }
 
     #dice-panel {
-        width: 8;
+        width: 12;
         height: 7;
         margin: 0 1;
     }
@@ -82,6 +119,7 @@ class GameApp(App):
         width: 1fr;
         height: 7;
         padding: 0 1;
+        color: auto;
     }
 
     #board-view {
@@ -139,16 +177,34 @@ class GameApp(App):
             self.value = value
             self.remaining = remaining
 
-    def __init__(self, config: GameConfig) -> None:
+    def __init__(
+        self,
+        config: GameConfig | None = None,
+        client_bridge: Any = None,
+    ) -> None:
         super().__init__()
         self.config = config
-        self.player_input = TuiPlayerInput()
+        self._client_bridge = client_bridge
+        self._networked = client_bridge is not None
+        if self._networked:
+            self.player_input: PlayerInputSource = client_bridge
+        else:
+            self.player_input = TuiPlayerInput()
         self.game_loop: GameLoop | None = None
         self._current_request: InputRequest | None = None
         self._info_visible = False
         self._log_messages: list[str] = []
-        self._keypress_mode = False
+        # Input mode: "text" (normal Input widget), "keypress" (WASD path),
+        # "selection" (option bar with highlight)
+        self._input_mode = "text"
         self._keypress_mapping: dict[str, int | str] = {}
+        # Selection bar state
+        self._selection_options: list[tuple[str, Any]] = []
+        self._selection_index = 0
+        self._selection_prompt = ""
+        # Multi-phase input state (selection → text input)
+        self._input_phase = 0
+        self._phase_data: dict = {}
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -164,7 +220,11 @@ class GameApp(App):
     def on_mount(self) -> None:
         self.player_input.set_log_callback(self._on_game_log)
         self.player_input.set_dice_callback(self._on_dice_update)
-        self._start_game()
+        if self._networked:
+            self._client_bridge.set_game_over_callback(self._on_game_over)
+            self._start_networked_game()
+        else:
+            self._start_game()
 
     def _on_game_log(self, msg: str) -> None:
         """Called from game thread — post message to UI thread."""
@@ -182,10 +242,11 @@ class GameApp(App):
         # Show last N messages, highlight only the last one
         visible = self._log_messages[-20:]
         for i, msg in enumerate(visible):
+            colored = _colorize_log(msg)
             if i == len(visible) - 1:
-                log_widget.write(f"[bold bright_white]{msg}[/]")
+                log_widget.write(f"[bold]{colored}[/]")
             else:
-                log_widget.write(f"[dim]{msg}[/]")
+                log_widget.write(f"[dim]{colored}[/]")
         self._refresh_board()
         self._refresh_player_info()
 
@@ -195,57 +256,313 @@ class GameApp(App):
         dice.value = event.value
         dice.remaining = event.remaining
 
-    def on_key(self, event) -> None:
-        """Handle raw keypresses for WASD movement and confirm-stop."""
-        if not self._keypress_mode or self._current_request is None:
-            return
+    # ── Key handling ──────────────────────────────────────────────
 
+    def on_key(self, event) -> None:
+        """Dispatch raw keypresses based on current input mode."""
+        if self._current_request is None:
+            return
+        if self._input_mode == "keypress":
+            self._handle_keypress_key(event)
+        elif self._input_mode == "selection":
+            self._handle_selection_key(event)
+
+    def _handle_keypress_key(self, event) -> None:
+        """Handle keys in keypress mode (CHOOSE_PATH only)."""
         key = event.character
         if key is None:
             return
         key = key.lower()
-
         req = self._current_request
-
-        if req.type == InputRequestType.CHOOSE_PATH:
+        if req is not None and req.type == InputRequestType.CHOOSE_PATH:
             if key in self._keypress_mapping:
                 event.prevent_default()
                 event.stop()
                 response = self._keypress_mapping[key]
-                self._current_request = None
-                self._exit_keypress_mode()
-                self.player_input.submit_response(response)
+                self._submit_response(response)
 
-        elif req.type == InputRequestType.CONFIRM_STOP:
-            if key in ("y", " ", "\r", "\n"):
-                event.prevent_default()
-                event.stop()
-                self._current_request = None
-                self._exit_keypress_mode()
-                self.player_input.submit_response(True)
-            elif key in self._keypress_mapping:
-                event.prevent_default()
-                event.stop()
-                self._current_request = None
-                self._exit_keypress_mode()
-                self.player_input.submit_response(False)
+    def _handle_selection_key(self, event) -> None:
+        """Handle keys in selection bar mode."""
+        key = event.key
+        char = (event.character or "").lower()
+
+        if char in ("a", "w") or key in ("up", "left"):
+            if self._selection_index > 0:
+                self._selection_index -= 1
+                self._update_selection_bar()
+            event.prevent_default()
+            event.stop()
+        elif char in ("d", "s") or key in ("down", "right"):
+            if self._selection_index < len(self._selection_options) - 1:
+                self._selection_index += 1
+                self._update_selection_bar()
+            event.prevent_default()
+            event.stop()
+        elif key == "space" or char == " ":
+            event.prevent_default()
+            event.stop()
+            if self._selection_options:
+                _, value = self._selection_options[self._selection_index]
+                self._on_selection_confirmed(value)
+        elif (
+            char.isdigit()
+            and char != "0"
+            and self._current_request is not None
+            and self._current_request.type == InputRequestType.PRE_ROLL
+        ):
+            event.prevent_default()
+            event.stop()
+            self._submit_response(f"roll_{char}")
+        elif key == "backspace":
+            event.prevent_default()
+            event.stop()
+            self._on_selection_cancelled()
+
+    # ── Mode switching ────────────────────────────────────────────
 
     def _enter_keypress_mode(self) -> None:
         """Switch to keypress mode: hide Input, capture raw keys."""
-        self._keypress_mode = True
+        self._input_mode = "keypress"
         inp = self.query_one("#command-input", Input)
         inp.display = False
 
     def _exit_keypress_mode(self) -> None:
         """Switch back to normal input mode."""
-        self._keypress_mode = False
+        self._input_mode = "text"
         self._keypress_mapping = {}
         inp = self.query_one("#command-input", Input)
         inp.display = True
 
+    def _enter_selection_mode(
+        self, prompt_text: str, options: list[tuple[str, Any]], initial_index: int = 0
+    ) -> None:
+        """Switch to selection bar mode with highlighted options."""
+        self._input_mode = "selection"
+        self._selection_prompt = prompt_text
+        self._selection_options = options
+        self._selection_index = initial_index
+        inp = self.query_one("#command-input", Input)
+        inp.display = False
+        self._update_selection_bar()
+
+    def _exit_selection_mode(self) -> None:
+        """Exit selection bar mode."""
+        self._input_mode = "text"
+        self._selection_options = []
+        self._selection_index = 0
+
+    def _update_selection_bar(self) -> None:
+        """Re-render the prompt bar with current selection highlight."""
+        parts = [self._selection_prompt + "  "]
+        for i, (label, _) in enumerate(self._selection_options):
+            if i == self._selection_index:
+                parts.append(f"[reverse] {label} [/reverse]")
+            else:
+                parts.append(f" {label} ")
+        prompt = self.query_one("#prompt-bar", PromptBar)
+        prompt.prompt_text = "".join(parts)
+
+    def _enter_text_mode(self, placeholder: str) -> None:
+        """Switch to text input mode (for two-phase inputs)."""
+        self._input_mode = "text"
+        inp = self.query_one("#command-input", Input)
+        inp.display = True
+        inp.placeholder = placeholder
+        inp.value = ""
+        inp.focus()
+
+    def _submit_response(self, value: Any) -> None:
+        """Submit a response and clean up all input state."""
+        self._current_request = None
+        self._input_phase = 0
+        self._phase_data = {}
+        if self._input_mode == "selection":
+            self._exit_selection_mode()
+        elif self._input_mode == "keypress":
+            self._exit_keypress_mode()
+        self._input_mode = "text"
+        self.player_input.submit_response(value)
+
+    # ── Selection callbacks ───────────────────────────────────────
+
+    def _on_selection_confirmed(self, value: Any) -> None:
+        """Handle Space press on a selection bar option."""
+        req = self._current_request
+        if req is None:
+            return
+        rtype = req.type
+
+        # PRE_ROLL: Info toggles without submitting
+        if rtype == InputRequestType.PRE_ROLL and value == "info":
+            self._show_info()
+            return
+
+        # ── Two-phase types: selection → text input ──
+
+        if rtype == InputRequestType.BUY_STOCK:
+            if value is None:
+                self._submit_response(None)
+            else:
+                self._phase_data["district_id"] = value
+                self._input_phase = 1
+                price = next(
+                    s["price"]
+                    for s in req.data.get("stocks", [])
+                    if s["district_id"] == value
+                )
+                self._exit_selection_mode()
+                prompt = self.query_one("#prompt-bar", PromptBar)
+                prompt.prompt_text = (
+                    f"Buy stock in d{value} (@{price}G each). Quantity:"
+                )
+                self._enter_text_mode("Enter quantity (default 1)")
+            return
+
+        if rtype == InputRequestType.SELL_STOCK:
+            if value is None:
+                self._submit_response(None)
+            else:
+                self._phase_data["district_id"] = value
+                self._input_phase = 1
+                holdings = req.data.get("holdings", {})
+                max_qty = holdings.get(str(value), {}).get("quantity", 0)
+                self._exit_selection_mode()
+                prompt = self.query_one("#prompt-bar", PromptBar)
+                prompt.prompt_text = (
+                    f"Sell stock in d{value}. Quantity (max {max_qty}):"
+                )
+                self._enter_text_mode(f"Enter quantity (default all={max_qty})")
+            return
+
+        if rtype == InputRequestType.INVEST:
+            if value is None:
+                self._submit_response(None)
+            else:
+                self._phase_data["square_id"] = value
+                self._input_phase = 1
+                match = next(
+                    s for s in req.data.get("investable", [])
+                    if s["square_id"] == value
+                )
+                max_cap = match["max_capital"]
+                cash = req.data["cash"]
+                default = min(cash, max_cap)
+                self._exit_selection_mode()
+                prompt = self.query_one("#prompt-bar", PromptBar)
+                prompt.prompt_text = (
+                    f"Invest in sq{value}. Amount (max {max_cap}G):"
+                )
+                self._enter_text_mode(f"Enter amount (default {default})")
+            return
+
+        if rtype == InputRequestType.AUCTION_BID:
+            if value is None:
+                self._submit_response(None)
+            else:
+                self._input_phase = 1
+                self._exit_selection_mode()
+                prompt = self.query_one("#prompt-bar", PromptBar)
+                prompt.prompt_text = (
+                    f"Bid on sq{req.data['square_id']}. "
+                    f"Min: {req.data['min_bid']}G | Cash: {req.data['cash']}G"
+                )
+                self._enter_text_mode("Enter bid amount")
+            return
+
+        if rtype == InputRequestType.CHOOSE_SHOP_BUY:
+            if value is None:
+                self._submit_response(None)
+            else:
+                target_pid, sq_id = value
+                self._phase_data["target_pid"] = target_pid
+                self._phase_data["sq_id"] = sq_id
+                self._input_phase = 1
+                self._exit_selection_mode()
+                prompt = self.query_one("#prompt-bar", PromptBar)
+                prompt.prompt_text = (
+                    f"Buy sq{sq_id} from P{target_pid}. Offer price:"
+                )
+                self._enter_text_mode("Enter price")
+            return
+
+        if rtype == InputRequestType.CHOOSE_SHOP_SELL:
+            if self._input_phase == 0:
+                # Phase 0: picked a shop, now pick target player
+                if value is None:
+                    self._submit_response(None)
+                else:
+                    self._phase_data["sq_id"] = value
+                    self._input_phase = 1
+                    state = self._get_state()
+                    options = []
+                    if state:
+                        for p in state.players:
+                            if p.player_id == req.player_id or p.bankrupt:
+                                continue
+                            options.append((f"Player {p.player_id}", p.player_id))
+                    options.append(("Cancel", None))
+                    self._enter_selection_mode(
+                        f"Sell sq{value} to:", options
+                    )
+                return
+            elif self._input_phase == 1:
+                # Phase 1: picked target player, now enter price
+                if value is None:
+                    self._submit_response(None)
+                else:
+                    self._phase_data["target_pid"] = value
+                    self._input_phase = 2
+                    sq_id = self._phase_data["sq_id"]
+                    self._exit_selection_mode()
+                    prompt = self.query_one("#prompt-bar", PromptBar)
+                    prompt.prompt_text = (
+                        f"Sell sq{sq_id} to P{value}. Asking price:"
+                    )
+                    self._enter_text_mode("Enter price")
+                return
+
+        # ── Simple direct-response types ──
+        self._submit_response(value)
+
+    def _on_selection_cancelled(self) -> None:
+        """Handle Backspace press in selection mode."""
+        req = self._current_request
+        if req is None:
+            return
+        rtype = req.type
+
+        # Types where cancel is not allowed
+        if rtype in (InputRequestType.PRE_ROLL, InputRequestType.LIQUIDATION):
+            return
+
+        # Cancel value depends on the type
+        cancel_map = {
+            InputRequestType.BUY_SHOP: False,
+            InputRequestType.FORCED_BUYOUT: False,
+            InputRequestType.CONFIRM_STOP: False,
+            InputRequestType.BUY_STOCK: None,
+            InputRequestType.SELL_STOCK: None,
+            InputRequestType.INVEST: None,
+            InputRequestType.RENOVATE: None,
+            InputRequestType.CHOOSE_SHOP_AUCTION: None,
+            InputRequestType.AUCTION_BID: None,
+            InputRequestType.CHOOSE_SHOP_BUY: None,
+            InputRequestType.CHOOSE_SHOP_SELL: None,
+            InputRequestType.ACCEPT_OFFER: "reject",
+            InputRequestType.CANNON_TARGET: None,
+            InputRequestType.VACANT_PLOT_TYPE: None,
+        }
+
+        if rtype in cancel_map:
+            self._submit_response(cancel_map[rtype])
+
+    # ── Event handlers ────────────────────────────────────────────
+
     @on(InputReady)
     def handle_input_ready(self, event: InputReady) -> None:
         self._current_request = event.request
+        self._refresh_board()
+        self._refresh_player_info()
         self._show_prompt(event.request)
 
     @on(GameOver)
@@ -261,30 +578,24 @@ class GameApp(App):
         prompt.prompt_text = "Press Escape to exit."
         self._current_request = None
 
+    # ── Prompt setup ──────────────────────────────────────────────
+
     def _show_prompt(self, req: InputRequest) -> None:
-        # Exit keypress mode if switching to a typed-input prompt
-        if self._keypress_mode:
+        """Set up the UI for the given input request."""
+        # Clean up previous mode
+        if self._input_mode == "keypress":
             self._exit_keypress_mode()
+        elif self._input_mode == "selection":
+            self._exit_selection_mode()
+        self._input_phase = 0
+        self._phase_data = {}
+
         prompt = self.query_one("#prompt-bar", PromptBar)
         inp = self.query_one("#command-input", Input)
         inp.value = ""
 
-        if req.type == InputRequestType.PRE_ROLL:
-            options = "\\[R]oll"
-            if req.data.get("has_stock"):
-                options += ", \\[S]ell Stock"
-            if req.data.get("has_shops"):
-                options += ", \\[A]uction, Sell S\\[h]op, \\[T]rade"
-            options += ", \\[B]uy Shop, \\[I]nfo"
-            prompt.prompt_text = (
-                f"P{req.player_id} | "
-                f"Cash: {req.data['cash']}G | "
-                f"Lv{req.data['level']} | "
-                f"{options}"
-            )
-            inp.placeholder = "R / S / A / H / T / B / I"
-
-        elif req.type == InputRequestType.CHOOSE_PATH:
+        if req.type == InputRequestType.CHOOSE_PATH:
+            # Keep existing WASD directional keypress mode
             choices = req.data["choices"]
             remaining = req.data.get("remaining", 0)
             current_pos = tuple(req.data.get("current_position", (0, 0)))
@@ -305,176 +616,213 @@ class GameApp(App):
             self._keypress_mapping = mapping
             self._enter_keypress_mode()
             prompt.prompt_text = f"\\[{remaining}] remaining | {hints}"
-            return  # skip inp.focus() — Input is hidden
+            return
 
-        elif req.type == InputRequestType.CONFIRM_STOP:
-            can_undo = req.data.get("can_undo", False)
-            sq_type = req.data.get("square_type", "")
-            current_pos = tuple(req.data.get("current_position", (0, 0)))
-            undo_pos = req.data.get("undo_position")
-
-            undo_hint = ""
-            self._keypress_mapping = {}
-            if can_undo and undo_pos:
-                undo_pos_t = tuple(undo_pos)
-                mapping = compute_direction_keys(current_pos, [], undo_pos_t)
-                self._keypress_mapping = mapping
-                undo_keys = [
-                    k.upper() for k, v in mapping.items() if v == "undo"
-                ]
-                if undo_keys:
-                    undo_hint = f", \\[{undo_keys[0]}] Undo"
-
-            self._enter_keypress_mode()
-            prompt.prompt_text = (
-                f"Stop on sq{req.data['square_id']} ({sq_type})? "
-                f"\\[Y]es{undo_hint}"
+        if req.type == InputRequestType.PRE_ROLL:
+            options = [("Roll", "roll")]
+            if req.data.get("has_stock"):
+                options.append(("Sell Stock", "sell_stock"))
+            if req.data.get("has_shops"):
+                options.append(("Auction", "auction"))
+                options.append(("Sell Shop", "sell_shop"))
+                options.append(("Trade", "trade"))
+            options.append(("Buy Shop", "buy_shop"))
+            options.append(("Info", "info"))
+            header = (
+                f"P{req.player_id} | "
+                f"Cash: {req.data['cash']}G | "
+                f"Lv{req.data['level']}"
             )
-            return  # skip inp.focus() — Input is hidden
+            self._enter_selection_mode(header, options)
+            return
 
-        elif req.type == InputRequestType.BUY_SHOP:
-            prompt.prompt_text = (
+        if req.type == InputRequestType.CONFIRM_STOP:
+            options = [("Stop Here", True)]
+            if req.data.get("can_undo"):
+                options.append(("Go Back", False))
+            sq_type = req.data.get("square_type", "")
+            header = f"Stop on sq{req.data['square_id']} ({sq_type})?"
+            self._enter_selection_mode(header, options)
+            return
+
+        if req.type == InputRequestType.BUY_SHOP:
+            header = (
                 f"Buy shop at sq{req.data['square_id']}? "
                 f"Cost: {req.data['cost']}G | Cash: {req.data['cash']}G"
             )
-            inp.placeholder = "Y / N"
+            self._enter_selection_mode(header, [("Buy", True), ("Skip", False)])
+            return
 
-        elif req.type == InputRequestType.INVEST:
-            shops = req.data.get("investable", [])
-            parts = [
-                f"sq{s['square_id']}(val={s['current_value']},"
-                f"max={s['max_capital']})"
-                for s in shops
-            ]
-            prompt.prompt_text = (
-                f"Invest? Cash: {req.data['cash']}G | "
-                f"Shops: {', '.join(parts)}"
-            )
-            inp.placeholder = "square_id amount / N"
-
-        elif req.type == InputRequestType.BUY_STOCK:
-            stocks = req.data.get("stocks", [])
-            parts = [f"d{s['district_id']}@{s['price']}G" for s in stocks]
-            prompt.prompt_text = (
-                f"Buy stock? Cash: {req.data['cash']}G | "
-                f"{', '.join(parts)}"
-            )
-            inp.placeholder = "district_id quantity / N"
-
-        elif req.type == InputRequestType.SELL_STOCK:
-            holdings = req.data.get("holdings", {})
-            parts = [
-                f"d{d}:{h['quantity']}@{h['price']}G"
-                for d, h in holdings.items()
-            ]
-            prompt.prompt_text = f"Sell stock? {', '.join(parts)}"
-            inp.placeholder = "district_id quantity / N"
-
-        elif req.type == InputRequestType.CANNON_TARGET:
-            targets = req.data.get("targets", [])
-            parts = [
-                f"P{t['player_id']}(sq{t['position']})" for t in targets
-            ]
-            prompt.prompt_text = (
-                f"Cannon! Choose target: {', '.join(parts)}"
-            )
-            inp.placeholder = "Player ID"
-
-        elif req.type == InputRequestType.VACANT_PLOT_TYPE:
-            options = req.data.get("options", [])
-            parts = [
-                f"\\[{i + 1}] {o}" for i, o in enumerate(options)
-            ]
-            prompt.prompt_text = (
-                f"Build on sq{req.data['square_id']}: "
-                f"{', '.join(parts)}"
-            )
-            inp.placeholder = "Enter number"
-
-        elif req.type == InputRequestType.FORCED_BUYOUT:
-            prompt.prompt_text = (
+        if req.type == InputRequestType.FORCED_BUYOUT:
+            header = (
                 f"Force-buy sq{req.data['square_id']} "
                 f"for {req.data['cost']}G?"
             )
-            inp.placeholder = "Y / N"
+            self._enter_selection_mode(header, [("Buy", True), ("Skip", False)], initial_index=1)
+            return
 
-        elif req.type == InputRequestType.AUCTION_BID:
-            prompt.prompt_text = (
-                f"P{req.player_id}: Bid on sq"
-                f"{req.data['square_id']}? "
-                f"Min: {req.data['min_bid']}G | "
-                f"Cash: {req.data['cash']}G"
-            )
-            inp.placeholder = "Bid amount / N"
-
-        elif req.type == InputRequestType.CHOOSE_SHOP_AUCTION:
-            shops = req.data.get("shops", [])
-            parts = [
-                f"sq{s['square_id']}({s['value']}G)" for s in shops
-            ]
-            prompt.prompt_text = (
-                f"Auction which shop? {', '.join(parts)}"
-            )
-            inp.placeholder = "Square ID / N"
-
-        elif req.type == InputRequestType.CHOOSE_SHOP_BUY:
-            prompt.prompt_text = (
-                f"Buy a shop. Cash: {req.data['cash']}G"
-            )
-            inp.placeholder = "player_id square_id price / N"
-
-        elif req.type == InputRequestType.CHOOSE_SHOP_SELL:
-            shops = req.data.get("shops", [])
-            parts = [
-                f"sq{s['square_id']}({s['value']}G)" for s in shops
-            ]
-            prompt.prompt_text = f"Sell a shop: {', '.join(parts)}"
-            inp.placeholder = "target_player square_id price / N"
-
-        elif req.type == InputRequestType.ACCEPT_OFFER:
+        if req.type == InputRequestType.ACCEPT_OFFER:
             offer = req.data.get("offer", {})
             otype = offer.get("type", "?")
             sq_id = offer.get("square_id", "?")
             price = offer.get("price", offer.get("gold_offer", "?"))
-            prompt.prompt_text = (
+            header = (
                 f"P{req.player_id}: {otype} offer for "
                 f"sq{sq_id} at {price}G"
             )
-            inp.placeholder = "A(ccept) / R(eject) / C(ounter)"
+            options = [
+                ("Accept", "accept"),
+                ("Reject", "reject"),
+                ("Counter", "counter"),
+            ]
+            self._enter_selection_mode(header, options)
+            return
 
-        elif req.type == InputRequestType.COUNTER_PRICE:
+        if req.type == InputRequestType.CANNON_TARGET:
+            targets = req.data.get("targets", [])
+            options = [
+                (f"P{t['player_id']} (sq{t['position']})", t["player_id"])
+                for t in targets
+            ]
+            self._enter_selection_mode("Cannon! Choose target:", options)
+            return
+
+        if req.type == InputRequestType.VACANT_PLOT_TYPE:
+            opts = req.data.get("options", [])
+            options = [(o, o) for o in opts]
+            header = f"Build on sq{req.data['square_id']}:"
+            self._enter_selection_mode(header, options)
+            return
+
+        if req.type == InputRequestType.RENOVATE:
+            opts = req.data.get("options", [])
+            options = [(o, o) for o in opts]
+            options.append(("Skip", None))
+            header = f"Renovate sq{req.data['square_id']}?"
+            self._enter_selection_mode(header, options)
+            return
+
+        if req.type == InputRequestType.CHOOSE_SHOP_AUCTION:
+            shops = req.data.get("shops", [])
+            options = [
+                (f"sq{s['square_id']} ({s['value']}G)", s["square_id"])
+                for s in shops
+            ]
+            options.append(("Cancel", None))
+            self._enter_selection_mode("Auction which shop?", options)
+            return
+
+        if req.type == InputRequestType.LIQUIDATION:
+            options_data = req.data.get("options", {})
+            options: list[tuple[str, Any]] = []
+            for s in options_data.get("shops", []):
+                options.append((
+                    f"Shop sq{s['square_id']} ({s['sell_value']}G)",
+                    ("shop", s["square_id"]),
+                ))
+            for d_id, info in options_data.get("stock", {}).items():
+                options.append((
+                    f"Stock d{d_id} ({info['quantity']}x{info['price_per_share']}G)",
+                    ("stock", int(d_id)),
+                ))
+            cash = req.data.get("cash", 0)
+            self._enter_selection_mode(
+                f"Must sell assets! Cash: {cash}G", options
+            )
+            return
+
+        if req.type == InputRequestType.BUY_STOCK:
+            stocks = req.data.get("stocks", [])
+            options = [
+                (f"d{s['district_id']} @{s['price']}G", s["district_id"])
+                for s in stocks
+            ]
+            options.append(("Skip", None))
+            header = f"Buy stock? Cash: {req.data['cash']}G"
+            self._enter_selection_mode(header, options)
+            return
+
+        if req.type == InputRequestType.SELL_STOCK:
+            holdings = req.data.get("holdings", {})
+            options = [
+                (f"d{d}: {h['quantity']}@{h['price']}G", int(d))
+                for d, h in holdings.items()
+            ]
+            options.append(("Skip", None))
+            self._enter_selection_mode("Sell stock?", options)
+            return
+
+        if req.type == InputRequestType.INVEST:
+            shops = req.data.get("investable", [])
+            options = [
+                (f"sq{s['square_id']} (max {s['max_capital']}G)", s["square_id"])
+                for s in shops
+            ]
+            options.append(("Skip", None))
+            header = f"Invest? Cash: {req.data['cash']}G"
+            self._enter_selection_mode(header, options)
+            return
+
+        if req.type == InputRequestType.AUCTION_BID:
+            header = (
+                f"P{req.player_id}: Bid on sq{req.data['square_id']}? "
+                f"Min: {req.data['min_bid']}G | Cash: {req.data['cash']}G"
+            )
+            self._enter_selection_mode(header, [("Bid", "bid"), ("Pass", None)])
+            return
+
+        if req.type == InputRequestType.CHOOSE_SHOP_BUY:
+            state = self._get_state()
+            options = []
+            if state:
+                for p in state.players:
+                    if p.player_id == req.player_id or p.bankrupt:
+                        continue
+                    for sq_id in p.owned_properties:
+                        sq = state.board.squares[sq_id]
+                        val = sq.shop_current_value or 0
+                        options.append((
+                            f"P{p.player_id}: sq{sq_id} ({val}G)",
+                            (p.player_id, sq_id),
+                        ))
+            options.append(("Cancel", None))
+            header = f"Buy a shop. Cash: {req.data['cash']}G"
+            self._enter_selection_mode(header, options, initial_index=len(options) - 1)
+            return
+
+        if req.type == InputRequestType.CHOOSE_SHOP_SELL:
+            shops = req.data.get("shops", [])
+            options = [
+                (f"sq{s['square_id']} ({s['value']}G)", s["square_id"])
+                for s in shops
+            ]
+            options.append(("Cancel", None))
+            self._enter_selection_mode("Sell which shop?", options)
+            return
+
+        # ── Text-only types ──
+
+        if req.type == InputRequestType.COUNTER_PRICE:
             prompt.prompt_text = (
                 f"Original: {req.data['original_price']}G. "
                 f"Counter-offer:"
             )
-            inp.placeholder = "Enter amount"
+            self._enter_text_mode("Enter amount")
+            return
 
-        elif req.type == InputRequestType.RENOVATE:
-            options = req.data.get("options", [])
-            parts = [
-                f"\\[{i + 1}] {o}" for i, o in enumerate(options)
-            ]
-            prompt.prompt_text = (
-                f"Renovate sq{req.data['square_id']}? "
-                f"{', '.join(parts)}"
-            )
-            inp.placeholder = "Enter number / N"
-
-        elif req.type == InputRequestType.TRADE:
+        if req.type == InputRequestType.TRADE:
             prompt.prompt_text = (
                 f"Propose trade. Cash: {req.data['cash']}G"
             )
-            inp.placeholder = (
+            self._enter_text_mode(
                 "target_pid your_shops their_shops gold / N"
             )
+            return
 
-        elif req.type == InputRequestType.LIQUIDATION:
-            prompt.prompt_text = (
-                f"Must sell assets! Cash: {req.data['cash']}G"
-            )
-            inp.placeholder = "sell shop <id> / sell stock <id>"
-
+        # Fallback
         inp.focus()
+
+    # ── Text input handling ───────────────────────────────────────
 
     @on(Input.Submitted, "#command-input")
     def handle_command(self, event: Input.Submitted) -> None:
@@ -482,160 +830,95 @@ class GameApp(App):
         inp = self.query_one("#command-input", Input)
         inp.value = ""
 
-        if not value:
-            return
-
         if self._current_request is None:
             return
 
         req = self._current_request
 
-        # Handle info command from pre-roll
-        if value.upper() in ("I", "INFO") and req.type == InputRequestType.PRE_ROLL:
-            self._show_info()
+        # Two-phase: text input after selection
+        if self._input_phase > 0:
+            response = self._handle_phase_text_input(req, value)
+            if response is None:
+                if value:
+                    log_widget = self.query_one("#game-log", RichLog)
+                    log_widget.write("[red]Invalid input. Try again.[/]")
+                return
+            self._submit_response(response)
             return
 
+        if not value:
+            return
+
+        # Standard text-only types (COUNTER_PRICE, TRADE)
         response = self._validate_and_parse(req, value)
         if response is None:
             log_widget = self.query_one("#game-log", RichLog)
             log_widget.write("[red]Invalid input. Try again.[/]")
             return
 
-        self._current_request = None
-        self.player_input.submit_response(response)
+        self._submit_response(response)
 
-    def _validate_and_parse(self, req: InputRequest, value: str) -> object:
-        """Validate input and return parsed response, or None if invalid."""
-        v = value.upper()
+    def _handle_phase_text_input(
+        self, req: InputRequest, value: str
+    ) -> Any:
+        """Handle text input for phase 1+ of two-phase inputs."""
+        v = value.strip().upper()
+        rtype = req.type
 
-        if req.type == InputRequestType.PRE_ROLL:
-            if v in ("R", "ROLL"):
-                return "roll"
-            if v in ("S", "SELL") and req.data.get("has_stock"):
-                return "sell_stock"
-            if v in ("A", "AUCTION") and req.data.get("has_shops"):
-                return "auction"
-            if v in ("H",) and req.data.get("has_shops"):
-                return "sell_shop"
-            if v in ("B", "BUY"):
-                return "buy_shop"
-            if v in ("T", "TRADE") and req.data.get("has_shops"):
-                return "trade"
-            return None
-
-        if req.type == InputRequestType.CONFIRM_STOP:
-            if v in ("S", "STOP", "Y", "YES", ""):
-                return True
-            if v in ("U", "UNDO") and req.data.get("can_undo"):
-                return False
-            return None
-
-        if req.type == InputRequestType.CHOOSE_PATH:
-            if v in ("U", "UNDO") and req.data.get("can_undo"):
-                return "undo"
+        if rtype == InputRequestType.BUY_STOCK and self._input_phase == 1:
+            district_id = self._phase_data["district_id"]
+            if not value or v in ("", "1"):
+                return (district_id, 1)
+            if v in ("N", "NO", "0"):
+                return None  # cancel
             try:
-                sq_id = int(value)
-                valid_ids = [
-                    c["square_id"] for c in req.data["choices"]
-                ]
-                if sq_id in valid_ids:
-                    return sq_id
-            except ValueError:
-                pass
-            return None
-
-        if req.type == InputRequestType.BUY_SHOP:
-            if v in ("Y", "YES"):
-                return True
-            if v in ("N", "NO"):
-                return False
-            return None
-
-        if req.type == InputRequestType.INVEST:
-            if v in ("N", "NO", ""):
-                return None
-            try:
-                parts = value.split()
-                sq_id = int(parts[0])
-                valid_ids = [
-                    s["square_id"]
-                    for s in req.data.get("investable", [])
-                ]
-                if sq_id not in valid_ids:
-                    return None
-                amount = (
-                    int(parts[1])
-                    if len(parts) > 1
-                    else req.data["cash"]
-                )
-                return (sq_id, amount)
-            except (ValueError, IndexError):
-                pass
-            return None
-
-        if req.type == InputRequestType.BUY_STOCK:
-            if v in ("N", "NO", ""):
-                return None
-            try:
-                parts = value.split()
-                district_id = int(parts[0])
-                qty = int(parts[1]) if len(parts) > 1 else 1
+                qty = int(value)
                 if qty > 0:
                     return (district_id, qty)
-            except (ValueError, IndexError):
+            except ValueError:
                 pass
-            return None
+            return None  # invalid
 
-        if req.type == InputRequestType.SELL_STOCK:
-            if v in ("N", "NO", ""):
+        if rtype == InputRequestType.SELL_STOCK and self._input_phase == 1:
+            district_id = self._phase_data["district_id"]
+            holdings = req.data.get("holdings", {})
+            max_qty = holdings.get(str(district_id), {}).get("quantity", 0)
+            if not value or v in ("ALL", ""):
+                return (district_id, max_qty)
+            if v in ("N", "NO", "0"):
                 return None
             try:
-                parts = value.split()
-                district_id = int(parts[0])
-                holdings = req.data.get("holdings", {})
-                max_qty = holdings.get(
-                    str(district_id), {}
-                ).get("quantity", 0)
-                qty = int(parts[1]) if len(parts) > 1 else max_qty
+                qty = int(value)
                 if qty > 0:
                     return (district_id, qty)
-            except (ValueError, IndexError):
-                pass
-            return None
-
-        if req.type == InputRequestType.CANNON_TARGET:
-            try:
-                pid = int(value)
-                valid_ids = [
-                    t["player_id"]
-                    for t in req.data.get("targets", [])
-                ]
-                if pid in valid_ids:
-                    return pid
             except ValueError:
                 pass
             return None
 
-        if req.type == InputRequestType.VACANT_PLOT_TYPE:
-            try:
-                idx = int(value)
-                options = req.data.get("options", [])
-                if 1 <= idx <= len(options):
-                    return options[idx - 1]
-            except ValueError:
-                pass
-            return None
-
-        if req.type == InputRequestType.FORCED_BUYOUT:
-            if v in ("Y", "YES"):
-                return True
-            if v in ("N", "NO"):
-                return False
-            return None
-
-        if req.type == InputRequestType.AUCTION_BID:
-            if v in ("N", "NO", ""):
+        if rtype == InputRequestType.INVEST and self._input_phase == 1:
+            sq_id = self._phase_data["square_id"]
+            match = next(
+                s for s in req.data.get("investable", [])
+                if s["square_id"] == sq_id
+            )
+            max_cap = match["max_capital"]
+            cash = req.data["cash"]
+            default = min(cash, max_cap)
+            if not value or v in ("ALL", ""):
+                return (sq_id, default)
+            if v in ("N", "NO", "0"):
                 return None
+            try:
+                amount = int(value)
+                if amount > 0:
+                    return (sq_id, amount)
+            except ValueError:
+                pass
+            return None
+
+        if rtype == InputRequestType.AUCTION_BID and self._input_phase == 1:
+            if not value or v in ("N", "NO"):
+                return None  # cancel bid
             try:
                 bid = int(value)
                 min_bid = req.data.get("min_bid", 1)
@@ -646,55 +929,43 @@ class GameApp(App):
                 pass
             return None
 
-        if req.type == InputRequestType.CHOOSE_SHOP_AUCTION:
-            if v in ("N", "NO", ""):
+        if rtype == InputRequestType.CHOOSE_SHOP_BUY and self._input_phase == 1:
+            if not value or v in ("N", "NO"):
                 return None
             try:
-                sq_id = int(value)
-                valid_ids = [
-                    s["square_id"]
-                    for s in req.data.get("shops", [])
-                ]
-                if sq_id in valid_ids:
-                    return sq_id
+                price = int(value)
+                if price > 0:
+                    return (
+                        self._phase_data["target_pid"],
+                        self._phase_data["sq_id"],
+                        price,
+                    )
             except ValueError:
                 pass
             return None
 
-        if req.type == InputRequestType.CHOOSE_SHOP_BUY:
-            if v in ("N", "NO", ""):
+        if rtype == InputRequestType.CHOOSE_SHOP_SELL and self._input_phase == 2:
+            if not value or v in ("N", "NO"):
                 return None
             try:
-                parts = value.split()
-                target_pid = int(parts[0])
-                sq_id = int(parts[1])
-                price = int(parts[2])
-                return (target_pid, sq_id, price)
-            except (ValueError, IndexError):
+                price = int(value)
+                if price > 0:
+                    return (
+                        self._phase_data["target_pid"],
+                        self._phase_data["sq_id"],
+                        price,
+                    )
+            except ValueError:
                 pass
             return None
 
-        if req.type == InputRequestType.CHOOSE_SHOP_SELL:
-            if v in ("N", "NO", ""):
-                return None
-            try:
-                parts = value.split()
-                target_pid = int(parts[0])
-                sq_id = int(parts[1])
-                price = int(parts[2])
-                return (target_pid, sq_id, price)
-            except (ValueError, IndexError):
-                pass
-            return None
+        return None
 
-        if req.type == InputRequestType.ACCEPT_OFFER:
-            if v in ("A", "ACCEPT"):
-                return "accept"
-            if v in ("R", "REJECT"):
-                return "reject"
-            if v in ("C", "COUNTER"):
-                return "counter"
-            return None
+    def _validate_and_parse(
+        self, req: InputRequest, value: str
+    ) -> object:
+        """Validate input for text-only request types."""
+        v = value.upper()
 
         if req.type == InputRequestType.COUNTER_PRICE:
             try:
@@ -702,20 +973,8 @@ class GameApp(App):
             except ValueError:
                 return None
 
-        if req.type == InputRequestType.RENOVATE:
-            if v in ("N", "NO", ""):
-                return None
-            try:
-                idx = int(value)
-                options = req.data.get("options", [])
-                if 1 <= idx <= len(options):
-                    return options[idx - 1]
-            except ValueError:
-                pass
-            return None
-
         if req.type == InputRequestType.TRADE:
-            if v in ("N", "NO", ""):
+            if v in ("N", "NO"):
                 return None
             try:
                 parts = value.split()
@@ -743,28 +1002,28 @@ class GameApp(App):
                 pass
             return None
 
-        if req.type == InputRequestType.LIQUIDATION:
-            parts = value.lower().split()
-            try:
-                if len(parts) >= 3 and parts[0] == "sell":
-                    asset_type = parts[1]
-                    asset_id = int(parts[2])
-                    if asset_type in ("shop", "stock"):
-                        return (asset_type, asset_id)
-            except ValueError:
-                pass
-            return None
+        return None
 
+    # ── State helpers ─────────────────────────────────────────────
+
+    def _get_state(self) -> Any:
+        """Get current game state from either local game loop or bridge."""
+        if self._networked:
+            return self._client_bridge.state
+        if self.game_loop is not None:
+            return self.game_loop.state
         return None
 
     def _refresh_board(self) -> None:
         """Re-render the board view from current game state."""
-        if self.game_loop is None:
+        state = self._get_state()
+        if state is None:
             return
         try:
             from road_to_riches.client.board_renderer import render_board
 
-            board_text = render_board(self.game_loop.state)
+            active_pid = self._current_request.player_id if self._current_request else None
+            board_text = render_board(state, active_player_id=active_pid)
             board_widget = self.query_one("#board-view", RichLog)
             board_widget.clear()
             for line in board_text.split("\n"):
@@ -775,30 +1034,42 @@ class GameApp(App):
 
     def _refresh_player_info(self) -> None:
         """Update the always-visible player info panel."""
-        if self.game_loop is None:
+        state = self._get_state()
+        if state is None:
             return
-        state = self.game_loop.state
         parts = []
         for p in state.players:
             if p.bankrupt:
                 continue
+            from rich.text import Text
+
             color = PLAYER_COLORS[p.player_id % len(PLAYER_COLORS)]
             nw = state.net_worth(p)
-            suit_symbols = {
-                "SPADE": "♠", "HEART": "♥", "DIAMOND": "♦",
-                "CLUB": "♣", "WILD": "★",
-            }
-            suit_str = " ".join(
-                suit_symbols.get(s.value if hasattr(s, "value") else s, "?")
-                for s in p.suits
-            ) if p.suits else "-"
-            parts.append(
-                f"[{color}]P{p.player_id}[/{color}] "
-                f"Lv{p.level} ${p.ready_cash} NW:{nw} "
-                f"Suits:{suit_str}"
+            line = Text()
+            line.append(
+                f"P{p.player_id} Lv{p.level} ${p.ready_cash} NW:{nw} ",
+                style=color,
             )
+            if p.suits:
+                for i, s in enumerate(p.suits):
+                    name = s.value if hasattr(s, "value") else s
+                    symbol = SUIT_SYMBOLS.get(name, "?")
+                    sc = SUIT_COLORS.get(name, "white")
+                    if i > 0:
+                        line.append(" ")
+                    line.append(symbol, style=sc)
+            else:
+                line.append("-")
+            parts.append(line)
         info_widget = self.query_one("#player-info", Static)
-        info_widget.update("\n".join(parts))
+        from rich.text import Text
+
+        combined = Text()
+        for i, part in enumerate(parts):
+            if i > 0:
+                combined.append("\n")
+            combined.append(part)
+        info_widget.update(combined)
 
     def _show_info(self) -> None:
         """Toggle the info panel with game state."""
@@ -812,10 +1083,10 @@ class GameApp(App):
         self._info_visible = True
         info_widget.clear()
 
-        if self.game_loop is None:
+        state = self._get_state()
+        if state is None:
             return
 
-        state = self.game_loop.state
         info_widget.write("[bold]=== Game Info ===[/]")
         info_widget.write(
             f"Target net worth: {state.board.target_networth}G"
@@ -859,15 +1130,28 @@ class GameApp(App):
                 row += f" | {qty:2d}"
             info_widget.write(row)
 
+    # ── Game lifecycle ────────────────────────────────────────────
+
+    def _on_game_over(self, winner: int | None) -> None:
+        """Called from client bridge when server sends game_over."""
+        self.post_message(self.GameOver(winner))
+
     @work(thread=True)
     def _start_game(self) -> None:
-        """Run the game loop in a background thread."""
+        """Run the game loop in a background thread (local mode)."""
+        assert self.config is not None
         self.game_loop = GameLoop(self.config, self.player_input)
         self._poll_for_requests()
 
     @work(thread=True)
+    def _start_networked_game(self) -> None:
+        """Connect to server and poll for requests (networked mode)."""
+        self._client_bridge.send_start_game()
+        self._poll_for_requests_networked()
+
+    @work(thread=True)
     def _poll_for_requests(self) -> None:
-        """Poll for input requests from the game thread."""
+        """Poll for input requests from the game thread (local mode)."""
         game_thread = threading.Thread(
             target=self._run_game, daemon=True
         )
@@ -879,8 +1163,16 @@ class GameApp(App):
                 self.post_message(self.InputReady(req))
         game_thread.join()
 
+    @work(thread=True)
+    def _poll_for_requests_networked(self) -> None:
+        """Poll for input requests from the client bridge (networked mode)."""
+        while True:
+            req = self.player_input.get_pending_request()
+            if req is not None:
+                self.post_message(self.InputReady(req))
+
     def _run_game(self) -> None:
-        """Run the game loop (blocking)."""
+        """Run the game loop (blocking, local mode only)."""
         assert self.game_loop is not None
         winner = self.game_loop.run()
         self.post_message(self.GameOver(winner))
@@ -890,10 +1182,23 @@ def run_tui(
     board_path: str = "boards/test_board.json",
     num_players: int = 4,
 ) -> None:
+    """Run the TUI in local mode (game loop runs in-process)."""
     config = GameConfig(
         board_path=board_path,
         num_players=num_players,
         starting_cash=1500,
     )
-    app = GameApp(config)
+    app = GameApp(config=config)
+    app.run()
+
+
+def run_tui_client(
+    uri: str = "ws://localhost:8765",
+) -> None:
+    """Run the TUI as a client connecting to a remote game server."""
+    from road_to_riches.client.client_bridge import ClientBridge
+
+    bridge = ClientBridge(uri)
+    bridge.connect()
+    app = GameApp(client_bridge=bridge)
     app.run()

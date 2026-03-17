@@ -60,8 +60,10 @@ class PayRentEvent(GameEvent):
     owner_id: int
     square_id: int
     _rent_amount: int = 0
+    _dividends: list = None  # type: ignore[assignment]  # populated after execute
 
     def execute(self, state: GameState) -> None:
+        self._dividends = []
         payer = state.get_player(self.payer_id)
         owner = state.get_player(self.owner_id)
         square = state.board.squares[self.square_id]
@@ -86,6 +88,10 @@ class PayRentEvent(GameEvent):
             if commission_pct > 0:
                 commission = int(rent * commission_pct / 100.0)
                 p.ready_cash += commission
+
+        # Dividends: 20% of rent split among stockholders by weight (paid by bank)
+        if rent > 0 and square.property_district is not None:
+            self._dividends = _pay_dividends(state, square.property_district, rent)
 
     def get_result(self) -> int:
         return self._rent_amount
@@ -647,6 +653,40 @@ class RotateSuitEvent(GameEvent):
 # =============================================================================
 # Helpers
 # =============================================================================
+
+
+def _pay_dividends(state: GameState, district_id: int, rent_amount: int) -> list[tuple[int, int]]:
+    """Distribute dividends from a rent payment to stockholders.
+
+    20% of rent is split proportionally among all players holding stock
+    in the district. Dividends are paid by the bank (new money).
+    Returns list of (player_id, dividend_amount) for logging.
+    """
+    dividend_pool = int(rent_amount * 0.20)
+    if dividend_pool <= 0:
+        return []
+
+    # Count total stock held in this district across all active players
+    holdings: list[tuple[int, int]] = []  # (player_id, quantity)
+    total_stock = 0
+    for p in state.active_players:
+        qty = p.owned_stock.get(district_id, 0)
+        if qty > 0:
+            holdings.append((p.player_id, qty))
+            total_stock += qty
+
+    if total_stock == 0:
+        return []
+
+    # Distribute proportionally
+    payouts: list[tuple[int, int]] = []
+    for player_id, qty in holdings:
+        share = int(dividend_pool * qty / total_stock)
+        if share > 0:
+            state.get_player(player_id).ready_cash += share
+            payouts.append((player_id, share))
+
+    return payouts
 
 
 def _update_district_stock_value(state: GameState, district_id: int) -> None:

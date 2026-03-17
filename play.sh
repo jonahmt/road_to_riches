@@ -2,10 +2,12 @@
 # Launch Road to Riches
 #
 # Usage:
-#   ./play.sh                     # TUI, solo board, 1 player
-#   ./play.sh --text              # Text mode (stdin/stdout)
-#   ./play.sh boards/test_board.json 4   # Custom board, 4 players
-#   ./play.sh --text boards/solo_board.json 1
+#   ./play.sh                              # Local TUI, test board, 2 players
+#   ./play.sh local boards/big.json 4      # Custom board, 4 players
+#   ./play.sh server                       # Start WebSocket game server
+#   ./play.sh client                       # Connect TUI to running server
+#   ./play.sh server --port 9000 --debug   # Custom port with debug logging
+#   ./play.sh text                         # Text mode (stdin/stdout)
 
 set -e
 
@@ -22,34 +24,4 @@ else
     exit 1
 fi
 
-# Defaults
-MODE=""
-BOARD="boards/solo_board.json"
-PLAYERS="1"
-
-# Parse args
-ARGS=()
-for arg in "$@"; do
-    if [ "$arg" = "--text" ] || [ "$arg" = "--tui" ]; then
-        MODE="$arg"
-    else
-        ARGS+=("$arg")
-    fi
-done
-
-if [ ${#ARGS[@]} -ge 1 ]; then
-    BOARD="${ARGS[0]}"
-fi
-if [ ${#ARGS[@]} -ge 2 ]; then
-    PLAYERS="${ARGS[1]}"
-fi
-
-echo "═══════════════════════════════════════"
-echo "  ROAD TO RICHES"
-echo "  Board:   $BOARD"
-echo "  Players: $PLAYERS"
-echo "  Mode:    ${MODE:---tui}"
-echo "═══════════════════════════════════════"
-echo ""
-
-exec python -m road_to_riches.main $MODE "$BOARD" "$PLAYERS"
+exec python -m road_to_riches.main "$@"
