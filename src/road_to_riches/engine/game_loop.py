@@ -999,6 +999,10 @@ class GameLoop:
         )
 
         info = result.info
+
+        if info.get("unimplemented"):
+            self.log.log(f"[yellow]UNIMPLEMENTED: {info['unimplemented']} square has no effect.[/yellow]")
+
         # Check pipeline history for the events just executed
         for entry in reversed(self.pipeline.history):
             event = entry.event

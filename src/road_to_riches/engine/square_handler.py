@@ -30,6 +30,12 @@ from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.suit import Suit
 
 
+_UNIMPLEMENTED_TYPES: set[SquareType] = {
+    SquareType.SWITCH,
+    SquareType.ARCADE,
+}
+
+
 class PlayerAction(str, Enum):
     """An action the player can choose (not automatic)."""
 
@@ -212,6 +218,9 @@ def handle_land(state: GameState, player_id: int, square: SquareInfo) -> SquareR
             info["cannon_targets"] = [
                 {"player_id": p.player_id, "position": p.position} for p in other_players
             ]
+
+    elif square.type in _UNIMPLEMENTED_TYPES:
+        info["unimplemented"] = square.type.value
 
     return SquareResult(auto_events=auto_events, available_actions=actions, info=info)
 

@@ -1,0 +1,55 @@
+Initial cash: 1000
+Base salary: 200
+Salary increment: 150
+Max dice roll: 6
+
+
+
+id 0: Bank, waypoints: 1->9, 9->1, position 112, -128
+id 1: Property, district 0, val 200, price 20, waypoints: 0->2, 2->0, position 176, -128
+... (skipping other properties in district 0. Vals increase by 10, prices by 1)
+id 6: Property, district 1, val 400, price 40, waypoints: 5->7,10, 7->5,10, 10->5,7, position 176, -320
+... (skipping rest of district 1. Vals increase by 10, prices by 1)
+id 10: Vacant plot, district 2, waypoints: none (invalid in typical game), positon 176, -384
+
+For the rest of the squares, I am just saying id -> type and assuming you can map the positions correctly
+
+11: Spade
+12: Heart
+13: Diamond
+14: Club
+
+In our system, the cos squares can all be the same square type, with a rotating paramter.
+15: Spade (cos)
+16: Heart (cos)
+17: Diamond (cos)
+18: Club (cos)
+
+19: Take a break
+20: Boon (small commission)
+21: Venture
+22: Arcade
+23: Roll on
+24: Boom (large commission)
+25: Stockbroker
+26: Cannon
+27: Switch (with "district id" 4 which indicates the number of board states - in our system, we will handle this more robustly.)
+
+All the warp types are unneccesary, they basically just change the color.
+28: Warp A (dest id 0)
+29: Warp B (dest id 1)
+30: Warp C (dest id 2)
+31: Warp D (dest id 3)
+32: Warp E (dest id 4)
+
+All the gateway types are unneccesary, they basically just change the color. Gateway end is basically a null space
+These work with waypoints, but in the test they do not have waypoints set.
+33: Gateway A
+34: Gateway B
+35: Gateway C
+36: Gateway D
+37: Gateway End
+
+There may also be unneeded info as the game has shop models and such that we do not care about. 
+Also the positions are in larger units, for us just figure out the width and change to the 4 point scale.
+
