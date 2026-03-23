@@ -33,6 +33,7 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
 
     squares: list[SquareInfo] = []
     district_values: dict[int, int] = {}  # district_id -> total property value
+    district_shop_counts: dict[int, int] = {}  # district_id -> number of shops
 
     for sq_data in data["squares"]:
         waypoints = [
@@ -69,10 +70,13 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
         )
         squares.append(sq)
 
-        # Track district values for stock price initialization
+        # Track district values and shop counts for stock price initialization
         if sq.property_district is not None and sq.shop_base_value is not None:
             district_values[sq.property_district] = (
                 district_values.get(sq.property_district, 0) + sq.shop_base_value
+            )
+            district_shop_counts[sq.property_district] = (
+                district_shop_counts.get(sq.property_district, 0) + 1
             )
 
     num_districts = data.get("num_districts", len(district_values))
@@ -86,11 +90,13 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
         num_districts=num_districts,
     )
 
-    # Initialize stock prices: value component = 4% of total district value, rounded
+    # Initialize stock prices: value component = 4% of average shop value, rounded
     stock_prices = []
     for d_id in range(num_districts):
         total_val = district_values.get(d_id, 0)
-        value_component = round(total_val * 0.04)
+        num_shops = district_shop_counts.get(d_id, 1)
+        avg_val = total_val / num_shops if num_shops > 0 else 0
+        value_component = round(avg_val * 0.04)
         stock_prices.append(StockPrice(district_id=d_id, value_component=value_component))
 
     stock = StockState(stocks=stock_prices)

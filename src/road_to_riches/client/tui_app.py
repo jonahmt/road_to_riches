@@ -56,6 +56,41 @@ def _colorize_log(text: str) -> str:
     return text
 
 
+_MIN_STAT_WIDTH = 4
+
+
+def _compute_player_stats(
+    state: "GameState", players: list["PlayerState"],
+) -> list[dict[str, int]]:
+    """Compute NW, cash, property, and stock values for each player."""
+    stats = []
+    for p in players:
+        prop_val = sum(
+            state.board.squares[sq_id].shop_current_value or 0
+            for sq_id in p.owned_properties
+        )
+        stock_val = sum(
+            qty * state.stock.get_price(d_id).current_price
+            for d_id, qty in p.owned_stock.items()
+        )
+        stats.append({
+            "nw": state.net_worth(p),
+            "cash": p.ready_cash,
+            "prop": prop_val,
+            "stock": stock_val,
+        })
+    return stats
+
+
+def _column_widths(stats: list[dict[str, int]]) -> dict[str, int]:
+    """Determine column widths so all players' values align."""
+    widths: dict[str, int] = {}
+    for key in ("nw", "cash", "prop", "stock"):
+        max_len = max((len(str(s[key])) for s in stats), default=1)
+        widths[key] = max(max_len, _MIN_STAT_WIDTH)
+    return widths
+
+
 class DiceWidget(Static):
     """Displays a dice face in a 9x5 ASCII art block."""
 
@@ -205,6 +240,14 @@ class GameApp(App):
         # Multi-phase input state (selection → text input)
         self._input_phase = 0
         self._phase_data: dict = {}
+        # Dev command state
+        self._dev_mode: str | None = None  # current dev command type
+        self._dev_data: dict = {}  # accumulated dev command data
+        # Browse mode state
+        self._browse_mode = False
+        self._browse_row = 0
+        self._browse_col = 0
+        self._browse_grid: list[list[int | None]] = []
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -260,6 +303,26 @@ class GameApp(App):
 
     def on_key(self, event) -> None:
         """Dispatch raw keypresses based on current input mode."""
+        char = (event.character or "").lower()
+
+        # E toggles browse mode from any state
+        if char == "e" and self._current_request is not None:
+            if self._input_mode == "text":
+                # Don't intercept E when typing in an Input widget
+                pass
+            else:
+                event.prevent_default()
+                event.stop()
+                self._toggle_browse_mode()
+                return
+
+        # Browse mode consumes all keys
+        if self._browse_mode:
+            event.prevent_default()
+            event.stop()
+            self._handle_browse_key(event)
+            return
+
         if self._current_request is None:
             return
         if self._input_mode == "keypress":
@@ -307,6 +370,7 @@ class GameApp(App):
         elif (
             char.isdigit()
             and char != "0"
+            and self._dev_mode is None
             and self._current_request is not None
             and self._current_request.type == InputRequestType.PRE_ROLL
         ):
@@ -376,6 +440,8 @@ class GameApp(App):
         self._current_request = None
         self._input_phase = 0
         self._phase_data = {}
+        self._dev_mode = None
+        self._dev_data = {}
         if self._input_mode == "selection":
             self._exit_selection_mode()
         elif self._input_mode == "keypress":
@@ -387,14 +453,23 @@ class GameApp(App):
 
     def _on_selection_confirmed(self, value: Any) -> None:
         """Handle Space press on a selection bar option."""
+        # Dev mode intercept
+        if self._dev_mode is not None:
+            self._on_dev_selection(value)
+            return
+
         req = self._current_request
         if req is None:
             return
         rtype = req.type
 
-        # PRE_ROLL: Info toggles without submitting
+        # PRE_ROLL: Info/Dev toggle without submitting
         if rtype == InputRequestType.PRE_ROLL and value == "info":
             self._show_info()
+            return
+
+        if rtype == InputRequestType.PRE_ROLL and value == "dev":
+            self._open_dev_menu()
             return
 
         # ── Two-phase types: selection → text input ──
@@ -526,6 +601,11 @@ class GameApp(App):
 
     def _on_selection_cancelled(self) -> None:
         """Handle Backspace press in selection mode."""
+        # Dev mode: backspace returns to dev menu or pre-roll
+        if self._dev_mode is not None:
+            self._exit_dev_mode()
+            return
+
         req = self._current_request
         if req is None:
             return
@@ -628,6 +708,7 @@ class GameApp(App):
                 options.append(("Trade", "trade"))
             options.append(("Buy Shop", "buy_shop"))
             options.append(("Info", "info"))
+            options.append(("Dev", "dev"))
             header = (
                 f"P{req.player_id} | "
                 f"Cash: {req.data['cash']}G | "
@@ -829,6 +910,11 @@ class GameApp(App):
         value = event.value.strip()
         inp = self.query_one("#command-input", Input)
         inp.value = ""
+
+        # Dev mode text input
+        if self._dev_mode is not None:
+            self._handle_dev_text_input(value)
+            return
 
         if self._current_request is None:
             return
@@ -1037,22 +1123,25 @@ class GameApp(App):
         state = self._get_state()
         if state is None:
             return
-        parts = []
-        for p in state.players:
-            if p.bankrupt:
-                continue
-            from rich.text import Text
 
+        from rich.text import Text
+
+        active = [p for p in state.players if not p.bankrupt]
+        stats = _compute_player_stats(state, active)
+        widths = _column_widths(stats)
+        parts = []
+        for p, s in zip(active, stats):
             color = PLAYER_COLORS[p.player_id % len(PLAYER_COLORS)]
-            nw = state.net_worth(p)
             line = Text()
-            line.append(
-                f"P{p.player_id} Lv{p.level} ${p.ready_cash} NW:{nw} ",
-                style=color,
-            )
+            line.append(f"P{p.player_id} Lv{p.level} ", style=color)
+            line.append(f"NW:{s['nw']:>{widths['nw']}}", style=color)
+            line.append(" | ", style=color)
+            line.append(f"${s['cash']:>{widths['cash']}}", style="gold1")
+            line.append(f" | P:{s['prop']:>{widths['prop']}}", style=color)
+            line.append(f" | S:{s['stock']:>{widths['stock']}} ", style=color)
             if p.suits:
-                for i, s in enumerate(p.suits):
-                    name = s.value if hasattr(s, "value") else s
+                for i, suit in enumerate(p.suits):
+                    name = suit.value if hasattr(suit, "value") else suit
                     symbol = SUIT_SYMBOLS.get(name, "?")
                     sc = SUIT_COLORS.get(name, "white")
                     if i > 0:
@@ -1119,16 +1208,458 @@ class GameApp(App):
 
         info_widget.write("")
         info_widget.write("[bold]Stock Market:[/]")
-        header = "District | Price"
+        from road_to_riches.client.board_renderer import DISTRICT_COLORS
+
+        header = "District | [gold1]Price[/gold1]"
         for p in state.active_players:
-            header += f" | P{p.player_id}"
+            pc = PLAYER_COLORS[p.player_id % len(PLAYER_COLORS)]
+            header += f" | [{pc}]P{p.player_id}[/{pc}]"
         info_widget.write(header)
         for sp in state.stock.stocks:
-            row = f"   {sp.district_id}     |  {sp.current_price:3d} "
+            dc = DISTRICT_COLORS[sp.district_id % len(DISTRICT_COLORS)]
+            row = f"   [{dc}]{sp.district_id}[/{dc}]     | [gold1]{sp.current_price:3d}[/gold1] "
             for p in state.active_players:
                 qty = p.owned_stock.get(sp.district_id, 0)
-                row += f" | {qty:2d}"
+                if qty > 0:
+                    row += f" | [green]{qty:2d}[/green]"
+                else:
+                    row += f" | {qty:2d}"
             info_widget.write(row)
+
+    # ── Browse mode ───────────────────────────────────────────────
+
+    def _toggle_browse_mode(self) -> None:
+        """Toggle free-cam browse mode on/off."""
+        if self._browse_mode:
+            self._exit_browse_mode()
+        else:
+            self._enter_browse_mode()
+
+    def _enter_browse_mode(self) -> None:
+        """Enter browse mode: build grid, find starting position."""
+        state = self._get_state()
+        if state is None:
+            return
+        from road_to_riches.client.board_renderer import get_board_grid
+
+        self._browse_grid = get_board_grid(state.board)
+        if not self._browse_grid:
+            return
+
+        # Start on the current player's square
+        player_sq = None
+        if self._current_request is not None:
+            pid = self._current_request.player_id
+            player = state.get_player(pid)
+            player_sq = player.position
+
+        # Find the grid cell for the starting square
+        found = False
+        for r, row in enumerate(self._browse_grid):
+            for c, sq_id in enumerate(row):
+                if sq_id is not None and (sq_id == player_sq or not found):
+                    self._browse_row = r
+                    self._browse_col = c
+                    if sq_id == player_sq:
+                        found = True
+
+        self._browse_mode = True
+        self._refresh_browse()
+
+    def _exit_browse_mode(self) -> None:
+        """Exit browse mode and restore normal view."""
+        self._browse_mode = False
+        self._browse_grid = []
+        self._refresh_board()
+        # Restore the prompt
+        prompt = self.query_one("#prompt-bar", PromptBar)
+        req = self._current_request
+        if req is not None:
+            self._show_prompt(req)
+        else:
+            prompt.prompt_text = ""
+
+    def _handle_browse_key(self, event) -> None:
+        """Handle WASD/arrow navigation in browse mode."""
+        char = (event.character or "").lower()
+        key = event.key
+
+        if char in ("w",) or key == "up":
+            self._browse_move(-1, 0)
+        elif char in ("s",) or key == "down":
+            self._browse_move(1, 0)
+        elif char in ("a",) or key == "left":
+            self._browse_move(0, -1)
+        elif char in ("d",) or key == "right":
+            self._browse_move(0, 1)
+
+    def _browse_move(self, dr: int, dc: int) -> None:
+        """Move the browse cursor, skipping empty cells."""
+        rows = len(self._browse_grid)
+        if rows == 0:
+            return
+        cols = len(self._browse_grid[0])
+        r, c = self._browse_row + dr, self._browse_col + dc
+        # Search in the move direction for the next non-None cell
+        while 0 <= r < rows and 0 <= c < cols:
+            if self._browse_grid[r][c] is not None:
+                self._browse_row = r
+                self._browse_col = c
+                self._refresh_browse()
+                return
+            r += dr
+            c += dc
+
+    def _refresh_browse(self) -> None:
+        """Redraw the board with browse highlight and show square info."""
+        state = self._get_state()
+        if state is None:
+            return
+        sq_id = self._browse_grid[self._browse_row][self._browse_col]
+        if sq_id is None:
+            return
+
+        from road_to_riches.client.board_renderer import render_board
+
+        active_pid = self._current_request.player_id if self._current_request else None
+        board_text = render_board(state, active_player_id=active_pid, browsed_square_id=sq_id)
+        board_widget = self.query_one("#board-view", RichLog)
+        board_widget.clear()
+        for line in board_text.split("\n"):
+            board_widget.write(line)
+
+        # Show square info in the prompt bar
+        sq = state.board.squares[sq_id]
+        self._show_browse_info(sq, state)
+
+    def _show_browse_info(self, sq: "SquareInfo", state: Any) -> None:
+        """Display info about the browsed square in the prompt bar."""
+        from road_to_riches.engine.property import current_rent, max_capital
+
+        parts = [f"[bright_white]sq{sq.id}[/] {sq.type.value}"]
+        if sq.property_district is not None:
+            from road_to_riches.client.board_renderer import DISTRICT_COLORS
+            dc = DISTRICT_COLORS[sq.property_district % len(DISTRICT_COLORS)]
+            parts.append(f"[{dc}]d{sq.property_district}[/{dc}]")
+        if sq.property_owner is not None:
+            pc = PLAYER_COLORS[sq.property_owner % len(PLAYER_COLORS)]
+            parts.append(f"[{pc}]P{sq.property_owner}[/{pc}]")
+        if sq.shop_current_value is not None:
+            parts.append(f"val=[gold1]{sq.shop_current_value}[/gold1]")
+        if sq.property_owner is not None and sq.shop_base_rent is not None:
+            rent = current_rent(state.board, sq)
+            parts.append(f"rent=[gold1]{rent}[/gold1]")
+            mc = max_capital(state.board, sq)
+            parts.append(f"cap=[gold1]{mc}[/gold1]")
+        elif sq.shop_base_value is not None and sq.property_owner is None:
+            parts.append(f"cost=[gold1]{sq.shop_base_value}[/gold1]")
+        if sq.suit is not None:
+            name = sq.suit.value if hasattr(sq.suit, "value") else str(sq.suit)
+            symbol = SUIT_SYMBOLS.get(name, "?")
+            sc = SUIT_COLORS.get(name, "white")
+            parts.append(f"[{sc}]{symbol}[/{sc}]")
+        # Players on this square
+        players_here = [
+            p for p in state.players
+            if not p.bankrupt and p.position == sq.id
+        ]
+        if players_here:
+            player_strs = []
+            for p in players_here:
+                pc = PLAYER_COLORS[p.player_id % len(PLAYER_COLORS)]
+                player_strs.append(f"[{pc}]P{p.player_id}[/{pc}]")
+            parts.append("here:" + ",".join(player_strs))
+
+        prompt = self.query_one("#prompt-bar", PromptBar)
+        prompt.prompt_text = " | ".join(parts) + "  [dim](E to exit)[/dim]"
+
+    # ── Dev commands ──────────────────────────────────────────────
+
+    def _execute_dev_event(self, event: "GameEvent") -> None:
+        """Push a debug event into the pipeline and process it."""
+        if self.game_loop is None:
+            return
+        self.game_loop.pipeline.enqueue(event)
+        self.game_loop.pipeline.process_all(self.game_loop.state)
+        self._refresh_board()
+        self._refresh_player_info()
+        log_widget = self.query_one("#game-log", RichLog)
+        log_widget.write(f"[grey50][DEV] {event.event_type}[/grey50]")
+
+    def _open_dev_menu(self) -> None:
+        """Show the top-level dev command menu."""
+        self._dev_mode = "menu"
+        self._dev_data = {}
+        options = [
+            ("Exit", "exit"),
+            ("Gold", "gold"),
+            ("Teleport", "teleport"),
+            ("Suit", "suit"),
+            ("Stock", "stock"),
+            ("Property", "property"),
+            ("Shop Value", "shop_value"),
+        ]
+        self._enter_selection_mode("[grey50]DEV[/grey50] Choose command", options)
+
+    def _exit_dev_mode(self) -> None:
+        """Return from dev mode to the PRE_ROLL menu or dev menu."""
+        if self._dev_mode == "menu":
+            # Back to PRE_ROLL — re-present the request
+            self._dev_mode = None
+            self._dev_data = {}
+            req = self._current_request
+            if req is not None:
+                self._show_prompt(req)
+        else:
+            # Sub-menu back to dev menu
+            self._open_dev_menu()
+
+    def _on_dev_selection(self, value: Any) -> None:
+        """Handle a selection in dev mode."""
+        from road_to_riches.events.game_events import (
+            CollectSuitEvent,
+            DebugGrantPropertyEvent,
+            DebugRemovePropertyEvent,
+            DebugRemoveSuitEvent,
+            DebugSetShopValueEvent,
+            DebugSetStockEvent,
+            TransferCashEvent,
+            WarpEvent,
+        )
+
+        state = self._get_state()
+        if state is None:
+            return
+
+        if self._dev_mode == "menu":
+            if value == "exit":
+                self._exit_dev_mode()
+                return
+            self._dev_mode = value
+            self._dev_data = {}
+            self._show_dev_submenu(state)
+            return
+
+        if self._dev_mode == "gold":
+            # value = player_id, next: text input for amount
+            self._dev_data["player_id"] = value
+            self._exit_selection_mode()
+            self._enter_text_mode("Amount (+add / -remove)")
+            return
+
+        if self._dev_mode == "teleport":
+            if "player_id" not in self._dev_data:
+                self._dev_data["player_id"] = value
+                options = [
+                    (f"sq{sq.id} ({sq.type.value})", sq.id)
+                    for sq in state.board.squares
+                ]
+                self._enter_selection_mode(
+                    f"[grey50]DEV[/grey50] Teleport P{value} to:", options
+                )
+                return
+            self._execute_dev_event(
+                WarpEvent(player_id=self._dev_data["player_id"], target_square_id=value)
+            )
+            self._open_dev_menu()
+            return
+
+        if self._dev_mode == "suit":
+            if "player_id" not in self._dev_data:
+                self._dev_data["player_id"] = value
+                suits = [
+                    ("Spade", "SPADE"), ("Heart", "HEART"),
+                    ("Diamond", "DIAMOND"), ("Club", "CLUB"), ("Wild", "WILD"),
+                ]
+                self._enter_selection_mode(
+                    f"[grey50]DEV[/grey50] Suit for P{value}:", suits
+                )
+                return
+            if "suit" not in self._dev_data:
+                self._dev_data["suit"] = value
+                self._enter_selection_mode(
+                    f"[grey50]DEV[/grey50] {value}:",
+                    [("Give", "give"), ("Remove", "remove")],
+                )
+                return
+            suit = self._dev_data["suit"]
+            pid = self._dev_data["player_id"]
+            if value == "give":
+                self._execute_dev_event(CollectSuitEvent(player_id=pid, suit=suit))
+            else:
+                self._execute_dev_event(DebugRemoveSuitEvent(player_id=pid, suit=suit))
+            self._open_dev_menu()
+            return
+
+        if self._dev_mode == "stock":
+            if "player_id" not in self._dev_data:
+                self._dev_data["player_id"] = value
+                options = [
+                    (f"District {d}", d)
+                    for d in range(state.board.num_districts)
+                ]
+                self._enter_selection_mode(
+                    f"[grey50]DEV[/grey50] Stock for P{value}:", options
+                )
+                return
+            if "district_id" not in self._dev_data:
+                self._dev_data["district_id"] = value
+                self._exit_selection_mode()
+                self._enter_text_mode("Set stock quantity to:")
+                return
+
+        if self._dev_mode == "property":
+            if "action" not in self._dev_data:
+                self._dev_data["action"] = value
+                if value == "give":
+                    players = [
+                        (f"P{p.player_id}", p.player_id)
+                        for p in state.players if not p.bankrupt
+                    ]
+                    self._enter_selection_mode(
+                        "[grey50]DEV[/grey50] Give property to:", players
+                    )
+                else:
+                    # Remove: pick a shop that's owned
+                    options = [
+                        (f"sq{sq.id} d{sq.property_district} (P{sq.property_owner})", sq.id)
+                        for sq in state.board.squares
+                        if sq.property_owner is not None
+                    ]
+                    if not options:
+                        self._log_dev("No owned properties")
+                        self._open_dev_menu()
+                        return
+                    self._enter_selection_mode(
+                        "[grey50]DEV[/grey50] Remove ownership:", options
+                    )
+                return
+            if self._dev_data["action"] == "give":
+                if "player_id" not in self._dev_data:
+                    self._dev_data["player_id"] = value
+                    options = [
+                        (f"sq{sq.id} d{sq.property_district}", sq.id)
+                        for sq in state.board.squares
+                        if sq.shop_base_value is not None
+                    ]
+                    self._enter_selection_mode(
+                        f"[grey50]DEV[/grey50] Give to P{value}:", options
+                    )
+                    return
+                self._execute_dev_event(
+                    DebugGrantPropertyEvent(
+                        player_id=self._dev_data["player_id"], square_id=value
+                    )
+                )
+                self._open_dev_menu()
+                return
+            else:
+                # Remove
+                self._execute_dev_event(DebugRemovePropertyEvent(square_id=value))
+                self._open_dev_menu()
+                return
+
+        if self._dev_mode == "shop_value":
+            if "square_id" not in self._dev_data:
+                self._dev_data["square_id"] = value
+                self._exit_selection_mode()
+                sq = state.board.squares[value]
+                self._enter_text_mode(
+                    f"New value (current: {sq.shop_current_value})"
+                )
+                return
+
+    def _show_dev_submenu(self, state: Any) -> None:
+        """Show the appropriate submenu for the current dev command."""
+        players = [
+            (f"P{p.player_id}", p.player_id)
+            for p in state.players if not p.bankrupt
+        ]
+
+        if self._dev_mode in ("gold", "teleport", "suit", "stock"):
+            self._enter_selection_mode(
+                f"[grey50]DEV[/grey50] {self._dev_mode.title()} — pick player:", players
+            )
+            return
+
+        if self._dev_mode == "property":
+            self._enter_selection_mode(
+                "[grey50]DEV[/grey50] Property:", [("Give", "give"), ("Remove", "remove")]
+            )
+            return
+
+        if self._dev_mode == "shop_value":
+            options = [
+                (f"sq{sq.id} d{sq.property_district} (val={sq.shop_current_value})", sq.id)
+                for sq in state.board.squares
+                if sq.shop_current_value is not None
+            ]
+            self._enter_selection_mode("[grey50]DEV[/grey50] Set shop value:", options)
+            return
+
+    def _handle_dev_text_input(self, value: str) -> None:
+        """Handle text input while in dev mode."""
+        from road_to_riches.events.game_events import (
+            DebugSetShopValueEvent,
+            DebugSetStockEvent,
+            TransferCashEvent,
+        )
+
+        if not value:
+            return
+
+        if self._dev_mode == "gold":
+            try:
+                amount = int(value)
+            except ValueError:
+                self._log_dev("Invalid number")
+                return
+            pid = self._dev_data["player_id"]
+            if amount >= 0:
+                self._execute_dev_event(
+                    TransferCashEvent(from_player_id=None, to_player_id=pid, amount=amount)
+                )
+            else:
+                self._execute_dev_event(
+                    TransferCashEvent(from_player_id=pid, to_player_id=None, amount=-amount)
+                )
+            self._open_dev_menu()
+            return
+
+        if self._dev_mode == "stock":
+            try:
+                qty = int(value)
+            except ValueError:
+                self._log_dev("Invalid number")
+                return
+            self._execute_dev_event(
+                DebugSetStockEvent(
+                    player_id=self._dev_data["player_id"],
+                    district_id=self._dev_data["district_id"],
+                    quantity=max(0, qty),
+                )
+            )
+            self._open_dev_menu()
+            return
+
+        if self._dev_mode == "shop_value":
+            try:
+                new_val = int(value)
+            except ValueError:
+                self._log_dev("Invalid number")
+                return
+            self._execute_dev_event(
+                DebugSetShopValueEvent(
+                    square_id=self._dev_data["square_id"], new_value=max(0, new_val)
+                )
+            )
+            self._open_dev_menu()
+            return
+
+    def _log_dev(self, msg: str) -> None:
+        """Write a dev message to the game log."""
+        log_widget = self.query_one("#game-log", RichLog)
+        log_widget.write(f"[grey50][DEV] {msg}[/grey50]")
 
     # ── Game lifecycle ────────────────────────────────────────────
 

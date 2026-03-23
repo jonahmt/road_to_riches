@@ -9,66 +9,292 @@
   "promotion": {
     "base_salary": 250,
     "salary_increment": 150,
-    "shop_value_multiplier": 0.10,
-    "comeback_multiplier": 0.10
+    "shop_value_multiplier": 0.1,
+    "comeback_multiplier": 0.1
   },
   "squares": [
     {
-      "id": 0, "type": "BANK", "position": [0, 0],
-      "waypoints": [{"from_id": null, "to_ids": [1]}]
+      "id": 0,
+      "type": "BANK",
+      "position": [
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "from_id": 11,
+          "to_ids": [
+            1
+          ]
+        },
+        {
+          "from_id": 1,
+          "to_ids": [
+            11
+          ]
+        }
+      ]
     },
     {
-      "id": 1, "type": "SHOP", "position": [4, 0],
-      "district": 0, "base_value": 150, "base_rent": 20,
-      "waypoints": [{"from_id": null, "to_ids": [2]}]
+      "id": 1,
+      "type": "SHOP",
+      "position": [
+        4,
+        0
+      ],
+      "district": 0,
+      "base_value": 150,
+      "base_rent": 20,
+      "waypoints": [
+        {
+          "from_id": 0,
+          "to_ids": [
+            2
+          ]
+        },
+        {
+          "from_id": 2,
+          "to_ids": [
+            0
+          ]
+        }
+      ]
     },
     {
-      "id": 2, "type": "SUIT", "position": [8, 0],
+      "id": 2,
+      "type": "SUIT",
+      "position": [
+        8,
+        0
+      ],
       "suit": "SPADE",
-      "waypoints": [{"from_id": null, "to_ids": [3]}]
+      "waypoints": [
+        {
+          "from_id": 1,
+          "to_ids": [
+            3
+          ]
+        },
+        {
+          "from_id": 3,
+          "to_ids": [
+            1
+          ]
+        }
+      ]
     },
     {
-      "id": 3, "type": "SHOP", "position": [12, 0],
-      "district": 0, "base_value": 200, "base_rent": 30,
-      "waypoints": [{"from_id": null, "to_ids": [4]}]
+      "id": 3,
+      "type": "SHOP",
+      "position": [
+        12,
+        0
+      ],
+      "district": 0,
+      "base_value": 200,
+      "base_rent": 30,
+      "waypoints": [
+        {
+          "from_id": 2,
+          "to_ids": [
+            4
+          ]
+        },
+        {
+          "from_id": 4,
+          "to_ids": [
+            2
+          ]
+        }
+      ]
     },
     {
-      "id": 4, "type": "SUIT", "position": [12, 4],
+      "id": 4,
+      "type": "SUIT",
+      "position": [
+        12,
+        4
+      ],
       "suit": "HEART",
-      "waypoints": [{"from_id": null, "to_ids": [5]}]
+      "waypoints": [
+        {
+          "from_id": 3,
+          "to_ids": [
+            5
+          ]
+        },
+        {
+          "from_id": 5,
+          "to_ids": [
+            3
+          ]
+        }
+      ]
     },
     {
-      "id": 5, "type": "SHOP", "position": [12, 8],
-      "district": 1, "base_value": 180, "base_rent": 26,
-      "waypoints": [{"from_id": null, "to_ids": [6]}]
+      "id": 5,
+      "type": "SHOP",
+      "position": [
+        12,
+        8
+      ],
+      "district": 1,
+      "base_value": 180,
+      "base_rent": 26,
+      "waypoints": [
+        {
+          "from_id": 4,
+          "to_ids": [
+            6
+          ]
+        },
+        {
+          "from_id": 6,
+          "to_ids": [
+            4
+          ]
+        }
+      ]
     },
     {
-      "id": 6, "type": "BOON", "position": [12, 12],
-      "waypoints": [{"from_id": null, "to_ids": [7]}]
+      "id": 6,
+      "type": "BOON",
+      "position": [
+        12,
+        12
+      ],
+      "waypoints": [
+        {
+          "from_id": 5,
+          "to_ids": [
+            7
+          ]
+        },
+        {
+          "from_id": 7,
+          "to_ids": [
+            5
+          ]
+        }
+      ]
     },
     {
-      "id": 7, "type": "SHOP", "position": [8, 12],
-      "district": 1, "base_value": 220, "base_rent": 34,
-      "waypoints": [{"from_id": null, "to_ids": [8]}]
+      "id": 7,
+      "type": "SHOP",
+      "position": [
+        8,
+        12
+      ],
+      "district": 1,
+      "base_value": 220,
+      "base_rent": 34,
+      "waypoints": [
+        {
+          "from_id": 6,
+          "to_ids": [
+            8
+          ]
+        },
+        {
+          "from_id": 8,
+          "to_ids": [
+            6
+          ]
+        }
+      ]
     },
     {
-      "id": 8, "type": "SUIT", "position": [4, 12],
+      "id": 8,
+      "type": "SUIT",
+      "position": [
+        4,
+        12
+      ],
       "suit": "DIAMOND",
-      "waypoints": [{"from_id": null, "to_ids": [9]}]
+      "waypoints": [
+        {
+          "from_id": 7,
+          "to_ids": [
+            9
+          ]
+        },
+        {
+          "from_id": 9,
+          "to_ids": [
+            7
+          ]
+        }
+      ]
     },
     {
-      "id": 9, "type": "SHOP", "position": [0, 12],
-      "district": 1, "base_value": 250, "base_rent": 40,
-      "waypoints": [{"from_id": null, "to_ids": [10]}]
+      "id": 9,
+      "type": "SHOP",
+      "position": [
+        0,
+        12
+      ],
+      "district": 1,
+      "base_value": 250,
+      "base_rent": 40,
+      "waypoints": [
+        {
+          "from_id": 8,
+          "to_ids": [
+            10
+          ]
+        },
+        {
+          "from_id": 10,
+          "to_ids": [
+            8
+          ]
+        }
+      ]
     },
     {
-      "id": 10, "type": "SUIT", "position": [0, 8],
+      "id": 10,
+      "type": "SUIT",
+      "position": [
+        0,
+        8
+      ],
       "suit": "CLUB",
-      "waypoints": [{"from_id": null, "to_ids": [11]}]
+      "waypoints": [
+        {
+          "from_id": 9,
+          "to_ids": [
+            11
+          ]
+        },
+        {
+          "from_id": 11,
+          "to_ids": [
+            9
+          ]
+        }
+      ]
     },
     {
-      "id": 11, "type": "STOCKBROKER", "position": [0, 4],
-      "waypoints": [{"from_id": null, "to_ids": [0]}]
+      "id": 11,
+      "type": "STOCKBROKER",
+      "position": [
+        0,
+        4
+      ],
+      "waypoints": [
+        {
+          "from_id": 10,
+          "to_ids": [
+            0
+          ]
+        },
+        {
+          "from_id": 0,
+          "to_ids": [
+            10
+          ]
+        }
+      ]
     }
   ]
 }

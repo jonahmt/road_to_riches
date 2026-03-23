@@ -651,6 +651,100 @@ class RotateSuitEvent(GameEvent):
 
 
 # =============================================================================
+# Debug Events
+# =============================================================================
+
+
+@register_event
+@dataclass
+class DebugRemoveSuitEvent(GameEvent):
+    """Remove a suit from a player."""
+
+    player_id: int
+    suit: str
+
+    def execute(self, state: GameState) -> None:
+        player = state.get_player(self.player_id)
+        suit_enum = Suit(self.suit)
+        if suit_enum in player.suits:
+            if player.suits[suit_enum] <= 1:
+                del player.suits[suit_enum]
+            else:
+                player.suits[suit_enum] -= 1
+
+
+@register_event
+@dataclass
+class DebugSetShopValueEvent(GameEvent):
+    """Set a shop's current value directly."""
+
+    square_id: int
+    new_value: int
+
+    def execute(self, state: GameState) -> None:
+        square = state.board.squares[self.square_id]
+        assert square.shop_current_value is not None
+        square.shop_current_value = self.new_value
+        if square.property_district is not None:
+            _update_district_stock_value(state, square.property_district)
+
+
+@register_event
+@dataclass
+class DebugGrantPropertyEvent(GameEvent):
+    """Give a property to a player without payment."""
+
+    player_id: int
+    square_id: int
+
+    def execute(self, state: GameState) -> None:
+        player = state.get_player(self.player_id)
+        square = state.board.squares[self.square_id]
+        if square.property_owner is not None:
+            old_owner = state.get_player(square.property_owner)
+            old_owner.owned_properties.remove(self.square_id)
+        square.property_owner = self.player_id
+        if self.square_id not in player.owned_properties:
+            player.owned_properties.append(self.square_id)
+        if square.property_district is not None:
+            _update_district_stock_value(state, square.property_district)
+
+
+@register_event
+@dataclass
+class DebugRemovePropertyEvent(GameEvent):
+    """Remove property ownership, returning it to unowned."""
+
+    square_id: int
+
+    def execute(self, state: GameState) -> None:
+        square = state.board.squares[self.square_id]
+        if square.property_owner is not None:
+            owner = state.get_player(square.property_owner)
+            owner.owned_properties.remove(self.square_id)
+            square.property_owner = None
+        if square.property_district is not None:
+            _update_district_stock_value(state, square.property_district)
+
+
+@register_event
+@dataclass
+class DebugSetStockEvent(GameEvent):
+    """Set a player's stock quantity in a district directly."""
+
+    player_id: int
+    district_id: int
+    quantity: int
+
+    def execute(self, state: GameState) -> None:
+        player = state.get_player(self.player_id)
+        if self.quantity <= 0:
+            player.owned_stock.pop(self.district_id, None)
+        else:
+            player.owned_stock[self.district_id] = self.quantity
+
+
+# =============================================================================
 # Helpers
 # =============================================================================
 
@@ -692,13 +786,16 @@ def _pay_dividends(state: GameState, district_id: int, rent_amount: int) -> list
 def _update_district_stock_value(state: GameState, district_id: int) -> None:
     """Recalculate the value component of a district's stock price.
 
-    Value component = 4% of total property value in district, rounded to nearest int.
+    Value component = 4% of average shop value in district, rounded to nearest int.
     """
     total_value = 0
+    num_shops = 0
     for sq in state.board.squares:
         if sq.property_district == district_id and sq.shop_current_value is not None:
             total_value += sq.shop_current_value
-    state.stock.get_price(district_id).value_component = round(total_value * 0.04)
+            num_shops += 1
+    avg_value = total_value / num_shops if num_shops > 0 else 0
+    state.stock.get_price(district_id).value_component = round(avg_value * 0.04)
 
 
 def apply_pending_stock_fluctuations(state: GameState) -> list[tuple[int, int]]:
