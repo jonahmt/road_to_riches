@@ -12,6 +12,7 @@ import threading
 from typing import Any, ClassVar
 
 from textual import on, work
+from textual.timer import Timer
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
@@ -243,6 +244,9 @@ class GameApp(App):
         # Dev command state
         self._dev_mode: str | None = None  # current dev command type
         self._dev_data: dict = {}  # accumulated dev command data
+        # Keypress buffering for multi-key combos (e.g. "wa" for up-left)
+        self._key_buffer: str = ""
+        self._key_timer: Timer | None = None
         # Browse mode state
         self._browse_mode = False
         self._browse_row = 0
@@ -331,18 +335,61 @@ class GameApp(App):
             self._handle_selection_key(event)
 
     def _handle_keypress_key(self, event) -> None:
-        """Handle keys in keypress mode (CHOOSE_PATH only)."""
+        """Handle keys in keypress mode (CHOOSE_PATH only).
+
+        Supports multi-key combos (e.g. "wa" for diagonal) by buffering
+        the first keypress and waiting briefly for a second key.
+        """
         key = event.character
         if key is None:
             return
         key = key.lower()
-        req = self._current_request
-        if req is not None and req.type == InputRequestType.CHOOSE_PATH:
+        if key not in ("w", "a", "s", "d"):
+            return
+        event.prevent_default()
+        event.stop()
+
+        # Cancel any pending single-key timer
+        if self._key_timer is not None:
+            self._key_timer.stop()
+            self._key_timer = None
+
+        if self._key_buffer:
+            # Second key arrived — try the combo (both orderings)
+            combo1 = self._key_buffer + key
+            combo2 = key + self._key_buffer
+            self._key_buffer = ""
+            if combo1 in self._keypress_mapping:
+                self._submit_response(self._keypress_mapping[combo1])
+                return
+            if combo2 in self._keypress_mapping:
+                self._submit_response(self._keypress_mapping[combo2])
+                return
+            # Combo not mapped — try the second key alone
             if key in self._keypress_mapping:
-                event.prevent_default()
-                event.stop()
-                response = self._keypress_mapping[key]
-                self._submit_response(response)
+                self._submit_response(self._keypress_mapping[key])
+            return
+
+        # First key — check if any combo starting with this key exists
+        has_combo = any(
+            key in k and len(k) > 1 for k in self._keypress_mapping
+        )
+        if has_combo:
+            # Buffer and wait for possible second key
+            self._key_buffer = key
+            self._key_timer = self.set_timer(
+                0.25, self._flush_key_buffer
+            )
+        elif key in self._keypress_mapping:
+            self._submit_response(self._keypress_mapping[key])
+
+    def _flush_key_buffer(self) -> None:
+        """Timer callback: no second key arrived, try single key."""
+        self._key_timer = None
+        key = self._key_buffer
+        self._key_buffer = ""
+        if key and key in self._keypress_mapping:
+            self._submit_response(self._keypress_mapping[key])
 
     def _handle_selection_key(self, event) -> None:
         """Handle keys in selection bar mode."""

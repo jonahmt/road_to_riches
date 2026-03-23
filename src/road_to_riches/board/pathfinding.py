@@ -23,6 +23,15 @@ def get_next_squares(board: BoardState, square_id: int, from_id: int | None) -> 
         if wp.from_id is None:
             return wp.to_ids
 
+    # When from_id is None (e.g. game start, after warp) and no explicit null
+    # waypoint exists, return the union of all to_ids so the player can move
+    # in any direction.
+    if from_id is None and square.waypoints:
+        all_targets: set[int] = set()
+        for wp in square.waypoints:
+            all_targets.update(wp.to_ids)
+        return list(all_targets)
+
     return []
 
 
