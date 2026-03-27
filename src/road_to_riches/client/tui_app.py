@@ -284,18 +284,18 @@ class GameApp(App):
     @on(LogMessage)
     def handle_log_message(self, event: LogMessage) -> None:
         self._log_messages.append(event.text)
-        log_widget = self.query_one("#game-log", RichLog)
-        log_widget.clear()
-        # Show last N messages, highlight only the last one
-        visible = self._log_messages[-20:]
-        for i, msg in enumerate(visible):
-            colored = _colorize_log(msg)
-            if i == len(visible) - 1:
-                log_widget.write(f"[bold]{colored}[/]")
-            else:
-                log_widget.write(f"[dim]{colored}[/]")
-        self._refresh_board()
-        self._refresh_player_info()
+        with self.batch_update():
+            log_widget = self.query_one("#game-log", RichLog)
+            log_widget.clear()
+            visible = self._log_messages[-20:]
+            for i, msg in enumerate(visible):
+                c = _colorize_log(msg)
+                if i == len(visible) - 1:
+                    log_widget.write(f"[bold]{c}[/]")
+                else:
+                    log_widget.write(f"[dim]{c}[/]")
+            self._refresh_board()
+            self._refresh_player_info()
 
     @on(DiceUpdate)
     def handle_dice_update(self, event: DiceUpdate) -> None:
@@ -437,12 +437,14 @@ class GameApp(App):
         inp = self.query_one("#command-input", Input)
         inp.display = False
 
-    def _exit_keypress_mode(self) -> None:
-        """Switch back to normal input mode."""
+    def _reset_input_mode(self) -> None:
+        """Reset input mode state without toggling input visibility."""
+        if self._input_mode == "keypress":
+            self._keypress_mapping = {}
+        elif self._input_mode == "selection":
+            self._selection_options = []
+            self._selection_index = 0
         self._input_mode = "text"
-        self._keypress_mapping = {}
-        inp = self.query_one("#command-input", Input)
-        inp.display = True
 
     def _enter_selection_mode(
         self, prompt_text: str, options: list[tuple[str, Any]], initial_index: int = 0
@@ -489,11 +491,7 @@ class GameApp(App):
         self._phase_data = {}
         self._dev_mode = None
         self._dev_data = {}
-        if self._input_mode == "selection":
-            self._exit_selection_mode()
-        elif self._input_mode == "keypress":
-            self._exit_keypress_mode()
-        self._input_mode = "text"
+        self._reset_input_mode()
         self.player_input.submit_response(value)
 
     # ── Selection callbacks ───────────────────────────────────────
@@ -688,9 +686,10 @@ class GameApp(App):
     @on(InputReady)
     def handle_input_ready(self, event: InputReady) -> None:
         self._current_request = event.request
-        self._refresh_board()
-        self._refresh_player_info()
-        self._show_prompt(event.request)
+        with self.batch_update():
+            self._refresh_board()
+            self._refresh_player_info()
+            self._show_prompt(event.request)
 
     @on(GameOver)
     def handle_game_over(self, event: GameOver) -> None:
@@ -709,11 +708,7 @@ class GameApp(App):
 
     def _show_prompt(self, req: InputRequest) -> None:
         """Set up the UI for the given input request."""
-        # Clean up previous mode
-        if self._input_mode == "keypress":
-            self._exit_keypress_mode()
-        elif self._input_mode == "selection":
-            self._exit_selection_mode()
+        self._reset_input_mode()
         self._input_phase = 0
         self._phase_data = {}
 

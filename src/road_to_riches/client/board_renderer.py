@@ -138,14 +138,26 @@ def _render_cell(
     if browsed:
         highlight_color = "bright_white"
 
+    # Active square: highlight entire border area with the active player's color
+    active_bg: str | None = None
+    if is_active_square and active_player_id is not None:
+        active_bg = PLAYER_COLORS[active_player_id % len(PLAYER_COLORS)]
+    elif browsed:
+        active_bg = "bright_white"
+
+    def _border(text: str) -> str:
+        if active_bg:
+            return f"[bold black on {active_bg}]{text}[/]"
+        return _color(text, highlight_color)
+
     # Center content within INNER_W
     l1 = line1_text.center(INNER_W) if len(line1_text) < INNER_W else line1_text[:INNER_W]
     l2 = line2_text.center(INNER_W) if len(line2_text) < INNER_W else line2_text[:INNER_W]
 
     # Build the 4 lines
     if is_active_square:
-        border_h = _color("╔" + "═" * INNER_W + "╗", highlight_color)
-        vbar = _color("║", highlight_color)
+        border_h = _border("╔" + "═" * INNER_W + "╗")
+        vbar = _border("║")
     else:
         border_h = _color("┌" + "─" * INNER_W + "┐", highlight_color)
         vbar = _color("│", highlight_color)
@@ -157,15 +169,26 @@ def _render_cell(
         content2 = vbar + _color(l2, main_color) + vbar
 
     # Bottom row: player slots (4 chars) + ── (2 chars) + square id (2 chars)
-    player_slots = ""
-    for pid in range(4):
-        if pid in player_ids:
-            p_color = PLAYER_COLORS[pid % len(PLAYER_COLORS)]
-            player_slots += _color(str(pid), p_color)
-        else:
-            player_slots += _color(".", "grey37")
-    sep = _color("══" if is_active_square else "──", highlight_color)
-    sq_id = _color(f"{sq.id:02d}", "white")
+    if active_bg:
+        # Entire bottom row gets the highlight background
+        player_slots = ""
+        for pid in range(4):
+            if pid in player_ids:
+                player_slots += f"[bold black on {active_bg}]{pid}[/]"
+            else:
+                player_slots += f"[black on {active_bg}].[/]"
+        sep = _border("══")
+        sq_id = f"[bold black on {active_bg}]{sq.id:02d}[/]"
+    else:
+        player_slots = ""
+        for pid in range(4):
+            if pid in player_ids:
+                p_color = PLAYER_COLORS[pid % len(PLAYER_COLORS)]
+                player_slots += _color(str(pid), p_color)
+            else:
+                player_slots += _color(".", "grey37")
+        sep = _color("──", highlight_color)
+        sq_id = _color(f"{sq.id:02d}", "white")
     bottom = player_slots + sep + sq_id
 
     return [border_h, content1, content2, bottom]
