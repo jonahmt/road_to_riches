@@ -86,12 +86,25 @@ def msg_state_sync(state_dict: dict) -> dict:
     return {"msg": "state_sync", "state": state_dict}
 
 
+def msg_assign_player(player_id: int) -> dict:
+    """Tell a client which player_id they control."""
+    return {"msg": "assign_player", "player_id": player_id}
+
+
 # --- Client-to-server message builders ---
 
 
-def msg_input_response(value: Any) -> dict:
-    return {"msg": "input_response", "value": value}
+def msg_input_response(value: Any, player_id: int | None = None) -> dict:
+    msg: dict = {"msg": "input_response", "value": value}
+    if player_id is not None:
+        msg["player_id"] = player_id
+    return msg
 
 
 def msg_start_game(config: dict) -> dict:
     return {"msg": "start_game", "config": config}
+
+
+def msg_identify(player_id: int) -> dict:
+    """AI client identifies itself with its assigned player_id."""
+    return {"msg": "identify", "player_id": player_id}

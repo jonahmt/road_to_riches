@@ -45,11 +45,17 @@ class ClientBridge:
         self._thread: threading.Thread | None = None
         self._connected = threading.Event()
         self._game_over_callback: Any = None
+        self._player_id: int | None = None  # assigned by server
 
     @property
     def state(self) -> Any:
         """Current game state, updated via state_sync messages."""
         return self._state
+
+    @property
+    def player_id(self) -> int | None:
+        """Player ID assigned by the server."""
+        return self._player_id
 
     def set_log_callback(self, callback: Any) -> None:
         self._log_callback = callback
@@ -74,7 +80,7 @@ class ClientBridge:
         # Convert tuples to lists for JSON serialization
         if isinstance(response, tuple):
             response = list(response)
-        msg = encode(msg_input_response(response))
+        msg = encode(msg_input_response(response, self._player_id))
         asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
 
     def connect(self) -> None:
@@ -134,6 +140,10 @@ class ClientBridge:
         elif msg_type == "dice":
             if self._dice_callback:
                 self._dice_callback(msg["value"], msg["remaining"])
+
+        elif msg_type == "assign_player":
+            self._player_id = msg["player_id"]
+            logger.info("Assigned player_id: %d", self._player_id)
 
         elif msg_type == "game_over":
             if self._game_over_callback:

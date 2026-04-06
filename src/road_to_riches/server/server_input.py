@@ -1,11 +1,7 @@
-"""Server-side PlayerInput that communicates with clients over WebSocket.
+"""Server-side PlayerInput that routes requests to specific players over WebSocket.
 
-Implements the PlayerInput ABC. Each method sends an input_request message
-to the client WebSocket and blocks until the client responds. Log messages
-and dice updates are streamed as they occur.
-
-This mirrors the TuiPlayerInput pattern (threading.Event for blocking)
-but replaces the in-process queue with WebSocket message passing.
+Each input request is sent only to the client controlling that player_id.
+Broadcast messages (log, dice, state_sync, game_over) go to all clients.
 """
 
 from __future__ import annotations
@@ -33,48 +29,93 @@ logger = logging.getLogger(__name__)
 
 
 class WebSocketPlayerInput(PlayerInput):
-    """PlayerInput that sends requests over WebSocket and blocks for responses.
+    """PlayerInput that routes requests to specific player clients.
 
     The game loop runs in a thread. This class uses an asyncio event loop
     (from the server) to send messages, and a threading.Event to block
-    until the client responds.
+    until the correct client responds.
     """
 
     def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
-        self._websockets: list[Any] = []  # connected WebSocket clients
+        self._player_ws: dict[int, Any] = {}  # player_id -> WebSocket
+        self._ws_players: dict[int, list[int]] = {}  # ws id -> list of player_ids
+        self._all_ws: list[Any] = []  # all connected WebSockets (for broadcast)
         self._response: Any = None
         self._response_ready = threading.Event()
+        self._expecting_player: int | None = None  # which player_id we're waiting for
 
-    def add_client(self, ws: Any) -> None:
-        self._websockets.append(ws)
+    def set_client_for_player(self, player_id: int, ws: Any) -> None:
+        """Register a WebSocket as the client for a specific player.
 
-    def remove_client(self, ws: Any) -> None:
-        if ws in self._websockets:
-            self._websockets.remove(ws)
+        A single client can control multiple players (local multiplayer).
+        """
+        self._player_ws[player_id] = ws
+        ws_id = id(ws)
+        if ws_id not in self._ws_players:
+            self._ws_players[ws_id] = []
+        self._ws_players[ws_id].append(player_id)
+        if ws not in self._all_ws:
+            self._all_ws.append(ws)
 
-    def receive_response(self, value: Any) -> None:
-        """Called by the server when a client sends an input_response."""
+    def remove_client_for_player(self, player_id: int) -> None:
+        """Unregister a player's client."""
+        ws = self._player_ws.pop(player_id, None)
+        if ws is not None:
+            ws_id = id(ws)
+            if ws_id in self._ws_players:
+                pids = self._ws_players[ws_id]
+                if player_id in pids:
+                    pids.remove(player_id)
+                if not pids:
+                    del self._ws_players[ws_id]
+                    if ws in self._all_ws:
+                        self._all_ws.remove(ws)
+
+    def receive_response(self, value: Any, player_id: int | None = None) -> None:
+        """Called by the server when a client sends an input_response.
+
+        If player_id is provided, only accept if it matches the expected player.
+        """
+        if self._expecting_player is not None and player_id is not None:
+            if player_id != self._expecting_player:
+                logger.warning(
+                    "Ignoring response from player %d (expecting player %d)",
+                    player_id, self._expecting_player,
+                )
+                return
         self._response = value
         self._response_ready.set()
 
     def _broadcast(self, msg: dict) -> None:
         """Send a message to all connected clients (from game thread)."""
         raw = encode(msg)
-        for ws in list(self._websockets):
+        for ws in list(self._all_ws):
             asyncio.run_coroutine_threadsafe(ws.send(raw), self._loop)
+
+    def _send_to_player(self, player_id: int, msg: dict) -> None:
+        """Send a message to a specific player's client."""
+        ws = self._player_ws.get(player_id)
+        if ws is None:
+            logger.error("No client for player %d", player_id)
+            return
+        raw = encode(msg)
+        asyncio.run_coroutine_threadsafe(ws.send(raw), self._loop)
 
     def _send_state(self, state: GameState) -> None:
         """Send full game state to all clients."""
         self._broadcast(msg_state_sync(game_state_to_dict(state)))
 
     def _request_input(self, req: InputRequest, state: GameState) -> Any:
-        """Send an input request and block until the client responds."""
+        """Broadcast input request to all clients, accept response only from target player."""
         self._send_state(state)
         self._response_ready.clear()
+        self._expecting_player = req.player_id
+        # Broadcast so all clients can update their display
         self._broadcast(msg_input_request(req))
         logger.debug("Waiting for response to %s (player %d)", req.type, req.player_id)
         self._response_ready.wait()
+        self._expecting_player = None
         logger.debug("Got response: %r", self._response)
         return self._response
 

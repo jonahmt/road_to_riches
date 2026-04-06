@@ -18,7 +18,12 @@ def main() -> None:
     parser.add_argument(
         "board", nargs="?", default="boards/test_board.json", help="Board file path",
     )
-    parser.add_argument("players", nargs="?", type=int, default=4)
+    parser.add_argument("players", nargs="?", type=int, default=4,
+                        help="Number of players (local/text mode)")
+    parser.add_argument("--humans", type=int, default=1,
+                        help="Number of human players (server mode)")
+    parser.add_argument("--ai", type=int, default=3,
+                        help="Number of AI players (server mode)")
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
@@ -36,7 +41,8 @@ def main() -> None:
 
         run_server(
             board_path=args.board,
-            num_players=args.players,
+            num_humans=args.humans,
+            num_ai=args.ai,
             host=args.host,
             port=args.port,
             debug=args.debug,

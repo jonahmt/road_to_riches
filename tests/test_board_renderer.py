@@ -110,11 +110,12 @@ class TestRenderSquareCell:
         # District 0 = cyan highlight
         assert "cyan" in lines[0]
 
-    def test_suit_color_on_border(self):
+    def test_suit_white_border_colored_text(self):
         sq = SquareInfo(id=2, position=(0, 0), type=SquareType.SUIT, suit=Suit.HEART)
         lines = render_square_cell(sq, player_ids=[])
-        # Heart = red highlight
-        assert "red" in lines[0]
+        # Suit squares have white border, colored text
+        assert "white" in lines[0]
+        assert "bright_red" in lines[1]
 
     def test_absent_players_shown_as_dots(self):
         sq = SquareInfo(id=0, position=(0, 0), type=SquareType.BANK)
