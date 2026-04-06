@@ -21,7 +21,7 @@ PX_CHARS = 2        # chars per pixel horizontally
 
 # Suit symbols and colors
 SUIT_SYMBOLS = {"SPADE": "♠", "HEART": "♥", "DIAMOND": "♦", "CLUB": "♣"}
-SUIT_COLORS = {"SPADE": "bright_blue", "HEART": "bright_red", "DIAMOND": "yellow", "CLUB": "green"}
+SUIT_COLORS = {"SPADE": "dodger_blue1", "HEART": "bright_red", "DIAMOND": "yellow", "CLUB": "green"}
 SUIT_ABBR = {"SPADE": "SPADE", "HEART": "HEART", "DIAMOND": "Dmnd", "CLUB": "CLUB"}
 
 # District border colors
@@ -107,9 +107,8 @@ def _render_cell(
         line1_text = SUIT_ABBR.get(suit_name, suit_name[:5]).center(INNER_W)
         symbol = SUIT_SYMBOLS.get(suit_name, "?")
         line2_text = f"  {symbol}{symbol}  "
-        suit_color = SUIT_COLORS.get(suit_name, "white")
-        main_color = "white"
-        highlight_color = suit_color
+        main_color = SUIT_COLORS.get(suit_name, "white")
+        highlight_color = "white"
 
     elif sq.type == SquareType.CHANGE_OF_SUIT:
         line1_text = "C.o.S."
@@ -117,8 +116,8 @@ def _render_cell(
         symbol = SUIT_SYMBOLS.get(suit_name, "?")
         abbr = SUIT_ABBR.get(suit_name, suit_name[:4])
         line2_text = f" {abbr} " if len(abbr) <= 4 else abbr[:INNER_W]
-        highlight_color = SUIT_COLORS.get(suit_name, "white")
-        main_color = "bright_white"
+        main_color = SUIT_COLORS.get(suit_name, "white")
+        highlight_color = "white"
 
     elif sq.type in _SPECIAL_DISPLAY:
         disp = _SPECIAL_DISPLAY[sq.type]
@@ -126,6 +125,10 @@ def _render_cell(
         line2_text = disp[1]
         main_color = disp[2]
         highlight_color = disp[3]
+        # Vacant plots use their district's border color
+        if sq.type == SquareType.VACANT_PLOT and sq.property_district is not None:
+            d = sq.property_district
+            highlight_color = DISTRICT_COLORS[d % len(DISTRICT_COLORS)]
 
     else:
         line1_text = sq.type.value[:INNER_W]

@@ -51,6 +51,11 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
 
         vp_options = [SquareType(t) for t in sq_data.get("vacant_plot_options", [])]
 
+        # Default base_value for vacant plots to 250 if not specified
+        base_value = sq_data.get("base_value")
+        if base_value is None and sq_type == SquareType.VACANT_PLOT:
+            base_value = 250
+
         sq = SquareInfo(
             id=sq_data["id"],
             position=tuple(sq_data["position"]),
@@ -59,9 +64,9 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
             custom_vars=sq_data.get("custom_vars", {}),
             property_owner=None,
             property_district=sq_data.get("district"),
-            shop_base_value=sq_data.get("base_value"),
+            shop_base_value=base_value,
             shop_base_rent=sq_data.get("base_rent"),
-            shop_current_value=sq_data.get("base_value"),  # starts at base
+            shop_current_value=base_value,  # starts at base
             suit=suit,
             vacant_plot_options=vp_options,
             backstreet_destination=sq_data.get("backstreet_destination"),

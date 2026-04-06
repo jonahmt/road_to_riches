@@ -631,7 +631,7 @@ class WarpEvent(GameEvent):
 
     def execute(self, state: GameState) -> None:
         player = state.get_player(self.player_id)
-        player.from_square = player.position
+        player.from_square = None  # no prior square at warp destination
         player.position = self.target_square_id
 
 

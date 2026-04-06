@@ -33,7 +33,7 @@ PLAYER_COLORS = ["bright_cyan", "orchid1", "bright_yellow", "bright_green"]
 # Suit display
 SUIT_SYMBOLS = {"SPADE": "♠", "HEART": "♥", "DIAMOND": "♦", "CLUB": "♣", "WILD": "★"}
 SUIT_COLORS = {
-    "SPADE": "bright_blue", "HEART": "bright_red",
+    "SPADE": "dodger_blue1", "HEART": "bright_red",
     "DIAMOND": "yellow", "CLUB": "green", "WILD": "white",
 }
 
@@ -444,6 +444,11 @@ class GameApp(App):
         elif self._input_mode == "selection":
             self._selection_options = []
             self._selection_index = 0
+        # Cancel any pending key buffer timer
+        if self._key_timer is not None:
+            self._key_timer.stop()
+            self._key_timer = None
+        self._key_buffer = ""
         self._input_mode = "text"
 
     def _enter_selection_mode(
@@ -486,6 +491,8 @@ class GameApp(App):
 
     def _submit_response(self, value: Any) -> None:
         """Submit a response and clean up all input state."""
+        if self._current_request is None:
+            return  # no active request to answer (guard against race/double-submit)
         self._current_request = None
         self._input_phase = 0
         self._phase_data = {}

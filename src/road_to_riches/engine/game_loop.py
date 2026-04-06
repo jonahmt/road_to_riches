@@ -269,10 +269,15 @@ class GameLoop:
         # Handle land actions (buy shop, invest, etc.)
         self._handle_land_actions(turn.player_id, land_result)
 
-        # Roll On: roll again
+        # Roll On: roll again (continue forward from this square)
         if land_result.info.get("roll_again"):
             self.log.log("Roll On! Rolling again...")
             self.input.notify(self.state, self.log)
+            # Clear undo history so player can't undo back into previous roll
+            turn.move_snapshots.clear()
+            turn.path_taken.clear()
+            self.engine.pass_results.clear()
+            self._pass_results_handled = 0
             roll = self.engine.do_roll()
             self.log.log(f"Player {turn.player_id} rolls a {roll}!")
             self.input.notify_dice(roll, roll)
