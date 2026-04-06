@@ -3,7 +3,7 @@ You must initialize your session by reading the following files in order. They c
 
 1. **Issue Tracking:** Read `.beads/AGENTS.md` to understand the issue tracking protocols. Beads is THE ONLY method we will use for issue tracking. Do not attempt to replace/supplement it with a custom "tasks" directory or short lived temp files.
 2. **Contributing:** Read `DEVELOPMENT.md` to understand the development stack of the project. It defines clear issue tracking, version control, etc. This is oriented towards onboarding, so the setup steps may already be complete. But it also defines best practices that must be followed throughout.
-3. **Project Design:** Read all files present in the `spec` folder to understand the project specification, i.e. what we are actually building and an overview of the implementation.
+3. **Project Design:** Read all files present in the `design/` folder to understand the project specification, i.e. what we are actually building and an overview of the implementation.
 
 ---
 

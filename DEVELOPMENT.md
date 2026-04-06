@@ -1,76 +1,87 @@
 # Development Guide
 
-This document defines the technical standards, build processes, and contribution workflows for the road_to_riches project.
+Technical standards and workflows for the Road to Riches project.
 
 ## Environment Setup
 
-### Style and formatting
+### Python
+Python 3.10+. Install as editable package:
+```bash
+pip install -e .
+```
 
-* For consistency, we will use a automatic formatter and style checker. For python, this will be ruff (both the linter and formatter).
-* For JS choose whatever you feel fits.
-* Use a type checker in python.
+### Style
+- **Formatter/linter**: ruff (both linter and formatter)
+- **Type checking**: pyright
 
-### Python Backend
-The core game logic is implemented in Python 3.10+.
-1. Create a virtual environment: `python3 -m venv venv`
-2. Activate the environment: `source venv/bin/activate`
-3. Install dependencies: `pip install -r requirements.txt` (if applicable)
-
-### Front end dev
-1. The starter client is just a tui implemented in python. It should use the Textual library.
-
-### Issue Tracking (Beads)
-This project uses Beads (bd) for all task management.
-1. Install the beads CLI.
-2. Run `bd onboard` to initialize the local database.
-3. Use `bd ready --json` to find unblocked tasks.
+### Issue Tracking
+All task management uses [Beads](https://github.com/steveyegge/beads) (`bd` CLI).
+Do not use markdown TODO lists or other tracking methods.
 
 ## Project Structure
 
-- `starter_code/python/definitions/`: Core dataclasses for BoardState, PlayerState, and GameState.
-- `starter_code/python/definitions/events/`: Event system architecture and serialization logic.
-- `spec/`: Functional and technical specifications. This is the source of truth for game mechanics.
-- `.beads/`: Issue tracking metadata, configuration, and git hooks.
+```
+src/road_to_riches/
+├── models/          # Data classes (GameState, PlayerState, BoardState, StockState, Suit, SquareType)
+│   └── serialize.py     # GameState JSON serialization for client-server sync
+├── events/          # Event system (registry, base class, pipeline, all game events)
+├── board/           # Board JSON loader, waypoint pathfinding
+├── engine/          # Game logic
+│   ├── game_loop.py     # GameLoop orchestrator, PlayerInput ABC, GameConfig
+│   ├── turn.py          # Turn state machine + movement
+│   ├── square_handler.py # Pass/land effects for each square type
+│   ├── property.py      # Rent/max capital formulas
+│   ├── lut.py           # Lookup tables for rent/max cap multipliers
+│   ├── statuses.py      # Status effect processing
+│   ├── bankruptcy.py    # Bankruptcy, forced liquidation, victory
+│   └── dice.py          # Dice rolling
+├── server/          # WebSocket game server
+│   ├── server.py        # GameServer: hosts game, manages client connections
+│   └── server_input.py  # WebSocketPlayerInput: per-player request routing
+├── client/          # TUI client
+│   ├── tui_app.py       # Textual TUI application (GameApp)
+│   ├── tui_input.py     # TuiPlayerInput: bridges GameLoop thread with TUI
+│   ├── client_bridge.py # WebSocket client for remote server connection
+│   ├── board_renderer.py # Board rendering with Rich markup and camera support
+│   ├── direction.py     # WASD direction mapping
+│   └── text_input.py    # Stdin/stdout PlayerInput for testing
+├── ai/              # AI player clients
+│   └── basic/           # Basic greedy AI (connects via WebSocket)
+├── protocol.py      # Shared WebSocket message protocol (InputRequest, message builders)
+└── main.py          # Entry point: local, server, client, text modes
 
-## Operational Protocols for Agents
+boards/              # Board definition JSON files
+design/              # Game design and technical specs (source of truth for game rules)
+tests/               # 122 tests covering all game systems
+```
 
-### Non-Interactive Execution
-Agents must use non-interactive flags for all file operations to prevent session hangs:
-- Use `cp -f` instead of `cp`.
-- Use `mv -f` instead of `mv`.
-- Use `rm -rf` for directory removal.
+## Run Modes
+
+```bash
+# Local (default): TUI with local game loop, 4 players
+python -m road_to_riches local
+
+# Server: WebSocket server with per-player routing
+python -m road_to_riches server --humans 1 --ai 3
+
+# Client: TUI connecting to remote server
+python -m road_to_riches client --host localhost --port 8765
+
+# Text: stdin/stdout for testing
+python -m road_to_riches text
+```
+
+## Architecture
+
+The game uses a client-server model even for local play. The server is the source of truth; clients are UI. See `design/technical.md` for the full rationale.
+
+**Key abstractions:**
+- `PlayerInput` (ABC): 19 methods for collecting player decisions. Implementations: `TuiPlayerInput` (local TUI), `WebSocketPlayerInput` (server), `TextPlayerInput` (CLI), AI clients.
+- `GameLoop`: Orchestrates turns, delegates all I/O to `PlayerInput`.
+- `protocol.py`: Canonical message format for WebSocket communication. Input requests broadcast to all clients; responses accepted only from the target player.
+
+## Operational Notes for Agents
+
+- Use `cp -f`, `mv -f`, `rm -rf` (non-interactive flags) to prevent hangs.
 - Use `HOMEBREW_NO_AUTO_UPDATE=1` for brew commands.
-
-### Issue Management
-- All work must be tracked in Beads. Do not use markdown TODO lists.
-- Claim work before starting: `bd update <id> --claim`.
-- Link new discoveries: `bd create "Title" --deps discovered-from:<parent-id>`.
-- Close issues upon completion: `bd close <id> --reason "Completed"`.
-
-### Adding Dependencies
-- When adding a new dependency, like numpy for example, it is ok if the dependency is standard (such as numpy)
-- However if the dependency is less well known, you should ask me for permission first. It may turn out that a simpler more standard solution exists.
-
-## Contribution Workflow
-
-### 1. Branching
-Do not push directly to the main branch.
-1. Create a feature branch: `git checkout -b feature/description-of-work`.
-2. Reference the Beads issue ID in your branch name or commits.
-
-### 2. Implementation and Validation
-- Follow the architectural patterns in `starter_code/`.
-- Ensure all new events are decorated with `@register_event`.
-- Validate state mutations against the definitions in `gamestate.py`.
-
-### 3. Submission (Pull Requests)
-ALL changes that are ready to merge MUST be submitted via the GitHub CLI (gh) as a pull request:
-1. Push the branch: `git push -u origin <branch-name>`.
-2. Create the PR: `gh pr create --title "Work Summary" --body "Detailed explanation"`.
-
-### 4. Session Completion
-A work session is not complete until all changes are pushed to the remote repository:
-1. File issues for remaining follow-up work.
-2. Run `bd sync` to ensure issue state is exported.
-3. Run `git pull --rebase` followed by `git push`.
-4. Verify `git status` shows the local branch is up to date with origin.
+- When adding unfamiliar dependencies, ask the user first.
