@@ -217,11 +217,14 @@ class GameApp(App):
         self,
         config: GameConfig | None = None,
         client_bridge: Any = None,
+        log_lines: int | None = None,
     ) -> None:
         super().__init__()
         self.config = config
         self._client_bridge = client_bridge
         self._networked = client_bridge is not None
+        # None = unlimited (show entire game log).
+        self._log_lines_cap = log_lines
         if self._networked:
             self.player_input: PlayerInputSource = client_bridge
         else:
@@ -287,7 +290,11 @@ class GameApp(App):
         with self.batch_update():
             log_widget = self.query_one("#game-log", RichLog)
             log_widget.clear()
-            visible = self._log_messages[-20:]
+            visible = (
+                self._log_messages
+                if self._log_lines_cap is None
+                else self._log_messages[-self._log_lines_cap:]
+            )
             for i, msg in enumerate(visible):
                 c = _colorize_log(msg)
                 if i == len(visible) - 1:
@@ -1761,6 +1768,7 @@ class GameApp(App):
 def run_tui(
     board_path: str = "boards/test_board.json",
     num_players: int = 4,
+    log_lines: int | None = None,
 ) -> None:
     """Run the TUI in local mode (game loop runs in-process)."""
     config = GameConfig(
@@ -1768,17 +1776,18 @@ def run_tui(
         num_players=num_players,
         starting_cash=1500,
     )
-    app = GameApp(config=config)
+    app = GameApp(config=config, log_lines=log_lines)
     app.run()
 
 
 def run_tui_client(
     uri: str = "ws://localhost:8765",
+    log_lines: int | None = None,
 ) -> None:
     """Run the TUI as a client connecting to a remote game server."""
     from road_to_riches.client.client_bridge import ClientBridge
 
     bridge = ClientBridge(uri)
     bridge.connect()
-    app = GameApp(client_bridge=bridge)
+    app = GameApp(client_bridge=bridge, log_lines=log_lines)
     app.run()

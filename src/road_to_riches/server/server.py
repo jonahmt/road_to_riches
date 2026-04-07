@@ -41,10 +41,12 @@ class GameServer:
         config: GameConfig,
         num_humans: int = 1,
         num_ai: int = 0,
+        ai_delay: float = 1.0,
     ) -> None:
         self.config = config
         self.num_humans = num_humans
         self.num_ai = num_ai
+        self.ai_delay = ai_delay
         self._loop: asyncio.AbstractEventLoop | None = None
         self._player_input: WebSocketPlayerInput | None = None
         self._game_loop: GameLoop | None = None
@@ -135,6 +137,7 @@ class GameServer:
                 "--host", host,
                 "--port", str(port),
                 "--player-id", str(player_id),
+                "--delay", str(self.ai_delay),
             ]
             logger.info("Spawning AI player %d: %s", player_id, " ".join(cmd))
             proc = subprocess.Popen(cmd)
@@ -197,6 +200,7 @@ def run_server(
     board_path: str = "boards/test_board.json",
     num_humans: int = 1,
     num_ai: int = 3,
+    ai_delay: float = 1.0,
     host: str = "localhost",
     port: int = 8765,
     debug: bool = False,
@@ -214,5 +218,7 @@ def run_server(
         num_players=num_players,
         starting_cash=1500,
     )
-    server = GameServer(config, num_humans=num_humans, num_ai=num_ai)
+    server = GameServer(
+        config, num_humans=num_humans, num_ai=num_ai, ai_delay=ai_delay,
+    )
     asyncio.run(server.serve(host, port))

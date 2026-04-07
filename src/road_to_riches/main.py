@@ -24,8 +24,13 @@ def main() -> None:
                         help="Number of human players (server mode)")
     parser.add_argument("--ai", type=int, default=3,
                         help="Number of AI players (server mode)")
+    parser.add_argument("--ai-delay", type=float, default=1.0,
+                        help="AI response delay in seconds (server mode, default 1.0)")
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--log-lines", type=int, default=None,
+                        help="Max log lines kept in the TUI (local/client mode). "
+                             "Default: unlimited (entire game).")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     args = parser.parse_args()
@@ -43,6 +48,7 @@ def main() -> None:
             board_path=args.board,
             num_humans=args.humans,
             num_ai=args.ai,
+            ai_delay=args.ai_delay,
             host=args.host,
             port=args.port,
             debug=args.debug,
@@ -52,12 +58,12 @@ def main() -> None:
         from road_to_riches.client.tui_app import run_tui_client
 
         uri = f"ws://{args.host}:{args.port}"
-        run_tui_client(uri=uri)
+        run_tui_client(uri=uri, log_lines=args.log_lines)
 
     elif args.mode == "local":
         from road_to_riches.client.tui_app import run_tui
 
-        run_tui(args.board, args.players)
+        run_tui(args.board, args.players, log_lines=args.log_lines)
 
     else:  # text
         from road_to_riches.client.text_input import TextPlayerInput
