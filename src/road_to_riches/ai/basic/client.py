@@ -2,7 +2,9 @@
 
 Runs as a standalone process, spawned by the server. Connects to the
 server, identifies with its assigned player_id, and responds to input
-requests automatically using a simple greedy strategy.
+requests using a greedy suit-collector strategy.
+
+See bead road_to_riches-ae5 for full strategy specification.
 """
 
 from __future__ import annotations
@@ -10,12 +12,21 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import random
 import time
 
 import websockets
 
+from road_to_riches.ai.basic.pathfinder import (
+    bfs_distances,
+    find_bank_squares,
+    next_step_toward,
+    plan_route,
+)
+from road_to_riches.engine.property import max_capital
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.serialize import game_state_from_dict
+from road_to_riches.models.square_type import SquareType
 from road_to_riches.protocol import (
     InputRequest,
     InputRequestType,
@@ -27,47 +38,83 @@ from road_to_riches.protocol import (
 
 logger = logging.getLogger(__name__)
 
+# Districts where AI owns shops get this multiplier in stock buying score
+OWN_DISTRICT_WEIGHT = 1.5
+
+# Max auction bid as a multiple of shop value
+AUCTION_BID_MULTIPLIER = 3
+
 
 class BasicAIClient:
-    """A simple AI client that plays the game automatically.
+    """Greedy suit-collector AI.
 
-    Strategy (to be implemented):
-    - Pathfinding: BFS shortest path to collect all 4 suits then bank
-    - Shop buying: always buy when affordable
-    - Stock buying: buy in district with highest total capital
-    - Everything else: sensible defaults
+    Plans an optimal BFS tour through uncollected suit squares and bank,
+    always buys affordable shops, and buys stock in the highest-capital district.
     """
 
     def __init__(self, player_id: int, delay: float = 0.5) -> None:
         self.player_id = player_id
         self.delay = delay
         self.state: GameState | None = None
+        self._route: list[int] = []  # planned tour of square IDs to visit
+
+    def _player(self):
+        assert self.state is not None
+        return self.state.get_player(self.player_id)
+
+    def _replan(self) -> None:
+        """Recompute the promotion tour based on current state."""
+        if self.state is None:
+            return
+        player = self._player()
+        self._route = plan_route(
+            self.state.board,
+            player.position,
+            player.suits,
+        )
+        logger.debug("Route planned: %s", self._route)
+
+    @property
+    def _next_target(self) -> int | None:
+        """The next square ID the AI is heading toward."""
+        return self._route[0] if self._route else None
 
     def decide(self, req: InputRequest) -> object:
-        """Make a decision for the given input request.
-
-        Returns the response value to send back to the server.
-        """
-        # Only respond to requests for our player
+        """Make a decision for the given input request."""
         if req.player_id != self.player_id:
             return None
 
         time.sleep(self.delay)
 
+        # Replan route before making path decisions
+        if req.type in (InputRequestType.CHOOSE_PATH, InputRequestType.PRE_ROLL):
+            self._replan()
+
         handler = _HANDLERS.get(req.type, _default_handler)
         return handler(self, req)
 
+
+# ---------------------------------------------------------------------------
+# Handler functions
+# ---------------------------------------------------------------------------
 
 def _handle_pre_roll(ai: BasicAIClient, req: InputRequest) -> str:
     return "roll"
 
 
 def _handle_choose_path(ai: BasicAIClient, req: InputRequest) -> int:
-    # For now, always pick the first choice
     choices = req.data.get("choices", [])
-    if choices:
-        return choices[0]["square_id"]
-    return 0
+    if not choices or ai.state is None:
+        return choices[0]["square_id"] if choices else 0
+
+    choice_ids = [c["square_id"] for c in choices]
+    target = ai._next_target
+
+    if target is not None:
+        return next_step_toward(ai.state.board, ai._player().position, target, choice_ids)
+
+    # No target (shouldn't happen), pick first
+    return choice_ids[0]
 
 
 def _handle_confirm_stop(ai: BasicAIClient, req: InputRequest) -> bool:
@@ -75,20 +122,94 @@ def _handle_confirm_stop(ai: BasicAIClient, req: InputRequest) -> bool:
 
 
 def _handle_buy_shop(ai: BasicAIClient, req: InputRequest) -> bool:
-    # Buy if we can afford it
     cost = req.data.get("cost", 0)
     cash = req.data.get("cash", 0)
     return cash >= cost
 
 
 def _handle_invest(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] | None:
-    # Skip investment for now
-    return None
+    """Invest max into the owned shop with lowest current value.
+
+    Prioritize shops in districts where AI owns stock.
+    """
+    if ai.state is None:
+        return None
+
+    investable = req.data.get("investable", [])
+    if not investable:
+        return None
+
+    player = ai._player()
+    cash = req.data.get("cash", player.ready_cash)
+    if cash <= 0:
+        return None
+
+    # Separate into stock-district shops and others
+    stock_districts = set(player.owned_stock.keys())
+    in_stock_district = [s for s in investable if s.get("district") in stock_districts]
+    candidates = in_stock_district if in_stock_district else investable
+
+    # Pick the one with lowest current value
+    best = min(candidates, key=lambda s: s.get("current_value", 999999))
+    amount = min(cash, best.get("max_capital", 0))
+    if amount <= 0:
+        return None
+
+    return (best["square_id"], amount)
 
 
 def _handle_buy_stock(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] | None:
-    # Skip stock buying for now
-    return None
+    """Buy max stock in district with highest weighted max_capital."""
+    if ai.state is None:
+        return None
+
+    stocks = req.data.get("stocks", [])
+    cash = req.data.get("cash", 0)
+    if not stocks or cash <= 0:
+        return None
+
+    board = ai.state.board
+    player = ai._player()
+    owned_districts = set()
+    for sq_id in player.owned_properties:
+        sq = board.squares[sq_id]
+        if sq.property_district is not None:
+            owned_districts.add(sq.property_district)
+
+    # Score each district by total max_capital of ALL shops in it
+    district_scores: dict[int, float] = {}
+    for sq in board.squares:
+        if sq.type == SquareType.SHOP and sq.property_district is not None and sq.property_owner is not None:
+            mc = max_capital(board, sq)
+            d = sq.property_district
+            district_scores[d] = district_scores.get(d, 0) + mc
+
+    # Apply weight for own districts
+    for d in owned_districts:
+        if d in district_scores:
+            district_scores[d] *= OWN_DISTRICT_WEIGHT
+
+    if not district_scores:
+        return None
+
+    # Pick highest scoring district
+    best_district = max(district_scores, key=lambda d: district_scores[d])
+
+    # Find price for that district
+    price = None
+    for s in stocks:
+        if s["district_id"] == best_district:
+            price = s["price"]
+            break
+
+    if price is None or price <= 0:
+        return None
+
+    quantity = cash // price
+    if quantity <= 0:
+        return None
+
+    return (best_district, quantity)
 
 
 def _handle_sell_stock(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] | None:
@@ -96,15 +217,36 @@ def _handle_sell_stock(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] 
 
 
 def _handle_cannon_target(ai: BasicAIClient, req: InputRequest) -> int:
+    """Pick the target whose position brings AI closest to its next promotion target."""
     targets = req.data.get("targets", [])
-    if targets:
+    if not targets or ai.state is None:
+        return targets[0]["square_id"] if targets else 0
+
+    next_target = ai._next_target
+    if next_target is None:
         return targets[0]["square_id"]
-    return 0
+
+    target_dists = bfs_distances(ai.state.board, next_target)
+
+    best = targets[0]
+    best_dist = 999999
+    for t in targets:
+        # t has "square_id" (where the target player is)
+        sq_id = t["square_id"]
+        d = target_dists.get(sq_id, 999999)
+        if d < best_dist:
+            best_dist = d
+            best = t
+
+    return best["square_id"]
 
 
 def _handle_vacant_plot_type(ai: BasicAIClient, req: InputRequest) -> str:
+    """Randomly choose between checkpoint and tax office."""
     options = req.data.get("options", [])
-    return options[0] if options else "SHOP"
+    if not options:
+        return SquareType.VP_CHECKPOINT.value
+    return random.choice(options)
 
 
 def _handle_forced_buyout(ai: BasicAIClient, req: InputRequest) -> bool:
@@ -112,6 +254,31 @@ def _handle_forced_buyout(ai: BasicAIClient, req: InputRequest) -> bool:
 
 
 def _handle_auction_bid(ai: BasicAIClient, req: InputRequest) -> int | None:
+    """Bid if AI already owns a shop in this district, up to 3x shop value."""
+    if ai.state is None:
+        return None
+
+    square_id = req.data.get("square_id")
+    if square_id is None:
+        return None
+
+    sq = ai.state.board.squares[square_id]
+    player = ai._player()
+
+    # Check if we own a shop in this district
+    if sq.property_district is not None:
+        owns_in_district = any(
+            ai.state.board.squares[sid].property_district == sq.property_district
+            for sid in player.owned_properties
+        )
+        if owns_in_district and sq.shop_current_value is not None:
+            max_bid = min(
+                sq.shop_current_value * AUCTION_BID_MULTIPLIER,
+                req.data.get("cash", 0),
+            )
+            min_bid = req.data.get("min_bid", 0)
+            if max_bid >= min_bid:
+                return min_bid  # bid the minimum to try to win cheaply
     return None
 
 
@@ -144,14 +311,19 @@ def _handle_trade(ai: BasicAIClient, req: InputRequest) -> dict | None:
 
 
 def _handle_liquidation(ai: BasicAIClient, req: InputRequest) -> tuple[str, int]:
-    # Sell first available shop
+    """Sell stock first (arbitrary order), then shops."""
     options = req.data.get("options", {})
-    if "shops" in options and options["shops"]:
-        shop = options["shops"][0]
-        return ("sell_shop", shop["square_id"])
+
+    # Sell stock first
     if "stocks" in options and options["stocks"]:
         stock = options["stocks"][0]
         return ("sell_stock", stock["district_id"])
+
+    # Then shops
+    if "shops" in options and options["shops"]:
+        shop = options["shops"][0]
+        return ("sell_shop", shop["square_id"])
+
     return ("bankrupt", 0)
 
 
