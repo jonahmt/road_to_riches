@@ -217,28 +217,33 @@ def _handle_sell_stock(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] 
 
 
 def _handle_cannon_target(ai: BasicAIClient, req: InputRequest) -> int:
-    """Pick the target whose position brings AI closest to its next promotion target."""
+    """Pick the target player whose position brings AI closest to its next promotion target.
+
+    The engine sends targets as [{"player_id": int, "position": int}] and
+    expects the chosen target's player_id back.
+    """
     targets = req.data.get("targets", [])
-    if not targets or ai.state is None:
-        return targets[0]["square_id"] if targets else 0
+    if not targets:
+        return 0
+    if ai.state is None:
+        return targets[0]["player_id"]
 
     next_target = ai._next_target
     if next_target is None:
-        return targets[0]["square_id"]
+        return targets[0]["player_id"]
 
     target_dists = bfs_distances(ai.state.board, next_target)
 
     best = targets[0]
     best_dist = 999999
     for t in targets:
-        # t has "square_id" (where the target player is)
-        sq_id = t["square_id"]
+        sq_id = t["position"]  # the square the target player currently occupies
         d = target_dists.get(sq_id, 999999)
         if d < best_dist:
             best_dist = d
             best = t
 
-    return best["square_id"]
+    return best["player_id"]
 
 
 def _handle_vacant_plot_type(ai: BasicAIClient, req: InputRequest) -> str:

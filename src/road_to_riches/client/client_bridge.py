@@ -130,8 +130,12 @@ class ClientBridge:
                 player_id=msg["player_id"],
                 data=msg.get("data", {}),
             )
-            self._request = req
-            self._request_ready.set()
+            # Only surface prompts that target the player this client controls.
+            # All clients still receive the message (so they can update their
+            # display), but only the matching client should respond.
+            if self._player_id is None or req.player_id == self._player_id:
+                self._request = req
+                self._request_ready.set()
 
         elif msg_type == "log":
             if self._log_callback:
