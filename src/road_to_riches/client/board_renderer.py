@@ -66,6 +66,7 @@ def _render_cell(
     active_player_id: int | None = None,
     board: BoardState | None = None,
     browsed: bool = False,
+    state: GameState | None = None,
 ) -> list[str]:
     """Render a single square as 4 lines of 8 visible characters (4x4 pixels).
 
@@ -118,6 +119,37 @@ def _render_cell(
         line2_text = f" {abbr} " if len(abbr) <= 4 else abbr[:INNER_W]
         main_color = SUIT_COLORS.get(suit_name, "white")
         highlight_color = "white"
+
+    elif sq.type == SquareType.VP_CHECKPOINT:
+        line1_text = "CHECK"
+        toll = sq.checkpoint_toll or 0
+        line2_text = f"${toll:>5}"
+        main_color = "white"
+        highlight_color = "bright_magenta"
+        if sq.property_owner is not None:
+            bg_color = PLAYER_COLORS[sq.property_owner % len(PLAYER_COLORS)]
+
+    elif sq.type == SquareType.VP_TAX_OFFICE:
+        line1_text = "TAX"
+        # Show what the *current* (active) player would owe on landing.
+        # Blank if there's no active player or the active player is the owner.
+        line2_text = ""
+        if (
+            sq.property_owner is not None
+            and active_player_id is not None
+            and active_player_id != sq.property_owner
+            and state is not None
+        ):
+            try:
+                ap = state.get_player(active_player_id)
+                amount = max(0, int(state.net_worth(ap) * 0.04))
+                line2_text = f"${amount:>5}"
+            except Exception:
+                line2_text = ""
+        main_color = "white"
+        highlight_color = "bright_magenta"
+        if sq.property_owner is not None:
+            bg_color = PLAYER_COLORS[sq.property_owner % len(PLAYER_COLORS)]
 
     elif sq.type in _SPECIAL_DISPLAY:
         disp = _SPECIAL_DISPLAY[sq.type]
@@ -258,7 +290,7 @@ def render_board(
         sx, sy = sq.position[0], sq.position[1]
         pids = player_positions.get(sq.id, [])
         is_browsed = browsed_square_id is not None and sq.id == browsed_square_id
-        cell_lines = _render_cell(sq, pids, active_player_id, board, is_browsed)
+        cell_lines = _render_cell(sq, pids, active_player_id, board, is_browsed, state)
 
         for row_offset in range(SQUARE_PX):
             py = sy + row_offset
