@@ -207,6 +207,10 @@ class GameApp(App):
             super().__init__()
             self.winner = winner
 
+    class StateChanged(Message):
+        """The game state was updated via state_sync (networked mode)."""
+        pass
+
     class DiceUpdate(Message):
         def __init__(self, value: int, remaining: int) -> None:
             super().__init__()
@@ -271,6 +275,7 @@ class GameApp(App):
         self.player_input.set_log_callback(self._on_game_log)
         self.player_input.set_dice_callback(self._on_dice_update)
         if self._networked:
+            self._client_bridge.set_state_callback(self._on_state_changed)
             self._client_bridge.set_game_over_callback(self._on_game_over)
             self._start_networked_game()
         else:
@@ -279,6 +284,10 @@ class GameApp(App):
     def _on_game_log(self, msg: str) -> None:
         """Called from game thread — post message to UI thread."""
         self.post_message(self.LogMessage(msg))
+
+    def _on_state_changed(self) -> None:
+        """Called from bridge thread when state_sync arrives."""
+        self.post_message(self.StateChanged())
 
     def _on_dice_update(self, value: int, remaining: int) -> None:
         """Called from game thread to update dice display."""
@@ -301,6 +310,12 @@ class GameApp(App):
                     log_widget.write(f"[bold]{c}[/]")
                 else:
                     log_widget.write(f"[dim]{c}[/]")
+            self._refresh_board()
+            self._refresh_player_info()
+
+    @on(StateChanged)
+    def handle_state_changed(self, event: StateChanged) -> None:
+        with self.batch_update():
             self._refresh_board()
             self._refresh_player_info()
 
@@ -1156,6 +1171,18 @@ class GameApp(App):
             return self.game_loop.state
         return None
 
+    def _active_player_id(self) -> int | None:
+        """The player whose turn it currently is, per the game state.
+
+        Reads from GameState.current_player_index, which is the single source
+        of truth and is sync'd to every client. Works identically in local
+        and networked modes.
+        """
+        state = self._get_state()
+        if state is None:
+            return None
+        return state.current_player.player_id
+
     def _refresh_board(self) -> None:
         """Re-render the board view from current game state."""
         state = self._get_state()
@@ -1164,7 +1191,7 @@ class GameApp(App):
         try:
             from road_to_riches.client.board_renderer import render_board
 
-            active_pid = self._current_request.player_id if self._current_request else None
+            active_pid = self._active_player_id()
             board_text = render_board(state, active_player_id=active_pid)
             board_widget = self.query_one("#board-view", RichLog)
             board_widget.clear()
@@ -1378,7 +1405,7 @@ class GameApp(App):
         from road_to_riches.client.board_renderer import render_board
 
         active_pid = self._current_request.player_id if self._current_request else None
-        board_text = render_board(state, active_player_id=active_pid, browsed_square_id=sq_id)
+        board_text = render_board(state, active_player_id=self._active_player_id(), browsed_square_id=sq_id)
         board_widget = self.query_one("#board-view", RichLog)
         board_widget.clear()
         for line in board_text.split("\n"):

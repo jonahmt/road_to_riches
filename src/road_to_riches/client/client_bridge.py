@@ -45,6 +45,7 @@ class ClientBridge:
         self._thread: threading.Thread | None = None
         self._connected = threading.Event()
         self._game_over_callback: Any = None
+        self._state_callback: Any = None
         self._player_id: int | None = None  # assigned by server
 
     @property
@@ -62,6 +63,9 @@ class ClientBridge:
 
     def set_dice_callback(self, callback: Any) -> None:
         self._dice_callback = callback
+
+    def set_state_callback(self, callback: Any) -> None:
+        self._state_callback = callback
 
     def set_game_over_callback(self, callback: Any) -> None:
         self._game_over_callback = callback
@@ -123,6 +127,8 @@ class ClientBridge:
 
         if msg_type == "state_sync":
             self._state = game_state_from_dict(msg["state"])
+            if self._state_callback:
+                self._state_callback()
 
         elif msg_type == "input_request":
             req = InputRequest(
