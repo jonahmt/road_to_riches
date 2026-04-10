@@ -211,6 +211,12 @@ class GameApp(App):
         """The game state was updated via state_sync (networked mode)."""
         pass
 
+    class RetractLog(Message):
+        """Remove the last N log messages (move was undone)."""
+        def __init__(self, count: int) -> None:
+            super().__init__()
+            self.count = count
+
     class DiceUpdate(Message):
         def __init__(self, value: int, remaining: int) -> None:
             super().__init__()
@@ -274,7 +280,10 @@ class GameApp(App):
     def on_mount(self) -> None:
         self.player_input.set_log_callback(self._on_game_log)
         self.player_input.set_dice_callback(self._on_dice_update)
+        if hasattr(self.player_input, 'set_retract_callback'):
+            self.player_input.set_retract_callback(self._on_retract_log)
         if self._networked:
+            self._client_bridge.set_retract_callback(self._on_retract_log)
             self._client_bridge.set_state_callback(self._on_state_changed)
             self._client_bridge.set_game_over_callback(self._on_game_over)
             self._start_networked_game()
@@ -284,6 +293,10 @@ class GameApp(App):
     def _on_game_log(self, msg: str) -> None:
         """Called from game thread — post message to UI thread."""
         self.post_message(self.LogMessage(msg))
+
+    def _on_retract_log(self, count: int) -> None:
+        """Called from game thread when a move is undone."""
+        self.post_message(self.RetractLog(count))
 
     def _on_state_changed(self) -> None:
         """Called from bridge thread when state_sync arrives."""
@@ -312,6 +325,27 @@ class GameApp(App):
                     log_widget.write(f"[dim]{c}[/]")
             self._refresh_board()
             self._refresh_player_info()
+
+    @on(RetractLog)
+    def handle_retract_log(self, event: RetractLog) -> None:
+        if event.count > 0 and self._log_messages:
+            del self._log_messages[-event.count:]
+            with self.batch_update():
+                log_widget = self.query_one("#game-log", RichLog)
+                log_widget.clear()
+                visible = (
+                    self._log_messages
+                    if self._log_lines_cap is None
+                    else self._log_messages[-self._log_lines_cap:]
+                )
+                for i, msg in enumerate(visible):
+                    c = _colorize_log(msg)
+                    if i == len(visible) - 1:
+                        log_widget.write(f"[bold]{c}[/]")
+                    else:
+                        log_widget.write(f"[dim]{c}[/]")
+                self._refresh_board()
+                self._refresh_player_info()
 
     @on(StateChanged)
     def handle_state_changed(self, event: StateChanged) -> None:

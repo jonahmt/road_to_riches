@@ -453,5 +453,8 @@ class WebSocketPlayerInput(PlayerInput):
     def notify_dice(self, value: int, remaining: int) -> None:
         self._broadcast(msg_dice(value, remaining))
 
+    def retract_log(self, count: int) -> None:
+        self._broadcast({"msg": "log_retract", "count": count})
+
     def send_game_over(self, winner: int | None) -> None:
         self._broadcast(msg_game_over(winner))

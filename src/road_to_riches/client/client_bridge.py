@@ -46,6 +46,7 @@ class ClientBridge:
         self._connected = threading.Event()
         self._game_over_callback: Any = None
         self._state_callback: Any = None
+        self._retract_callback: Any = None
         self._player_id: int | None = None  # assigned by server
 
     @property
@@ -63,6 +64,9 @@ class ClientBridge:
 
     def set_dice_callback(self, callback: Any) -> None:
         self._dice_callback = callback
+
+    def set_retract_callback(self, callback: Any) -> None:
+        self._retract_callback = callback
 
     def set_state_callback(self, callback: Any) -> None:
         self._state_callback = callback
@@ -150,6 +154,10 @@ class ClientBridge:
         elif msg_type == "dice":
             if self._dice_callback:
                 self._dice_callback(msg["value"], msg["remaining"])
+
+        elif msg_type == "log_retract":
+            if self._retract_callback:
+                self._retract_callback(msg["count"])
 
         elif msg_type == "assign_player":
             self._player_id = msg["player_id"]

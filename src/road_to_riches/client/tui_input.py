@@ -36,12 +36,16 @@ class TuiPlayerInput(PlayerInput):
         self._response_ready = threading.Event()
         self._log_callback: Any = None  # set by the TUI app
         self._dice_callback: Any = None
+        self._retract_callback: Any = None
 
     def set_log_callback(self, callback: Any) -> None:
         self._log_callback = callback
 
     def set_dice_callback(self, callback: Any) -> None:
         self._dice_callback = callback
+
+    def set_retract_callback(self, callback: Any) -> None:
+        self._retract_callback = callback
 
     def _notify_dice(self, value: int, remaining: int) -> None:
         if self._dice_callback:
@@ -382,3 +386,7 @@ class TuiPlayerInput(PlayerInput):
 
     def notify_dice(self, value: int, remaining: int) -> None:
         self._notify_dice(value, remaining)
+
+    def retract_log(self, count: int) -> None:
+        if self._retract_callback and count > 0:
+            self._retract_callback(count)
