@@ -32,6 +32,8 @@ def main() -> None:
                         help="Max log lines kept in the TUI (local/client mode). "
                              "Default: unlimited (entire game).")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--resume", action="store_true",
+                        help="Resume from most recent save file")
 
     args = parser.parse_args()
 
@@ -52,6 +54,7 @@ def main() -> None:
             host=args.host,
             port=args.port,
             debug=args.debug,
+            resume=args.resume,
         )
 
     elif args.mode == "client":
@@ -63,7 +66,7 @@ def main() -> None:
     elif args.mode == "local":
         from road_to_riches.client.tui_app import run_tui
 
-        run_tui(args.board, args.players, log_lines=args.log_lines)
+        run_tui(args.board, args.players, log_lines=args.log_lines, resume=args.resume)
 
     else:  # text
         from road_to_riches.client.text_input import TextPlayerInput

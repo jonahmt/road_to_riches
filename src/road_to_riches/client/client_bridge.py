@@ -18,6 +18,7 @@ from road_to_riches.protocol import (
     InputRequestType,
     decode,
     encode,
+    msg_dev_event,
     msg_input_response,
     msg_start_game,
 )
@@ -96,6 +97,13 @@ class ClientBridge:
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
         self._connected.wait()
+
+    def send_dev_event(self, event_type: str, event_data: dict) -> None:
+        """Send a dev/debug event to the server."""
+        if self._loop is None or self._ws is None:
+            return
+        msg = encode(msg_dev_event(event_type, event_data))
+        asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
 
     def send_start_game(self) -> None:
         """Tell the server to start the game."""

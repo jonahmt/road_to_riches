@@ -20,6 +20,7 @@ from road_to_riches.engine.bankruptcy import (
     needs_liquidation,
 )
 from road_to_riches.engine.square_handler import PlayerAction, SquareResult
+from road_to_riches.models.square_type import SquareType
 from road_to_riches.engine.turn import TurnEngine, TurnPhase
 from road_to_riches.events.game_events import (
     AuctionSellEvent,
@@ -28,6 +29,8 @@ from road_to_riches.events.game_events import (
     BuyVacantPlotEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
+    PayCheckpointTollEvent,
+    PromotionEvent,
     RenovatePropertyEvent,
     ScriptEvent,
     SellStockEvent,
@@ -220,18 +223,26 @@ class PlayerInput(ABC):
 class GameLoop:
     """Central game orchestrator. Drives everything through the event pipeline."""
 
-    def __init__(self, config: GameConfig, player_input: PlayerInput) -> None:
+    def __init__(
+        self,
+        config: GameConfig,
+        player_input: PlayerInput,
+        saved_state: GameState | None = None,
+    ) -> None:
         self.config = config
-        board, stock = load_board(config.board_path)
-        players = [
-            PlayerState(
-                player_id=i,
-                position=0,
-                ready_cash=config.starting_cash,
-            )
-            for i in range(config.num_players)
-        ]
-        self.state = GameState(board=board, stock=stock, players=players)
+        if saved_state is not None:
+            self.state = saved_state
+        else:
+            board, stock = load_board(config.board_path)
+            players = [
+                PlayerState(
+                    player_id=i,
+                    position=0,
+                    ready_cash=config.starting_cash,
+                )
+                for i in range(config.num_players)
+            ]
+            self.state = GameState(board=board, stock=stock, players=players)
         self.pipeline = EventPipeline()
         self.engine = TurnEngine(self.state, self.pipeline)
         self.input = player_input
@@ -289,6 +300,10 @@ class GameLoop:
         self._log_land_effects(turn.player_id, land_result)
         self.input.notify(self.state, self.log)
 
+        # Bank: clear direction lock so player can choose freely next turn
+        if landed_sq.type == SquareType.BANK:
+            player.from_square = None
+
         # Handle land actions (buy shop, invest, etc.)
         self._handle_land_actions(turn.player_id, land_result)
 
@@ -313,6 +328,8 @@ class GameLoop:
             land_result = self.engine.get_land_result()
             self._log_land_effects(turn.player_id, land_result)
             self.input.notify(self.state, self.log)
+            if landed_sq.type == SquareType.BANK:
+                player.from_square = None
             self._handle_land_actions(turn.player_id, land_result)
 
         # Victory check
@@ -416,6 +433,8 @@ class GameLoop:
                         # Checkpoint before this step's messages
                         self._move_log_checkpoints.append(self.log.total_count)
                         self.engine.choose_path(choice)
+                        # Handle pass effects from this move step
+                        self._process_new_pass_results(player_id)
                         player = self.state.get_player(player_id)
                         sq = self.state.board.squares[player.position]
                         self.log.log(
@@ -468,6 +487,28 @@ class GameLoop:
         while self._pass_results_handled < len(results):
             result = results[self._pass_results_handled]
             self._pass_results_handled += 1
+            for event in result.auto_events:
+                if isinstance(event, PromotionEvent):
+                    player = self.state.get_player(event.player_id)
+                    bonus = event.get_result()
+                    suits = (
+                        "[dodger_blue1]♠[/dodger_blue1]"
+                        "[bright_red]♥[/bright_red]"
+                        "[yellow]♦[/yellow]"
+                        "[green]♣[/green]"
+                    )
+                    self.log.log(
+                        f"{suits} Player {event.player_id} promoted to "
+                        f"level {player.level}! Receives {bonus}G! {suits}"
+                    )
+                    self.input.notify(self.state, self.log)
+                if isinstance(event, PayCheckpointTollEvent):
+                    toll = event.get_result()
+                    if toll > 0:
+                        self.log.log(
+                            f"Player {event.payer_id} paid {toll}G toll to "
+                            f"Player {event.owner_id} at checkpoint."
+                        )
             self._handle_pass_actions(player_id, result)
 
     def _handle_pass_actions(self, player_id: int, result: SquareResult) -> None:

@@ -42,11 +42,13 @@ class GameServer:
         num_humans: int = 1,
         num_ai: int = 0,
         ai_delay: float = 1.0,
+        saved_state: "GameState | None" = None,
     ) -> None:
         self.config = config
         self.num_humans = num_humans
         self.num_ai = num_ai
         self.ai_delay = ai_delay
+        self._saved_state = saved_state
         self._loop: asyncio.AbstractEventLoop | None = None
         self._player_input: WebSocketPlayerInput | None = None
         self._game_loop: GameLoop | None = None
@@ -88,6 +90,9 @@ class GameServer:
                 elif msg_type == "start_game":
                     # Legacy: ignored, game starts when all clients connect
                     pass
+
+                elif msg_type == "dev_event":
+                    self._handle_dev_event(msg)
 
                 else:
                     logger.warning("Unknown message type: %s", msg_type)
@@ -143,12 +148,32 @@ class GameServer:
             proc = subprocess.Popen(cmd)
             self._ai_processes.append(proc)
 
+    def _handle_dev_event(self, msg: dict) -> None:
+        """Execute a dev/debug event from a client."""
+        if self._game_loop is None:
+            logger.warning("Dev event received but game not running")
+            return
+        from road_to_riches.events.event import GameEvent
+        event_data = dict(msg["event_data"])
+        event_data["event_type"] = msg["event_type"]
+        try:
+            event = GameEvent.from_dict(event_data)
+        except KeyError:
+            logger.warning("Unknown dev event type: %s", msg["event_type"])
+            return
+        self._game_loop.pipeline.enqueue(event)
+        self._game_loop.pipeline.process_all(self._game_loop.state)
+        # Broadcast updated state to all clients
+        assert self._player_input is not None
+        self._player_input._send_state(self._game_loop.state)
+        logger.info("Dev event executed: %s", msg["event_type"])
+
     def _run_game(self) -> None:
         """Run the game loop (blocking, called from game thread)."""
         assert self._player_input is not None
         assert self._loop is not None
 
-        self._game_loop = GameLoop(self.config, self._player_input)
+        self._game_loop = GameLoop(self.config, self._player_input, saved_state=self._saved_state)
         logger.info("Game started: %s, %d players (%d human, %d AI)",
                     self.config.board_path, self.config.num_players,
                     self.num_humans, self.num_ai)
@@ -204,6 +229,7 @@ def run_server(
     host: str = "localhost",
     port: int = 8765,
     debug: bool = False,
+    resume: bool = False,
 ) -> None:
     """Entry point: start a game server."""
     logging.basicConfig(
@@ -212,13 +238,26 @@ def run_server(
     )
     logging.getLogger("websockets").setLevel(logging.INFO)
 
-    num_players = num_humans + num_ai
-    config = GameConfig(
-        board_path=board_path,
-        num_players=num_players,
-        starting_cash=1500,
-    )
+    saved_state = None
+    if resume:
+        from road_to_riches.save import load_save
+        result = load_save()
+        if result is not None:
+            saved_state, config = result
+            logger.info("Resuming saved game (%d players, board: %s)",
+                        config.num_players, config.board_path)
+        else:
+            logger.warning("No save file found, starting new game.")
+
+    if saved_state is None:
+        num_players = num_humans + num_ai
+        config = GameConfig(
+            board_path=board_path,
+            num_players=num_players,
+            starting_cash=1500,
+        )
     server = GameServer(
         config, num_humans=num_humans, num_ai=num_ai, ai_delay=ai_delay,
+        saved_state=saved_state,
     )
     asyncio.run(server.serve(host, port))

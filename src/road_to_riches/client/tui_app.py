@@ -228,9 +228,11 @@ class GameApp(App):
         config: GameConfig | None = None,
         client_bridge: Any = None,
         log_lines: int | None = None,
+        saved_state: "GameState | None" = None,
     ) -> None:
         super().__init__()
         self.config = config
+        self._saved_state = saved_state
         self._client_bridge = client_bridge
         self._networked = client_bridge is not None
         # None = unlimited (show entire game log).
@@ -580,6 +582,10 @@ class GameApp(App):
             self._open_dev_menu()
             return
 
+        if rtype == InputRequestType.PRE_ROLL and value == "save":
+            self._save_game()
+            return
+
         # ── Two-phase types: selection → text input ──
 
         if rtype == InputRequestType.BUY_STOCK:
@@ -812,6 +818,7 @@ class GameApp(App):
                 options.append(("Sell Shop", "sell_shop"))
                 options.append(("Trade", "trade"))
             options.append(("Buy Shop", "buy_shop"))
+            options.append(("Save", "save"))
             options.append(("Info", "info"))
             options.append(("Dev", "dev"))
             header = (
@@ -1256,16 +1263,22 @@ class GameApp(App):
             line.append(f"${s['cash']:>{widths['cash']}}", style="gold1")
             line.append(f" | P:{s['prop']:>{widths['prop']}}", style=color)
             line.append(f" | S:{s['stock']:>{widths['stock']}} ", style=color)
-            if p.suits:
-                for i, suit in enumerate(p.suits):
-                    name = suit.value if hasattr(suit, "value") else suit
-                    symbol = SUIT_SYMBOLS.get(name, "?")
-                    sc = SUIT_COLORS.get(name, "white")
-                    if i > 0:
-                        line.append(" ")
-                    line.append(symbol, style=sc)
-            else:
-                line.append("-")
+            FIXED_ORDER = ["SPADE", "HEART", "DIAMOND", "CLUB"]
+            suit_names = {
+                (s.value if hasattr(s, "value") else s): qty
+                for s, qty in p.suits.items()
+            }
+            for i, name in enumerate(FIXED_ORDER):
+                if i > 0:
+                    line.append(" ")
+                if suit_names.get(name, 0) > 0:
+                    line.append(SUIT_SYMBOLS[name], style=SUIT_COLORS[name])
+                else:
+                    line.append("_", style="grey50")
+            wild_count = suit_names.get("WILD", 0)
+            if wild_count > 0:
+                line.append(" ")
+                line.append(f"{SUIT_SYMBOLS['WILD']}×{wild_count}", style=SUIT_COLORS["WILD"])
             parts.append(line)
         info_widget = self.query_one("#player-info", Static)
         from rich.text import Text
@@ -1490,16 +1503,49 @@ class GameApp(App):
         prompt = self.query_one("#prompt-bar", PromptBar)
         prompt.prompt_text = " | ".join(parts) + "  [dim](E to exit)[/dim]"
 
+    # ── Save/Load ─────────────────────────────────────────────────
+
+    def _save_game(self) -> None:
+        """Save the current game state to disk."""
+        state = self._get_state()
+        if state is None:
+            return
+        from road_to_riches.save import save_game
+        config = None
+        if self.game_loop is not None:
+            config = self.game_loop.config
+        elif self.config is not None:
+            config = self.config
+        else:
+            # Networked mode without config — build a minimal one from state
+            config = GameConfig(
+                board_path="unknown",
+                num_players=len(state.players),
+            )
+        path = save_game(state, config)
+        log_widget = self.query_one("#game-log", RichLog)
+        log_widget.write(f"[green]Game saved to {path}[/green]")
+        # Re-present the PRE_ROLL menu
+        if self._current_request is not None:
+            self._show_prompt(self._current_request)
+
     # ── Dev commands ──────────────────────────────────────────────
 
     def _execute_dev_event(self, event: "GameEvent") -> None:
         """Push a debug event into the pipeline and process it."""
-        if self.game_loop is None:
+        if self.game_loop is not None:
+            # Local mode: execute directly
+            self.game_loop.pipeline.enqueue(event)
+            self.game_loop.pipeline.process_all(self.game_loop.state)
+            self._refresh_board()
+            self._refresh_player_info()
+        elif self._client_bridge is not None:
+            # Networked mode: send to server
+            d = event.to_dict()
+            event_type = d.pop("event_type")
+            self._client_bridge.send_dev_event(event_type, d)
+        else:
             return
-        self.game_loop.pipeline.enqueue(event)
-        self.game_loop.pipeline.process_all(self.game_loop.state)
-        self._refresh_board()
-        self._refresh_player_info()
         log_widget = self.query_one("#game-log", RichLog)
         log_widget.write(f"[grey50][DEV] {event.event_type}[/grey50]")
 
@@ -1788,7 +1834,7 @@ class GameApp(App):
     def _start_game(self) -> None:
         """Run the game loop in a background thread (local mode)."""
         assert self.config is not None
-        self.game_loop = GameLoop(self.config, self.player_input)
+        self.game_loop = GameLoop(self.config, self.player_input, saved_state=self._saved_state)
         self._poll_for_requests()
 
     @work(thread=True)
@@ -1830,14 +1876,25 @@ def run_tui(
     board_path: str = "boards/test_board.json",
     num_players: int = 4,
     log_lines: int | None = None,
+    resume: bool = False,
 ) -> None:
     """Run the TUI in local mode (game loop runs in-process)."""
-    config = GameConfig(
-        board_path=board_path,
-        num_players=num_players,
-        starting_cash=1500,
-    )
-    app = GameApp(config=config, log_lines=log_lines)
+    saved_state = None
+    if resume:
+        from road_to_riches.save import load_save
+        result = load_save()
+        if result is not None:
+            saved_state, config = result
+            print(f"Resuming saved game ({config.num_players} players, board: {config.board_path})")
+        else:
+            print("No save file found, starting new game.")
+    if saved_state is None:
+        config = GameConfig(
+            board_path=board_path,
+            num_players=num_players,
+            starting_cash=1500,
+        )
+    app = GameApp(config=config, log_lines=log_lines, saved_state=saved_state)
     app.run()
 
 

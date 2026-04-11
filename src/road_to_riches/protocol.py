@@ -108,3 +108,8 @@ def msg_start_game(config: dict) -> dict:
 def msg_identify(player_id: int) -> dict:
     """AI client identifies itself with its assigned player_id."""
     return {"msg": "identify", "player_id": player_id}
+
+
+def msg_dev_event(event_type: str, event_data: dict) -> dict:
+    """Send a dev/debug event to the server for execution."""
+    return {"msg": "dev_event", "event_type": event_type, "event_data": event_data}
