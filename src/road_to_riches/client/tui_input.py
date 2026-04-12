@@ -356,6 +356,38 @@ class TuiPlayerInput(PlayerInput):
             )
         )
 
+    def choose_script_decision(
+        self, state: GameState, player_id: int, prompt: str,
+        options: dict[str, Any], log: GameLog,
+    ) -> Any:
+        self._flush_log(log)
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.SCRIPT_DECISION,
+                player_id=player_id,
+                data={"prompt": prompt, "options": options},
+            )
+        )
+
+    def choose_any_square(
+        self, state: GameState, player_id: int, prompt: str, log: GameLog,
+    ) -> int:
+        self._flush_log(log)
+        squares = []
+        for sq in state.board.squares:
+            squares.append({
+                "square_id": sq.id,
+                "type": sq.type.value,
+                "position": list(sq.position),
+            })
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.CHOOSE_ANY_SQUARE,
+                player_id=player_id,
+                data={"prompt": prompt, "squares": squares},
+            )
+        )
+
     def confirm_stop(
         self, state: GameState, player_id: int, square_id: int,
         can_undo: bool, log: GameLog,

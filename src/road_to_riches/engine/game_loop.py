@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
 from road_to_riches.board.loader import load_board
 from road_to_riches.engine.bankruptcy import (
@@ -20,6 +21,7 @@ from road_to_riches.engine.bankruptcy import (
     needs_liquidation,
 )
 from road_to_riches.engine.square_handler import PlayerAction, SquareResult
+from road_to_riches.events.event import GameEvent
 from road_to_riches.models.square_type import SquareType
 from road_to_riches.engine.turn import TurnEngine, TurnPhase
 from road_to_riches.events.game_events import (
@@ -36,6 +38,15 @@ from road_to_riches.events.game_events import (
     SellStockEvent,
     WarpEvent,
 )
+from road_to_riches.events.script_commands import (
+    ChooseSquare,
+    Decision,
+    ExtraRoll,
+    Message,
+    RollForEvent,
+    ScriptCommand,
+)
+from road_to_riches.events.script_runner import load_script_generator
 from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
@@ -202,6 +213,23 @@ class PlayerInput(ABC):
         self, state: GameState, player_id: int, options: dict, log: GameLog
     ) -> tuple[str, int]:
         """Forced to sell assets. Return ('shop', square_id) or ('stock', district_id)."""
+
+    @abstractmethod
+    def choose_script_decision(
+        self, state: GameState, player_id: int, prompt: str,
+        options: dict[str, Any], log: GameLog,
+    ) -> Any:
+        """Choose from options presented by a venture card script.
+
+        options: dict mapping display label -> return value.
+        Returns the value associated with the chosen label.
+        """
+
+    @abstractmethod
+    def choose_any_square(
+        self, state: GameState, player_id: int, prompt: str, log: GameLog,
+    ) -> int:
+        """Choose any square on the board. Returns square_id."""
 
     @abstractmethod
     def notify(self, state: GameState, log: GameLog) -> None:
@@ -734,18 +762,104 @@ class GameLoop:
 
         script_path = self.config.venture_script
         if not os.path.isabs(script_path):
-            # Resolve relative to cwd
             script_path = os.path.join(os.getcwd(), script_path)
         if not os.path.exists(script_path):
             self.log.log("No venture card script found, skipping.")
             return
-        event = ScriptEvent(player_id=player_id, script_path=script_path)
-        self.pipeline.enqueue(event)
-        self.pipeline.process_all(self.state)
-        msg = event.get_result()
-        if msg:
-            self.log.log(msg)
-        self._report_auto_events()
+        self.run_script(script_path, player_id)
+
+    def run_script(self, script_path: str, player_id: int) -> None:
+        """Execute a venture card script (generator or plain function).
+
+        Drives the generator to completion. Yielded objects are either:
+        - GameEvent instances: enqueued into the pipeline, get_result() sent back
+        - ScriptCommand instances: handled for I/O (messages, decisions, dice rolls)
+        """
+        gen = load_script_generator(script_path, self.state, player_id)
+        if gen is None:
+            return
+
+        result: Any = None
+        try:
+            cmd = gen.send(None)
+            while True:
+                if isinstance(cmd, ScriptCommand):
+                    result = self._handle_script_io(cmd, player_id)
+                elif isinstance(cmd, GameEvent):
+                    self.pipeline.enqueue(cmd)
+                    self.pipeline.process_all(self.state)
+                    self._report_auto_events()
+                    result = cmd.get_result()
+                else:
+                    raise ValueError(f"Script yielded unexpected type: {type(cmd).__name__}")
+                cmd = gen.send(result)
+        except StopIteration:
+            pass
+
+    def _handle_script_io(self, cmd: ScriptCommand, player_id: int) -> Any:
+        """Handle a script I/O command (not a pipeline event)."""
+        from road_to_riches.engine.dice import roll_dice
+
+        if isinstance(cmd, Message):
+            self.log.log(cmd.text)
+            self.input.notify(self.state, self.log)
+            return None
+
+        if isinstance(cmd, Decision):
+            target_pid = cmd.player_id if cmd.player_id is not None else player_id
+            return self.input.choose_script_decision(
+                self.state, target_pid, cmd.prompt, cmd.options, self.log,
+            )
+
+        if isinstance(cmd, RollForEvent):
+            roll = roll_dice(self.state.board.max_dice_roll)
+            self.log.log(f"Player {cmd.player_id} rolls a {roll}!")
+            self.input.notify_dice(roll, 0)
+            self.input.notify(self.state, self.log)
+            return roll
+
+        if isinstance(cmd, ExtraRoll):
+            self._do_extra_roll(cmd.player_id)
+            return None
+
+        if isinstance(cmd, ChooseSquare):
+            return self.input.choose_any_square(
+                self.state, cmd.player_id, cmd.prompt, self.log,
+            )
+
+        raise ValueError(f"Unknown script command: {type(cmd).__name__}")
+
+    def _do_extra_roll(self, player_id: int) -> None:
+        """Perform a bonus roll+move+land cycle (no pre-roll menu)."""
+        from road_to_riches.engine.dice import roll_dice
+
+        roll = roll_dice(self.state.board.max_dice_roll)
+        self.log.log(f"Player {player_id} rolls a {roll}! (bonus roll)")
+        self.input.notify_dice(roll, roll)
+        self.input.notify(self.state, self.log)
+
+        turn = self.engine.turn
+        assert turn is not None
+        turn.move_snapshots.clear()
+        turn.path_taken.clear()
+        self.engine.pass_results.clear()
+        self._pass_results_handled = 0
+        self._move_log_checkpoints.clear()
+        turn.dice_roll = roll
+        turn.remaining_moves = roll
+        turn.phase = TurnPhase.MOVING
+
+        self._movement_phase(player_id)
+
+        player = self.state.get_player(player_id)
+        landed_sq = self.state.board.squares[player.position]
+        self.log.log(f"Landed on square {landed_sq.id} ({landed_sq.type.value})")
+        land_result = self.engine.get_land_result()
+        self._log_land_effects(player_id, land_result)
+        self.input.notify(self.state, self.log)
+        if landed_sq.type == SquareType.BANK:
+            player.from_square = None
+        self._handle_land_actions(player_id, land_result)
 
     def _handle_auction(self, player_id: int) -> None:
         """Player auctions one of their shops."""

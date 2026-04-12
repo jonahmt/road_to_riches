@@ -446,6 +446,37 @@ class WebSocketPlayerInput(PlayerInput):
             state,
         )
 
+    def choose_script_decision(
+        self, state: GameState, player_id: int, prompt: str,
+        options: dict[str, Any], log: GameLog,
+    ) -> Any:
+        self._flush_log(log)
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.SCRIPT_DECISION,
+                player_id=player_id,
+                data={"prompt": prompt, "options": options},
+            ),
+            state,
+        )
+
+    def choose_any_square(
+        self, state: GameState, player_id: int, prompt: str, log: GameLog,
+    ) -> int:
+        self._flush_log(log)
+        squares = [
+            {"square_id": sq.id, "type": sq.type.value, "position": list(sq.position)}
+            for sq in state.board.squares
+        ]
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.CHOOSE_ANY_SQUARE,
+                player_id=player_id,
+                data={"prompt": prompt, "squares": squares},
+            ),
+            state,
+        )
+
     def notify(self, state: GameState, log: GameLog) -> None:
         self._flush_log(log)
         self._send_state(state)

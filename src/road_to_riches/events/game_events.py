@@ -595,8 +595,13 @@ class AuctionSellEvent(GameEvent):
 class ScriptEvent(GameEvent):
     """Execute an external Python script to modify game state.
 
-    The script must define a run(state, player_id) function that
-    returns a message string.
+    The script must define a run(state, player_id) function.
+    For simple scripts, run() can be a plain function (executed immediately).
+    For complex scripts, run() should be a generator that yields ScriptCommand
+    objects — these are driven by GameLoop.run_script() instead.
+
+    NOTE: ScriptEvent.execute() only supports plain (non-generator) scripts.
+    Generator scripts must be run via GameLoop.run_script().
     """
 
     player_id: int
@@ -605,12 +610,20 @@ class ScriptEvent(GameEvent):
 
     def execute(self, state: GameState) -> None:
         import importlib.util
+        import inspect
 
         spec = importlib.util.spec_from_file_location("script", self.script_path)
         assert spec is not None and spec.loader is not None
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        self._message = module.run(state, self.player_id)
+        result = module.run(state, self.player_id)
+        if inspect.isgenerator(result):
+            raise RuntimeError(
+                f"Script {self.script_path} uses generator pattern — "
+                "it must be run via GameLoop.run_script(), not ScriptEvent.execute()."
+            )
+        if isinstance(result, str):
+            self._message = result
 
     def get_result(self) -> str:
         return self._message

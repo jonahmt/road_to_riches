@@ -34,6 +34,8 @@ class InputRequestType(str, Enum):
     TRADE = "TRADE"
     CONFIRM_STOP = "CONFIRM_STOP"
     LIQUIDATION = "LIQUIDATION"
+    SCRIPT_DECISION = "SCRIPT_DECISION"
+    CHOOSE_ANY_SQUARE = "CHOOSE_ANY_SQUARE"
 
 
 @dataclass

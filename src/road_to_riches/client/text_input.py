@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from road_to_riches.engine.game_loop import GameLog, PlayerInput
 from road_to_riches.engine.property import current_rent, max_capital
 from road_to_riches.models.game_state import GameState
@@ -447,6 +449,40 @@ class TextPlayerInput(PlayerInput):
             except ValueError:
                 pass
             print("  Invalid. Use: sell shop <id> or sell stock <id>")
+
+    def choose_script_decision(
+        self, state: GameState, player_id: int, prompt: str,
+        options: dict[str, Any], log: GameLog,
+    ) -> Any:
+        self.notify(state, log)
+        print(f"  {prompt}")
+        labels = list(options.keys())
+        for i, label in enumerate(labels):
+            print(f"    [{i + 1}] {label}")
+        while True:
+            try:
+                choice = int(input("  > ").strip())
+                if 1 <= choice <= len(labels):
+                    return options[labels[choice - 1]]
+            except ValueError:
+                pass
+            print("  Invalid choice.")
+
+    def choose_any_square(
+        self, state: GameState, player_id: int, prompt: str, log: GameLog,
+    ) -> int:
+        self.notify(state, log)
+        print(f"  {prompt}")
+        num_squares = len(state.board.squares)
+        print(f"  Enter a square ID (0-{num_squares - 1}):")
+        while True:
+            try:
+                sq_id = int(input("  > ").strip())
+                if 0 <= sq_id < num_squares:
+                    return sq_id
+            except ValueError:
+                pass
+            print("  Invalid square ID.")
 
     def notify(self, state: GameState, log: GameLog) -> None:
         for msg in log.messages:

@@ -332,6 +332,35 @@ def _handle_liquidation(ai: BasicAIClient, req: InputRequest) -> tuple[str, int]
     return ("bankrupt", 0)
 
 
+def _handle_script_decision(ai: BasicAIClient, req: InputRequest) -> object:
+    """Pick the first option by default."""
+    options = req.data.get("options", {})
+    if options:
+        return next(iter(options.values()))
+    return None
+
+
+def _handle_choose_any_square(ai: BasicAIClient, req: InputRequest) -> int:
+    """Choose the square closest to the AI's next promotion target."""
+    squares = req.data.get("squares", [])
+    if not squares or ai.state is None:
+        return squares[0]["square_id"] if squares else 0
+
+    next_target = ai._next_target
+    if next_target is not None:
+        # Pick the square closest to our target
+        target_dists = bfs_distances(ai.state.board, next_target)
+        best = min(squares, key=lambda s: target_dists.get(s["square_id"], 999999))
+        return best["square_id"]
+
+    # No target — pick bank squares first, then random
+    bank_squares = find_bank_squares(ai.state.board)
+    for s in squares:
+        if s["square_id"] in bank_squares:
+            return s["square_id"]
+    return random.choice(squares)["square_id"]
+
+
 def _default_handler(ai: BasicAIClient, req: InputRequest) -> object:
     logger.warning("No handler for request type: %s", req.type)
     return None
@@ -357,6 +386,8 @@ _HANDLERS: dict[InputRequestType, object] = {
     InputRequestType.RENOVATE: _handle_renovate,
     InputRequestType.TRADE: _handle_trade,
     InputRequestType.LIQUIDATION: _handle_liquidation,
+    InputRequestType.SCRIPT_DECISION: _handle_script_decision,
+    InputRequestType.CHOOSE_ANY_SQUARE: _handle_choose_any_square,
 }
 
 

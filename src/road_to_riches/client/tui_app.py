@@ -354,6 +354,9 @@ class GameApp(App):
         with self.batch_update():
             self._refresh_board()
             self._refresh_player_info()
+            # Update "Player X's turn" if we're waiting
+            if self._current_request is None:
+                self._show_waiting()
 
     @on(DiceUpdate)
     def handle_dice_update(self, event: DiceUpdate) -> None:
@@ -557,6 +560,8 @@ class GameApp(App):
         self._dev_mode = None
         self._dev_data = {}
         self._reset_input_mode()
+        # Show waiting message until next input request arrives
+        self._show_waiting()
         self.player_input.submit_response(value)
 
     # ── Selection callbacks ───────────────────────────────────────
@@ -774,6 +779,16 @@ class GameApp(App):
         self._current_request = None
 
     # ── Prompt setup ──────────────────────────────────────────────
+
+    def _show_waiting(self) -> None:
+        """Clear the prompt bar and show whose turn it is."""
+        prompt = self.query_one("#prompt-bar", PromptBar)
+        active = self._active_player_id()
+        if active is not None:
+            color = PLAYER_COLORS[active % len(PLAYER_COLORS)]
+            prompt.prompt_text = f"[{color}]Player {active}[/{color}]'s turn..."
+        else:
+            prompt.prompt_text = ""
 
     def _show_prompt(self, req: InputRequest) -> None:
         """Set up the UI for the given input request."""
@@ -1010,6 +1025,23 @@ class GameApp(App):
             self._enter_text_mode(
                 "target_pid your_shops their_shops gold / N"
             )
+            return
+
+        if req.type == InputRequestType.SCRIPT_DECISION:
+            options_dict = req.data.get("options", {})
+            options = [(label, value) for label, value in options_dict.items()]
+            header = req.data.get("prompt", "Choose:")
+            self._enter_selection_mode(header, options)
+            return
+
+        if req.type == InputRequestType.CHOOSE_ANY_SQUARE:
+            squares = req.data.get("squares", [])
+            options = [
+                (f"sq{s['square_id']} ({s['type']})", s["square_id"])
+                for s in squares
+            ]
+            header = req.data.get("prompt", "Choose a square")
+            self._enter_selection_mode(header, options)
             return
 
         # Fallback
