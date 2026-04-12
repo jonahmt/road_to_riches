@@ -58,6 +58,7 @@ class GameConfig:
     num_players: int = 4
     starting_cash: int = 1500
     venture_script: str = "scripts/venture_placeholder.py"
+    cards_dir: str = "cards"
 
 
 class GameLog:
@@ -271,6 +272,10 @@ class GameLoop:
                 for i in range(config.num_players)
             ]
             self.state = GameState(board=board, stock=stock, players=players)
+
+        # Build venture deck if not already present (e.g., from save)
+        if self.state.venture_deck is None:
+            self._init_venture_deck()
         self.pipeline = EventPipeline()
         self.engine = TurnEngine(self.state, self.pipeline)
         self.input = player_input
@@ -281,6 +286,26 @@ class GameLoop:
         self.game_over = False
         self.winner: int | None = None
         self._forced_roll: int | None = None
+
+    def _init_venture_deck(self) -> None:
+        """Build the venture deck from the cards directory and board config."""
+        import json
+        from road_to_riches.models.venture_deck import build_deck, load_cards_from_directory
+
+        cards = load_cards_from_directory(self.config.cards_dir)
+        if not cards:
+            return  # no cards available, venture_deck stays None
+
+        # Check board JSON for optional deck composition
+        deck_composition = None
+        try:
+            with open(self.config.board_path) as f:
+                board_data = json.load(f)
+            deck_composition = board_data.get("venture_deck")
+        except (OSError, json.JSONDecodeError):
+            pass
+
+        self.state.venture_deck = build_deck(cards, deck_composition)
 
     def run(self) -> int | None:
         """Run the game to completion. Returns the winner's player_id or None."""
@@ -757,16 +782,24 @@ class GameLoop:
             self.input.notify(self.state, self.log)
 
     def _handle_venture_card(self, player_id: int) -> None:
-        """Execute the venture card script for this player."""
-        import os
-
-        script_path = self.config.venture_script
-        if not os.path.isabs(script_path):
-            script_path = os.path.join(os.getcwd(), script_path)
-        if not os.path.exists(script_path):
-            self.log.log("No venture card script found, skipping.")
+        """Draw a venture card and execute its script."""
+        deck = self.state.venture_deck
+        if deck is None:
+            # Fallback to legacy single-script mode
+            import os
+            script_path = self.config.venture_script
+            if not os.path.isabs(script_path):
+                script_path = os.path.join(os.getcwd(), script_path)
+            if not os.path.exists(script_path):
+                self.log.log("No venture cards available, skipping.")
+                return
+            self.run_script(script_path, player_id)
             return
-        self.run_script(script_path, player_id)
+
+        card = deck.draw()
+        self.log.log(f"Venture Card: {card.name} — {card.description}")
+        self.input.notify(self.state, self.log)
+        self.run_script(card.script_path, player_id)
 
     def run_script(self, script_path: str, player_id: int) -> None:
         """Execute a venture card script (generator or plain function).

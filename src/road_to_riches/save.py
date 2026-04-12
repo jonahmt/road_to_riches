@@ -30,6 +30,7 @@ def save_game(state: GameState, config: GameConfig) -> Path:
             "num_players": config.num_players,
             "starting_cash": config.starting_cash,
             "venture_script": config.venture_script,
+            "cards_dir": config.cards_dir,
         },
         "state": game_state_to_dict(state),
     }

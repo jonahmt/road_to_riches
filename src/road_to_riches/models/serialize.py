@@ -19,23 +19,31 @@ from road_to_riches.models.player_state import PlayerState, PlayerStatus
 from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.stock_state import StockPrice, StockState
 from road_to_riches.models.suit import Suit
+from road_to_riches.models.venture_deck import VentureCard, VentureDeck
 
 
 def game_state_to_dict(state: GameState) -> dict:
-    return {
+    d = {
         "current_player_index": state.current_player_index,
         "board": _board_to_dict(state.board),
         "stock": _stock_to_dict(state.stock),
         "players": [_player_to_dict(p) for p in state.players],
     }
+    if state.venture_deck is not None:
+        d["venture_deck"] = _venture_deck_to_dict(state.venture_deck)
+    return d
 
 
 def game_state_from_dict(d: dict) -> GameState:
+    venture_deck = None
+    if "venture_deck" in d:
+        venture_deck = _venture_deck_from_dict(d["venture_deck"])
     return GameState(
         board=_board_from_dict(d["board"]),
         stock=_stock_from_dict(d["stock"]),
         players=[_player_from_dict(p) for p in d["players"]],
         current_player_index=d["current_player_index"],
+        venture_deck=venture_deck,
     )
 
 
@@ -192,4 +200,40 @@ def _player_from_dict(d: dict) -> PlayerState:
             for s in d.get("statuses", [])
         ],
         bankrupt=d.get("bankrupt", False),
+    )
+
+
+# --- Venture Deck ---
+
+
+def _venture_deck_to_dict(deck: VentureDeck) -> dict:
+    return {
+        "cards": {
+            str(cid): {
+                "card_id": c.card_id,
+                "name": c.name,
+                "description": c.description,
+                "script_path": c.script_path,
+            }
+            for cid, c in deck.cards.items()
+        },
+        "remaining": deck.remaining,
+        "full_deck": deck.full_deck,
+    }
+
+
+def _venture_deck_from_dict(d: dict) -> VentureDeck:
+    cards = {
+        int(cid): VentureCard(
+            card_id=c["card_id"],
+            name=c["name"],
+            description=c["description"],
+            script_path=c["script_path"],
+        )
+        for cid, c in d["cards"].items()
+    }
+    return VentureDeck(
+        cards=cards,
+        remaining=d["remaining"],
+        full_deck=d["full_deck"],
     )

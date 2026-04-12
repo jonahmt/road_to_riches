@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from road_to_riches.models.board_state import BoardState
 from road_to_riches.models.player_state import PlayerState
 from road_to_riches.models.stock_state import StockState
+from road_to_riches.models.venture_deck import VentureDeck
 
 
 @dataclass
@@ -13,6 +14,7 @@ class GameState:
     stock: StockState
     players: list[PlayerState]
     current_player_index: int = 0
+    venture_deck: VentureDeck | None = None
 
     @property
     def current_player(self) -> PlayerState:
