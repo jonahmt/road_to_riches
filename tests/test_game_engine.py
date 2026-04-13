@@ -258,8 +258,7 @@ def _run_movement(game: GameState, pipeline: EventPipeline, player_id: int, roll
         result = pass_evt.get_result()
         if result is not None:
             for auto_event in result.auto_events:
-                pipeline.enqueue(auto_event)
-            pipeline.process_all(game)
+                auto_event.execute(game)
 
         remaining -= step_cost
 

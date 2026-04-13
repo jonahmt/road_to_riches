@@ -1666,7 +1666,7 @@ class GameApp(App):
         if self.game_loop is not None:
             # Local mode: execute directly
             self.game_loop.pipeline.enqueue(event)
-            self.game_loop.pipeline.process_all(self.game_loop.state)
+            self.game_loop.pipeline.process_next(self.game_loop.state)
             self._refresh_board()
             self._refresh_player_info()
         elif self._client_bridge is not None:

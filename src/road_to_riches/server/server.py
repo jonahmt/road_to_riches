@@ -162,7 +162,7 @@ class GameServer:
             logger.warning("Unknown dev event type: %s", msg["event_type"])
             return
         self._game_loop.pipeline.enqueue(event)
-        self._game_loop.pipeline.process_all(self._game_loop.state)
+        self._game_loop.pipeline.process_next(self._game_loop.state)
         # Broadcast updated state to all clients
         assert self._player_input is not None
         self._player_input._send_state(self._game_loop.state)
