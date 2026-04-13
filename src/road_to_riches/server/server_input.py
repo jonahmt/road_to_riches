@@ -477,6 +477,21 @@ class WebSocketPlayerInput(PlayerInput):
             state,
         )
 
+    def choose_venture_cell(
+        self, state: GameState, player_id: int, log: GameLog,
+    ) -> tuple[int, int]:
+        self._flush_log(log)
+        grid = state.venture_grid
+        cells = grid.cells if grid else []
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.CHOOSE_VENTURE_CELL,
+                player_id=player_id,
+                data={"cells": cells},
+            ),
+            state,
+        )
+
     def notify(self, state: GameState, log: GameLog) -> None:
         self._flush_log(log)
         self._send_state(state)

@@ -388,6 +388,20 @@ class TuiPlayerInput(PlayerInput):
             )
         )
 
+    def choose_venture_cell(
+        self, state: GameState, player_id: int, log: GameLog,
+    ) -> tuple[int, int]:
+        self._flush_log(log)
+        grid = state.venture_grid
+        cells = grid.cells if grid else []
+        return self._request_input(
+            InputRequest(
+                type=InputRequestType.CHOOSE_VENTURE_CELL,
+                player_id=player_id,
+                data={"cells": cells},
+            )
+        )
+
     def confirm_stop(
         self, state: GameState, player_id: int, square_id: int,
         can_undo: bool, log: GameLog,

@@ -484,6 +484,33 @@ class TextPlayerInput(PlayerInput):
                 pass
             print("  Invalid square ID.")
 
+    def choose_venture_cell(
+        self, state: GameState, player_id: int, log: GameLog,
+    ) -> tuple[int, int]:
+        self.notify(state, log)
+        grid = state.venture_grid
+        if grid:
+            print("  Venture Grid:")
+            print("     " + " ".join(str(c) for c in range(8)))
+            for r in range(8):
+                row_str = f"  {r}  "
+                for c in range(8):
+                    cell = grid.cells[r][c]
+                    row_str += f"{cell if cell is not None else '.'} "
+                print(row_str)
+        unclaimed = grid.unclaimed_cells() if grid else []
+        print(f"  Choose a cell ({len(unclaimed)} available). Enter row,col:")
+        while True:
+            raw = input("  > ").strip()
+            try:
+                parts = raw.split(",")
+                row, col = int(parts[0]), int(parts[1])
+                if (row, col) in unclaimed:
+                    return (row, col)
+                print("  That cell is already claimed.")
+            except (ValueError, IndexError):
+                print("  Invalid input. Use: row,col (e.g. 3,5)")
+
     def notify(self, state: GameState, log: GameLog) -> None:
         for msg in log.messages:
             print(f"  [LOG] {msg}")

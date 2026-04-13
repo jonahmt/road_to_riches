@@ -361,6 +361,72 @@ def _handle_choose_any_square(ai: BasicAIClient, req: InputRequest) -> int:
     return random.choice(squares)["square_id"]
 
 
+def _handle_choose_venture_cell(ai: BasicAIClient, req: InputRequest) -> list[int]:
+    """Pick a venture grid cell that maximizes line-building potential.
+
+    Strategy: score each unclaimed cell by counting how many adjacent cells
+    (in all 4 axes) are already owned by this player, then pick the best.
+    Ties broken randomly.
+    """
+    cells = req.data.get("cells", [])
+    if not cells:
+        return [0, 0]
+
+    player_id = ai.player_id
+    size = len(cells)
+
+    # Find unclaimed cells
+    unclaimed = []
+    for r in range(size):
+        for c in range(size):
+            if cells[r][c] is None:
+                unclaimed.append((r, c))
+
+    if not unclaimed:
+        return [0, 0]
+
+    def count_dir(r: int, c: int, dr: int, dc: int) -> int:
+        count = 0
+        r, c = r + dr, c + dc
+        while 0 <= r < size and 0 <= c < size:
+            if cells[r][c] != player_id:
+                break
+            count += 1
+            r += dr
+            c += dc
+        return count
+
+    def score_cell(r: int, c: int) -> int:
+        axes = [
+            ((0, 1), (0, -1)),
+            ((1, 0), (-1, 0)),
+            ((1, 1), (-1, -1)),
+            ((1, -1), (-1, 1)),
+        ]
+        total = 0
+        for (dr1, dc1), (dr2, dc2) in axes:
+            line_len = 1 + count_dir(r, c, dr1, dc1) + count_dir(r, c, dr2, dc2)
+            if line_len >= 3:
+                total += line_len * 10  # weight longer lines heavily
+            else:
+                total += line_len
+        return total
+
+    # Score all unclaimed cells, pick best (random tiebreak)
+    best_score = -1
+    best_cells = []
+    for r, c in unclaimed:
+        s = score_cell(r, c)
+        if s > best_score:
+            best_score = s
+            best_cells = [(r, c)]
+        elif s == best_score:
+            best_cells.append((r, c))
+
+    chosen = random.choice(best_cells)
+    return list(chosen)
+
+
 def _default_handler(ai: BasicAIClient, req: InputRequest) -> object:
     logger.warning("No handler for request type: %s", req.type)
     return None
@@ -388,6 +454,7 @@ _HANDLERS: dict[InputRequestType, object] = {
     InputRequestType.LIQUIDATION: _handle_liquidation,
     InputRequestType.SCRIPT_DECISION: _handle_script_decision,
     InputRequestType.CHOOSE_ANY_SQUARE: _handle_choose_any_square,
+    InputRequestType.CHOOSE_VENTURE_CELL: _handle_choose_venture_cell,
 }
 
 

@@ -391,7 +391,11 @@ class GameApp(App):
         if self._current_request is None:
             return
         if self._input_mode == "keypress":
-            self._handle_keypress_key(event)
+            if (self._current_request
+                    and self._current_request.type == InputRequestType.CHOOSE_VENTURE_CELL):
+                self._handle_venture_grid_key(event)
+            else:
+                self._handle_keypress_key(event)
         elif self._input_mode == "selection":
             self._handle_selection_key(event)
 
@@ -451,6 +455,83 @@ class GameApp(App):
         self._key_buffer = ""
         if key and key in self._keypress_mapping:
             self._submit_response(self._keypress_mapping[key])
+
+    def _handle_venture_grid_key(self, event) -> None:
+        """Handle WASD navigation + Space confirm on the venture grid."""
+        key = event.key
+        char = (event.character or "").lower()
+        cells = self._phase_data.get("grid_cells", [])
+        cursor = self._phase_data.get("grid_cursor", [0, 0])
+        size = len(cells)
+        if size == 0:
+            return
+
+        moved = False
+        if char == "w" or key == "up":
+            if cursor[0] > 0:
+                cursor[0] -= 1
+                moved = True
+        elif char == "s" or key == "down":
+            if cursor[0] < size - 1:
+                cursor[0] += 1
+                moved = True
+        elif char == "a" or key == "left":
+            if cursor[1] > 0:
+                cursor[1] -= 1
+                moved = True
+        elif char == "d" or key == "right":
+            if cursor[1] < size - 1:
+                cursor[1] += 1
+                moved = True
+        elif key == "space" or key == "enter":
+            r, c = cursor
+            if cells[r][c] is None:
+                self._submit_response([r, c])
+            # If cell is claimed, do nothing (user must pick unclaimed)
+
+        if char in ("w", "a", "s", "d") or key in ("up", "down", "left", "right", "space", "enter"):
+            event.prevent_default()
+            event.stop()
+
+        if moved:
+            self._render_venture_grid()
+
+    def _render_venture_grid(self) -> None:
+        """Render the venture grid in the log area and update prompt bar with cursor info."""
+        cells = self._phase_data.get("grid_cells", [])
+        cursor = self._phase_data.get("grid_cursor", [0, 0])
+        size = len(cells)
+
+        # Retract previous grid render (if any)
+        prev_lines = self._phase_data.get("grid_log_lines", 0)
+        if prev_lines > 0:
+            self.post_message(self.RetractLog(prev_lines))
+
+        # Build grid display
+        header = "    " + " ".join(str(c) for c in range(size))
+        lines = [header]
+        for r in range(size):
+            row_parts = [f" {r}  "]
+            for c in range(size):
+                cell = cells[r][c]
+                if r == cursor[0] and c == cursor[1]:
+                    sym = "X" if cell is None else str(cell)
+                elif cell is not None:
+                    sym = str(cell)
+                else:
+                    sym = "·"
+                row_parts.append(sym + " ")
+            lines.append("".join(row_parts))
+
+        for line in lines:
+            self.post_message(self.LogMessage(line))
+        self._phase_data["grid_log_lines"] = len(lines)
+
+        # Update prompt bar with cursor position and instructions
+        r, c = cursor
+        cell_status = "empty" if cells[r][c] is None else f"P{cells[r][c]}"
+        prompt = self.query_one("#prompt-bar", PromptBar)
+        prompt.prompt_text = f"Venture Grid | Cursor: ({r},{c}) [{cell_status}] | WASD=move Space=claim"
 
     def _handle_selection_key(self, event) -> None:
         """Handle keys in selection bar mode."""
@@ -1032,6 +1113,23 @@ class GameApp(App):
             options = [(label, value) for label, value in options_dict.items()]
             header = req.data.get("prompt", "Choose:")
             self._enter_selection_mode(header, options)
+            return
+
+        if req.type == InputRequestType.CHOOSE_VENTURE_CELL:
+            cells = req.data.get("cells", [])
+            self._phase_data["grid_cells"] = cells
+            self._phase_data["grid_cursor"] = [0, 0]
+            # Find first unclaimed cell for initial cursor
+            for r in range(len(cells)):
+                for c in range(len(cells[0]) if cells else 0):
+                    if cells[r][c] is None:
+                        self._phase_data["grid_cursor"] = [r, c]
+                        break
+                else:
+                    continue
+                break
+            self._enter_keypress_mode()
+            self._render_venture_grid()
             return
 
         if req.type == InputRequestType.CHOOSE_ANY_SQUARE:

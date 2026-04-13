@@ -20,6 +20,7 @@ from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.stock_state import StockPrice, StockState
 from road_to_riches.models.suit import Suit
 from road_to_riches.models.venture_deck import VentureCard, VentureDeck
+from road_to_riches.models.venture_grid import VentureGrid
 
 
 def game_state_to_dict(state: GameState) -> dict:
@@ -31,6 +32,8 @@ def game_state_to_dict(state: GameState) -> dict:
     }
     if state.venture_deck is not None:
         d["venture_deck"] = _venture_deck_to_dict(state.venture_deck)
+    if state.venture_grid is not None:
+        d["venture_grid"] = _venture_grid_to_dict(state.venture_grid)
     return d
 
 
@@ -38,12 +41,16 @@ def game_state_from_dict(d: dict) -> GameState:
     venture_deck = None
     if "venture_deck" in d:
         venture_deck = _venture_deck_from_dict(d["venture_deck"])
+    venture_grid = None
+    if "venture_grid" in d:
+        venture_grid = _venture_grid_from_dict(d["venture_grid"])
     return GameState(
         board=_board_from_dict(d["board"]),
         stock=_stock_from_dict(d["stock"]),
         players=[_player_from_dict(p) for p in d["players"]],
         current_player_index=d["current_player_index"],
         venture_deck=venture_deck,
+        venture_grid=venture_grid,
     )
 
 
@@ -237,3 +244,14 @@ def _venture_deck_from_dict(d: dict) -> VentureDeck:
         remaining=d["remaining"],
         full_deck=d["full_deck"],
     )
+
+
+# --- Venture Grid ---
+
+
+def _venture_grid_to_dict(grid: VentureGrid) -> dict:
+    return {"cells": grid.cells}
+
+
+def _venture_grid_from_dict(d: dict) -> VentureGrid:
+    return VentureGrid(cells=d["cells"])
