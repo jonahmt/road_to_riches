@@ -52,14 +52,24 @@ from road_to_riches.events.script_runner import load_script_generator
 from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.events.turn_events import (
     EndTurnEvent,
+    InitBuyShopEvent,
+    InitBuyStockEvent,
+    InitBuyVacantPlotEvent,
+    InitCannonEvent,
+    InitForcedBuyoutEvent,
+    InitInvestEvent,
+    InitRenovateEvent,
+    InitSellStockEvent,
     MoveEvent,
     MoveSnapshot,
     MoveStep,
     PassActionEvent,
+    RollAgainEvent,
     RollEvent,
     RollForEventEvent,
     StopActionEvent,
     TurnEvent,
+    VentureCardEvent,
     WillMoveEvent,
 )
 from road_to_riches.models.game_state import GameState
@@ -377,6 +387,27 @@ class GameLoop:
             self._handle_stop_action(event)
         elif isinstance(event, EndTurnEvent):
             self._handle_end_turn(event)
+        # Land action Init events
+        elif isinstance(event, InitBuyShopEvent):
+            self._handle_init_buy_shop(event)
+        elif isinstance(event, InitBuyVacantPlotEvent):
+            self._handle_init_buy_vacant_plot(event)
+        elif isinstance(event, InitForcedBuyoutEvent):
+            self._handle_init_forced_buyout(event)
+        elif isinstance(event, InitInvestEvent):
+            self._handle_init_invest(event)
+        elif isinstance(event, InitBuyStockEvent):
+            self._handle_init_buy_stock(event)
+        elif isinstance(event, InitSellStockEvent):
+            self._handle_init_sell_stock(event)
+        elif isinstance(event, InitRenovateEvent):
+            self._handle_init_renovate(event)
+        elif isinstance(event, InitCannonEvent):
+            self._handle_init_cannon(event)
+        elif isinstance(event, VentureCardEvent):
+            self._handle_venture_card_event(event)
+        elif isinstance(event, RollAgainEvent):
+            self._handle_roll_again(event)
         # Leaf events (BuyShopEvent, PayRentEvent, etc.) — no handler needed.
 
     # ------------------------------------------------------------------
@@ -591,40 +622,49 @@ class GameLoop:
         if landed_sq.type == SquareType.BANK:
             player.from_square = None
 
-        # Handle land actions (buy shop, invest, etc.)
-        self._handle_land_actions(player_id, result)
-
-        # Roll On: roll again
+        # Enqueue land action events based on available_actions.
+        # These get inserted before the EndTurnEvent already in the queue.
+        if PlayerAction.BUY_SHOP in result.available_actions:
+            self.pipeline.enqueue(InitBuyShopEvent(
+                player_id=player_id, square_id=result.info["square_id"],
+                cost=result.info["cost"],
+            ))
+        if PlayerAction.BUY_VACANT_PLOT in result.available_actions:
+            self.pipeline.enqueue(InitBuyVacantPlotEvent(
+                player_id=player_id, square_id=result.info["square_id"],
+                cost=result.info["cost"],
+                options=result.info.get("options", []),
+            ))
+        if PlayerAction.FORCED_BUYOUT in result.available_actions:
+            self.pipeline.enqueue(InitForcedBuyoutEvent(
+                player_id=player_id, square_id=result.info["square_id"],
+                buyout_cost=result.info["buyout_cost"],
+            ))
+        if PlayerAction.INVEST in result.available_actions:
+            self.pipeline.enqueue(InitInvestEvent(
+                player_id=player_id,
+                investable_shops=result.info.get("investable_shops", []),
+            ))
+        if PlayerAction.BUY_STOCK in result.available_actions:
+            self.pipeline.enqueue(InitBuyStockEvent(player_id=player_id))
+        if PlayerAction.SELL_STOCK in result.available_actions:
+            self.pipeline.enqueue(InitSellStockEvent(player_id=player_id))
+        if PlayerAction.RENOVATE in result.available_actions:
+            self.pipeline.enqueue(InitRenovateEvent(
+                player_id=player_id, square_id=result.info["square_id"],
+                options=result.info.get("renovate_options", []),
+            ))
+        if PlayerAction.CHOOSE_CANNON_TARGET in result.available_actions:
+            self.pipeline.enqueue(InitCannonEvent(
+                player_id=player_id,
+                targets=result.info.get("cannon_targets", []),
+            ))
+        if result.info.get("venture_card"):
+            self.pipeline.enqueue(VentureCardEvent(player_id=player_id))
         if result.info.get("roll_again"):
-            self.log.log("Roll On! Rolling again...")
-            self.input.notify(self.state, self.log)
-            self._move_snapshots.clear()
-            self._move_log_checkpoints.clear()
-            self._path_taken.clear()
-            # Insert a RollEvent before the EndTurnEvent
-            # The EndTurnEvent is already in the queue, but we need to do
-            # another full roll+move+land cycle first. We enqueue_front
-            # to handle the roll before the EndTurnEvent.
-            # But first remove the EndTurnEvent and TurnEvent that follow
-            # so we can re-add them after the new movement cycle.
-            # Actually, the approach is simpler: just enqueue a new
-            # roll and stop+end will be enqueued after movement.
-            # We need to temporarily save and remove the pending end/turn events.
-            saved_events = []
-            while not self.pipeline.is_empty:
-                saved_events.append(self.pipeline._queue.popleft())
-            self.pipeline.enqueue(RollEvent(player_id=player_id))
-            # The roll handler will enqueue WillMoveEvent, which will
-            # eventually enqueue StopActionEvent + EndTurnEvent.
-            # We drop the saved EndTurnEvent+TurnEvent since a new cycle will create them.
-            # However, if there were other events (shouldn't be), we should keep them.
-            # For safety, filter out only the EndTurnEvent and TurnEvent(next)
-            for evt in saved_events:
-                if isinstance(evt, (EndTurnEvent, TurnEvent)):
-                    continue
-                self.pipeline.enqueue(evt)
+            self.pipeline.enqueue(RollAgainEvent(player_id=player_id))
 
-        # Victory check
+        # Victory check (stays inline — not land-action-specific)
         if result.info.get("can_win"):
             if check_victory(self.state, player_id):
                 self.pipeline.enqueue(VictoryEvent(player_id=player_id))
@@ -802,157 +842,170 @@ class GameLoop:
                 self._report_auto_events()
                 break
 
-    def _handle_land_actions(self, player_id: int, result: SquareResult) -> None:
-        if PlayerAction.BUY_SHOP in result.available_actions:
-            cost = result.info["cost"]
-            sq_id = result.info["square_id"]
-            if self.input.choose_buy_shop(self.state, player_id, sq_id, cost, self.log):
-                event = BuyShopEvent(player_id=player_id, square_id=sq_id)
-                self.pipeline.enqueue(event)
-                self.pipeline.process_all(self.state)
-                self.log.log(f"Player {player_id} bought shop at square {sq_id}!")
-                self._report_auto_events()
+    # ------------------------------------------------------------------
+    # Land action Init event handlers
+    # ------------------------------------------------------------------
 
-        if PlayerAction.BUY_VACANT_PLOT in result.available_actions:
-            sq_id = result.info["square_id"]
-            options = result.info.get("options", [])
-            cost = result.info["cost"]
-            if self.input.choose_buy_shop(self.state, player_id, sq_id, cost, self.log):
-                dev_type = self.input.choose_vacant_plot_type(
-                    self.state, player_id, sq_id, options, self.log
+    def _handle_init_buy_shop(self, event: InitBuyShopEvent) -> None:
+        pid, sq_id, cost = event.player_id, event.square_id, event.cost
+        if self.input.choose_buy_shop(self.state, pid, sq_id, cost, self.log):
+            buy = BuyShopEvent(player_id=pid, square_id=sq_id)
+            self.pipeline.enqueue(buy)
+            self.pipeline.process_all(self.state)
+            self.log.log(f"Player {pid} bought shop at square {sq_id}!")
+            self._report_auto_events()
+
+    def _handle_init_buy_vacant_plot(self, event: InitBuyVacantPlotEvent) -> None:
+        pid, sq_id, cost = event.player_id, event.square_id, event.cost
+        options = event.options
+        if self.input.choose_buy_shop(self.state, pid, sq_id, cost, self.log):
+            dev_type = self.input.choose_vacant_plot_type(
+                self.state, pid, sq_id, options, self.log
+            )
+            if dev_type not in options:
+                self.log.log(f"Invalid development type: {dev_type}")
+                self.input.notify(self.state, self.log)
+            else:
+                buy = BuyVacantPlotEvent(
+                    player_id=pid, square_id=sq_id, development_type=dev_type
                 )
-                if dev_type not in options:
-                    self.log.log(f"Invalid development type: {dev_type}")
-                    self.input.notify(self.state, self.log)
-                else:
-                    event = BuyVacantPlotEvent(
-                        player_id=player_id, square_id=sq_id, development_type=dev_type
-                    )
-                    self.pipeline.enqueue(event)
-                    self.pipeline.process_all(self.state)
-                    self.log.log(
-                        f"Player {player_id} developed vacant plot {sq_id} as {dev_type}!"
-                    )
-                    self._report_auto_events()
-
-        if PlayerAction.FORCED_BUYOUT in result.available_actions:
-            sq_id = result.info["square_id"]
-            buyout_cost = result.info["buyout_cost"]
-            if self.input.choose_forced_buyout(self.state, player_id, sq_id, buyout_cost, self.log):
-                event = ForcedBuyoutEvent(buyer_id=player_id, square_id=sq_id)
-                self.pipeline.enqueue(event)
+                self.pipeline.enqueue(buy)
                 self.pipeline.process_all(self.state)
                 self.log.log(
-                    f"Player {player_id} forced buyout of square {sq_id} for {buyout_cost}G!"
+                    f"Player {pid} developed vacant plot {sq_id} as {dev_type}!"
                 )
                 self._report_auto_events()
 
-        if PlayerAction.INVEST in result.available_actions:
-            investable = result.info.get("investable_shops", [])
-            if investable:
-                choice = self.input.choose_investment(self.state, player_id, investable, self.log)
-                if choice is not None:
-                    sq_id, amount = choice
-                    valid_ids = {s["square_id"] for s in investable}
-                    if sq_id not in valid_ids or amount <= 0:
-                        self.log.log("Invalid investment choice.")
-                        self.input.notify(self.state, self.log)
-                    else:
-                        match = next(s for s in investable if s["square_id"] == sq_id)
-                        if amount > match["max_capital"]:
-                            self.log.log("Investment exceeds max capital.")
-                            self.input.notify(self.state, self.log)
-                        else:
-                            player = self.state.get_player(player_id)
-                            if player.ready_cash < amount:
-                                self.log.log("Not enough cash to invest.")
-                                self.input.notify(self.state, self.log)
-                            else:
-                                event = InvestInShopEvent(
-                                    player_id=player_id, square_id=sq_id, amount=amount
-                                )
-                                self.pipeline.enqueue(event)
-                                self.pipeline.process_all(self.state)
-                                self.log.log(
-                                    f"Player {player_id} invested {amount}G in square {sq_id}!"
-                                )
-                                self._report_auto_events()
+    def _handle_init_forced_buyout(self, event: InitForcedBuyoutEvent) -> None:
+        pid, sq_id = event.player_id, event.square_id
+        buyout_cost = event.buyout_cost
+        if self.input.choose_forced_buyout(self.state, pid, sq_id, buyout_cost, self.log):
+            buy = ForcedBuyoutEvent(buyer_id=pid, square_id=sq_id)
+            self.pipeline.enqueue(buy)
+            self.pipeline.process_all(self.state)
+            self.log.log(
+                f"Player {pid} forced buyout of square {sq_id} for {buyout_cost}G!"
+            )
+            self._report_auto_events()
 
-        if PlayerAction.BUY_STOCK in result.available_actions:
-            stock_choice = self.input.choose_stock_buy(self.state, player_id, self.log)
-            if stock_choice is not None:
-                district_id, qty = stock_choice
-                if self._validate_stock_buy(player_id, district_id, qty):
-                    event = BuyStockEvent(
-                        player_id=player_id, district_id=district_id, quantity=qty
-                    )
-                    self.pipeline.enqueue(event)
-                    self.pipeline.process_all(self.state)
-                    self.log.log(
-                        f"Player {player_id} bought {qty} stock in district {district_id}."
-                    )
-                    self._report_auto_events()
+    def _handle_init_invest(self, event: InitInvestEvent) -> None:
+        pid = event.player_id
+        investable = event.investable_shops
+        if not investable:
+            return
+        choice = self.input.choose_investment(self.state, pid, investable, self.log)
+        if choice is None:
+            return
+        sq_id, amount = choice
+        valid_ids = {s["square_id"] for s in investable}
+        if sq_id not in valid_ids or amount <= 0:
+            self.log.log("Invalid investment choice.")
+            self.input.notify(self.state, self.log)
+            return
+        match = next(s for s in investable if s["square_id"] == sq_id)
+        if amount > match["max_capital"]:
+            self.log.log("Investment exceeds max capital.")
+            self.input.notify(self.state, self.log)
+            return
+        player = self.state.get_player(pid)
+        if player.ready_cash < amount:
+            self.log.log("Not enough cash to invest.")
+            self.input.notify(self.state, self.log)
+            return
+        inv = InvestInShopEvent(player_id=pid, square_id=sq_id, amount=amount)
+        self.pipeline.enqueue(inv)
+        self.pipeline.process_all(self.state)
+        self.log.log(f"Player {pid} invested {amount}G in square {sq_id}!")
+        self._report_auto_events()
 
-        if PlayerAction.SELL_STOCK in result.available_actions:
-            stock_choice = self.input.choose_stock_sell(self.state, player_id, self.log)
-            if stock_choice is not None:
-                district_id, qty = stock_choice
-                if self._validate_stock_sell(player_id, district_id, qty):
-                    event = SellStockEvent(
-                        player_id=player_id, district_id=district_id, quantity=qty
-                    )
-                    self.pipeline.enqueue(event)
-                    self.pipeline.process_all(self.state)
-                    self.log.log(
-                        f"Player {player_id} sold {qty} stock in district {district_id}."
-                    )
-                    self._report_auto_events()
+    def _handle_init_buy_stock(self, event: InitBuyStockEvent) -> None:
+        pid = event.player_id
+        stock_choice = self.input.choose_stock_buy(self.state, pid, self.log)
+        if stock_choice is None:
+            return
+        district_id, qty = stock_choice
+        if self._validate_stock_buy(pid, district_id, qty):
+            buy = BuyStockEvent(player_id=pid, district_id=district_id, quantity=qty)
+            self.pipeline.enqueue(buy)
+            self.pipeline.process_all(self.state)
+            self.log.log(
+                f"Player {pid} bought {qty} stock in district {district_id}."
+            )
+            self._report_auto_events()
 
-        if PlayerAction.RENOVATE in result.available_actions:
-            sq_id = result.info["square_id"]
-            options = result.info.get("renovate_options", [])
-            if options:
-                choice = self.input.choose_renovation(
-                    self.state, player_id, sq_id, options, self.log
-                )
-                if choice is not None:
-                    if choice not in options:
-                        self.log.log(f"Invalid renovation type: {choice}")
-                        self.input.notify(self.state, self.log)
-                    else:
-                        event = RenovatePropertyEvent(
-                            player_id=player_id, square_id=sq_id, new_type=choice
-                        )
-                        self.pipeline.enqueue(event)
-                        self.pipeline.process_all(self.state)
-                        self.log.log(
-                            f"Player {player_id} renovated square {sq_id} to {choice}!"
-                        )
-                        self._report_auto_events()
+    def _handle_init_sell_stock(self, event: InitSellStockEvent) -> None:
+        pid = event.player_id
+        stock_choice = self.input.choose_stock_sell(self.state, pid, self.log)
+        if stock_choice is None:
+            return
+        district_id, qty = stock_choice
+        if self._validate_stock_sell(pid, district_id, qty):
+            sell = SellStockEvent(player_id=pid, district_id=district_id, quantity=qty)
+            self.pipeline.enqueue(sell)
+            self.pipeline.process_all(self.state)
+            self.log.log(
+                f"Player {pid} sold {qty} stock in district {district_id}."
+            )
+            self._report_auto_events()
 
-        if PlayerAction.CHOOSE_CANNON_TARGET in result.available_actions:
-            targets = result.info.get("cannon_targets", [])
-            if targets:
-                target_pid = self.input.choose_cannon_target(
-                    self.state, player_id, targets, self.log
-                )
-                valid_pids = {t["player_id"] for t in targets}
-                if target_pid not in valid_pids:
-                    self.log.log("Invalid cannon target.")
-                    self.input.notify(self.state, self.log)
-                else:
-                    target = self.state.get_player(target_pid)
-                    event = WarpEvent(player_id=player_id, target_square_id=target.position)
-                    self.pipeline.enqueue(event)
-                    self.pipeline.process_all(self.state)
-                    self.log.log(
-                        f"Player {player_id} cannons to Player {target_pid}'s "
-                        f"position (square {target.position})!"
-                    )
-                    self._report_auto_events()
+    def _handle_init_renovate(self, event: InitRenovateEvent) -> None:
+        pid, sq_id = event.player_id, event.square_id
+        options = event.options
+        if not options:
+            return
+        choice = self.input.choose_renovation(self.state, pid, sq_id, options, self.log)
+        if choice is None:
+            return
+        if choice not in options:
+            self.log.log(f"Invalid renovation type: {choice}")
+            self.input.notify(self.state, self.log)
+            return
+        ren = RenovatePropertyEvent(player_id=pid, square_id=sq_id, new_type=choice)
+        self.pipeline.enqueue(ren)
+        self.pipeline.process_all(self.state)
+        self.log.log(f"Player {pid} renovated square {sq_id} to {choice}!")
+        self._report_auto_events()
 
-        if result.info.get("venture_card"):
-            self._handle_venture_card(player_id)
+    def _handle_init_cannon(self, event: InitCannonEvent) -> None:
+        pid = event.player_id
+        targets = event.targets
+        if not targets:
+            return
+        target_pid = self.input.choose_cannon_target(self.state, pid, targets, self.log)
+        valid_pids = {t["player_id"] for t in targets}
+        if target_pid not in valid_pids:
+            self.log.log("Invalid cannon target.")
+            self.input.notify(self.state, self.log)
+            return
+        target = self.state.get_player(target_pid)
+        warp = WarpEvent(player_id=pid, target_square_id=target.position)
+        self.pipeline.enqueue(warp)
+        self.pipeline.process_all(self.state)
+        self.log.log(
+            f"Player {pid} cannons to Player {target_pid}'s "
+            f"position (square {target.position})!"
+        )
+        self._report_auto_events()
+
+    def _handle_venture_card_event(self, event: VentureCardEvent) -> None:
+        self._handle_venture_card(event.player_id)
+
+    def _handle_roll_again(self, event: RollAgainEvent) -> None:
+        pid = event.player_id
+        self.log.log("Roll On! Rolling again...")
+        self.input.notify(self.state, self.log)
+        self._move_snapshots.clear()
+        self._move_log_checkpoints.clear()
+        self._path_taken.clear()
+        # Remove pending EndTurnEvent/TurnEvent — the new roll cycle will produce new ones.
+        saved_events = []
+        while not self.pipeline.is_empty:
+            saved_events.append(self.pipeline._queue.popleft())
+        self.pipeline.enqueue(RollEvent(player_id=pid))
+        for evt in saved_events:
+            if isinstance(evt, (EndTurnEvent, TurnEvent)):
+                continue
+            self.pipeline.enqueue(evt)
 
     def _liquidation_phase(self, player_id: int) -> None:
         self.log.log(f"Player {player_id} has negative cash! Must sell assets.")

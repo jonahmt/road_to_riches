@@ -241,6 +241,137 @@ class EndTurnEvent(GameEvent):
 
 
 # ---------------------------------------------------------------------------
+# Land action events (Init* pattern per design/technical.md)
+#
+# StopActionEvent handler enqueues these based on available_actions.
+# Each has a no-op execute() — the game loop dispatch handler does I/O
+# and enqueues the corresponding mutation event.
+# ---------------------------------------------------------------------------
+
+
+@register_event
+@dataclass
+class InitBuyShopEvent(GameEvent):
+    """Player may buy an unowned shop. Handler prompts and enqueues BuyShopEvent."""
+
+    player_id: int
+    square_id: int
+    cost: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitBuyVacantPlotEvent(GameEvent):
+    """Player may develop a vacant plot. Handler prompts and enqueues BuyVacantPlotEvent."""
+
+    player_id: int
+    square_id: int
+    cost: int
+    options: list[str] = field(default_factory=list)
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitForcedBuyoutEvent(GameEvent):
+    """Player may force-buy another player's shop. Handler prompts and enqueues ForcedBuyoutEvent."""
+
+    player_id: int
+    square_id: int
+    buyout_cost: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitInvestEvent(GameEvent):
+    """Player may invest in owned shops. Handler prompts and enqueues InvestInShopEvent."""
+
+    player_id: int
+    investable_shops: list[dict] = field(default_factory=list)
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitBuyStockEvent(GameEvent):
+    """Player may buy stock at a stock square. Handler prompts and enqueues BuyStockEvent."""
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitSellStockEvent(GameEvent):
+    """Player may sell stock at a stock square. Handler prompts and enqueues SellStockEvent."""
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitRenovateEvent(GameEvent):
+    """Player may renovate a shop. Handler prompts and enqueues RenovatePropertyEvent."""
+
+    player_id: int
+    square_id: int
+    options: list[str] = field(default_factory=list)
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitCannonEvent(GameEvent):
+    """Player chooses a cannon target. Handler prompts and enqueues WarpEvent."""
+
+    player_id: int
+    targets: list[dict] = field(default_factory=list)
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class VentureCardEvent(GameEvent):
+    """Player landed on a venture card square. Handler runs the card script."""
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class RollAgainEvent(GameEvent):
+    """Player gets an extra roll (e.g. Roll On square). Handler clears move
+    state, removes pending EndTurnEvent, and enqueues a new RollEvent."""
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+# ---------------------------------------------------------------------------
 # Script-oriented events (formerly ScriptCommands)
 # ---------------------------------------------------------------------------
 
