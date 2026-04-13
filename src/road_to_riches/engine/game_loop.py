@@ -448,7 +448,7 @@ class GameLoop:
                             player_id=player_id, district_id=district_id, quantity=qty
                         )
                         self.pipeline.enqueue(evt)
-                        self.pipeline.process_all(self.state)
+                        self.pipeline.process_n(self.state, 1)
                         self._report_auto_events()
             elif action == "auction":
                 self._handle_auction(player_id)
@@ -569,7 +569,7 @@ class GameLoop:
         # Enqueue and process auto-events (promotion, checkpoint toll, etc.)
         for auto_event in result.auto_events:
             self.pipeline.enqueue(auto_event)
-        self.pipeline.process_all(self.state)
+        self.pipeline.process_n(self.state, len(result.auto_events))
 
         # Log pass effects
         for auto_event in result.auto_events:
@@ -612,7 +612,7 @@ class GameLoop:
         # Enqueue and process auto-events
         for auto_event in result.auto_events:
             self.pipeline.enqueue(auto_event)
-        self.pipeline.process_all(self.state)
+        self.pipeline.process_n(self.state, len(result.auto_events))
 
         # Log land effects
         self._log_land_effects(player_id, result)
@@ -668,7 +668,7 @@ class GameLoop:
         if result.info.get("can_win"):
             if check_victory(self.state, player_id):
                 self.pipeline.enqueue(VictoryEvent(player_id=player_id))
-                self.pipeline.process_all(self.state)
+                self.pipeline.process_n(self.state, 1)
                 self.log.log(f"Player {player_id} WINS THE GAME!")
                 self.input.notify(self.state, self.log)
                 self.game_over = True
@@ -833,7 +833,7 @@ class GameLoop:
                     player_id=player_id, district_id=district_id, quantity=qty
                 )
                 self.pipeline.enqueue(event)
-                self.pipeline.process_all(self.state)
+                self.pipeline.process_n(self.state, 1)
                 self.log.log(
                     f"Player {player_id} bought {qty} stock in district "
                     f"{district_id}."
@@ -851,7 +851,7 @@ class GameLoop:
         if self.input.choose_buy_shop(self.state, pid, sq_id, cost, self.log):
             buy = BuyShopEvent(player_id=pid, square_id=sq_id)
             self.pipeline.enqueue(buy)
-            self.pipeline.process_all(self.state)
+            self.pipeline.process_n(self.state, 1)
             self.log.log(f"Player {pid} bought shop at square {sq_id}!")
             self._report_auto_events()
 
@@ -870,7 +870,7 @@ class GameLoop:
                     player_id=pid, square_id=sq_id, development_type=dev_type
                 )
                 self.pipeline.enqueue(buy)
-                self.pipeline.process_all(self.state)
+                self.pipeline.process_n(self.state, 1)
                 self.log.log(
                     f"Player {pid} developed vacant plot {sq_id} as {dev_type}!"
                 )
@@ -882,7 +882,7 @@ class GameLoop:
         if self.input.choose_forced_buyout(self.state, pid, sq_id, buyout_cost, self.log):
             buy = ForcedBuyoutEvent(buyer_id=pid, square_id=sq_id)
             self.pipeline.enqueue(buy)
-            self.pipeline.process_all(self.state)
+            self.pipeline.process_n(self.state, 1)
             self.log.log(
                 f"Player {pid} forced buyout of square {sq_id} for {buyout_cost}G!"
             )
@@ -914,7 +914,7 @@ class GameLoop:
             return
         inv = InvestInShopEvent(player_id=pid, square_id=sq_id, amount=amount)
         self.pipeline.enqueue(inv)
-        self.pipeline.process_all(self.state)
+        self.pipeline.process_n(self.state, 1)
         self.log.log(f"Player {pid} invested {amount}G in square {sq_id}!")
         self._report_auto_events()
 
@@ -927,7 +927,7 @@ class GameLoop:
         if self._validate_stock_buy(pid, district_id, qty):
             buy = BuyStockEvent(player_id=pid, district_id=district_id, quantity=qty)
             self.pipeline.enqueue(buy)
-            self.pipeline.process_all(self.state)
+            self.pipeline.process_n(self.state, 1)
             self.log.log(
                 f"Player {pid} bought {qty} stock in district {district_id}."
             )
@@ -942,7 +942,7 @@ class GameLoop:
         if self._validate_stock_sell(pid, district_id, qty):
             sell = SellStockEvent(player_id=pid, district_id=district_id, quantity=qty)
             self.pipeline.enqueue(sell)
-            self.pipeline.process_all(self.state)
+            self.pipeline.process_n(self.state, 1)
             self.log.log(
                 f"Player {pid} sold {qty} stock in district {district_id}."
             )
@@ -962,7 +962,7 @@ class GameLoop:
             return
         ren = RenovatePropertyEvent(player_id=pid, square_id=sq_id, new_type=choice)
         self.pipeline.enqueue(ren)
-        self.pipeline.process_all(self.state)
+        self.pipeline.process_n(self.state, 1)
         self.log.log(f"Player {pid} renovated square {sq_id} to {choice}!")
         self._report_auto_events()
 
@@ -980,7 +980,7 @@ class GameLoop:
         target = self.state.get_player(target_pid)
         warp = WarpEvent(player_id=pid, target_square_id=target.position)
         self.pipeline.enqueue(warp)
-        self.pipeline.process_all(self.state)
+        self.pipeline.process_n(self.state, 1)
         self.log.log(
             f"Player {pid} cannons to Player {target_pid}'s "
             f"position (square {target.position})!"
@@ -1024,7 +1024,7 @@ class GameLoop:
                     continue
                 event = SellShopToBankEvent(player_id=player_id, square_id=asset_id)
                 self.pipeline.enqueue(event)
-                self.pipeline.process_all(self.state)
+                self.pipeline.process_n(self.state, 1)
                 self.log.log(f"Player {player_id} sold shop {asset_id} to the bank.")
             elif asset_type == "stock":
                 if asset_id not in options.get("stock", {}):
@@ -1038,7 +1038,7 @@ class GameLoop:
                         player_id=player_id, district_id=asset_id, quantity=qty
                     )
                     self.pipeline.enqueue(event)
-                    self.pipeline.process_all(self.state)
+                    self.pipeline.process_n(self.state, 1)
                     self.log.log(
                         f"Player {player_id} sold {qty} stock in district {asset_id}."
                     )
@@ -1130,7 +1130,7 @@ class GameLoop:
                     result = roll
                 elif isinstance(cmd, GameEvent):
                     self.pipeline.enqueue(cmd)
-                    self.pipeline.process_all(self.state)
+                    self.pipeline.process_n(self.state, 1)
                     self._report_auto_events()
                     result = cmd.get_result()
                 else:
@@ -1261,7 +1261,7 @@ class GameLoop:
             winning_bid=best_bid,
         )
         self.pipeline.enqueue(event)
-        self.pipeline.process_all(self.state)
+        self.pipeline.process_n(self.state, 1)
         if best_bidder is not None:
             self.log.log(f"Player {best_bidder} wins auction for square {sq_id} at {best_bid}G!")
         else:
@@ -1318,7 +1318,7 @@ class GameLoop:
                 price=offer_price,
             )
             self.pipeline.enqueue(event)
-            self.pipeline.process_all(self.state)
+            self.pipeline.process_n(self.state, 1)
             self.log.log(f"Deal accepted! Square {sq_id} sold for {offer_price}G.")
         elif response == "counter":
             counter_price = self.input.choose_counter_price(
@@ -1335,7 +1335,7 @@ class GameLoop:
                     price=counter_price,
                 )
                 self.pipeline.enqueue(event)
-                self.pipeline.process_all(self.state)
+                self.pipeline.process_n(self.state, 1)
                 self.log.log(f"Counter accepted! Square {sq_id} sold for {counter_price}G.")
             else:
                 self.log.log("Deal rejected.")
@@ -1392,7 +1392,7 @@ class GameLoop:
                 price=asking_price,
             )
             self.pipeline.enqueue(event)
-            self.pipeline.process_all(self.state)
+            self.pipeline.process_n(self.state, 1)
             self.log.log(f"Deal accepted! Square {sq_id} sold for {asking_price}G.")
         elif response == "counter":
             counter_price = self.input.choose_counter_price(
@@ -1409,7 +1409,7 @@ class GameLoop:
                     price=counter_price,
                 )
                 self.pipeline.enqueue(event)
-                self.pipeline.process_all(self.state)
+                self.pipeline.process_n(self.state, 1)
                 self.log.log(f"Counter accepted! Square {sq_id} sold for {counter_price}G.")
             else:
                 self.log.log("Deal rejected.")
@@ -1507,6 +1507,7 @@ class GameLoop:
         """Execute a trade by transferring shops and gold."""
         from road_to_riches.events.game_events import TransferPropertyEvent
 
+        n_events = 0
         for sq_id in offer_shops:
             event = TransferPropertyEvent(
                 from_player_id=proposer_id,
@@ -1515,6 +1516,7 @@ class GameLoop:
                 price=0,
             )
             self.pipeline.enqueue(event)
+            n_events += 1
 
         for sq_id in request_shops:
             event = TransferPropertyEvent(
@@ -1524,6 +1526,7 @@ class GameLoop:
                 price=0,
             )
             self.pipeline.enqueue(event)
+            n_events += 1
 
         if gold_offer != 0:
             proposer = self.state.get_player(proposer_id)
@@ -1535,7 +1538,7 @@ class GameLoop:
                 target.ready_cash += gold_offer
                 proposer.ready_cash -= gold_offer
 
-        self.pipeline.process_all(self.state)
+        self.pipeline.process_n(self.state, n_events)
 
     # ------------------------------------------------------------------
     # Logging helpers

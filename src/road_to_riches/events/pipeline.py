@@ -58,6 +58,20 @@ class EventPipeline:
                 processed.append(event)
         return processed
 
+    def process_n(self, state: GameState, n: int) -> list[GameEvent]:
+        """Process the next *n* events from the front of the queue.
+
+        Use this instead of process_all() when other lifecycle events may
+        already be queued and must not be consumed prematurely.
+        """
+        processed = []
+        for _ in range(n):
+            event = self.process_next(state)
+            if event is None:
+                break
+            processed.append(event)
+        return processed
+
     def peek(self) -> GameEvent | None:
         """Return the next event without removing it, or None if empty."""
         return self._queue[0] if self._queue else None
