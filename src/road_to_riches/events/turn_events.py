@@ -238,3 +238,30 @@ class EndTurnEvent(GameEvent):
             "game_over": self._game_over,
             "winner": self._winner,
         }
+
+
+# ---------------------------------------------------------------------------
+# Script-oriented events (formerly ScriptCommands)
+# ---------------------------------------------------------------------------
+
+
+@register_event
+@dataclass
+class RollForEventEvent(GameEvent):
+    """Roll the dice for a script event (not movement).
+
+    Rolls the dice and stores the result.  Scripts yield this instead of the
+    old RollForEvent ScriptCommand.  The game loop reads get_result() and
+    sends it back to the generator.
+
+    Non-interactive (the game loop logs and plays dice animation after execute).
+    """
+
+    player_id: int
+    _roll: int = 0
+
+    def execute(self, state: GameState) -> None:
+        self._roll = roll_dice(state.board.max_dice_roll)
+
+    def get_result(self) -> int:
+        return self._roll

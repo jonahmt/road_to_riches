@@ -45,7 +45,7 @@ from road_to_riches.events.script_commands import (
     Decision,
     ExtraRoll,
     Message,
-    RollForEvent,
+    RollForEvent as RollForEventCmd,
     ScriptCommand,
 )
 from road_to_riches.events.script_runner import load_script_generator
@@ -57,6 +57,7 @@ from road_to_riches.events.turn_events import (
     MoveStep,
     PassActionEvent,
     RollEvent,
+    RollForEventEvent,
     StopActionEvent,
     TurnEvent,
     WillMoveEvent,
@@ -1062,6 +1063,18 @@ class GameLoop:
             while True:
                 if isinstance(cmd, ScriptCommand):
                     result = self._handle_script_io(cmd, player_id)
+                elif isinstance(cmd, RollEvent):
+                    # Extra roll from script — run full movement sub-loop
+                    self._do_extra_roll(cmd.player_id)
+                    result = None
+                elif isinstance(cmd, RollForEventEvent):
+                    # Roll for event — execute, log, return roll value
+                    cmd.execute(self.state)
+                    roll = cmd.get_result()
+                    self.log.log(f"Player {cmd.player_id} rolls a {roll}!")
+                    self.input.notify_dice(roll, 0)
+                    self.input.notify(self.state, self.log)
+                    result = roll
                 elif isinstance(cmd, GameEvent):
                     self.pipeline.enqueue(cmd)
                     self.pipeline.process_all(self.state)
@@ -1088,7 +1101,8 @@ class GameLoop:
                 self.state, target_pid, cmd.prompt, cmd.options, self.log,
             )
 
-        if isinstance(cmd, RollForEvent):
+        if isinstance(cmd, RollForEventCmd):
+            # Legacy ScriptCommand — prefer RollForEventEvent GameEvent
             roll = roll_dice(self.state.board.max_dice_roll)
             self.log.log(f"Player {cmd.player_id} rolls a {roll}!")
             self.input.notify_dice(roll, 0)
@@ -1096,6 +1110,7 @@ class GameLoop:
             return roll
 
         if isinstance(cmd, ExtraRoll):
+            # Legacy ScriptCommand — prefer yielding RollEvent directly
             self._do_extra_roll(cmd.player_id)
             return None
 

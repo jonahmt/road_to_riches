@@ -61,13 +61,19 @@ class Decision(ScriptCommand):
 
 @dataclass
 class RollForEvent(ScriptCommand):
-    """Roll the dice for an event (not movement). Returns the roll value (int)."""
+    """DEPRECATED: Use RollForEventEvent (GameEvent) instead.
+
+    Roll the dice for an event (not movement). Returns the roll value (int).
+    """
     player_id: int
 
 
 @dataclass
 class ExtraRoll(ScriptCommand):
-    """Give the player an extra roll+move+land cycle (no pre-roll menu). Returns None."""
+    """DEPRECATED: Yield RollEvent (GameEvent) instead.
+
+    Give the player an extra roll+move+land cycle (no pre-roll menu). Returns None.
+    """
     player_id: int
 
 
