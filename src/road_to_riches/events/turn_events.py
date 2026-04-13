@@ -1,0 +1,240 @@
+"""Lifecycle events for the turn system.
+
+These events represent the high-level turn structure (TURN, ROLL, WILL_MOVE,
+MOVE, PASS_SQUARE_ACTION, STOP_ACTION, END_TURN) as specified in
+design/technical.md.  The game loop pops them one at a time, handles
+interactive I/O for events that need player input, and enqueues follow-up
+events.  Non-interactive events are fully self-contained in execute().
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any
+
+from road_to_riches.board.pathfinding import get_next_squares
+from road_to_riches.engine.dice import roll_dice
+from road_to_riches.engine.square_handler import SquareResult, handle_land, handle_pass
+from road_to_riches.events.event import GameEvent
+from road_to_riches.events.registry import register_event
+from road_to_riches.models.game_state import GameState
+from road_to_riches.models.square_type import SquareType
+
+
+# ---------------------------------------------------------------------------
+# Snapshot for undo (migrated from turn.py)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class MoveSnapshot:
+    """Snapshot of state before a move step, used for undo."""
+
+    player_position: int
+    player_from_square: int | None
+    remaining_moves: int
+    pass_results_len: int
+    state_snapshot: Any  # deep copy of relevant state
+
+
+@dataclass
+class MoveStep:
+    """A single step in the player's movement path."""
+
+    square_id: int
+    from_id: int | None
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle events
+# ---------------------------------------------------------------------------
+
+
+@register_event
+@dataclass
+class TurnEvent(GameEvent):
+    """Start of a player's turn.  Sets current_player_index.
+
+    Interactive: game loop runs the pre-roll menu after execute().
+    """
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        # Point the state at this player.
+        state.current_player_index = next(
+            i for i, p in enumerate(state.players) if p.player_id == self.player_id
+        )
+
+
+@register_event
+@dataclass
+class RollEvent(GameEvent):
+    """Dice roll.  Generates a random roll (or uses a forced value) and
+    stores the result so the game loop can read it via get_result().
+
+    Non-interactive.  execute() enqueues a WillMoveEvent.
+    """
+
+    player_id: int
+    forced_roll: int | None = None
+    _roll: int = 0
+
+    def execute(self, state: GameState) -> None:
+        if self.forced_roll is not None:
+            self._roll = self.forced_roll
+        else:
+            self._roll = roll_dice(state.board.max_dice_roll)
+
+    def get_result(self) -> int:
+        return self._roll
+
+
+@register_event
+@dataclass
+class WillMoveEvent(GameEvent):
+    """Presents the player with movement choices (or stop confirmation).
+
+    execute() computes the set of valid next squares and stores them on
+    ``_choices``.  The game loop reads _choices to decide what I/O to do:
+    - remaining > 0 and choices exist → ask player to choose a path
+    - remaining == 0 or no choices → ask player to confirm stop (or undo)
+
+    Interactive.
+    """
+
+    player_id: int
+    total_roll: int
+    remaining: int
+    _choices: list[int] = field(default_factory=list, repr=False)
+
+    def execute(self, state: GameState) -> None:
+        if self.remaining <= 0:
+            self._choices = []
+            return
+        player = state.get_player(self.player_id)
+        self._choices = get_next_squares(
+            state.board, player.position, player.from_square
+        )
+
+    def get_result(self) -> list[int]:
+        return self._choices
+
+
+@register_event
+@dataclass
+class MoveEvent(GameEvent):
+    """Move the player one square.  Updates position and from_square.
+
+    Non-interactive.  The game loop pushes a MoveSnapshot *before* calling
+    execute (snapshot must capture pre-move state).
+    """
+
+    player_id: int
+    from_sq: int
+    to_sq: int
+
+    def execute(self, state: GameState) -> None:
+        player = state.get_player(self.player_id)
+        player.from_square = self.from_sq
+        player.position = self.to_sq
+
+
+@register_event
+@dataclass
+class PassActionEvent(GameEvent):
+    """Process pass-through effects for a square the player moved into.
+
+    execute() calls handle_pass() and stores the SquareResult.  Auto-events
+    from the result are enqueued by the game loop (not here) so the game loop
+    can log them and handle any interactive pass actions (bank stock buy).
+
+    Possibly interactive (bank stock buy).
+    """
+
+    player_id: int
+    square_id: int
+    _result: SquareResult | None = field(default=None, repr=False)
+
+    def execute(self, state: GameState) -> None:
+        square = state.board.squares[self.square_id]
+        self._result = handle_pass(state, self.player_id, square)
+
+    def get_result(self) -> SquareResult | None:
+        return self._result
+
+
+@register_event
+@dataclass
+class StopActionEvent(GameEvent):
+    """Process land effects for the square the player stopped on.
+
+    execute() calls handle_land() and stores the SquareResult.  Like
+    PassActionEvent, auto-events are enqueued by the game loop.
+
+    Interactive (buy shop, invest, venture card, etc.).
+    """
+
+    player_id: int
+    square_id: int
+    _result: SquareResult | None = field(default=None, repr=False)
+
+    def execute(self, state: GameState) -> None:
+        square = state.board.squares[self.square_id]
+        self._result = handle_land(state, self.player_id, square)
+
+    def get_result(self) -> SquareResult | None:
+        return self._result
+
+
+@register_event
+@dataclass
+class EndTurnEvent(GameEvent):
+    """End-of-turn bookkeeping: bankruptcy check, stock fluctuations, status
+    ticks, and enqueue the next TurnEvent.
+
+    Non-interactive.  Results are stored for the game loop to log.
+    """
+
+    player_id: int
+    _stock_changes: list[tuple[int, int]] = field(default_factory=list, repr=False)
+    _game_over: bool = False
+    _winner: int | None = None
+
+    def execute(self, state: GameState) -> None:
+        from road_to_riches.engine.bankruptcy import (
+            BankruptcyEvent,
+            check_bankruptcy,
+        )
+        from road_to_riches.engine.statuses import tick_board_statuses, tick_player_statuses
+        from road_to_riches.events.game_events import apply_pending_stock_fluctuations
+
+        # Bankruptcy check
+        if check_bankruptcy(state, self.player_id):
+            BankruptcyEvent(player_id=self.player_id).execute(state)
+
+        # Stock fluctuations
+        self._stock_changes = apply_pending_stock_fluctuations(state)
+
+        # Tick statuses
+        for p in state.active_players:
+            tick_player_statuses(p)
+        tick_board_statuses(state.board)
+
+        # Check game over (too many bankruptcies)
+        bankrupt_count = sum(1 for p in state.players if p.bankrupt)
+        if bankrupt_count >= state.board.max_bankruptcies:
+            self._game_over = True
+            active = state.active_players
+            if active:
+                self._winner = max(active, key=lambda p: state.net_worth(p)).player_id
+
+        # Advance to next player
+        state.advance_turn()
+
+    def get_result(self) -> dict:
+        return {
+            "stock_changes": self._stock_changes,
+            "game_over": self._game_over,
+            "winner": self._winner,
+        }

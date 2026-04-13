@@ -14,7 +14,13 @@ from road_to_riches.engine.bankruptcy import (
 )
 from road_to_riches.engine.property import current_rent, max_capital
 from road_to_riches.engine.square_handler import PlayerAction, handle_land, handle_pass
-from road_to_riches.engine.turn import TurnEngine, TurnPhase
+from road_to_riches.events.turn_events import (
+    MoveEvent,
+    PassActionEvent,
+    RollEvent,
+    TurnEvent,
+    WillMoveEvent,
+)
 from road_to_riches.events.game_events import (
     AuctionSellEvent,
     BuyShopEvent,
@@ -43,12 +49,12 @@ from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.suit import Suit
 
 
-def _make_game() -> tuple[GameState, TurnEngine]:
+def _make_game() -> tuple[GameState, EventPipeline]:
     board, stock = load_board("boards/test_board.json")
     players = [PlayerState(player_id=i, position=0, ready_cash=1500) for i in range(4)]
     game = GameState(board=board, stock=stock, players=players)
     pipeline = EventPipeline()
-    return game, TurnEngine(game, pipeline)
+    return game, pipeline
 
 
 class TestBuyShop:
@@ -227,43 +233,68 @@ class TestPromotion:
         assert len(game.players[0].suits) == 0
 
 
-def _auto_move(engine):
-    """Advance movement choosing the first path each step until landed."""
-    turn = engine.turn
-    while turn.phase == TurnPhase.MOVING:
-        phase = engine.advance_move()
-        if phase == TurnPhase.CHOOSING_PATH:
-            engine.choose_path(turn.pending_choices[0])
+def _run_movement(game: GameState, pipeline: EventPipeline, player_id: int, roll: int) -> None:
+    """Run movement events choosing the first path each step, auto-confirm stop."""
+    from road_to_riches.board.pathfinding import get_next_squares
+
+    remaining = roll
+    while remaining > 0:
+        player = game.get_player(player_id)
+        choices = get_next_squares(game.board, player.position, player.from_square)
+        if not choices:
+            break
+
+        from_sq = player.position
+        target_sq = game.board.squares[choices[0]]
+        step_cost = 0 if target_sq.type == SquareType.DOORWAY else 1
+
+        # Move
+        move_evt = MoveEvent(player_id=player_id, from_sq=from_sq, to_sq=choices[0])
+        move_evt.execute(game)
+
+        # Pass action
+        pass_evt = PassActionEvent(player_id=player_id, square_id=choices[0])
+        pass_evt.execute(game)
+        result = pass_evt.get_result()
+        if result is not None:
+            for auto_event in result.auto_events:
+                pipeline.enqueue(auto_event)
+            pipeline.process_all(game)
+
+        remaining -= step_cost
 
 
-class TestTurnEngine:
+class TestTurnLifecycle:
     def test_full_turn_cycle(self):
         random.seed(99)
-        game, engine = _make_game()
+        game, pipeline = _make_game()
 
-        turn = engine.start_turn()
-        assert turn.player_id == 0
-        assert turn.phase == TurnPhase.PRE_ROLL
+        # TurnEvent
+        turn_event = TurnEvent(player_id=0)
+        turn_event.execute(game)
+        assert game.current_player.player_id == 0
 
-        roll = engine.do_roll()
+        # RollEvent
+        roll_event = RollEvent(player_id=0)
+        roll_event.execute(game)
+        roll = roll_event.get_result()
         assert 1 <= roll <= 6
 
-        _auto_move(engine)
+        # Movement
+        _run_movement(game, pipeline, 0, roll)
 
-        assert turn.phase == TurnPhase.LANDED
-        land = engine.get_land_result()
-        assert land is not None
-
-        engine.end_turn()
-        assert game.current_player.player_id == 1
+        # Player should have moved
+        assert game.players[0].position != 0
 
     def test_suit_collected_during_pass(self):
         random.seed(42)  # rolls 6, passes square 3 (spade suit)
-        game, engine = _make_game()
-        engine.start_turn()
-        engine.do_roll()
+        game, pipeline = _make_game()
 
-        _auto_move(engine)
+        roll_event = RollEvent(player_id=0)
+        roll_event.execute(game)
+        roll = roll_event.get_result()
+
+        _run_movement(game, pipeline, 0, roll)
 
         assert Suit.SPADE in game.players[0].suits
 

@@ -58,6 +58,14 @@ class EventPipeline:
                 processed.append(event)
         return processed
 
+    def peek(self) -> GameEvent | None:
+        """Return the next event without removing it, or None if empty."""
+        return self._queue[0] if self._queue else None
+
+    def clear(self) -> None:
+        """Remove all pending events from the queue."""
+        self._queue.clear()
+
     @property
     def pending(self) -> int:
         return len(self._queue)

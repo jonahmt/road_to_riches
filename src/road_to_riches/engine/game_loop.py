@@ -1,9 +1,13 @@
-"""Core game loop that orchestrates the turn engine, event pipeline, and player input.
+"""Core game loop that orchestrates the event pipeline and player input.
 
 The GameLoop drives all game flow through the EventPipeline. Every state
 mutation is an event that gets enqueued, executed, and logged. Player
 decisions are collected through a PlayerInput interface that can be
 implemented by any frontend (TUI, GUI, AI agent, network client).
+
+The turn lifecycle is fully event-driven per design/technical.md:
+  TurnEvent → RollEvent → WillMoveEvent ↔ MoveEvent/PassActionEvent
+  → StopActionEvent → EndTurnEvent → TurnEvent (next player)
 """
 
 from __future__ import annotations
@@ -22,8 +26,6 @@ from road_to_riches.engine.bankruptcy import (
 )
 from road_to_riches.engine.square_handler import PlayerAction, SquareResult
 from road_to_riches.events.event import GameEvent
-from road_to_riches.models.square_type import SquareType
-from road_to_riches.engine.turn import TurnEngine, TurnPhase
 from road_to_riches.events.game_events import (
     AuctionSellEvent,
     BuyShopEvent,
@@ -48,8 +50,20 @@ from road_to_riches.events.script_commands import (
 )
 from road_to_riches.events.script_runner import load_script_generator
 from road_to_riches.events.pipeline import EventPipeline
+from road_to_riches.events.turn_events import (
+    EndTurnEvent,
+    MoveEvent,
+    MoveSnapshot,
+    MoveStep,
+    PassActionEvent,
+    RollEvent,
+    StopActionEvent,
+    TurnEvent,
+    WillMoveEvent,
+)
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
+from road_to_riches.models.square_type import SquareType
 
 
 @dataclass
@@ -233,6 +247,12 @@ class PlayerInput(ABC):
         """Choose any square on the board. Returns square_id."""
 
     @abstractmethod
+    def choose_venture_cell(
+        self, state: GameState, player_id: int, log: GameLog,
+    ) -> tuple[int, int]:
+        """Choose a cell on the 8x8 venture grid. Returns (row, col)."""
+
+    @abstractmethod
     def notify(self, state: GameState, log: GameLog) -> None:
         """Display accumulated log messages to the player."""
 
@@ -250,7 +270,14 @@ class PlayerInput(ABC):
 
 
 class GameLoop:
-    """Central game orchestrator. Drives everything through the event pipeline."""
+    """Central game orchestrator. Drives everything through the event pipeline.
+
+    The main loop pops lifecycle events one at a time. Interactive events
+    (TurnEvent, WillMoveEvent, PassActionEvent, StopActionEvent) are handled
+    by calling PlayerInput methods and enqueuing follow-up events.
+    Non-interactive events (RollEvent, MoveEvent, EndTurnEvent) are fully
+    resolved by their execute() method.
+    """
 
     def __init__(
         self,
@@ -277,15 +304,16 @@ class GameLoop:
         if self.state.venture_deck is None:
             self._init_venture_deck()
         self.pipeline = EventPipeline()
-        self.engine = TurnEngine(self.state, self.pipeline)
         self.input = player_input
         self.log = GameLog()
-        # Stack of log total_count snapshots, one per undoable move step.
-        # Used to compute how many client-side log messages to retract on undo.
+        # Undo support: snapshot stack + log checkpoints
+        self._move_snapshots: list[MoveSnapshot] = []
         self._move_log_checkpoints: list[int] = []
+        self._path_taken: list[MoveStep] = []
+        # Track current dice roll for UI
+        self._current_dice_roll: int = 0
         self.game_over = False
         self.winner: int | None = None
-        self._forced_roll: int | None = None
 
     def _init_venture_deck(self) -> None:
         """Build the venture deck from the cards directory and board config."""
@@ -307,131 +335,75 @@ class GameLoop:
 
         self.state.venture_deck = build_deck(cards, deck_composition)
 
+    # ------------------------------------------------------------------
+    # Main event loop
+    # ------------------------------------------------------------------
+
     def run(self) -> int | None:
         """Run the game to completion. Returns the winner's player_id or None."""
         self.log.log("Game started!")
         self.input.notify(self.state, self.log)
 
+        # Seed the queue with the first turn
+        self.pipeline.enqueue(TurnEvent(player_id=self.state.current_player.player_id))
+
         while not self.game_over:
-            self._run_turn()
+            event = self.pipeline.process_next(self.state)
+            if event is None:
+                break
+            self._dispatch(event)
 
         return self.winner
 
-    def _run_turn(self) -> None:
-        turn = self.engine.start_turn()
-        player = self.state.get_player(turn.player_id)
-        self.log.log(f"--- Player {turn.player_id}'s turn ---")
+    def _dispatch(self, event: GameEvent) -> None:
+        """Route a lifecycle event to its handler.
+
+        Leaf events (BuyShopEvent, PayRentEvent, etc.) have already had their
+        execute() called by pipeline.process_next() — nothing more to do.
+        Lifecycle events need follow-up I/O and enqueueing.
+        """
+        if isinstance(event, TurnEvent):
+            self._handle_turn(event)
+        elif isinstance(event, RollEvent):
+            self._handle_roll(event)
+        elif isinstance(event, WillMoveEvent):
+            self._handle_will_move(event)
+        elif isinstance(event, MoveEvent):
+            self._handle_move(event)
+        elif isinstance(event, PassActionEvent):
+            self._handle_pass_action(event)
+        elif isinstance(event, StopActionEvent):
+            self._handle_stop_action(event)
+        elif isinstance(event, EndTurnEvent):
+            self._handle_end_turn(event)
+        # Leaf events (BuyShopEvent, PayRentEvent, etc.) — no handler needed.
+
+    # ------------------------------------------------------------------
+    # Lifecycle event handlers
+    # ------------------------------------------------------------------
+
+    def _handle_turn(self, event: TurnEvent) -> None:
+        """Pre-roll menu: let the player sell stock, trade, etc. before rolling."""
+        player_id = event.player_id
+        player = self.state.get_player(player_id)
         sq = self.state.board.squares[player.position]
+        self.log.log(f"--- Player {player_id}'s turn ---")
         self.log.log(f"On square {sq.id} ({sq.type.value})")
         self.input.notify(self.state, self.log)
 
-        # Pre-roll phase: player can sell stock or request info before rolling
-        self._pre_roll_phase(turn.player_id)
+        # Clear undo state from previous turn
+        self._move_snapshots.clear()
+        self._move_log_checkpoints.clear()
+        self._path_taken.clear()
 
-        # Roll dice
-        if self._forced_roll is not None:
-            roll = self._forced_roll
-            self._forced_roll = None
-            # Manually set the turn state instead of using do_roll
-            self.engine.turn.dice_roll = roll
-            self.engine.turn.remaining_moves = roll
-            self.engine.turn.phase = TurnPhase.MOVING
-            self.log.log(f"Player {turn.player_id} rolls a {roll}! (forced)")
-        else:
-            roll = self.engine.do_roll()
-            self.log.log(f"Player {turn.player_id} rolls a {roll}!")
-        self.input.notify_dice(roll, roll)
-        self.input.notify(self.state, self.log)
-
-        # Movement phase (pass effects like bank stock buy handled inline)
-        self._movement_phase(turn.player_id)
-
-        # Land phase
-        landed_sq = self.state.board.squares[player.position]
-        self.log.log(f"Landed on square {landed_sq.id} ({landed_sq.type.value})")
-        land_result = self.engine.get_land_result()
-        self._log_land_effects(turn.player_id, land_result)
-        self.input.notify(self.state, self.log)
-
-        # Bank: clear direction lock so player can choose freely next turn
-        if landed_sq.type == SquareType.BANK:
-            player.from_square = None
-
-        # Handle land actions (buy shop, invest, etc.)
-        self._handle_land_actions(turn.player_id, land_result)
-
-        # Roll On: roll again (continue forward from this square)
-        if land_result.info.get("roll_again"):
-            self.log.log("Roll On! Rolling again...")
-            self.input.notify(self.state, self.log)
-            # Clear undo history so player can't undo back into previous roll
-            turn.move_snapshots.clear()
-            turn.path_taken.clear()
-            self.engine.pass_results.clear()
-            self._pass_results_handled = 0
-            self._move_log_checkpoints.clear()
-            roll = self.engine.do_roll()
-            self.log.log(f"Player {turn.player_id} rolls a {roll}!")
-            self.input.notify_dice(roll, roll)
-            self.input.notify(self.state, self.log)
-            self._movement_phase(turn.player_id)
-
-            landed_sq = self.state.board.squares[player.position]
-            self.log.log(f"Landed on square {landed_sq.id} ({landed_sq.type.value})")
-            land_result = self.engine.get_land_result()
-            self._log_land_effects(turn.player_id, land_result)
-            self.input.notify(self.state, self.log)
-            if landed_sq.type == SquareType.BANK:
-                player.from_square = None
-            self._handle_land_actions(turn.player_id, land_result)
-
-        # Victory check
-        if land_result.info.get("can_win"):
-            if check_victory(self.state, turn.player_id):
-                self.pipeline.enqueue(VictoryEvent(player_id=turn.player_id))
-                self.pipeline.process_all(self.state)
-                self.log.log(f"Player {turn.player_id} WINS THE GAME!")
-                self.input.notify(self.state, self.log)
-                self.game_over = True
-                self.winner = turn.player_id
-                return
-
-        # End-of-turn: liquidation if cash < 0
-        if self.engine.check_end_of_turn_liquidation():
-            self._liquidation_phase(turn.player_id)
-
-        # End turn
-        stock_changes = self.engine.end_turn()
-        if stock_changes:
-            for district_id, delta in stock_changes:
-                direction = "up" if delta > 0 else "down"
-                self.log.log(
-                    f"District {district_id} stock price went {direction} by {abs(delta)}!"
-                )
-
-        # Check if bankruptcy ended the game
-        if self.engine.turn is None:
-            # turn was cleared by end_turn, check game_over from phase
-            bankrupt_count = sum(1 for p in self.state.players if p.bankrupt)
-            if bankrupt_count >= self.state.board.max_bankruptcies:
-                self.log.log("Game over due to bankruptcies!")
-                self.input.notify(self.state, self.log)
-                self.game_over = True
-                # Winner is player with highest net worth
-                active = self.state.active_players
-                if active:
-                    self.winner = max(active, key=lambda p: self.state.net_worth(p)).player_id
-
-        self.input.notify(self.state, self.log)
-
-    def _pre_roll_phase(self, player_id: int) -> None:
+        forced_roll: int | None = None
         while True:
             action = self.input.choose_pre_roll_action(self.state, player_id, self.log)
             if action == "roll":
                 break
             elif isinstance(action, str) and action.startswith("roll_"):
                 try:
-                    self._forced_roll = int(action.split("_", 1)[1])
+                    forced_roll = int(action.split("_", 1)[1])
                 except (ValueError, IndexError):
                     pass
                 break
@@ -440,10 +412,10 @@ class GameLoop:
                 if result is not None:
                     district_id, qty = result
                     if self._validate_stock_sell(player_id, district_id, qty):
-                        event = SellStockEvent(
+                        evt = SellStockEvent(
                             player_id=player_id, district_id=district_id, quantity=qty
                         )
-                        self.pipeline.enqueue(event)
+                        self.pipeline.enqueue(evt)
                         self.pipeline.process_all(self.state)
                         self._report_auto_events()
             elif action == "auction":
@@ -455,126 +427,367 @@ class GameLoop:
             elif action == "trade":
                 self._handle_trade(player_id)
 
-    def _movement_phase(self, player_id: int) -> None:
-        assert self.engine.turn is not None
-        self._pass_results_handled = 0
-        while True:
-            turn = self.engine.turn
-            if turn.phase == TurnPhase.MOVING:
-                phase = self.engine.advance_move()
-                if phase == TurnPhase.CHOOSING_PATH:
-                    # Handle any new pass effects immediately (e.g. bank)
-                    self._process_new_pass_results(player_id)
+        # Enqueue the roll
+        self.pipeline.enqueue(RollEvent(player_id=player_id, forced_roll=forced_roll))
 
-                    choices = turn.pending_choices
-                    remaining = turn.remaining_moves
-                    can_undo = self.engine.can_undo
-                    choice = self.input.choose_path(
-                        self.state, player_id, choices, remaining, can_undo,
-                        self.log,
-                    )
-                    if choice == "undo":
-                        self.engine.undo_move()
-                        self._retract_move_log()
-                        self.input.notify_dice(turn.dice_roll, turn.remaining_moves)
-                        self.input.notify(self.state, self.log)
-                    elif choice not in choices:
-                        self.log.log(f"Invalid path choice: {choice}")
-                        self.input.notify(self.state, self.log)
-                        continue
-                    else:
-                        # Checkpoint before this step's messages
-                        self._move_log_checkpoints.append(self.log.total_count)
-                        self.engine.choose_path(choice)
-                        # Handle pass effects from this move step
-                        self._process_new_pass_results(player_id)
-                        player = self.state.get_player(player_id)
-                        sq = self.state.board.squares[player.position]
-                        self.log.log(
-                            f"Moved to square {sq.id} ({sq.type.value}). "
-                            f"{turn.remaining_moves} remaining."
-                        )
-                        self.input.notify_dice(turn.dice_roll, turn.remaining_moves)
-                        self.input.notify(self.state, self.log)
-                elif phase == TurnPhase.LANDED:
-                    # Handle pass effects before confirmation
-                    self._process_new_pass_results(player_id)
-                    pass  # fall through to confirmation below
-                else:
-                    break
+    def _handle_roll(self, event: RollEvent) -> None:
+        """After dice roll: log it and enqueue WillMoveEvent."""
+        player_id = event.player_id
+        roll = event.get_result()
+        self._current_dice_roll = roll
+        forced_tag = " (forced)" if event.forced_roll is not None else ""
+        self.log.log(f"Player {player_id} rolls a {roll}!{forced_tag}")
+        self.input.notify_dice(roll, roll)
+        self.input.notify(self.state, self.log)
 
-            if turn.phase == TurnPhase.LANDED:
-                can_undo = self.engine.can_undo
-                if not can_undo:
-                    break  # nothing to undo, auto-confirm
-                player = self.state.get_player(player_id)
-                sq = self.state.board.squares[player.position]
-                confirmed = self.input.confirm_stop(
-                    self.state, player_id, sq.id, can_undo, self.log,
+        # Begin movement
+        self.pipeline.enqueue(
+            WillMoveEvent(player_id=player_id, total_roll=roll, remaining=roll)
+        )
+
+    def _handle_will_move(self, event: WillMoveEvent) -> None:
+        """Movement decision point: choose path, confirm stop, or undo."""
+        player_id = event.player_id
+        choices = event.get_result()
+        remaining = event.remaining
+        can_undo = len(self._move_snapshots) > 0
+
+        if remaining <= 0 or not choices:
+            # No moves left — confirm stop or undo
+            if not can_undo:
+                # Auto-confirm: enqueue stop + end turn
+                self._enqueue_stop_and_end(player_id, event.total_roll)
+                return
+            player = self.state.get_player(player_id)
+            sq = self.state.board.squares[player.position]
+            confirmed = self.input.confirm_stop(
+                self.state, player_id, sq.id, can_undo, self.log,
+            )
+            if confirmed:
+                self._enqueue_stop_and_end(player_id, event.total_roll)
+            else:
+                self._undo_move(player_id, event.total_roll)
+            return
+
+        # Player has moves remaining — choose a path
+        choice = self.input.choose_path(
+            self.state, player_id, choices, remaining, can_undo, self.log,
+        )
+        if choice == "undo":
+            self._undo_move(player_id, event.total_roll)
+            return
+
+        if choice not in choices:
+            self.log.log(f"Invalid path choice: {choice}")
+            self.input.notify(self.state, self.log)
+            # Re-enqueue the same WillMoveEvent to retry
+            self.pipeline.enqueue_front(
+                WillMoveEvent(
+                    player_id=player_id,
+                    total_roll=event.total_roll,
+                    remaining=remaining,
                 )
-                if confirmed:
-                    break
-                else:
-                    self.engine.undo_move()
-                    self._retract_move_log()
-                    self.input.notify_dice(turn.dice_roll, turn.remaining_moves)
-                    self.input.notify(self.state, self.log)
+            )
+            return
+
+        # Valid choice — save checkpoint and enqueue move + pass + next will_move
+        self._move_log_checkpoints.append(self.log.total_count)
+        self._take_snapshot(player_id, remaining)
+
+        player = self.state.get_player(player_id)
+        from_sq = player.position
+
+        # Figure out if this square is a doorway (doesn't consume a move)
+        target_square = self.state.board.squares[choice]
+        step_cost = 0 if target_square.type == SquareType.DOORWAY else 1
+        new_remaining = remaining - step_cost
+
+        self._path_taken.append(MoveStep(square_id=choice, from_id=from_sq))
+
+        # Enqueue: MoveEvent → PassActionEvent → WillMoveEvent(remaining-1)
+        self.pipeline.enqueue(MoveEvent(player_id=player_id, from_sq=from_sq, to_sq=choice))
+        self.pipeline.enqueue(PassActionEvent(player_id=player_id, square_id=choice))
+        self.pipeline.enqueue(
+            WillMoveEvent(
+                player_id=player_id,
+                total_roll=event.total_roll,
+                remaining=new_remaining,
+            )
+        )
+
+    def _handle_move(self, event: MoveEvent) -> None:
+        """After a move: log it and update UI."""
+        player = self.state.get_player(event.player_id)
+        sq = self.state.board.squares[player.position]
+        # Compute remaining from the next WillMoveEvent in the queue
+        next_evt = self.pipeline.peek()
+        # The next event is PassActionEvent, then WillMoveEvent
+        # We logged the position update; remaining is tracked on WillMoveEvent
+        self.log.log(
+            f"Moved to square {sq.id} ({sq.type.value})."
+        )
+        self.input.notify(self.state, self.log)
+
+    def _handle_pass_action(self, event: PassActionEvent) -> None:
+        """Process pass-through effects: enqueue auto-events, handle interactive actions."""
+        result = event.get_result()
+        if result is None:
+            return
+
+        # Enqueue and process auto-events (promotion, checkpoint toll, etc.)
+        for auto_event in result.auto_events:
+            self.pipeline.enqueue(auto_event)
+        self.pipeline.process_all(self.state)
+
+        # Log pass effects
+        for auto_event in result.auto_events:
+            if isinstance(auto_event, PromotionEvent):
+                player = self.state.get_player(auto_event.player_id)
+                bonus = auto_event.get_result()
+                suits = (
+                    "[dodger_blue1]♠[/dodger_blue1]"
+                    "[bright_red]♥[/bright_red]"
+                    "[yellow]♦[/yellow]"
+                    "[green]♣[/green]"
+                )
+                self.log.log(
+                    f"{suits} Player {auto_event.player_id} promoted to "
+                    f"level {player.level}! Receives {bonus}G! {suits}"
+                )
+                self.input.notify(self.state, self.log)
+            if isinstance(auto_event, PayCheckpointTollEvent):
+                toll = auto_event.get_result()
+                if toll > 0:
+                    self.log.log(
+                        f"Player {auto_event.payer_id} paid {toll}G toll to "
+                        f"Player {auto_event.owner_id} at checkpoint."
+                    )
+
+        # Handle interactive pass actions (bank stock buy)
+        self._handle_pass_interactive(event.player_id, result)
+
+    def _handle_stop_action(self, event: StopActionEvent) -> None:
+        """Process land effects: enqueue auto-events, handle interactive actions."""
+        player_id = event.player_id
+        result = event.get_result()
+        if result is None:
+            return
+
+        player = self.state.get_player(player_id)
+        landed_sq = self.state.board.squares[player.position]
+        self.log.log(f"Landed on square {landed_sq.id} ({landed_sq.type.value})")
+
+        # Enqueue and process auto-events
+        for auto_event in result.auto_events:
+            self.pipeline.enqueue(auto_event)
+        self.pipeline.process_all(self.state)
+
+        # Log land effects
+        self._log_land_effects(player_id, result)
+        self.input.notify(self.state, self.log)
+
+        # Bank: clear direction lock
+        if landed_sq.type == SquareType.BANK:
+            player.from_square = None
+
+        # Handle land actions (buy shop, invest, etc.)
+        self._handle_land_actions(player_id, result)
+
+        # Roll On: roll again
+        if result.info.get("roll_again"):
+            self.log.log("Roll On! Rolling again...")
+            self.input.notify(self.state, self.log)
+            self._move_snapshots.clear()
+            self._move_log_checkpoints.clear()
+            self._path_taken.clear()
+            # Insert a RollEvent before the EndTurnEvent
+            # The EndTurnEvent is already in the queue, but we need to do
+            # another full roll+move+land cycle first. We enqueue_front
+            # to handle the roll before the EndTurnEvent.
+            # But first remove the EndTurnEvent and TurnEvent that follow
+            # so we can re-add them after the new movement cycle.
+            # Actually, the approach is simpler: just enqueue a new
+            # roll and stop+end will be enqueued after movement.
+            # We need to temporarily save and remove the pending end/turn events.
+            saved_events = []
+            while not self.pipeline.is_empty:
+                saved_events.append(self.pipeline._queue.popleft())
+            self.pipeline.enqueue(RollEvent(player_id=player_id))
+            # The roll handler will enqueue WillMoveEvent, which will
+            # eventually enqueue StopActionEvent + EndTurnEvent.
+            # We drop the saved EndTurnEvent+TurnEvent since a new cycle will create them.
+            # However, if there were other events (shouldn't be), we should keep them.
+            # For safety, filter out only the EndTurnEvent and TurnEvent(next)
+            for evt in saved_events:
+                if isinstance(evt, (EndTurnEvent, TurnEvent)):
+                    continue
+                self.pipeline.enqueue(evt)
+
+        # Victory check
+        if result.info.get("can_win"):
+            if check_victory(self.state, player_id):
+                self.pipeline.enqueue(VictoryEvent(player_id=player_id))
+                self.pipeline.process_all(self.state)
+                self.log.log(f"Player {player_id} WINS THE GAME!")
+                self.input.notify(self.state, self.log)
+                self.game_over = True
+                self.winner = player_id
+
+        # Liquidation if cash < 0
+        if needs_liquidation(self.state, player_id):
+            self._liquidation_phase(player_id)
+
+    def _handle_end_turn(self, event: EndTurnEvent) -> None:
+        """Log end-of-turn results and enqueue the next TurnEvent."""
+        result = event.get_result()
+        stock_changes = result["stock_changes"]
+        if stock_changes:
+            for district_id, delta in stock_changes:
+                direction = "up" if delta > 0 else "down"
+                self.log.log(
+                    f"District {district_id} stock price went {direction} by {abs(delta)}!"
+                )
+
+        if result["game_over"]:
+            self.log.log("Game over due to bankruptcies!")
+            self.input.notify(self.state, self.log)
+            self.game_over = True
+            self.winner = result["winner"]
+            return
+
+        self.input.notify(self.state, self.log)
+
+        # Enqueue next player's turn
+        self.pipeline.enqueue(
+            TurnEvent(player_id=self.state.current_player.player_id)
+        )
+
+    # ------------------------------------------------------------------
+    # Movement helpers
+    # ------------------------------------------------------------------
+
+    def _enqueue_stop_and_end(self, player_id: int, total_roll: int) -> None:
+        """Enqueue StopActionEvent + EndTurnEvent + TurnEvent(next)."""
+        player = self.state.get_player(player_id)
+        self.pipeline.enqueue(
+            StopActionEvent(player_id=player_id, square_id=player.position)
+        )
+        self.pipeline.enqueue(EndTurnEvent(player_id=player_id))
+
+    def _take_snapshot(self, player_id: int, remaining: int) -> None:
+        """Create a state snapshot before a move step for undo."""
+        player = self.state.get_player(player_id)
+
+        player_snap = {
+            "ready_cash": player.ready_cash,
+            "suits": dict(player.suits),
+            "level": player.level,
+        }
+        other_snaps = []
+        for p in self.state.players:
+            if p.player_id != player_id:
+                other_snaps.append({
+                    "player_id": p.player_id,
+                    "ready_cash": p.ready_cash,
+                })
+        sq_snaps = []
+        for sq in self.state.board.squares:
+            sq_snaps.append({
+                "id": sq.id,
+                "checkpoint_toll": sq.checkpoint_toll,
+                "suit": sq.suit,
+            })
+
+        self._move_snapshots.append(MoveSnapshot(
+            player_position=player.position,
+            player_from_square=player.from_square,
+            remaining_moves=remaining,
+            pass_results_len=0,  # not used in new system
+            state_snapshot={
+                "player": player_snap,
+                "other_players": other_snaps,
+                "squares": sq_snaps,
+            },
+        ))
+
+    def _undo_move(self, player_id: int, total_roll: int) -> None:
+        """Undo the last move step: restore state, retract log, re-enqueue WillMoveEvent."""
+        if not self._move_snapshots:
+            return
+        snapshot = self._move_snapshots.pop()
+        if self._path_taken:
+            self._path_taken.pop()
+
+        player = self.state.get_player(player_id)
+        player.position = snapshot.player_position
+        player.from_square = snapshot.player_from_square
+
+        # Restore player state
+        saved_player = snapshot.state_snapshot["player"]
+        player.ready_cash = saved_player["ready_cash"]
+        player.suits = dict(saved_player["suits"])
+        player.level = saved_player["level"]
+
+        # Restore other players
+        for p_snap in snapshot.state_snapshot.get("other_players", []):
+            other = self.state.get_player(p_snap["player_id"])
+            other.ready_cash = p_snap["ready_cash"]
+
+        # Restore board squares
+        for sq_snap in snapshot.state_snapshot.get("squares", []):
+            sq = self.state.board.squares[sq_snap["id"]]
+            sq.checkpoint_toll = sq_snap["checkpoint_toll"]
+            if sq_snap.get("suit") is not None:
+                sq.suit = sq_snap["suit"]
+
+        remaining = snapshot.remaining_moves
+
+        # Retract log messages
+        self._retract_move_log()
+
+        self.input.notify_dice(self._current_dice_roll, remaining)
+        self.input.notify(self.state, self.log)
+
+        # Clear the pipeline of any queued events from the undone move
+        self.pipeline.clear()
+
+        # Re-enqueue WillMoveEvent with restored remaining
+        self.pipeline.enqueue(
+            WillMoveEvent(
+                player_id=player_id,
+                total_roll=total_roll,
+                remaining=remaining,
+            )
+        )
 
     def _retract_move_log(self) -> None:
         """Pop the last move checkpoint and retract client-side log messages."""
         if self._move_log_checkpoints:
             checkpoint = self._move_log_checkpoints.pop()
             retract = self.log.total_count - checkpoint
-            # Clear any unflushed messages that are part of the retracted step
             unflushed = min(len(self.log.messages), retract)
             if unflushed > 0:
                 del self.log.messages[-unflushed:]
                 retract -= unflushed
-            # Retract already-flushed messages from the client
             if retract > 0:
                 self.input.retract_log(retract)
 
-    def _process_new_pass_results(self, player_id: int) -> None:
-        """Handle any new pass_results that accumulated since last check."""
-        results = self.engine.pass_results
-        while self._pass_results_handled < len(results):
-            result = results[self._pass_results_handled]
-            self._pass_results_handled += 1
-            for event in result.auto_events:
-                if isinstance(event, PromotionEvent):
-                    player = self.state.get_player(event.player_id)
-                    bonus = event.get_result()
-                    suits = (
-                        "[dodger_blue1]♠[/dodger_blue1]"
-                        "[bright_red]♥[/bright_red]"
-                        "[yellow]♦[/yellow]"
-                        "[green]♣[/green]"
-                    )
-                    self.log.log(
-                        f"{suits} Player {event.player_id} promoted to "
-                        f"level {player.level}! Receives {bonus}G! {suits}"
-                    )
-                    self.input.notify(self.state, self.log)
-                if isinstance(event, PayCheckpointTollEvent):
-                    toll = event.get_result()
-                    if toll > 0:
-                        self.log.log(
-                            f"Player {event.payer_id} paid {toll}G toll to "
-                            f"Player {event.owner_id} at checkpoint."
-                        )
-            self._handle_pass_actions(player_id, result)
+    # ------------------------------------------------------------------
+    # Pass/land action helpers (largely unchanged from old game_loop)
+    # ------------------------------------------------------------------
 
-    def _handle_pass_actions(self, player_id: int, result: SquareResult) -> None:
+    def _handle_pass_interactive(self, player_id: int, result: SquareResult) -> None:
+        """Handle interactive pass actions (bank stock buy)."""
         if PlayerAction.BUY_STOCK in result.available_actions:
             while True:
                 stock_choice = self.input.choose_stock_buy(
                     self.state, player_id, self.log
                 )
                 if stock_choice is None:
-                    break  # player chose to skip
+                    break
                 district_id, qty = stock_choice
                 if not self._validate_stock_buy(player_id, district_id, qty):
-                    continue  # re-prompt on invalid input
+                    continue
                 event = BuyStockEvent(
                     player_id=player_id, district_id=district_id, quantity=qty
                 )
@@ -586,7 +799,7 @@ class GameLoop:
                 )
                 self.input.notify(self.state, self.log)
                 self._report_auto_events()
-                break  # one successful buy per bank pass
+                break
 
     def _handle_land_actions(self, player_id: int, result: SquareResult) -> None:
         if PlayerAction.BUY_SHOP in result.available_actions:
@@ -746,7 +959,7 @@ class GameLoop:
         while needs_liquidation(self.state, player_id):
             options = get_liquidation_options(self.state, player_id)
             if not options["shops"] and not options["stock"]:
-                break  # nothing left to sell, bankruptcy will handle it
+                break
             asset_type, asset_id = self.input.choose_liquidation(
                 self.state, player_id, options, self.log
             )
@@ -781,6 +994,10 @@ class GameLoop:
                 continue
             self.input.notify(self.state, self.log)
 
+    # ------------------------------------------------------------------
+    # Venture card handling
+    # ------------------------------------------------------------------
+
     def _handle_venture_card(self, player_id: int) -> None:
         """Draw a venture card and execute its script."""
         deck = self.state.venture_deck
@@ -796,10 +1013,37 @@ class GameLoop:
             self.run_script(script_path, player_id)
             return
 
+        # Initialize grid if needed
+        if self.state.venture_grid is None:
+            from road_to_riches.models.venture_grid import VentureGrid
+            self.state.venture_grid = VentureGrid()
+
+        grid = self.state.venture_grid
+
+        # Reset grid if full
+        if grid.is_full():
+            grid.reset()
+
+        # Player picks an unclaimed cell
+        row, col = self.input.choose_venture_cell(self.state, player_id, self.log)
+
+        # Claim the cell and check for line bonuses
+        bonus = grid.claim(row, col, player_id)
+        if bonus > 0:
+            player = self.state.get_player(player_id)
+            player.ready_cash += bonus
+            self.log.log(f"Player {player_id} completed a line! Bonus: {bonus}G!")
+            self.input.notify(self.state, self.log)
+
+        # Draw and execute the card
         card = deck.draw()
         self.log.log(f"Venture Card: {card.name} — {card.description}")
         self.input.notify(self.state, self.log)
         self.run_script(card.script_path, player_id)
+
+    # ------------------------------------------------------------------
+    # Script execution
+    # ------------------------------------------------------------------
 
     def run_script(self, script_path: str, player_id: int) -> None:
         """Execute a venture card script (generator or plain function).
@@ -863,36 +1107,49 @@ class GameLoop:
         raise ValueError(f"Unknown script command: {type(cmd).__name__}")
 
     def _do_extra_roll(self, player_id: int) -> None:
-        """Perform a bonus roll+move+land cycle (no pre-roll menu)."""
-        from road_to_riches.engine.dice import roll_dice
+        """Perform a bonus roll+move+land cycle (no pre-roll menu).
 
-        roll = roll_dice(self.state.board.max_dice_roll)
+        This is called during script execution (e.g. "Roll the dice again!")
+        and needs to run a synchronous movement sub-loop before returning
+        control to the script.
+        """
+        from road_to_riches.engine.dice import roll_dice as _roll_dice
+
+        roll = _roll_dice(self.state.board.max_dice_roll)
         self.log.log(f"Player {player_id} rolls a {roll}! (bonus roll)")
         self.input.notify_dice(roll, roll)
         self.input.notify(self.state, self.log)
 
-        turn = self.engine.turn
-        assert turn is not None
-        turn.move_snapshots.clear()
-        turn.path_taken.clear()
-        self.engine.pass_results.clear()
-        self._pass_results_handled = 0
+        # Clear undo state for the bonus roll
+        self._move_snapshots.clear()
         self._move_log_checkpoints.clear()
-        turn.dice_roll = roll
-        turn.remaining_moves = roll
-        turn.phase = TurnPhase.MOVING
+        self._path_taken.clear()
 
-        self._movement_phase(player_id)
+        # Run a synchronous sub-loop: enqueue roll events and dispatch them
+        # until the stop action completes.
+        sub_pipeline = EventPipeline()
+        # We temporarily swap pipelines
+        main_pipeline = self.pipeline
+        self.pipeline = sub_pipeline
 
-        player = self.state.get_player(player_id)
-        landed_sq = self.state.board.squares[player.position]
-        self.log.log(f"Landed on square {landed_sq.id} ({landed_sq.type.value})")
-        land_result = self.engine.get_land_result()
-        self._log_land_effects(player_id, land_result)
-        self.input.notify(self.state, self.log)
-        if landed_sq.type == SquareType.BANK:
-            player.from_square = None
-        self._handle_land_actions(player_id, land_result)
+        # Enqueue movement events
+        self.pipeline.enqueue(
+            WillMoveEvent(player_id=player_id, total_roll=roll, remaining=roll)
+        )
+
+        # Dispatch until we hit StopActionEvent (which will handle land)
+        while not self.pipeline.is_empty:
+            event = self.pipeline.process_next(self.state)
+            if event is None:
+                break
+            self._dispatch(event)
+
+        # Restore main pipeline
+        self.pipeline = main_pipeline
+
+    # ------------------------------------------------------------------
+    # Negotiation helpers (unchanged from old code)
+    # ------------------------------------------------------------------
 
     def _handle_auction(self, player_id: int) -> None:
         """Player auctions one of their shops."""
@@ -917,7 +1174,6 @@ class GameLoop:
         )
         self.input.notify(self.state, self.log)
 
-        # Collect bids from all other active players
         best_bidder: int | None = None
         best_bid = 0
         for p in self.state.active_players:
@@ -954,7 +1210,6 @@ class GameLoop:
 
         target_pid, sq_id, offer_price = result
 
-        # Validate bounds and ownership
         if (
             sq_id < 0
             or sq_id >= len(self.state.board.squares)
@@ -1030,7 +1285,6 @@ class GameLoop:
 
         target_pid, sq_id, asking_price = result
 
-        # Validate bounds and ownership
         if (
             sq_id < 0
             or sq_id >= len(self.state.board.squares)
@@ -1106,7 +1360,6 @@ class GameLoop:
         request_shops = proposal.get("request_shops", [])
         gold_offer = proposal.get("gold_offer", 0)
 
-        # Validate trade proposal
         if (
             target_pid is None
             or target_pid == player_id
@@ -1130,7 +1383,6 @@ class GameLoop:
                 self.input.notify(self.state, self.log)
                 return
 
-        # Build description for target
         desc_parts = []
         if offer_shops:
             desc_parts.append(f"giving shops {offer_shops}")
@@ -1159,7 +1411,6 @@ class GameLoop:
             self._execute_trade(player_id, target_pid, offer_shops, request_shops, gold_offer)
             self.log.log("Trade accepted!")
         elif response == "counter":
-            # Counter: target can adjust gold amount
             counter_gold = self.input.choose_counter_price(
                 self.state, target_pid, gold_offer, self.log
             )
@@ -1188,7 +1439,6 @@ class GameLoop:
         """Execute a trade by transferring shops and gold."""
         from road_to_riches.events.game_events import TransferPropertyEvent
 
-        # Transfer proposer's shops to target (price=0, gold handled separately)
         for sq_id in offer_shops:
             event = TransferPropertyEvent(
                 from_player_id=proposer_id,
@@ -1198,7 +1448,6 @@ class GameLoop:
             )
             self.pipeline.enqueue(event)
 
-        # Transfer target's shops to proposer (price=0)
         for sq_id in request_shops:
             event = TransferPropertyEvent(
                 from_player_id=target_id,
@@ -1208,20 +1457,21 @@ class GameLoop:
             )
             self.pipeline.enqueue(event)
 
-        # Handle gold transfer
         if gold_offer != 0:
             proposer = self.state.get_player(proposer_id)
             target = self.state.get_player(target_id)
             if gold_offer > 0:
-                # Proposer gives gold to target
                 proposer.ready_cash -= gold_offer
                 target.ready_cash += gold_offer
             else:
-                # Target gives gold to proposer
-                target.ready_cash += gold_offer  # gold_offer is negative
+                target.ready_cash += gold_offer
                 proposer.ready_cash -= gold_offer
 
         self.pipeline.process_all(self.state)
+
+    # ------------------------------------------------------------------
+    # Logging helpers
+    # ------------------------------------------------------------------
 
     def _log_land_effects(self, player_id: int, result: SquareResult) -> None:
         """Log auto-event results from landing (rent, tolls, dividends, etc.)."""
@@ -1236,7 +1486,6 @@ class GameLoop:
         if info.get("unimplemented"):
             self.log.log(f"[yellow]UNIMPLEMENTED: {info['unimplemented']} square has no effect.[/yellow]")
 
-        # Check pipeline history for the events just executed
         for entry in reversed(self.pipeline.history):
             event = entry.event
             if isinstance(event, PayRentEvent) and event.square_id == info.get("square_id"):
