@@ -658,7 +658,7 @@ class GameLoop:
         self._path_taken.append(MoveStep(square_id=choice, from_id=from_sq))
 
         # Enqueue: MoveEvent → PassActionEvent → WillMoveEvent(remaining-1)
-        self.pipeline.enqueue(MoveEvent(player_id=player_id, from_sq=from_sq, to_sq=choice))
+        self.pipeline.enqueue(MoveEvent(player_id=player_id, from_sq=from_sq, to_sq=choice, remaining=new_remaining))
         self.pipeline.enqueue(PassActionEvent(player_id=player_id, square_id=choice))
         self.pipeline.enqueue(
             WillMoveEvent(
@@ -669,16 +669,13 @@ class GameLoop:
         )
 
     def _handle_move(self, event: MoveEvent) -> None:
-        """After a move: log it and update UI."""
+        """After a move: log it and update dice remaining."""
         player = self.state.get_player(event.player_id)
         sq = self.state.board.squares[player.position]
-        # Compute remaining from the next WillMoveEvent in the queue
-        next_evt = self.pipeline.peek()
-        # The next event is PassActionEvent, then WillMoveEvent
-        # We logged the position update; remaining is tracked on WillMoveEvent
         self.log.log(
             f"Moved to square {sq.id} ({sq.type.value})."
         )
+        self.input.notify_dice(self._current_dice_roll, event.remaining)
         self.input.notify(self.state, self.log)
 
     def _handle_pass_action(self, event: PassActionEvent) -> None:

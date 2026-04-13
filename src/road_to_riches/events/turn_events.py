@@ -133,6 +133,7 @@ class MoveEvent(GameEvent):
     player_id: int
     from_sq: int
     to_sq: int
+    remaining: int = 0
 
     def execute(self, state: GameState) -> None:
         player = state.get_player(self.player_id)
