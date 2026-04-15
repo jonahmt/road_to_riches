@@ -40,6 +40,7 @@ from road_to_riches.events.game_events import (
     RenovatePropertyEvent,
     ScriptEvent,
     SellStockEvent,
+    TransferCashEvent,
     WarpEvent,
 )
 from road_to_riches.events.script_commands import (
@@ -54,14 +55,18 @@ from road_to_riches.events.script_runner import load_script_generator
 from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.events.turn_events import (
     EndTurnEvent,
+    InitAuctionEvent,
     InitBuyShopEvent,
+    InitBuyShopOfferEvent,
     InitBuyStockEvent,
     InitBuyVacantPlotEvent,
     InitCannonEvent,
     InitForcedBuyoutEvent,
     InitInvestEvent,
     InitRenovateEvent,
+    InitSellShopOfferEvent,
     InitSellStockEvent,
+    InitTradeShopEvent,
     MoveEvent,
     MoveSnapshot,
     MoveStep,
@@ -325,6 +330,8 @@ class GameLoop:
         self._path_taken: list[MoveStep] = []
         # Track current dice roll for UI
         self._current_dice_roll: int = 0
+        # Track which player's turn header has been logged (to avoid repeats on TURN re-enqueue)
+        self._turn_player_id: int | None = None
         self.game_over = False
         self.winner: int | None = None
 
@@ -390,7 +397,7 @@ class GameLoop:
             self._handle_stop_action(event)
         elif isinstance(event, EndTurnEvent):
             self._handle_end_turn(event)
-        # --- Land action Init events (interactive, enqueue mutations) ---
+        # --- Init events (interactive, enqueue mutations) ---
         elif isinstance(event, InitBuyShopEvent):
             self._handle_init_buy_shop(event)
         elif isinstance(event, InitBuyVacantPlotEvent):
@@ -403,6 +410,14 @@ class GameLoop:
             self._handle_init_buy_stock(event)
         elif isinstance(event, InitSellStockEvent):
             self._handle_init_sell_stock(event)
+        elif isinstance(event, InitAuctionEvent):
+            self._handle_auction(event.player_id)
+        elif isinstance(event, InitBuyShopOfferEvent):
+            self._handle_buy_negotiation(event.player_id)
+        elif isinstance(event, InitSellShopOfferEvent):
+            self._handle_sell_negotiation(event.player_id)
+        elif isinstance(event, InitTradeShopEvent):
+            self._handle_trade(event.player_id)
         elif isinstance(event, InitRenovateEvent):
             self._handle_init_renovate(event)
         elif isinstance(event, InitCannonEvent):
@@ -539,49 +554,55 @@ class GameLoop:
     # ------------------------------------------------------------------
 
     def _handle_turn(self, event: TurnEvent) -> None:
-        """Pre-roll menu: let the player sell stock, trade, etc. before rolling."""
-        player_id = event.player_id
-        player = self.state.get_player(player_id)
-        sq = self.state.board.squares[player.position]
-        self.log.log(f"--- Player {player_id}'s turn ---")
-        self.log.log(f"On square {sq.id} ({sq.type.value})")
-        self.input.notify(self.state, self.log)
+        """Pre-roll menu: ask for one action, enqueue it + re-enqueue TURN.
 
-        # Clear undo state from previous turn
+        Per the spec, each pre-roll action is an Init event followed by
+        a TURN re-enqueue so the player can take additional actions.
+        When the player finally rolls, only the RollEvent is enqueued
+        (no TURN re-enqueue).
+        """
+        player_id = event.player_id
+
+        # Log turn header once per turn (not on re-enqueues).
+        if player_id != self._turn_player_id:
+            self._turn_player_id = player_id
+            player = self.state.get_player(player_id)
+            sq = self.state.board.squares[player.position]
+            self.log.log(f"--- Player {player_id}'s turn ---")
+            self.log.log(f"On square {sq.id} ({sq.type.value})")
+            self.input.notify(self.state, self.log)
+
+        # Clear undo state — harmless no-op on re-enqueues since
+        # no movement has happened yet during pre-roll.
         self._move_snapshots.clear()
         self._move_log_checkpoints.clear()
         self._path_taken.clear()
 
-        forced_roll: int | None = None
-        while True:
-            action = self.input.choose_pre_roll_action(self.state, player_id, self.log)
-            if action == "roll":
-                break
-            elif isinstance(action, str) and action.startswith("roll_"):
+        action = self.input.choose_pre_roll_action(self.state, player_id, self.log)
+
+        # Map pre-roll actions to Init events
+        action_events: dict[str, GameEvent] = {
+            "sell_stock": InitSellStockEvent(player_id=player_id),
+            "auction": InitAuctionEvent(player_id=player_id),
+            "buy_shop": InitBuyShopOfferEvent(player_id=player_id),
+            "sell_shop": InitSellShopOfferEvent(player_id=player_id),
+            "trade": InitTradeShopEvent(player_id=player_id),
+        }
+
+        if action == "roll" or (isinstance(action, str) and action.startswith("roll_")):
+            forced_roll: int | None = None
+            if isinstance(action, str) and action.startswith("roll_"):
                 try:
                     forced_roll = int(action.split("_", 1)[1])
                 except (ValueError, IndexError):
                     pass
-                break
-            elif action == "sell_stock":
-                result = self.input.choose_stock_sell(self.state, player_id, self.log)
-                if result is not None:
-                    district_id, qty = result
-                    if self._validate_stock_sell(player_id, district_id, qty):
-                        self._execute_event(SellStockEvent(
-                            player_id=player_id, district_id=district_id, quantity=qty
-                        ))
-            elif action == "auction":
-                self._handle_auction(player_id)
-            elif action == "buy_shop":
-                self._handle_buy_negotiation(player_id)
-            elif action == "sell_shop":
-                self._handle_sell_negotiation(player_id)
-            elif action == "trade":
-                self._handle_trade(player_id)
-
-        # Enqueue the roll
-        self.pipeline.enqueue(RollEvent(player_id=player_id, forced_roll=forced_roll))
+            self.pipeline.enqueue(RollEvent(player_id=player_id, forced_roll=forced_roll))
+        elif action in action_events:
+            self.pipeline.enqueue(action_events[action])
+            self.pipeline.enqueue(TurnEvent(player_id=player_id))
+        # else: unknown action (e.g. "info") — re-enqueue TURN to ask again
+        else:
+            self.pipeline.enqueue(TurnEvent(player_id=player_id))
 
     def _handle_roll(self, event: RollEvent) -> None:
         """After dice roll: log it and enqueue WillMoveEvent."""
@@ -1286,7 +1307,7 @@ class GameLoop:
                 best_bid = bid
                 best_bidder = p.player_id
 
-        self._execute_event(AuctionSellEvent(
+        self.pipeline.enqueue_front(AuctionSellEvent(
             seller_id=player_id,
             square_id=sq_id,
             winner_id=best_bidder,
@@ -1336,7 +1357,7 @@ class GameLoop:
         }
         response = self.input.choose_accept_offer(self.state, target_pid, offer, self.log)
         if response == "accept":
-            self._execute_event(TransferPropertyEvent(
+            self.pipeline.enqueue_front(TransferPropertyEvent(
                 from_player_id=target_pid, to_player_id=player_id,
                 square_id=sq_id, price=offer_price,
             ))
@@ -1349,7 +1370,7 @@ class GameLoop:
             offer["price"] = counter_price
             final = self.input.choose_accept_offer(self.state, player_id, offer, self.log)
             if final == "accept":
-                self._execute_event(TransferPropertyEvent(
+                self.pipeline.enqueue_front(TransferPropertyEvent(
                     from_player_id=target_pid, to_player_id=player_id,
                     square_id=sq_id, price=counter_price,
                 ))
@@ -1401,7 +1422,7 @@ class GameLoop:
         }
         response = self.input.choose_accept_offer(self.state, target_pid, offer, self.log)
         if response == "accept":
-            self._execute_event(TransferPropertyEvent(
+            self.pipeline.enqueue_front(TransferPropertyEvent(
                 from_player_id=player_id, to_player_id=target_pid,
                 square_id=sq_id, price=asking_price,
             ))
@@ -1414,7 +1435,7 @@ class GameLoop:
             offer["price"] = counter_price
             final = self.input.choose_accept_offer(self.state, player_id, offer, self.log)
             if final == "accept":
-                self._execute_event(TransferPropertyEvent(
+                self.pipeline.enqueue_front(TransferPropertyEvent(
                     from_player_id=player_id, to_player_id=target_pid,
                     square_id=sq_id, price=counter_price,
                 ))
@@ -1510,30 +1531,31 @@ class GameLoop:
         request_shops: list[int],
         gold_offer: int,
     ) -> None:
-        """Execute a trade by transferring shops and gold."""
+        """Execute a trade by enqueuing transfer events for shops and gold."""
         from road_to_riches.events.game_events import TransferPropertyEvent
 
+        events: list[GameEvent] = []
         for sq_id in offer_shops:
-            self._execute_event(TransferPropertyEvent(
+            events.append(TransferPropertyEvent(
                 from_player_id=proposer_id, to_player_id=target_id,
                 square_id=sq_id, price=0,
             ))
-
         for sq_id in request_shops:
-            self._execute_event(TransferPropertyEvent(
+            events.append(TransferPropertyEvent(
                 from_player_id=target_id, to_player_id=proposer_id,
                 square_id=sq_id, price=0,
             ))
-
-        if gold_offer != 0:
-            proposer = self.state.get_player(proposer_id)
-            target = self.state.get_player(target_id)
-            if gold_offer > 0:
-                proposer.ready_cash -= gold_offer
-                target.ready_cash += gold_offer
-            else:
-                target.ready_cash += gold_offer
-                proposer.ready_cash -= gold_offer
+        if gold_offer > 0:
+            events.append(TransferCashEvent(
+                from_player_id=proposer_id, to_player_id=target_id, amount=gold_offer,
+            ))
+        elif gold_offer < 0:
+            events.append(TransferCashEvent(
+                from_player_id=target_id, to_player_id=proposer_id, amount=-gold_offer,
+            ))
+        # enqueue_front in reverse to preserve order
+        for evt in reversed(events):
+            self.pipeline.enqueue_front(evt)
 
     # ------------------------------------------------------------------
     # Validation helpers

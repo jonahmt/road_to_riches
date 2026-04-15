@@ -56,12 +56,13 @@ class TurnEvent(GameEvent):
     """Start of a player's turn.  Sets current_player_index.
 
     Interactive: game loop runs the pre-roll menu after execute().
+    Re-enqueued after each pre-roll action per the spec's TURN re-enqueue
+    pattern.  execute() is idempotent.
     """
 
     player_id: int
 
     def execute(self, state: GameState) -> None:
-        # Point the state at this player.
         state.current_player_index = next(
             i for i, p in enumerate(state.players) if p.player_id == self.player_id
         )
@@ -317,6 +318,50 @@ class InitBuyStockEvent(GameEvent):
 @dataclass
 class InitSellStockEvent(GameEvent):
     """Player may sell stock at a stock square. Handler prompts and enqueues SellStockEvent."""
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitAuctionEvent(GameEvent):
+    """Player auctions one of their shops. Handler prompts and enqueues AuctionSellEvent."""
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitBuyShopOfferEvent(GameEvent):
+    """Player offers to buy another player's shop. Handler runs negotiation."""
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitSellShopOfferEvent(GameEvent):
+    """Player offers to sell one of their shops to another player. Handler runs negotiation."""
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class InitTradeShopEvent(GameEvent):
+    """Player proposes a multi-shop trade. Handler runs negotiation."""
 
     player_id: int
 
