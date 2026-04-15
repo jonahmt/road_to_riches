@@ -650,6 +650,18 @@ class WarpEvent(GameEvent):
 
 @register_event
 @dataclass
+class ClearDirectionLockEvent(GameEvent):
+    """Clear a player's direction lock (from_square) when landing on a bank."""
+
+    player_id: int
+
+    def execute(self, state: GameState) -> None:
+        player = state.get_player(self.player_id)
+        player.from_square = None
+
+
+@register_event
+@dataclass
 class RotateSuitEvent(GameEvent):
     """Rotate the suit on a Change of Suit square to the next suit."""
 

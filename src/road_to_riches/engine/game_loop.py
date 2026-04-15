@@ -40,15 +40,14 @@ from road_to_riches.events.game_events import (
     RenovatePropertyEvent,
     ScriptEvent,
     SellStockEvent,
+    ClearDirectionLockEvent,
     TransferCashEvent,
     WarpEvent,
 )
 from road_to_riches.events.script_commands import (
     ChooseSquare,
     Decision,
-    ExtraRoll,
     Message,
-    RollForEvent as RollForEventCmd,
     ScriptCommand,
 )
 from road_to_riches.events.script_runner import load_script_generator
@@ -411,13 +410,13 @@ class GameLoop:
         elif isinstance(event, InitSellStockEvent):
             self._handle_init_sell_stock(event)
         elif isinstance(event, InitAuctionEvent):
-            self._handle_auction(event.player_id)
+            self._handle_auction(event)
         elif isinstance(event, InitBuyShopOfferEvent):
-            self._handle_buy_negotiation(event.player_id)
+            self._handle_buy_negotiation(event)
         elif isinstance(event, InitSellShopOfferEvent):
-            self._handle_sell_negotiation(event.player_id)
+            self._handle_sell_negotiation(event)
         elif isinstance(event, InitTradeShopEvent):
-            self._handle_trade(event.player_id)
+            self._handle_trade(event)
         elif isinstance(event, InitRenovateEvent):
             self._handle_init_renovate(event)
         elif isinstance(event, InitCannonEvent):
@@ -740,13 +739,15 @@ class GameLoop:
             )
         self.input.notify(self.state, self.log)
 
-        # Bank: clear direction lock
-        if landed_sq.type == SquareType.BANK:
-            player.from_square = None
-
         # Build the full sequence of events to insert before EndTurnEvent.
-        # Order: auto_events → Init* actions → venture → victory → roll_again
-        sequence: list[GameEvent] = list(result.auto_events)
+        # Order: direction-lock clear → auto_events → Init* actions → venture → victory → roll_again
+        sequence: list[GameEvent] = []
+
+        # Bank: clear direction lock via event
+        if landed_sq.type == SquareType.BANK:
+            sequence.append(ClearDirectionLockEvent(player_id=player_id))
+
+        sequence.extend(result.auto_events)
 
         if PlayerAction.BUY_SHOP in result.available_actions:
             sequence.append(InitBuyShopEvent(
@@ -1116,9 +1117,6 @@ class GameLoop:
             script_path = self.config.venture_script
             if not os.path.isabs(script_path):
                 script_path = os.path.join(os.getcwd(), script_path)
-            if not os.path.exists(script_path):
-                self.log.log("No venture cards available, skipping.")
-                return
             self.run_script(script_path, player_id)
             return
 
@@ -1161,6 +1159,10 @@ class GameLoop:
         - GameEvent instances: enqueued into the pipeline, get_result() sent back
         - ScriptCommand instances: handled for I/O (messages, decisions, dice rolls)
         """
+        import os
+        if not os.path.exists(script_path):
+            self.log.log(f"[yellow]Script not found: {script_path}, skipping.[/yellow]")
+            return
         gen = load_script_generator(script_path, self.state, player_id)
         if gen is None:
             return
@@ -1206,19 +1208,6 @@ class GameLoop:
             return self.input.choose_script_decision(
                 self.state, target_pid, cmd.prompt, cmd.options, self.log,
             )
-
-        if isinstance(cmd, RollForEventCmd):
-            # Legacy ScriptCommand — prefer RollForEventEvent GameEvent
-            roll = roll_dice(self.state.board.max_dice_roll)
-            self.log.log(f"Player {cmd.player_id} rolls a {roll}!")
-            self.input.notify_dice(roll, 0)
-            self.input.notify(self.state, self.log)
-            return roll
-
-        if isinstance(cmd, ExtraRoll):
-            # Legacy ScriptCommand — prefer yielding RollEvent directly
-            self._do_extra_roll(cmd.player_id)
-            return None
 
         if isinstance(cmd, ChooseSquare):
             return self.input.choose_any_square(
@@ -1272,8 +1261,9 @@ class GameLoop:
     # Negotiation helpers (unchanged from old code)
     # ------------------------------------------------------------------
 
-    def _handle_auction(self, player_id: int) -> None:
+    def _handle_auction(self, event: InitAuctionEvent) -> None:
         """Player auctions one of their shops."""
+        player_id = event.player_id
         choice = self.input.choose_shop_to_auction(self.state, player_id, self.log)
         if choice is None:
             return
@@ -1314,10 +1304,11 @@ class GameLoop:
             winning_bid=best_bid,
         ))
 
-    def _handle_buy_negotiation(self, player_id: int) -> None:
+    def _handle_buy_negotiation(self, event: InitBuyShopOfferEvent) -> None:
         """Player offers to buy another player's shop."""
         from road_to_riches.events.game_events import TransferPropertyEvent
 
+        player_id = event.player_id
         result = self.input.choose_shop_to_buy(self.state, player_id, self.log)
         if result is None:
             return
@@ -1380,10 +1371,11 @@ class GameLoop:
         else:
             self.log.log("Offer rejected.")
 
-    def _handle_sell_negotiation(self, player_id: int) -> None:
+    def _handle_sell_negotiation(self, event: InitSellShopOfferEvent) -> None:
         """Player offers to sell one of their shops to another player."""
         from road_to_riches.events.game_events import TransferPropertyEvent
 
+        player_id = event.player_id
         result = self.input.choose_shop_to_sell(self.state, player_id, self.log)
         if result is None:
             return
@@ -1445,8 +1437,9 @@ class GameLoop:
         else:
             self.log.log("Offer rejected.")
 
-    def _handle_trade(self, player_id: int) -> None:
+    def _handle_trade(self, event: InitTradeShopEvent) -> None:
         """Player proposes a multi-shop trade with another player."""
+        player_id = event.player_id
         proposal = self.input.choose_trade(self.state, player_id, self.log)
         if proposal is None:
             return

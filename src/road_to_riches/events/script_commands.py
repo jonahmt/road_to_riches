@@ -12,12 +12,12 @@ Scripts can yield two kinds of objects:
 Example script:
 
     from road_to_riches.events.game_events import TransferCashEvent, WarpEvent
+    from road_to_riches.events.turn_events import RollForEventEvent
 
     def run(state, player_id):
-        # Roll dice and give gold (I/O command)
-        roll = yield RollForEvent(player_id)
+        # Roll dice and give gold (GameEvent for dice, ScriptCommand for I/O)
+        roll = yield RollForEventEvent(player_id=player_id)
         amount = 40 * roll
-        # State mutation via real GameEvent
         yield TransferCashEvent(from_player_id=None, to_player_id=player_id, amount=amount)
         yield Message(f"You rolled {roll} and received {amount}G!")
 
@@ -58,23 +58,6 @@ class Decision(ScriptCommand):
     options: dict[str, Any]
     player_id: int | None = None  # defaults to current player
 
-
-@dataclass
-class RollForEvent(ScriptCommand):
-    """DEPRECATED: Use RollForEventEvent (GameEvent) instead.
-
-    Roll the dice for an event (not movement). Returns the roll value (int).
-    """
-    player_id: int
-
-
-@dataclass
-class ExtraRoll(ScriptCommand):
-    """DEPRECATED: Yield RollEvent (GameEvent) instead.
-
-    Give the player an extra roll+move+land cycle (no pre-roll menu). Returns None.
-    """
-    player_id: int
 
 
 @dataclass
