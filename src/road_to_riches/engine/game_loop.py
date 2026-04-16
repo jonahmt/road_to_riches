@@ -1137,8 +1137,10 @@ class GameLoop:
         # Claim the cell and check for line bonuses
         bonus = grid.claim(row, col, player_id)
         if bonus > 0:
-            player = self.state.get_player(player_id)
-            player.ready_cash += bonus
+            self.pipeline.enqueue(TransferCashEvent(
+                from_player_id=None, to_player_id=player_id, amount=bonus
+            ))
+            self.pipeline.process_next(self.state)
             self.log.log(f"Player {player_id} completed a line! Bonus: {bonus}G!")
             self.input.notify(self.state, self.log)
 
