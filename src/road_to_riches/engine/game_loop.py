@@ -54,7 +54,10 @@ from road_to_riches.events.script_commands import (
 from road_to_riches.events.script_runner import load_script_generator
 from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.events.turn_events import (
+    AdvanceTurnEvent,
+    BankruptcyCheckEvent,
     EndTurnEvent,
+    GameOverCheckEvent,
     InitAuctionEvent,
     InitBuyShopEvent,
     InitBuyShopOfferEvent,
@@ -74,7 +77,9 @@ from road_to_riches.events.turn_events import (
     RollAgainEvent,
     RollEvent,
     RollForEventEvent,
+    StockFluctuationEvent,
     StopActionEvent,
+    TickStatusesEvent,
     TurnEvent,
     VentureCardEvent,
     WillMoveEvent,
@@ -397,6 +402,16 @@ class GameLoop:
             self._handle_stop_action(event)
         elif isinstance(event, EndTurnEvent):
             self._handle_end_turn(event)
+        elif isinstance(event, BankruptcyCheckEvent):
+            self._handle_bankruptcy_check(event)
+        elif isinstance(event, StockFluctuationEvent):
+            self._handle_stock_fluctuation(event)
+        elif isinstance(event, TickStatusesEvent):
+            pass  # fully handled by execute()
+        elif isinstance(event, GameOverCheckEvent):
+            self._handle_game_over_check(event)
+        elif isinstance(event, AdvanceTurnEvent):
+            self._handle_advance_turn(event)
         # --- Init events (interactive, enqueue mutations) ---
         elif isinstance(event, InitBuyShopEvent):
             self._handle_init_buy_shop(event)
@@ -797,26 +812,38 @@ class GameLoop:
             self.pipeline.enqueue_front(evt)
 
     def _handle_end_turn(self, event: EndTurnEvent) -> None:
-        """Log end-of-turn results and enqueue the next TurnEvent."""
-        result = event.get_result()
-        stock_changes = result["stock_changes"]
-        if stock_changes:
-            for district_id, delta in stock_changes:
+        """Enqueue the composable end-of-turn sub-events."""
+        pid = event.player_id
+        self.pipeline.enqueue(BankruptcyCheckEvent(player_id=pid))
+        self.pipeline.enqueue(StockFluctuationEvent())
+        self.pipeline.enqueue(TickStatusesEvent())
+        self.pipeline.enqueue(GameOverCheckEvent())
+        self.pipeline.enqueue(AdvanceTurnEvent())
+
+    def _handle_bankruptcy_check(self, event: BankruptcyCheckEvent) -> None:
+        if event.get_result():
+            self.log.log(f"Player {event.player_id} went bankrupt!")
+            self.input.notify(self.state, self.log)
+
+    def _handle_stock_fluctuation(self, event: StockFluctuationEvent) -> None:
+        changes = event.get_result()
+        if changes:
+            for district_id, delta in changes:
                 direction = "up" if delta > 0 else "down"
                 self.log.log(
                     f"District {district_id} stock price went {direction} by {abs(delta)}!"
                 )
 
+    def _handle_game_over_check(self, event: GameOverCheckEvent) -> None:
+        result = event.get_result()
         if result["game_over"]:
             self.log.log("Game over due to bankruptcies!")
             self.input.notify(self.state, self.log)
             self.game_over = True
             self.winner = result["winner"]
-            return
 
+    def _handle_advance_turn(self, event: AdvanceTurnEvent) -> None:
         self.input.notify(self.state, self.log)
-
-        # Enqueue next player's turn
         self.pipeline.enqueue(
             TurnEvent(player_id=self.state.current_player.player_id)
         )

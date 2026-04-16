@@ -192,38 +192,79 @@ class StopActionEvent(GameEvent):
 @register_event
 @dataclass
 class EndTurnEvent(GameEvent):
-    """End-of-turn bookkeeping: bankruptcy check, stock fluctuations, status
-    ticks, and enqueue the next TurnEvent.
+    """Marker event for end-of-turn.  No-op execute().
 
-    Non-interactive.  Results are stored for the game loop to log.
+    The game loop handler enqueues the composable sub-events:
+    BankruptcyCheckEvent → StockFluctuationEvent → TickStatusesEvent
+    → GameOverCheckEvent → AdvanceTurnEvent.
     """
 
     player_id: int
-    _stock_changes: list[tuple[int, int]] = field(default_factory=list, repr=False)
-    _game_over: bool = False
-    _winner: int | None = None
+
+    def execute(self, state: GameState) -> None:
+        pass
+
+
+@register_event
+@dataclass
+class BankruptcyCheckEvent(GameEvent):
+    """Check if the player is bankrupt and mark them if so."""
+
+    player_id: int
+    _went_bankrupt: bool = False
 
     def execute(self, state: GameState) -> None:
         from road_to_riches.engine.bankruptcy import (
             BankruptcyEvent,
             check_bankruptcy,
         )
-        from road_to_riches.engine.statuses import tick_board_statuses, tick_player_statuses
-        from road_to_riches.events.game_events import apply_pending_stock_fluctuations
 
-        # Bankruptcy check
         if check_bankruptcy(state, self.player_id):
             BankruptcyEvent(player_id=self.player_id).execute(state)
+            self._went_bankrupt = True
 
-        # Stock fluctuations
-        self._stock_changes = apply_pending_stock_fluctuations(state)
+    def get_result(self) -> bool:
+        return self._went_bankrupt
 
-        # Tick statuses
+
+@register_event
+@dataclass
+class StockFluctuationEvent(GameEvent):
+    """Apply pending stock fluctuation changes at end of turn."""
+
+    _changes: list[tuple[int, int]] = field(default_factory=list, repr=False)
+
+    def execute(self, state: GameState) -> None:
+        from road_to_riches.events.game_events import apply_pending_stock_fluctuations
+
+        self._changes = apply_pending_stock_fluctuations(state)
+
+    def get_result(self) -> list[tuple[int, int]]:
+        return self._changes
+
+
+@register_event
+@dataclass
+class TickStatusesEvent(GameEvent):
+    """Decrement all player and board status durations, removing expired ones."""
+
+    def execute(self, state: GameState) -> None:
+        from road_to_riches.engine.statuses import tick_board_statuses, tick_player_statuses
+
         for p in state.active_players:
             tick_player_statuses(p)
         tick_board_statuses(state.board)
 
-        # Check game over (too many bankruptcies)
+
+@register_event
+@dataclass
+class GameOverCheckEvent(GameEvent):
+    """Check if the game is over due to too many bankruptcies."""
+
+    _game_over: bool = False
+    _winner: int | None = None
+
+    def execute(self, state: GameState) -> None:
         bankrupt_count = sum(1 for p in state.players if p.bankrupt)
         if bankrupt_count >= state.board.max_bankruptcies:
             self._game_over = True
@@ -231,15 +272,17 @@ class EndTurnEvent(GameEvent):
             if active:
                 self._winner = max(active, key=lambda p: state.net_worth(p)).player_id
 
-        # Advance to next player
-        state.advance_turn()
-
     def get_result(self) -> dict:
-        return {
-            "stock_changes": self._stock_changes,
-            "game_over": self._game_over,
-            "winner": self._winner,
-        }
+        return {"game_over": self._game_over, "winner": self._winner}
+
+
+@register_event
+@dataclass
+class AdvanceTurnEvent(GameEvent):
+    """Advance to the next active player."""
+
+    def execute(self, state: GameState) -> None:
+        state.advance_turn()
 
 
 # ---------------------------------------------------------------------------
