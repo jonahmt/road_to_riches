@@ -662,6 +662,27 @@ class ClearDirectionLockEvent(GameEvent):
 
 @register_event
 @dataclass
+class ClaimVentureCellEvent(GameEvent):
+    """Claim a cell on the venture grid for a player.
+
+    execute() claims the cell and computes any line bonuses.
+    get_result() returns the total bonus earned.
+    """
+
+    player_id: int
+    row: int
+    col: int
+    _bonus: int = 0
+
+    def execute(self, state: GameState) -> None:
+        self._bonus = state.venture_grid.claim(self.row, self.col, self.player_id)
+
+    def get_result(self) -> int:
+        return self._bonus
+
+
+@register_event
+@dataclass
 class RotateSuitEvent(GameEvent):
     """Rotate the suit on a Change of Suit square to the next suit."""
 

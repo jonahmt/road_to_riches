@@ -1,6 +1,7 @@
 """Venture Card 001: Choose your direction next turn."""
 
+from road_to_riches.events.game_events import ClearDirectionLockEvent
+
 
 def run(state, player_id):
-    player = state.get_player(player_id)
-    player.from_square = None
+    yield ClearDirectionLockEvent(player_id=player_id)

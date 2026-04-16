@@ -40,6 +40,7 @@ from road_to_riches.events.game_events import (
     RenovatePropertyEvent,
     ScriptEvent,
     SellStockEvent,
+    ClaimVentureCellEvent,
     ClearDirectionLockEvent,
     TransferCashEvent,
     WarpEvent,
@@ -1135,7 +1136,10 @@ class GameLoop:
         row, col = self.input.choose_venture_cell(self.state, player_id, self.log)
 
         # Claim the cell and check for line bonuses
-        bonus = grid.claim(row, col, player_id)
+        claim_event = ClaimVentureCellEvent(player_id=player_id, row=row, col=col)
+        self.pipeline.enqueue(claim_event)
+        self.pipeline.process_next(self.state)
+        bonus = claim_event.get_result()
         if bonus > 0:
             self.pipeline.enqueue(TransferCashEvent(
                 from_player_id=None, to_player_id=player_id, amount=bonus
