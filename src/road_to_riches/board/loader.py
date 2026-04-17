@@ -53,7 +53,7 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
 
         # Default base_value for vacant plots to 250 if not specified
         base_value = sq_data.get("base_value")
-        if base_value is None and sq_type == SquareType.VACANT_PLOT:
+        if not base_value and sq_type == SquareType.VACANT_PLOT:
             base_value = 250
 
         sq = SquareInfo(

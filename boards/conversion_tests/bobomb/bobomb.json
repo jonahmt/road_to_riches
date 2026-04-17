@@ -647,7 +647,7 @@
         12
       ],
       "district": 4,
-      "base_value": 0,
+      "base_value": 250,
       "base_rent": 0,
       "waypoints": [
         {
@@ -819,7 +819,7 @@
         4
       ],
       "district": 6,
-      "base_value": 0,
+      "base_value": 250,
       "base_rent": 0,
       "waypoints": [
         {
@@ -1031,7 +1031,7 @@
         13
       ],
       "district": 7,
-      "base_value": 0,
+      "base_value": 250,
       "base_rent": 0,
       "waypoints": [
         {
@@ -1316,7 +1316,7 @@
         24
       ],
       "district": 8,
-      "base_value": 0,
+      "base_value": 250,
       "base_rent": 0,
       "waypoints": [
         {

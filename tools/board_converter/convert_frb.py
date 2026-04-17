@@ -312,11 +312,11 @@ def convert_to_json(frb: FrbBoard) -> dict:
         if sq.index in doorway_dest:
             entry["doorway_destination"] = old_to_new[doorway_dest[sq.index]]
 
-        # Vacant plot
+        # Vacant plot — value field is unset in base boards, hardcode to 250
         if sq.frb_type == FRB_TYPE_VACANT_PLOT:
             entry["district"] = sq.district
-            entry["base_value"] = sq.value or 0
-            entry["base_rent"] = sq.price or 0
+            entry["base_value"] = 250
+            entry["base_rent"] = 0
 
         # Waypoints: remap IDs
         if sq.waypoints:
