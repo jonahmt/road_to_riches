@@ -17,8 +17,8 @@ class GameEvent(ABC):
         return self.__class__.__name__
 
     @abstractmethod
-    def execute(self, state: GameState) -> None:
-        """Mutate the game state. May append follow-up events to a pipeline."""
+    def execute(self, state: GameState) -> list[GameEvent] | None:
+        """Mutate the game state. Return follow-up events to enqueue at front, or None."""
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize this event. Fields starting with _ are excluded."""
@@ -35,4 +35,12 @@ class GameEvent(ABC):
 
     def get_result(self) -> Any:
         """Optional: return a result after execute(). Override in subclasses."""
+        return None
+
+    def log_message(self) -> str | None:
+        """Optional: return a log message after execute(). Called by the game loop.
+
+        Override in subclasses to provide event-specific log strings.
+        Return None (default) to produce no log output.
+        """
         return None

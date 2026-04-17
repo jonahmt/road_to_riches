@@ -377,6 +377,11 @@ class GameLoop:
             if event is None:
                 break
             self._dispatch(event)
+            # Generic log_message() — events declare their own log strings
+            msg = event.log_message()
+            if msg is not None:
+                self.log.log(msg)
+                self.input.notify(self.state, self.log)
 
         return self.winner
 
@@ -401,17 +406,17 @@ class GameLoop:
         elif isinstance(event, StopActionEvent):
             self._handle_stop_action(event)
         elif isinstance(event, EndTurnEvent):
-            self._handle_end_turn(event)
+            pass  # follow-ups returned by execute()
         elif isinstance(event, BankruptcyCheckEvent):
-            self._handle_bankruptcy_check(event)
+            pass  # follow-ups returned by execute(), logging by log_message()
         elif isinstance(event, StockFluctuationEvent):
-            self._handle_stock_fluctuation(event)
+            pass  # logging by log_message()
         elif isinstance(event, TickStatusesEvent):
             pass  # fully handled by execute()
         elif isinstance(event, GameOverCheckEvent):
             self._handle_game_over_check(event)
         elif isinstance(event, AdvanceTurnEvent):
-            self._handle_advance_turn(event)
+            self.input.notify(self.state, self.log)  # flush logs before next turn
         # --- Init events (interactive, enqueue mutations) ---
         elif isinstance(event, InitBuyShopEvent):
             self._handle_init_buy_shop(event)
@@ -441,115 +446,17 @@ class GameLoop:
             self._handle_venture_card_event(event)
         elif isinstance(event, RollAgainEvent):
             self._handle_roll_again(event)
-        # --- Leaf mutation events (logging only) ---
-        elif isinstance(event, BuyShopEvent):
-            self.log.log(f"Player {event.player_id} bought shop at square {event.square_id}!")
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, BuyVacantPlotEvent):
-            self.log.log(
-                f"Player {event.player_id} developed vacant plot "
-                f"{event.square_id} as {event.development_type}!"
-            )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, ForcedBuyoutEvent):
-            self.log.log(
-                f"Player {event.buyer_id} forced buyout of square {event.square_id}!"
-            )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, InvestInShopEvent):
-            self.log.log(
-                f"Player {event.player_id} invested {event.amount}G in square {event.square_id}!"
-            )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, BuyStockEvent):
-            self.log.log(
-                f"Player {event.player_id} bought {event.quantity} stock "
-                f"in district {event.district_id}."
-            )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, SellStockEvent):
-            self.log.log(
-                f"Player {event.player_id} sold {event.quantity} stock "
-                f"in district {event.district_id}."
-            )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, RenovatePropertyEvent):
-            self.log.log(
-                f"Player {event.player_id} renovated square {event.square_id} "
-                f"to {event.new_type}!"
-            )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, WarpEvent):
-            self.log.log(
-                f"Player {event.player_id} warped to square {event.target_square_id}!"
-            )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, PromotionEvent):
-            player = self.state.get_player(event.player_id)
-            bonus = event.get_result()
-            suits = (
-                "[dodger_blue1]♠[/dodger_blue1]"
-                "[bright_red]♥[/bright_red]"
-                "[yellow]♦[/yellow]"
-                "[green]♣[/green]"
-            )
-            self.log.log(
-                f"{suits} Player {event.player_id} promoted to "
-                f"level {player.level}! Receives {bonus}G! {suits}"
-            )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, PayCheckpointTollEvent):
-            toll = event.get_result()
-            if toll > 0:
-                self.log.log(
-                    f"Player {event.payer_id} paid {toll}G toll to "
-                    f"Player {event.owner_id} at checkpoint."
-                )
-                self.input.notify(self.state, self.log)
+        # --- Leaf mutation events: handled by log_message() ---
         elif isinstance(event, VictoryEvent):
-            self.log.log(f"Player {event.player_id} WINS THE GAME!")
-            self.input.notify(self.state, self.log)
+            # Control flow: must set game_over on the loop instance
             self.game_over = True
             self.winner = event.player_id
-        elif isinstance(event, SellShopToBankEvent):
-            self.log.log(
-                f"Player {event.player_id} sold shop {event.square_id} to the bank."
-            )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, AuctionSellEvent):
-            if event.winner_id is not None:
-                self.log.log(
-                    f"Player {event.winner_id} wins auction for square "
-                    f"{event.square_id} at {event.winning_bid}G!"
-                )
-            else:
-                self.log.log(
-                    f"No bids for square {event.square_id}. "
-                    f"Player {event.seller_id} receives base value."
-                )
-            self.input.notify(self.state, self.log)
-        elif isinstance(event, PayRentEvent):
-            rent = event.get_result()
-            if rent > 0:
-                self.log.log(
-                    f"Player {event.payer_id} pays {rent}G rent to "
-                    f"Player {event.owner_id}."
-                )
-                if event._dividends:
-                    for pid, amount in event._dividends:
-                        self.log.log(f"  Dividend: Player {pid} receives {amount}G.")
-                self.input.notify(self.state, self.log)
-        elif isinstance(event, PayTaxEvent):
-            tax = event.get_result()
-            if tax > 0:
-                self.log.log(
-                    f"Player {event.payer_id} pays {tax}G tax to "
-                    f"Player {event.owner_id}."
-                )
-                self.input.notify(self.state, self.log)
-        # Silent leaf events: CollectSuitEvent, RotateSuitEvent,
+        # All other leaf events (BuyShopEvent, PayRentEvent, etc.) are
+        # handled by the generic log_message() call in the main loop.
+        # Silent leaf events (CollectSuitEvent, RotateSuitEvent,
         # TransferPropertyEvent, TransferCashEvent, ScriptEvent,
-        # CloseShopsEvent, GainCommissionEvent, etc.
+        # CloseShopsEvent, GainCommissionEvent, etc.) return None
+        # from log_message() and produce no output.
 
     def _execute_event(self, event: GameEvent) -> GameEvent:
         """Execute a single event through the pipeline and dispatch it.
@@ -620,7 +527,7 @@ class GameLoop:
             self.pipeline.enqueue(TurnEvent(player_id=player_id))
 
     def _handle_roll(self, event: RollEvent) -> None:
-        """After dice roll: log it and enqueue WillMoveEvent."""
+        """After dice roll: log it.  WillMoveEvent is returned by execute()."""
         player_id = event.player_id
         roll = event.get_result()
         self._current_dice_roll = roll
@@ -628,11 +535,6 @@ class GameLoop:
         self.log.log(f"Player {player_id} rolls a {roll}!{forced_tag}")
         self.input.notify_dice(roll, roll)
         self.input.notify(self.state, self.log)
-
-        # Begin movement
-        self.pipeline.enqueue(
-            WillMoveEvent(player_id=player_id, total_roll=roll, remaining=roll)
-        )
 
     def _handle_will_move(self, event: WillMoveEvent) -> None:
         """Movement decision point: choose path, confirm stop, or undo."""
@@ -811,42 +713,11 @@ class GameLoop:
         for evt in reversed(sequence):
             self.pipeline.enqueue_front(evt)
 
-    def _handle_end_turn(self, event: EndTurnEvent) -> None:
-        """Enqueue the composable end-of-turn sub-events."""
-        pid = event.player_id
-        self.pipeline.enqueue(BankruptcyCheckEvent(player_id=pid))
-        self.pipeline.enqueue(StockFluctuationEvent())
-        self.pipeline.enqueue(TickStatusesEvent())
-        self.pipeline.enqueue(GameOverCheckEvent())
-        self.pipeline.enqueue(AdvanceTurnEvent())
-
-    def _handle_bankruptcy_check(self, event: BankruptcyCheckEvent) -> None:
-        if event.get_result():
-            self.log.log(f"Player {event.player_id} went bankrupt!")
-            self.input.notify(self.state, self.log)
-
-    def _handle_stock_fluctuation(self, event: StockFluctuationEvent) -> None:
-        changes = event.get_result()
-        if changes:
-            for district_id, delta in changes:
-                direction = "up" if delta > 0 else "down"
-                self.log.log(
-                    f"District {district_id} stock price went {direction} by {abs(delta)}!"
-                )
-
     def _handle_game_over_check(self, event: GameOverCheckEvent) -> None:
         result = event.get_result()
         if result["game_over"]:
-            self.log.log("Game over due to bankruptcies!")
-            self.input.notify(self.state, self.log)
             self.game_over = True
             self.winner = result["winner"]
-
-    def _handle_advance_turn(self, event: AdvanceTurnEvent) -> None:
-        self.input.notify(self.state, self.log)
-        self.pipeline.enqueue(
-            TurnEvent(player_id=self.state.current_player.player_id)
-        )
 
     # ------------------------------------------------------------------
     # Movement helpers

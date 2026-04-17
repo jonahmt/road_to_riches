@@ -87,6 +87,9 @@ class SellShopToBankEvent(GameEvent):
 
             _update_district_stock_value(state, square.property_district)
 
+    def log_message(self) -> str | None:
+        return f"Player {self.player_id} sold shop {self.square_id} to the bank."
+
 
 @register_event
 @dataclass
@@ -125,3 +128,6 @@ class VictoryEvent(GameEvent):
 
     def get_result(self) -> int:
         return self.player_id
+
+    def log_message(self) -> str | None:
+        return f"Player {self.player_id} WINS THE GAME!"

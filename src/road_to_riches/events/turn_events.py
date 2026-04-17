@@ -74,18 +74,26 @@ class RollEvent(GameEvent):
     """Dice roll.  Generates a random roll (or uses a forced value) and
     stores the result so the game loop can read it via get_result().
 
-    Non-interactive.  execute() enqueues a WillMoveEvent.
+    Returns WillMoveEvent as a follow-up.  The dispatch handler does
+    dice animation / logging I/O only.
     """
 
     player_id: int
     forced_roll: int | None = None
     _roll: int = 0
 
-    def execute(self, state: GameState) -> None:
+    def execute(self, state: GameState) -> list[GameEvent] | None:
         if self.forced_roll is not None:
             self._roll = self.forced_roll
         else:
             self._roll = roll_dice(state.board.max_dice_roll)
+        return [
+            WillMoveEvent(
+                player_id=self.player_id,
+                total_roll=self._roll,
+                remaining=self._roll,
+            )
+        ]
 
     def get_result(self) -> int:
         return self._roll
@@ -192,39 +200,49 @@ class StopActionEvent(GameEvent):
 @register_event
 @dataclass
 class EndTurnEvent(GameEvent):
-    """Marker event for end-of-turn.  No-op execute().
-
-    The game loop handler enqueues the composable sub-events:
+    """End-of-turn event.  Returns the composable sub-events as follow-ups:
     BankruptcyCheckEvent → StockFluctuationEvent → TickStatusesEvent
     → GameOverCheckEvent → AdvanceTurnEvent.
     """
 
     player_id: int
 
-    def execute(self, state: GameState) -> None:
-        pass
+    def execute(self, state: GameState) -> list[GameEvent] | None:
+        return [
+            BankruptcyCheckEvent(player_id=self.player_id),
+            StockFluctuationEvent(),
+            TickStatusesEvent(),
+            GameOverCheckEvent(),
+            AdvanceTurnEvent(),
+        ]
 
 
 @register_event
 @dataclass
 class BankruptcyCheckEvent(GameEvent):
-    """Check if the player is bankrupt and mark them if so."""
+    """Check if the player is bankrupt and return BankruptcyEvent as follow-up if so."""
 
     player_id: int
     _went_bankrupt: bool = False
 
-    def execute(self, state: GameState) -> None:
+    def execute(self, state: GameState) -> list[GameEvent] | None:
         from road_to_riches.engine.bankruptcy import (
             BankruptcyEvent,
             check_bankruptcy,
         )
 
         if check_bankruptcy(state, self.player_id):
-            BankruptcyEvent(player_id=self.player_id).execute(state)
             self._went_bankrupt = True
+            return [BankruptcyEvent(player_id=self.player_id)]
+        return None
 
     def get_result(self) -> bool:
         return self._went_bankrupt
+
+    def log_message(self) -> str | None:
+        if self._went_bankrupt:
+            return f"Player {self.player_id} went bankrupt!"
+        return None
 
 
 @register_event
@@ -241,6 +259,17 @@ class StockFluctuationEvent(GameEvent):
 
     def get_result(self) -> list[tuple[int, int]]:
         return self._changes
+
+    def log_message(self) -> str | None:
+        if not self._changes:
+            return None
+        lines = []
+        for district_id, delta in self._changes:
+            direction = "up" if delta > 0 else "down"
+            lines.append(
+                f"District {district_id} stock price went {direction} by {abs(delta)}!"
+            )
+        return "\n".join(lines)
 
 
 @register_event
@@ -275,14 +304,20 @@ class GameOverCheckEvent(GameEvent):
     def get_result(self) -> dict:
         return {"game_over": self._game_over, "winner": self._winner}
 
+    def log_message(self) -> str | None:
+        if self._game_over:
+            return "Game over due to bankruptcies!"
+        return None
+
 
 @register_event
 @dataclass
 class AdvanceTurnEvent(GameEvent):
-    """Advance to the next active player."""
+    """Advance to the next active player and return TurnEvent for the new player."""
 
-    def execute(self, state: GameState) -> None:
+    def execute(self, state: GameState) -> list[GameEvent] | None:
         state.advance_turn()
+        return [TurnEvent(player_id=state.current_player.player_id)]
 
 
 # ---------------------------------------------------------------------------

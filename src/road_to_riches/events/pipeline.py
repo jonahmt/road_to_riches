@@ -39,13 +39,20 @@ class EventPipeline:
         self._log_queue(f"enqueue_front {event.event_type}")
 
     def process_next(self, state: GameState) -> GameEvent | None:
-        """Process the next event in the queue. Returns the event or None if empty."""
+        """Process the next event in the queue. Returns the event or None if empty.
+
+        If execute() returns follow-up events, they are enqueued at the front
+        of the queue (in order) so they process before any previously queued events.
+        """
         if not self._queue:
             return None
         event = self._queue.popleft()
         logger.debug("processing %s", event.event_type)
-        event.execute(state)
+        follow_ups = event.execute(state)
         self.history.append(EventLog(event=event, player_id=state.current_player.player_id))
+        if follow_ups:
+            for fu in reversed(follow_ups):
+                self.enqueue_front(fu)
         self._log_queue(f"after {event.event_type}")
         return event
 

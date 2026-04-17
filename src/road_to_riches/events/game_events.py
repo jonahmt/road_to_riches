@@ -50,6 +50,9 @@ class BuyShopEvent(GameEvent):
         if square.property_district is not None:
             _update_district_stock_value(state, square.property_district)
 
+    def log_message(self) -> str | None:
+        return f"Player {self.player_id} bought shop at square {self.square_id}!"
+
 
 @register_event
 @dataclass
@@ -96,6 +99,18 @@ class PayRentEvent(GameEvent):
     def get_result(self) -> int:
         return self._rent_amount
 
+    def log_message(self) -> str | None:
+        if self._rent_amount <= 0:
+            return None
+        lines = [
+            f"Player {self.payer_id} pays {self._rent_amount}G rent to "
+            f"Player {self.owner_id}."
+        ]
+        if self._dividends:
+            for pid, amount in self._dividends:
+                lines.append(f"  Dividend: Player {pid} receives {amount}G.")
+        return "\n".join(lines)
+
 
 @register_event
 @dataclass
@@ -130,6 +145,9 @@ class InvestInShopEvent(GameEvent):
         # Stock value component updates immediately on investment
         _update_district_stock_value(state, square.property_district)
 
+    def log_message(self) -> str | None:
+        return f"Player {self.player_id} invested {self.amount}G in square {self.square_id}!"
+
 
 # =============================================================================
 # Stock Events
@@ -162,6 +180,12 @@ class BuyStockEvent(GameEvent):
             delta = price.current_price // 16 + 1
             price.pending_fluctuation += delta
 
+    def log_message(self) -> str | None:
+        return (
+            f"Player {self.player_id} bought {self.quantity} stock "
+            f"in district {self.district_id}."
+        )
+
 
 @register_event
 @dataclass
@@ -188,6 +212,12 @@ class SellStockEvent(GameEvent):
         if sell_qty >= 10:
             delta = price.current_price // 16 + 1
             price.pending_fluctuation -= delta
+
+    def log_message(self) -> str | None:
+        return (
+            f"Player {self.player_id} sold {self.quantity} stock "
+            f"in district {self.district_id}."
+        )
 
 
 # =============================================================================
@@ -219,6 +249,7 @@ class PromotionEvent(GameEvent):
 
     player_id: int
     _bonus: int = 0
+    _level: int = 0
 
     def execute(self, state: GameState) -> None:
         player = state.get_player(self.player_id)
@@ -249,6 +280,7 @@ class PromotionEvent(GameEvent):
 
         self._bonus = bonus
         player.level = next_level
+        self._level = next_level
 
         # Consume exactly 4 suits: prioritize real suits, then wilds
         standard = [Suit.SPADE, Suit.HEART, Suit.DIAMOND, Suit.CLUB]
@@ -267,6 +299,19 @@ class PromotionEvent(GameEvent):
 
     def get_result(self) -> int:
         return self._bonus
+
+    def log_message(self) -> str | None:
+        suits = (
+            "[dodger_blue1]♠[/dodger_blue1]"
+            "[bright_red]♥[/bright_red]"
+            "[yellow]♦[/yellow]"
+            "[green]♣[/green]"
+        )
+        # _bonus and player.level are set during execute()
+        return (
+            f"{suits} Player {self.player_id} promoted to "
+            f"level {self._level}! Receives {self._bonus}G! {suits}"
+        )
 
 
 # =============================================================================
@@ -360,6 +405,12 @@ class BuyVacantPlotEvent(GameEvent):
         if square.property_district is not None:
             _update_district_stock_value(state, square.property_district)
 
+    def log_message(self) -> str | None:
+        return (
+            f"Player {self.player_id} developed vacant plot "
+            f"{self.square_id} as {self.development_type}!"
+        )
+
 
 @register_event
 @dataclass
@@ -388,6 +439,14 @@ class PayCheckpointTollEvent(GameEvent):
 
     def get_result(self) -> int:
         return self._toll_amount
+
+    def log_message(self) -> str | None:
+        if self._toll_amount <= 0:
+            return None
+        return (
+            f"Player {self.payer_id} paid {self._toll_amount}G toll to "
+            f"Player {self.owner_id} at checkpoint."
+        )
 
 
 @register_event
@@ -420,6 +479,14 @@ class PayTaxEvent(GameEvent):
 
     def get_result(self) -> int:
         return self._tax_amount
+
+    def log_message(self) -> str | None:
+        if self._tax_amount <= 0:
+            return None
+        return (
+            f"Player {self.payer_id} pays {self._tax_amount}G tax to "
+            f"Player {self.owner_id}."
+        )
 
 
 @register_event
@@ -474,6 +541,12 @@ class RenovatePropertyEvent(GameEvent):
         if square.property_district is not None:
             _update_district_stock_value(state, square.property_district)
 
+    def log_message(self) -> str | None:
+        return (
+            f"Player {self.player_id} renovated square {self.square_id} "
+            f"to {self.new_type}!"
+        )
+
 
 # =============================================================================
 # Shop Exchange Events
@@ -517,6 +590,9 @@ class ForcedBuyoutEvent(GameEvent):
 
     def get_result(self) -> int:
         return self._cost
+
+    def log_message(self) -> str | None:
+        return f"Player {self.buyer_id} forced buyout of square {self.square_id}!"
 
 
 @register_event
@@ -584,6 +660,17 @@ class AuctionSellEvent(GameEvent):
         if square.property_district is not None:
             _update_district_stock_value(state, square.property_district)
 
+    def log_message(self) -> str | None:
+        if self.winner_id is not None:
+            return (
+                f"Player {self.winner_id} wins auction for square "
+                f"{self.square_id} at {self.winning_bid}G!"
+            )
+        return (
+            f"No bids for square {self.square_id}. "
+            f"Player {self.seller_id} receives base value."
+        )
+
 
 # =============================================================================
 # Script Events
@@ -646,6 +733,9 @@ class WarpEvent(GameEvent):
         player = state.get_player(self.player_id)
         player.from_square = None  # no prior square at warp destination
         player.position = self.target_square_id
+
+    def log_message(self) -> str | None:
+        return f"Player {self.player_id} warped to square {self.target_square_id}!"
 
 
 @register_event
