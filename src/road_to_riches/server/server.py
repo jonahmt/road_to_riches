@@ -254,7 +254,6 @@ def run_server(
         config = GameConfig(
             board_path=board_path,
             num_players=num_players,
-            starting_cash=1500,
         )
     server = GameServer(
         config, num_humans=num_humans, num_ai=num_ai, ai_delay=ai_delay,

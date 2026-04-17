@@ -79,3 +79,4 @@ class BoardState:
     max_bankruptcies: int
     squares: list[SquareInfo]
     num_districts: int = 0
+    starting_cash: int = 1500

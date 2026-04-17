@@ -93,7 +93,6 @@ from road_to_riches.models.square_type import SquareType
 class GameConfig:
     board_path: str
     num_players: int = 4
-    starting_cash: int = 1500
     venture_script: str = "scripts/venture_placeholder.py"
     cards_dir: str = "cards"
 
@@ -317,7 +316,7 @@ class GameLoop:
                 PlayerState(
                     player_id=i,
                     position=0,
-                    ready_cash=config.starting_cash,
+                    ready_cash=board.starting_cash,
                 )
                 for i in range(config.num_players)
             ]

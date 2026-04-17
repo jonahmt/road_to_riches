@@ -93,6 +93,7 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
         max_bankruptcies=data.get("max_bankruptcies", 1),
         squares=squares,
         num_districts=num_districts,
+        starting_cash=data.get("starting_cash", 1500),
     )
 
     # Initialize stock prices: value component = 4% of average shop value, rounded

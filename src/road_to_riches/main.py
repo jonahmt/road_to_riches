@@ -75,7 +75,6 @@ def main() -> None:
         config = GameConfig(
             board_path=args.board,
             num_players=args.players,
-            starting_cash=1500,
         )
         player_input = TextPlayerInput()
         game = GameLoop(config, player_input)

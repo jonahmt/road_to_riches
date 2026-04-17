@@ -28,7 +28,6 @@ def save_game(state: GameState, config: GameConfig) -> Path:
         "config": {
             "board_path": config.board_path,
             "num_players": config.num_players,
-            "starting_cash": config.starting_cash,
             "venture_script": config.venture_script,
             "cards_dir": config.cards_dir,
         },
@@ -47,6 +46,8 @@ def load_save() -> tuple[GameState, GameConfig] | None:
         return None
     with open(path) as f:
         data = json.load(f)
-    config = GameConfig(**data["config"])
+    config_data = data["config"]
+    config_data.pop("starting_cash", None)  # removed field, ignore in old saves
+    config = GameConfig(**config_data)
     state = game_state_from_dict(data["state"])
     return state, config

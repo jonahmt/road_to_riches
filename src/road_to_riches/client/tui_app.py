@@ -2022,7 +2022,6 @@ def run_tui(
         config = GameConfig(
             board_path=board_path,
             num_players=num_players,
-            starting_cash=1500,
         )
     app = GameApp(config=config, log_lines=log_lines, saved_state=saved_state)
     app.run()
