@@ -31,6 +31,7 @@ from road_to_riches.events.game_events import (
     BuyShopEvent,
     BuyStockEvent,
     BuyVacantPlotEvent,
+    CollectSuitEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
     PayCheckpointTollEvent,
@@ -944,6 +945,19 @@ class GameLoop:
             self.input.notify(self.state, self.log)
             return
         target = self.state.get_player(target_pid)
+        target_sq = self.state.board.squares[target.position]
+        # Cannon: warp without firing pass/land actions, but still collect a
+        # suit if the destination is a suit-granting square.
+        suit_to_collect: str | None = None
+        if target_sq.type in (SquareType.SUIT, SquareType.CHANGE_OF_SUIT) and target_sq.suit is not None:
+            suit_to_collect = target_sq.suit
+        elif target_sq.type == SquareType.SUIT_YOURSELF:
+            from road_to_riches.models.suit import Suit
+            suit_to_collect = Suit.WILD.value
+        if suit_to_collect is not None:
+            self.pipeline.enqueue_front(
+                CollectSuitEvent(player_id=pid, suit=suit_to_collect)
+            )
         self.pipeline.enqueue_front(
             WarpEvent(player_id=pid, target_square_id=target.position)
         )

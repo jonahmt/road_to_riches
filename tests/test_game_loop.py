@@ -747,6 +747,26 @@ class TestInitCannon:
         assert len(queued) == 1
         assert isinstance(queued[0], WarpEvent)
         assert queued[0].target_square_id == 5
+        assert queued[0].voluntary is False
+
+    def test_target_on_suit_square_collects_suit(self):
+        from road_to_riches.events.game_events import CollectSuitEvent
+
+        loop = _make_loop()
+        loop.state.players[1].position = 3  # SUIT square (SPADE)
+        loop.input.choose_cannon_target.return_value = 1
+
+        init = InitCannonEvent(player_id=0, targets=[{"player_id": 1}])
+        loop.pipeline.enqueue(init)
+        loop.pipeline.process_next(loop.state)
+        loop._dispatch(init)
+
+        queued = list(loop.pipeline._queue)
+        assert len(queued) == 2
+        assert isinstance(queued[0], WarpEvent)
+        assert queued[0].voluntary is False
+        assert isinstance(queued[1], CollectSuitEvent)
+        assert queued[1].suit == "SPADE"
 
     def test_no_targets_does_nothing(self):
         loop = _make_loop()
@@ -922,3 +942,49 @@ class TestFullTurn:
             isinstance(e, TurnEvent) and e.player_id == 1
             for e in events
         )
+
+
+# ===========================================================================
+# WarpEvent voluntary follow-ups
+# ===========================================================================
+
+class TestWarpEventVoluntary:
+    def test_involuntary_warp_no_followups(self):
+        loop = _make_loop()
+        warp = WarpEvent(player_id=0, target_square_id=3)
+        loop.pipeline.enqueue(warp)
+        loop.pipeline.process_next(loop.state)
+
+        assert loop.state.players[0].position == 3
+        assert loop.pipeline.is_empty
+
+    def test_voluntary_warp_enqueues_pass_then_stop(self):
+        loop = _make_loop()
+        warp = WarpEvent(player_id=0, target_square_id=3, voluntary=True)
+        loop.pipeline.enqueue(warp)
+        loop.pipeline.process_next(loop.state)
+
+        assert loop.state.players[0].position == 3
+        queued = list(loop.pipeline._queue)
+        assert len(queued) == 2
+        assert isinstance(queued[0], PassActionEvent)
+        assert queued[0].square_id == 3
+        assert isinstance(queued[1], StopActionEvent)
+        assert queued[1].square_id == 3
+
+    def test_voluntary_warp_to_suit_collects_suit_via_pass_handler(self):
+        """Voluntary warp to a SUIT square: PassActionEvent enqueues CollectSuitEvent."""
+        from road_to_riches.events.game_events import CollectSuitEvent
+
+        loop = _make_loop()
+        warp = WarpEvent(player_id=0, target_square_id=3, voluntary=True)  # SPADE
+        loop.pipeline.enqueue(warp)
+        # Process WarpEvent — enqueues PassActionEvent + StopActionEvent
+        loop.pipeline.process_next(loop.state)
+        # Process PassActionEvent + dispatch its handler
+        pass_evt = loop.pipeline.process_next(loop.state)
+        loop._dispatch(pass_evt)
+
+        queued_types = [type(e) for e in loop.pipeline._queue]
+        assert CollectSuitEvent in queued_types
+        assert StopActionEvent in queued_types

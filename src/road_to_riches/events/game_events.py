@@ -724,15 +724,31 @@ class ScriptEvent(GameEvent):
 @register_event
 @dataclass
 class WarpEvent(GameEvent):
-    """Warp a player to a target square without triggering pass/land effects."""
+    """Warp a player to a target square.
+
+    If voluntary=True, the destination square's pass and land effects fire
+    after the warp (used by venture cards like "Warp Anywhere").  Involuntary
+    warps (doorway, backstreet) skip both pass and land effects.
+    """
 
     player_id: int
     target_square_id: int
+    voluntary: bool = False
 
-    def execute(self, state: GameState) -> None:
+    def execute(self, state: GameState) -> list[GameEvent] | None:
         player = state.get_player(self.player_id)
         player.from_square = None  # no prior square at warp destination
         player.position = self.target_square_id
+        if self.voluntary:
+            from road_to_riches.events.turn_events import (
+                PassActionEvent,
+                StopActionEvent,
+            )
+            return [
+                PassActionEvent(player_id=self.player_id, square_id=self.target_square_id),
+                StopActionEvent(player_id=self.player_id, square_id=self.target_square_id),
+            ]
+        return None
 
     def log_message(self) -> str | None:
         return f"Player {self.player_id} warped to square {self.target_square_id}!"
