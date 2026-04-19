@@ -377,13 +377,16 @@ class GameLoop:
             if event is None:
                 break
             self._dispatch(event)
-            # Generic log_message() — events declare their own log strings
-            msg = event.log_message()
-            if msg is not None:
-                self.log.log(msg)
-                self.input.notify(self.state, self.log)
+            self._log_event(event)
 
         return self.winner
+
+    def _log_event(self, event: GameEvent) -> None:
+        """Emit an event's log_message() and notify clients, if any."""
+        msg = event.log_message()
+        if msg is not None:
+            self.log.log(msg)
+            self.input.notify(self.state, self.log)
 
     def _dispatch(self, event: GameEvent) -> None:
         """Route an event to its handler after execute() has been called.
@@ -469,6 +472,7 @@ class GameLoop:
         self.pipeline.enqueue_front(event)
         processed = self.pipeline.process_next(self.state)
         self._dispatch(processed)
+        self._log_event(processed)
         return processed
 
     # ------------------------------------------------------------------
@@ -1170,6 +1174,7 @@ class GameLoop:
             if event is None:
                 break
             self._dispatch(event)
+            self._log_event(event)
 
         # Restore main pipeline
         self.pipeline = main_pipeline

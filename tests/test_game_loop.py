@@ -972,6 +972,19 @@ class TestWarpEventVoluntary:
         assert isinstance(queued[1], StopActionEvent)
         assert queued[1].square_id == 3
 
+    def test_execute_event_logs_via_log_message(self):
+        """Events processed via _execute_event must be logged (regression: PromotionEvent)."""
+        from road_to_riches.events.game_events import PromotionEvent
+        from road_to_riches.models.suit import Suit
+
+        loop = _make_loop(num_players=2)
+        loop.state.players[0].suits = {
+            Suit.SPADE: 1, Suit.HEART: 1, Suit.DIAMOND: 1, Suit.CLUB: 1,
+        }
+        loop._execute_event(PromotionEvent(player_id=0))
+
+        assert any("promoted" in m for m in loop.log.messages)
+
     def test_voluntary_warp_to_suit_collects_suit_via_pass_handler(self):
         """Voluntary warp to a SUIT square: PassActionEvent enqueues CollectSuitEvent."""
         from road_to_riches.events.game_events import CollectSuitEvent
