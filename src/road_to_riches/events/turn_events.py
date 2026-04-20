@@ -201,14 +201,17 @@ class StopActionEvent(GameEvent):
 @dataclass
 class EndTurnEvent(GameEvent):
     """End-of-turn event.  Returns the composable sub-events as follow-ups:
-    BankruptcyCheckEvent → StockFluctuationEvent → TickStatusesEvent
-    → GameOverCheckEvent → AdvanceTurnEvent.
+    LiquidationPhaseEvent → BankruptcyCheckEvent → StockFluctuationEvent
+    → TickStatusesEvent → GameOverCheckEvent → AdvanceTurnEvent.
     """
 
     player_id: int
 
     def execute(self, state: GameState) -> list[GameEvent] | None:
+        from road_to_riches.engine.bankruptcy import LiquidationPhaseEvent
+
         return [
+            LiquidationPhaseEvent(player_id=self.player_id),
             BankruptcyCheckEvent(player_id=self.player_id),
             StockFluctuationEvent(),
             TickStatusesEvent(),

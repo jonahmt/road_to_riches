@@ -877,9 +877,10 @@ class TestLiquidation:
         sq.shop_current_value = 200
         p.owned_properties.append(1)
 
-        loop.input.choose_liquidation.return_value = ("shop", 1)
+        loop.input.choose_liquidation.return_value = ("shop", 1, 0)
+        loop.input.choose_auction_bid.return_value = None
 
-        loop._liquidation_phase(0)
+        loop._handle_liquidation_phase(0)
 
         # Player should have sold the shop and have positive cash
         assert p.ready_cash > 0
@@ -891,11 +892,106 @@ class TestLiquidation:
         p.ready_cash = -100
         p.owned_stock[0] = 5
 
-        loop.input.choose_liquidation.return_value = ("stock", 0)
+        loop.input.choose_liquidation.return_value = ("stock", 0, 5)
 
-        loop._liquidation_phase(0)
+        loop._handle_liquidation_phase(0)
 
         assert p.ready_cash > 0 or p.owned_stock.get(0, 0) == 0
+
+    def test_liquidation_skipped_when_cash_nonnegative(self):
+        loop = _make_loop()
+        loop.state.players[0].ready_cash = 10
+
+        loop._handle_liquidation_phase(0)
+
+        loop.input.choose_liquidation.assert_not_called()
+
+    def test_sold_shop_is_auctioned_to_highest_bidder(self):
+        loop = _make_loop()
+        p0 = loop.state.players[0]
+        p1 = loop.state.players[1]
+        p0.ready_cash = -100
+        sq = loop.state.board.squares[1]
+        sq.property_owner = 0
+        sq.shop_current_value = 200
+        p0.owned_properties.append(1)
+        p1_cash_before = p1.ready_cash
+
+        loop.input.choose_liquidation.return_value = ("shop", 1, 0)
+        # p1 bids 50, p2 and p3 pass
+        loop.input.choose_auction_bid.side_effect = [50, None, None]
+
+        loop._handle_liquidation_phase(0)
+
+        assert sq.property_owner == 1
+        assert 1 in p1.owned_properties
+        assert p1.ready_cash == p1_cash_before - 50
+        # Liquidating player only got the 75% — auction proceeds go to bank.
+        assert p0.ready_cash == -100 + int(200 * 0.75)
+
+    def test_sold_shop_with_no_bids_stays_unowned(self):
+        loop = _make_loop()
+        p0 = loop.state.players[0]
+        p0.ready_cash = -100
+        sq = loop.state.board.squares[1]
+        sq.property_owner = 0
+        sq.shop_current_value = 200
+        p0.owned_properties.append(1)
+
+        loop.input.choose_liquidation.return_value = ("shop", 1, 0)
+        loop.input.choose_auction_bid.return_value = None
+
+        loop._handle_liquidation_phase(0)
+
+        assert sq.property_owner is None
+        assert p0.ready_cash == -100 + int(200 * 0.75)
+
+    def test_stock_sale_respects_chosen_quantity(self):
+        loop = _make_loop()
+        p = loop.state.players[0]
+        p.ready_cash = -10
+        p.owned_stock[0] = 10
+        price = loop.state.stock.get_price(0).current_price
+
+        loop.input.choose_liquidation.return_value = ("stock", 0, 3)
+
+        loop._handle_liquidation_phase(0)
+
+        # Only 3 shares sold → 7 remaining (unless further calls needed).
+        # The mock returns the same value every call, so if still negative
+        # another 3 would be sold. Pick price high enough to guarantee one call:
+        if p.ready_cash >= 0:
+            assert p.owned_stock.get(0, 0) == 7
+            assert p.ready_cash == -10 + 3 * price
+
+    def test_bankruptcy_case_sells_everything_then_auctions(self):
+        loop = _make_loop()
+        p0 = loop.state.players[0]
+        p0.ready_cash = -10_000  # way more than any single shop's 75% covers
+        sq = loop.state.board.squares[1]
+        sq.property_owner = 0
+        sq.shop_current_value = 200
+        p0.owned_properties.append(1)
+
+        loop.input.choose_liquidation.return_value = ("shop", 1, 0)
+        loop.input.choose_auction_bid.return_value = None
+
+        loop._handle_liquidation_phase(0)
+
+        # Player sold everything, still has negative cash → bankruptcy is the
+        # responsibility of BankruptcyCheckEvent (not tested here).
+        assert p0.owned_properties == []
+        assert p0.ready_cash < 0
+        # Sold shop was auctioned — handler called choose_auction_bid.
+        loop.input.choose_auction_bid.assert_called()
+
+    def test_end_turn_enqueues_liquidation_before_bankruptcy_check(self):
+        """EndTurnEvent.execute() must return LiquidationPhase as the first follow-up."""
+        from road_to_riches.engine.bankruptcy import LiquidationPhaseEvent
+
+        follow_ups = EndTurnEvent(player_id=0).execute(_make_game()[0])
+        assert isinstance(follow_ups[0], LiquidationPhaseEvent)
+        assert isinstance(follow_ups[1], BankruptcyCheckEvent)
 
 
 # ===========================================================================

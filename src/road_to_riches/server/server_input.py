@@ -435,7 +435,7 @@ class WebSocketPlayerInput(PlayerInput):
 
     def choose_liquidation(
         self, state: GameState, player_id: int, options: dict, log: GameLog
-    ) -> tuple[str, int]:
+    ) -> tuple[str, int, int]:
         self._flush_log(log)
         return self._request_input(
             InputRequest(

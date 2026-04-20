@@ -93,6 +93,60 @@ class SellShopToBankEvent(GameEvent):
 
 @register_event
 @dataclass
+class LiquidationPhaseEvent(GameEvent):
+    """End-of-turn forced-liquidation phase.
+
+    Runs only if the player's cash is negative. The game loop drives the
+    interactive sell+auction sequence from its dispatch handler; execute()
+    returns no follow-ups (the handler enqueues its own sub-events).
+    """
+
+    player_id: int
+
+    def execute(self, state: GameState) -> list[GameEvent] | None:
+        return None
+
+
+@register_event
+@dataclass
+class LiquidationAuctionSellEvent(GameEvent):
+    """Auction of a shop that was sold to the bank during liquidation.
+
+    The shop is already unowned when this event executes. If there is a
+    winning bid, ownership transfers to the winner and the winner pays the
+    bank. Proceeds do NOT go back to the liquidating player (they already
+    received 75% when the shop was sold). If no one bids, the shop simply
+    stays unowned.
+    """
+
+    square_id: int
+    winner_id: int | None = None
+    winning_bid: int = 0
+
+    def execute(self, state: GameState) -> list[GameEvent] | None:
+        square = state.board.squares[self.square_id]
+        assert square.property_owner is None
+        if self.winner_id is not None:
+            winner = state.get_player(self.winner_id)
+            winner.ready_cash -= self.winning_bid
+            square.property_owner = self.winner_id
+            winner.owned_properties.append(self.square_id)
+            if square.property_district is not None:
+                from road_to_riches.events.game_events import _update_district_stock_value
+                _update_district_stock_value(state, square.property_district)
+        return None
+
+    def log_message(self) -> str | None:
+        if self.winner_id is not None:
+            return (
+                f"Player {self.winner_id} won the liquidation auction for square "
+                f"{self.square_id} at {self.winning_bid}G."
+            )
+        return f"No bids in liquidation auction for square {self.square_id}; stays unowned."
+
+
+@register_event
+@dataclass
 class BankruptcyEvent(GameEvent):
     """Player goes bankrupt. All assets are liquidated and player is removed."""
 

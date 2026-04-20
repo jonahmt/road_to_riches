@@ -18,6 +18,8 @@ from typing import Any
 
 from road_to_riches.board.loader import load_board
 from road_to_riches.engine.bankruptcy import (
+    LiquidationAuctionSellEvent,
+    LiquidationPhaseEvent,
     SellShopToBankEvent,
     VictoryEvent,
     check_victory,
@@ -249,8 +251,13 @@ class PlayerInput(ABC):
     @abstractmethod
     def choose_liquidation(
         self, state: GameState, player_id: int, options: dict, log: GameLog
-    ) -> tuple[str, int]:
-        """Forced to sell assets. Return ('shop', square_id) or ('stock', district_id)."""
+    ) -> tuple[str, int, int]:
+        """Forced to sell assets.
+
+        Return ('shop', square_id, 0) to liquidate a shop (quantity ignored)
+        or ('stock', district_id, quantity) to sell that many shares of
+        district stock.
+        """
 
     @abstractmethod
     def choose_script_decision(
@@ -410,6 +417,8 @@ class GameLoop:
             self._handle_stop_action(event)
         elif isinstance(event, EndTurnEvent):
             pass  # follow-ups returned by execute()
+        elif isinstance(event, LiquidationPhaseEvent):
+            self._handle_liquidation_phase(event.player_id)
         elif isinstance(event, BankruptcyCheckEvent):
             pass  # follow-ups returned by execute(), logging by log_message()
         elif isinstance(event, StockFluctuationEvent):
@@ -986,39 +995,90 @@ class GameLoop:
                 continue
             self.pipeline.enqueue(evt)
 
-    def _liquidation_phase(self, player_id: int) -> None:
+    def _handle_liquidation_phase(self, player_id: int) -> None:
+        """Two-phase forced liquidation: sell, then auction the sold shops.
+
+        Sell phase: while cash < 0 and the player still has sellable assets,
+        prompt them to sell a shop (75% to player, shop becomes unowned, queued
+        for auction) or a quantity of stock (immediate cash). Stops when the
+        player is back in the green or has no assets left.
+
+        Auction phase: for each shop sold in order, run a blind-bid auction
+        among the other active players. Winner pays the bank (not the
+        liquidating player, who already received 75%). Shops with no bids stay
+        unowned.
+        """
+        if not needs_liquidation(self.state, player_id):
+            return
+
         self.log.log(f"Player {player_id} has negative cash! Must sell assets.")
         self.input.notify(self.state, self.log)
+
+        auction_queue: list[int] = []
+
+        # --- Sell phase ---
         while needs_liquidation(self.state, player_id):
             options = get_liquidation_options(self.state, player_id)
             if not options["shops"] and not options["stock"]:
                 break
-            asset_type, asset_id = self.input.choose_liquidation(
+            asset_type, asset_id, quantity = self.input.choose_liquidation(
                 self.state, player_id, options, self.log
             )
             if asset_type == "shop":
-                if asset_id not in [s["square_id"] for s in options.get("shops", [])]:
+                if asset_id not in [s["square_id"] for s in options["shops"]]:
                     self.log.log("Invalid liquidation choice.")
                     self.input.notify(self.state, self.log)
                     continue
                 self._execute_event(
                     SellShopToBankEvent(player_id=player_id, square_id=asset_id)
                 )
+                auction_queue.append(asset_id)
             elif asset_type == "stock":
-                if asset_id not in options.get("stock", {}):
+                held = self.state.get_player(player_id).owned_stock.get(asset_id, 0)
+                if asset_id not in options["stock"] or held <= 0:
                     self.log.log("Invalid liquidation choice.")
                     self.input.notify(self.state, self.log)
                     continue
-                player = self.state.get_player(player_id)
-                qty = player.owned_stock.get(asset_id, 0)
-                if qty > 0:
-                    self._execute_event(SellStockEvent(
-                        player_id=player_id, district_id=asset_id, quantity=qty
-                    ))
+                qty = quantity if quantity > 0 else held
+                qty = min(qty, held)
+                self._execute_event(SellStockEvent(
+                    player_id=player_id, district_id=asset_id, quantity=qty
+                ))
             else:
                 self.log.log("Invalid liquidation type.")
                 self.input.notify(self.state, self.log)
                 continue
+
+        # --- Auction phase ---
+        for sq_id in auction_queue:
+            self._run_liquidation_auction(seller_id=player_id, square_id=sq_id)
+
+    def _run_liquidation_auction(self, seller_id: int, square_id: int) -> None:
+        """Run a blind auction for a shop the bank is holding after liquidation."""
+        base_value = self.state.board.squares[square_id].shop_base_value or 0
+        self.log.log(
+            f"Auctioning square {square_id} (base value: {base_value}G) — "
+            f"proceeds go to the bank."
+        )
+        self.input.notify(self.state, self.log)
+
+        best_bidder: int | None = None
+        best_bid = 0
+        for p in self.state.active_players:
+            if p.player_id == seller_id:
+                continue
+            bid = self.input.choose_auction_bid(
+                self.state, p.player_id, square_id, best_bid + 1, self.log
+            )
+            if bid is not None and bid > best_bid and bid <= p.ready_cash:
+                best_bid = bid
+                best_bidder = p.player_id
+
+        self._execute_event(LiquidationAuctionSellEvent(
+            square_id=square_id,
+            winner_id=best_bidder,
+            winning_bid=best_bid,
+        ))
 
     # ------------------------------------------------------------------
     # Venture card handling

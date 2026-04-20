@@ -315,21 +315,20 @@ def _handle_trade(ai: BasicAIClient, req: InputRequest) -> dict | None:
     return None
 
 
-def _handle_liquidation(ai: BasicAIClient, req: InputRequest) -> tuple[str, int]:
-    """Sell stock first (arbitrary order), then shops."""
+def _handle_liquidation(ai: BasicAIClient, req: InputRequest) -> tuple[str, int, int]:
+    """Sell stock first (all shares of the first district), then shops."""
     options = req.data.get("options", {})
 
-    # Sell stock first
-    if "stocks" in options and options["stocks"]:
-        stock = options["stocks"][0]
-        return ("sell_stock", stock["district_id"])
+    stock = options.get("stock") or {}
+    if stock:
+        district_id, info = next(iter(stock.items()))
+        return ("stock", int(district_id), int(info.get("quantity", 0)))
 
-    # Then shops
-    if "shops" in options and options["shops"]:
-        shop = options["shops"][0]
-        return ("sell_shop", shop["square_id"])
+    shops = options.get("shops") or []
+    if shops:
+        return ("shop", shops[0]["square_id"], 0)
 
-    return ("bankrupt", 0)
+    return ("shop", 0, 0)
 
 
 def _handle_script_decision(ai: BasicAIClient, req: InputRequest) -> object:

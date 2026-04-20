@@ -424,12 +424,12 @@ class TextPlayerInput(PlayerInput):
 
     def choose_liquidation(
         self, state: GameState, player_id: int, options: dict, log: GameLog
-    ) -> tuple[str, int]:
+    ) -> tuple[str, int, int]:
         self.notify(state, log)
         player = state.get_player(player_id)
         print(f"  Cash: {player.ready_cash}G (need to reach 0)")
         if options["shops"]:
-            print("  Shops to sell (75% value):")
+            print("  Shops to sell (75% value, then auctioned):")
             for shop in options["shops"]:
                 print(f"    [shop {shop['square_id']}] sell value: {shop['sell_value']}G")
         if options["stock"]:
@@ -438,17 +438,23 @@ class TextPlayerInput(PlayerInput):
                 qty, val = info["quantity"], info["total_value"]
                 print(f"    [stock {d_id}] {qty} shares, total: {val}G")
         while True:
-            choice = input("  > sell shop <id> / sell stock <id>: ").strip().lower()
+            choice = input(
+                "  > sell shop <id> / sell stock <id> <qty>: "
+            ).strip().lower()
             parts = choice.split()
             try:
                 if len(parts) >= 3 and parts[0] == "sell":
                     asset_type = parts[1]
                     asset_id = int(parts[2])
-                    if asset_type in ("shop", "stock"):
-                        return (asset_type, asset_id)
-            except ValueError:
+                    if asset_type == "shop":
+                        return (asset_type, asset_id, 0)
+                    if asset_type == "stock":
+                        qty = int(parts[3]) if len(parts) >= 4 else 0
+                        if qty > 0:
+                            return (asset_type, asset_id, qty)
+            except (ValueError, IndexError):
                 pass
-            print("  Invalid. Use: sell shop <id> or sell stock <id>")
+            print("  Invalid. Use: sell shop <id> or sell stock <id> <qty>")
 
     def choose_script_decision(
         self, state: GameState, player_id: int, prompt: str,
