@@ -6,6 +6,9 @@ dist/
 build/
 venv/
 .venv/
+.coverage
+.coverage.*
+htmlcov/
 
 # IDE
 .vscode/
