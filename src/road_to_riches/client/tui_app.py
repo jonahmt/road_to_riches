@@ -1134,12 +1134,17 @@ class GameApp(App):
 
         if req.type == InputRequestType.CHOOSE_ANY_SQUARE:
             squares = req.data.get("squares", [])
-            options = [
-                (f"sq{s['square_id']} ({s['type']})", s["square_id"])
-                for s in squares
-            ]
             header = req.data.get("prompt", "Choose a square")
-            self._enter_selection_mode(header, options)
+            ids = sorted(s["square_id"] for s in squares)
+            if ids:
+                id_hint = (
+                    f"{ids[0]}-{ids[-1]}" if ids == list(range(ids[0], ids[-1] + 1))
+                    else ",".join(str(i) for i in ids)
+                )
+            else:
+                id_hint = ""
+            prompt.prompt_text = f"{header} (valid IDs: {id_hint})"
+            self._enter_text_mode("Enter square ID")
             return
 
         # Fallback
@@ -1300,6 +1305,16 @@ class GameApp(App):
                 return int(value)
             except ValueError:
                 return None
+
+        if req.type == InputRequestType.CHOOSE_ANY_SQUARE:
+            try:
+                sq_id = int(value)
+            except ValueError:
+                return None
+            valid_ids = {s["square_id"] for s in req.data.get("squares", [])}
+            if sq_id not in valid_ids:
+                return None
+            return sq_id
 
         if req.type == InputRequestType.TRADE:
             if v in ("N", "NO"):
@@ -1748,19 +1763,13 @@ class GameApp(App):
         if self._dev_mode == "teleport":
             if "player_id" not in self._dev_data:
                 self._dev_data["player_id"] = value
-                options = [
-                    (f"sq{sq.id} ({sq.type.value})", sq.id)
-                    for sq in state.board.squares
-                ]
-                self._enter_selection_mode(
-                    f"[grey50]DEV[/grey50] Teleport P{value} to:", options
+                max_id = len(state.board.squares) - 1
+                prompt = self.query_one("#prompt-bar", PromptBar)
+                prompt.prompt_text = (
+                    f"[grey50]DEV[/grey50] Teleport P{value} to square ID (0-{max_id}):"
                 )
+                self._enter_text_mode(f"square ID 0-{max_id}")
                 return
-            self._execute_dev_event(
-                WarpEvent(player_id=self._dev_data["player_id"], target_square_id=value)
-            )
-            self._open_dev_menu()
-            return
 
         if self._dev_mode == "suit":
             if "player_id" not in self._dev_data:
@@ -1901,9 +1910,26 @@ class GameApp(App):
             DebugSetShopValueEvent,
             DebugSetStockEvent,
             TransferCashEvent,
+            WarpEvent,
         )
 
         if not value:
+            return
+
+        if self._dev_mode == "teleport":
+            state = self._get_state()
+            try:
+                sq_id = int(value)
+            except ValueError:
+                self._log_dev("Invalid square ID")
+                return
+            if state is None or not (0 <= sq_id < len(state.board.squares)):
+                self._log_dev("Square ID out of range")
+                return
+            self._execute_dev_event(
+                WarpEvent(player_id=self._dev_data["player_id"], target_square_id=sq_id)
+            )
+            self._open_dev_menu()
             return
 
         if self._dev_mode == "gold":
