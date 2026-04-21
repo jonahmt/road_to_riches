@@ -280,12 +280,25 @@ class StockFluctuationEvent(GameEvent):
 class TickStatusesEvent(GameEvent):
     """Decrement all player and board status durations, removing expired ones."""
 
+    _expired_player: list[tuple[int, str, int]] = field(default_factory=list)
+    _expired_square: list[tuple[int, str]] = field(default_factory=list)
+
     def execute(self, state: GameState) -> None:
         from road_to_riches.engine.statuses import tick_board_statuses, tick_player_statuses
 
         for p in state.active_players:
-            tick_player_statuses(p)
-        tick_board_statuses(state.board)
+            for s in tick_player_statuses(p):
+                self._expired_player.append((p.player_id, s.type, s.modifier))
+        for sq_id, s in tick_board_statuses(state.board):
+            self._expired_square.append((sq_id, s.type))
+
+    def log_message(self) -> str | None:
+        lines = []
+        for player_id, stype, _modifier in self._expired_player:
+            lines.append(f"Player {player_id}'s {stype} status expired.")
+        for sq_id, stype in self._expired_square:
+            lines.append(f"Square {sq_id}'s {stype} status expired.")
+        return "\n".join(lines) if lines else None
 
 
 @register_event

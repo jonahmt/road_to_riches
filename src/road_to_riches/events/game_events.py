@@ -64,9 +64,11 @@ class PayRentEvent(GameEvent):
     square_id: int
     _rent_amount: int = 0
     _dividends: list = None  # type: ignore[assignment]  # populated after execute
+    _commissions: list = None  # type: ignore[assignment]  # populated after execute
 
     def execute(self, state: GameState) -> None:
         self._dividends = []
+        self._commissions = []
         payer = state.get_player(self.payer_id)
         owner = state.get_player(self.owner_id)
         square = state.board.squares[self.square_id]
@@ -91,6 +93,7 @@ class PayRentEvent(GameEvent):
             if commission_pct > 0:
                 commission = int(rent * commission_pct / 100.0)
                 p.ready_cash += commission
+                self._commissions.append((p.player_id, commission, commission_pct))
 
         # Dividends: 20% of rent split among stockholders by weight (paid by bank)
         if rent > 0 and square.property_district is not None:
@@ -109,6 +112,11 @@ class PayRentEvent(GameEvent):
         if self._dividends:
             for pid, amount in self._dividends:
                 lines.append(f"  Dividend: Player {pid} receives {amount}G.")
+        if self._commissions:
+            for pid, amount, pct in self._commissions:
+                lines.append(
+                    f"  Commission: Player {pid} receives {amount}G ({pct:g}%)."
+                )
         return "\n".join(lines)
 
 
@@ -342,13 +350,21 @@ class GainCommissionEvent(GameEvent):
 
     player_id: int
     percent: int  # 20 for boon, 50 for boom
+    _duration: int = 0
 
     def execute(self, state: GameState) -> None:
         from road_to_riches.engine.statuses import add_player_status
 
         player = state.get_player(self.player_id)
         num_players = len(state.active_players)
+        self._duration = num_players
         add_player_status(player, COMMISSION, self.percent, num_players)
+
+    def log_message(self) -> str | None:
+        return (
+            f"Player {self.player_id} gains {self.percent}% commission "
+            f"for {self._duration} turns."
+        )
 
 
 @register_event

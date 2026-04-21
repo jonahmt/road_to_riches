@@ -1409,6 +1409,11 @@ class GameApp(App):
             if wild_count > 0:
                 line.append(" ")
                 line.append(f"{SUIT_SYMBOLS['WILD']}×{wild_count}", style=SUIT_COLORS["WILD"])
+            for st in p.statuses:
+                line.append(
+                    f" | {st.type} {st.modifier} ({st.remaining_turns})",
+                    style=color,
+                )
             parts.append(line)
         info_widget = self.query_one("#player-info", Static)
         from rich.text import Text
