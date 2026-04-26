@@ -296,6 +296,8 @@ class GameApp(App):
         self._browse_row = 0
         self._browse_col = 0
         self._browse_grid: list[list[int | None]] = []
+        self._browse_positions: dict[int, tuple[int, int]] = {}
+        self._browse_neighbors: dict[int, set[int]] = {}
         # Stock overlay state
         self._stock_overlay_active = False
         self._stock_overlay_mode: str | None = None  # "view" | "buy" | "sell"
@@ -1944,32 +1946,52 @@ class GameApp(App):
             self._enter_browse_mode()
 
     def _enter_browse_mode(self) -> None:
-        """Enter browse mode: build grid, find starting position."""
+        """Enter browse mode: build grid, neighbor map, find starting position."""
         state = self._get_state()
         if state is None:
             return
         from road_to_riches.client.board_renderer import get_board_grid
+        from road_to_riches.board.pathfinding import get_next_squares
 
         self._browse_grid = get_board_grid(state.board)
         if not self._browse_grid:
             return
 
-        # Start on the current player's square
+        # Build sq_id -> (row, col) lookup from the rendered grid.
+        self._browse_positions = {}
+        for r, row in enumerate(self._browse_grid):
+            for c, sq_id in enumerate(row):
+                if sq_id is not None:
+                    self._browse_positions[sq_id] = (r, c)
+
+        # Build bidirectional neighbor map from waypoints, treating every
+        # square as if entered from None (no forced direction).
+        forward: dict[int, list[int]] = {
+            sq_id: get_next_squares(state.board, sq_id, None)
+            for sq_id in state.board.squares
+        }
+        self._browse_neighbors = {sq_id: set(nexts) for sq_id, nexts in forward.items()}
+        for sq_id, nexts in forward.items():
+            for nxt in nexts:
+                self._browse_neighbors.setdefault(nxt, set()).add(sq_id)
+
+        # Start on the current player's square (or first non-None cell).
         player_sq = None
         if self._current_request is not None:
             pid = self._current_request.player_id
             player = state.get_player(pid)
             player_sq = player.position
-
-        # Find the grid cell for the starting square
-        found = False
-        for r, row in enumerate(self._browse_grid):
-            for c, sq_id in enumerate(row):
-                if sq_id is not None and (sq_id == player_sq or not found):
-                    self._browse_row = r
-                    self._browse_col = c
-                    if sq_id == player_sq:
-                        found = True
+        if player_sq is not None and player_sq in self._browse_positions:
+            self._browse_row, self._browse_col = self._browse_positions[player_sq]
+        else:
+            for r, row in enumerate(self._browse_grid):
+                for c, sq_id in enumerate(row):
+                    if sq_id is not None:
+                        self._browse_row, self._browse_col = r, c
+                        break
+                else:
+                    continue
+                break
 
         self._browse_mode = True
         self._chord.reset()
@@ -1979,6 +2001,8 @@ class GameApp(App):
         """Exit browse mode and restore normal view."""
         self._browse_mode = False
         self._browse_grid = []
+        self._browse_positions = {}
+        self._browse_neighbors = {}
         self._chord.reset()
         self._refresh_board()
         # Restore the prompt
@@ -2037,38 +2061,41 @@ class GameApp(App):
         self._chord.feed(char, on_combo, on_single, may_combo)
 
     def _browse_move(self, dr: int, dc: int) -> None:
-        """Move to the nearest filled cell in the half-plane of the pressed direction.
+        """Step to a neighbor square along the board's path graph.
 
-        The half-plane is defined by all cells whose displacement from the
-        current position has a positive dot product with (dr, dc). Among
-        those, pick the closest by squared Euclidean distance, tiebreaking
-        by alignment with the direction (smaller perpendicular offset wins).
+        Candidates are the current square's neighbors (forward + backward,
+        treating from_id as None — no forced directions). Among neighbors
+        whose grid displacement has a positive dot product with (dr, dc),
+        pick the one most aligned with the direction (min perpendicular
+        offset), tiebreaking by closeness.
         """
-        rows = len(self._browse_grid)
-        if rows == 0:
+        sq_id = self._browse_grid[self._browse_row][self._browse_col]
+        if sq_id is None:
             return
-        cols = len(self._browse_grid[0])
+        neighbors = self._browse_neighbors.get(sq_id, set())
+        if not neighbors:
+            return
+
         r0, c0 = self._browse_row, self._browse_col
-
-        best: tuple[int, int] | None = None
+        best_pos: tuple[int, int] | None = None
         best_key: tuple[int, int] | None = None
-        for r in range(rows):
-            row = self._browse_grid[r]
-            for c in range(cols):
-                if row[c] is None or (r == r0 and c == c0):
-                    continue
-                ddr, ddc = r - r0, c - c0
-                if ddr * dr + ddc * dc <= 0:
-                    continue
-                dist_sq = ddr * ddr + ddc * ddc
-                perp = abs(ddr * dc - ddc * dr)
-                key = (dist_sq, perp)
-                if best_key is None or key < best_key:
-                    best_key = key
-                    best = (r, c)
+        for n_id in neighbors:
+            pos = self._browse_positions.get(n_id)
+            if pos is None:
+                continue
+            r, c = pos
+            ddr, ddc = r - r0, c - c0
+            if ddr * dr + ddc * dc <= 0:
+                continue
+            perp = abs(ddr * dc - ddc * dr)
+            dist_sq = ddr * ddr + ddc * ddc
+            key = (perp, dist_sq)
+            if best_key is None or key < best_key:
+                best_key = key
+                best_pos = pos
 
-        if best is not None:
-            self._browse_row, self._browse_col = best
+        if best_pos is not None:
+            self._browse_row, self._browse_col = best_pos
             self._refresh_browse()
 
     def _refresh_browse(self) -> None:
