@@ -285,16 +285,17 @@ class GameApp(App):
         # Dev command state
         self._dev_mode: str | None = None  # current dev command type
         self._dev_data: dict = {}  # accumulated dev command data
-        # Keypress buffering for multi-key combos (e.g. "wa" for up-left)
-        self._key_buffer: str = ""
-        self._key_timer: Timer | None = None
+        # Shared two-key chord buffer for multi-key combos (e.g. "wa" for
+        # up-left). Used by both keypress mode (CHOOSE_PATH) and browse mode.
+        # Safe to share: those modes are mutually exclusive at the dispatch
+        # level, and the buffer is reset whenever either mode is entered/exited.
+        from road_to_riches.client.chord_buffer import ChordBuffer
+        self._chord = ChordBuffer(self)
         # Browse mode state
         self._browse_mode = False
         self._browse_row = 0
         self._browse_col = 0
         self._browse_grid: list[list[int | None]] = []
-        self._browse_key_buffer: str = ""
-        self._browse_key_timer: Timer | None = None
         # Stock overlay state
         self._stock_overlay_active = False
         self._stock_overlay_mode: str | None = None  # "view" | "buy" | "sell"
@@ -465,8 +466,8 @@ class GameApp(App):
     def _handle_keypress_key(self, event) -> None:
         """Handle keys in keypress mode (CHOOSE_PATH only).
 
-        Supports multi-key combos (e.g. "wa" for diagonal) by buffering
-        the first keypress and waiting briefly for a second key.
+        Delegates chord buffering (e.g. "wa" for up-left diagonal) to the
+        shared ChordBuffer.
         """
         key = event.character
         if key is None:
@@ -477,47 +478,20 @@ class GameApp(App):
         event.prevent_default()
         event.stop()
 
-        # Cancel any pending single-key timer
-        if self._key_timer is not None:
-            self._key_timer.stop()
-            self._key_timer = None
+        def on_combo(combo: str) -> bool:
+            if combo in self._keypress_mapping:
+                self._submit_response(self._keypress_mapping[combo])
+                return True
+            return False
 
-        if self._key_buffer:
-            # Second key arrived — try the combo (both orderings)
-            combo1 = self._key_buffer + key
-            combo2 = key + self._key_buffer
-            self._key_buffer = ""
-            if combo1 in self._keypress_mapping:
-                self._submit_response(self._keypress_mapping[combo1])
-                return
-            if combo2 in self._keypress_mapping:
-                self._submit_response(self._keypress_mapping[combo2])
-                return
-            # Combo not mapped — try the second key alone
-            if key in self._keypress_mapping:
-                self._submit_response(self._keypress_mapping[key])
-            return
+        def on_single(k: str) -> None:
+            if k in self._keypress_mapping:
+                self._submit_response(self._keypress_mapping[k])
 
-        # First key — check if any combo starting with this key exists
-        has_combo = any(
-            key in k and len(k) > 1 for k in self._keypress_mapping
-        )
-        if has_combo:
-            # Buffer and wait for possible second key
-            self._key_buffer = key
-            self._key_timer = self.set_timer(
-                0.25, self._flush_key_buffer
-            )
-        elif key in self._keypress_mapping:
-            self._submit_response(self._keypress_mapping[key])
+        def may_combo(k: str) -> bool:
+            return any(k in mapped and len(mapped) > 1 for mapped in self._keypress_mapping)
 
-    def _flush_key_buffer(self) -> None:
-        """Timer callback: no second key arrived, try single key."""
-        self._key_timer = None
-        key = self._key_buffer
-        self._key_buffer = ""
-        if key and key in self._keypress_mapping:
-            self._submit_response(self._keypress_mapping[key])
+        self._chord.feed(key, on_combo, on_single, may_combo)
 
     def _handle_venture_grid_key(self, event) -> None:
         """Handle WASD navigation + Space confirm on the venture grid."""
@@ -649,11 +623,7 @@ class GameApp(App):
         elif self._input_mode == "selection":
             self._selection_options = []
             self._selection_index = 0
-        # Cancel any pending key buffer timer
-        if self._key_timer is not None:
-            self._key_timer.stop()
-            self._key_timer = None
-        self._key_buffer = ""
+        self._chord.reset()
         self._input_mode = "text"
 
     def _enter_selection_mode(
@@ -2002,16 +1972,14 @@ class GameApp(App):
                         found = True
 
         self._browse_mode = True
+        self._chord.reset()
         self._refresh_browse()
 
     def _exit_browse_mode(self) -> None:
         """Exit browse mode and restore normal view."""
         self._browse_mode = False
         self._browse_grid = []
-        if self._browse_key_timer is not None:
-            self._browse_key_timer.stop()
-            self._browse_key_timer = None
-        self._browse_key_buffer = ""
+        self._chord.reset()
         self._refresh_board()
         # Restore the prompt
         prompt = self.query_one("#prompt-bar", PromptBar)
@@ -2032,12 +2000,11 @@ class GameApp(App):
     def _handle_browse_key(self, event) -> None:
         """Handle WASD/arrow navigation in browse mode.
 
-        Supports diagonal combos (wa, wd, sa, sd) by buffering the first
-        keypress for 250ms.
+        Delegates chord buffering (wa/wd/sa/sd diagonals) to the shared
+        ChordBuffer.
         """
         char = (event.character or "").lower()
         key = event.key
-        # Map arrow keys to wasd
         if key == "up":
             char = "w"
         elif key == "down":
@@ -2052,35 +2019,22 @@ class GameApp(App):
         event.prevent_default()
         event.stop()
 
-        # Cancel any pending timer
-        if self._browse_key_timer is not None:
-            self._browse_key_timer.stop()
-            self._browse_key_timer = None
+        def on_combo(combo: str) -> bool:
+            direction = self._BROWSE_DIRS.get(combo)
+            if direction is not None and len(combo) > 1:
+                self._browse_move(*direction)
+                return True
+            return False
 
-        if self._browse_key_buffer:
-            combo = self._browse_key_buffer + char
-            self._browse_key_buffer = ""
-            if combo in self._BROWSE_DIRS:
-                dr, dc = self._BROWSE_DIRS[combo]
-                self._browse_move(dr, dc)
-                return
-            # Same key twice or invalid combo: treat first key alone, then buffer this one
-            first_dir = self._BROWSE_DIRS.get(combo[0])
-            if first_dir is not None:
-                self._browse_move(*first_dir)
+        def on_single(k: str) -> None:
+            direction = self._BROWSE_DIRS.get(k)
+            if direction is not None:
+                self._browse_move(*direction)
 
-        # Buffer this key and wait for a possible second key
-        self._browse_key_buffer = char
-        self._browse_key_timer = self.set_timer(0.25, self._flush_browse_key_buffer)
+        def may_combo(k: str) -> bool:
+            return any(combo.startswith(k) and len(combo) > 1 for combo in self._BROWSE_DIRS)
 
-    def _flush_browse_key_buffer(self) -> None:
-        """Timer callback: no second key arrived, execute single-key move."""
-        self._browse_key_timer = None
-        key = self._browse_key_buffer
-        self._browse_key_buffer = ""
-        direction = self._BROWSE_DIRS.get(key)
-        if direction is not None:
-            self._browse_move(*direction)
+        self._chord.feed(char, on_combo, on_single, may_combo)
 
     def _browse_move(self, dr: int, dc: int) -> None:
         """Move to the nearest filled cell in the half-plane of the pressed direction.
