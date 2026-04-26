@@ -1967,8 +1967,8 @@ class GameApp(App):
         # Build bidirectional neighbor map from waypoints, treating every
         # square as if entered from None (no forced direction).
         forward: dict[int, list[int]] = {
-            sq_id: get_next_squares(state.board, sq_id, None)
-            for sq_id in state.board.squares
+            sq.id: get_next_squares(state.board, sq.id, None)
+            for sq in state.board.squares
         }
         self._browse_neighbors = {sq_id: set(nexts) for sq_id, nexts in forward.items()}
         for sq_id, nexts in forward.items():
