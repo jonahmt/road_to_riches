@@ -86,9 +86,10 @@ def _render_cell(
     line2_text = ""
     bg_color: str | None = None
 
+    from road_to_riches.engine.statuses import is_shop_closed
+    closed = is_shop_closed(sq.statuses)
+
     if sq.type == SquareType.SHOP:
-        from road_to_riches.engine.statuses import is_shop_closed
-        shop_closed = is_shop_closed(sq.statuses)
         val = sq.shop_current_value or sq.shop_base_value or 0
         line1_text = f"V{val:>5}"
         if sq.property_owner is not None:
@@ -103,7 +104,7 @@ def _render_cell(
         else:
             line2_text = ""
             main_color = "white"
-        if shop_closed:
+        if closed:
             line2_text = "CLOSED"
         d = sq.property_district or 0
         highlight_color = DISTRICT_COLORS[d % len(DISTRICT_COLORS)]
@@ -133,6 +134,8 @@ def _render_cell(
         highlight_color = "bright_magenta"
         if sq.property_owner is not None:
             bg_color = PLAYER_COLORS[sq.property_owner % len(PLAYER_COLORS)]
+        if closed:
+            line2_text = "CLOSED"
 
     elif sq.type == SquareType.VP_TAX_OFFICE:
         line1_text = "TAX"
@@ -155,6 +158,8 @@ def _render_cell(
         highlight_color = "bright_magenta"
         if sq.property_owner is not None:
             bg_color = PLAYER_COLORS[sq.property_owner % len(PLAYER_COLORS)]
+        if closed:
+            line2_text = "CLOSED"
 
     elif sq.type in _SPECIAL_DISPLAY:
         disp = _SPECIAL_DISPLAY[sq.type]

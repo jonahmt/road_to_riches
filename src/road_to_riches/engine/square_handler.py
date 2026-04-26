@@ -173,6 +173,7 @@ def handle_land(state: GameState, player_id: int, square: SquareInfo) -> SquareR
                     PayTaxEvent(
                         payer_id=player_id,
                         owner_id=square.property_owner,
+                        square_id=square.id,
                     )
                 )
                 info["owner_id"] = square.property_owner

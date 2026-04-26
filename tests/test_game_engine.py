@@ -515,7 +515,7 @@ class TestVacantPlots:
         # Set specific net worths
         game.players[1].ready_cash = 2000
 
-        PayTaxEvent(payer_id=1, owner_id=0).execute(game)
+        PayTaxEvent(payer_id=1, owner_id=0, square_id=0).execute(game)
 
         # 4% of player 1's net worth (2000) = 80
         assert game.players[1].ready_cash == 2000 - 80

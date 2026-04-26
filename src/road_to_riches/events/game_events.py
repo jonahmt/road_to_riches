@@ -460,7 +460,10 @@ class PayCheckpointTollEvent(GameEvent):
         from road_to_riches.engine.statuses import is_shop_closed
 
         if is_shop_closed(square.statuses):
+            # Closed: no toll paid, but the toll still ratchets up so it
+            # is higher when the checkpoint reopens.
             self._toll_amount = 0
+            square.checkpoint_toll += 10
             return
 
         self._toll_amount = square.checkpoint_toll
@@ -500,9 +503,15 @@ class PayTaxEvent(GameEvent):
 
     payer_id: int
     owner_id: int
+    square_id: int
     _tax_amount: int = 0
 
     def execute(self, state: GameState) -> None:
+        from road_to_riches.engine.statuses import is_shop_closed
+        square = state.board.squares[self.square_id]
+        if is_shop_closed(square.statuses):
+            self._tax_amount = 0
+            return
         payer = state.get_player(self.payer_id)
         owner = state.get_player(self.owner_id)
         nw = state.net_worth(payer)

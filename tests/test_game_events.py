@@ -229,6 +229,21 @@ class TestPayCheckpointTollEvent:
         assert evt.get_result() == 0
         assert evt.log_message() is None
 
+    def test_closed_checkpoint_still_increments_toll(self):
+        # Even when closed, the toll ratchets up so the next reopened
+        # pass costs more.
+        game = _make_game()
+        sq = game.board.squares[1]
+        sq.checkpoint_toll = 50
+        sq.property_owner = 1
+        add_square_status(game.board, 1, CLOSED, 0, 5)
+        payer_before = game.players[0].ready_cash
+        owner_before = game.players[1].ready_cash
+        PayCheckpointTollEvent(payer_id=0, owner_id=1, square_id=1).execute(game)
+        assert sq.checkpoint_toll == 60
+        assert game.players[0].ready_cash == payer_before
+        assert game.players[1].ready_cash == owner_before
+
     def test_pays_toll_and_logs(self):
         game = _make_game()
         sq = game.board.squares[1]
@@ -243,17 +258,30 @@ class TestPayTaxEvent:
     def test_pays_and_logs(self):
         game = _make_game()
         game.players[0].ready_cash = 10000
-        evt = PayTaxEvent(payer_id=0, owner_id=1)
+        evt = PayTaxEvent(payer_id=0, owner_id=1, square_id=0)
         evt.execute(game)
         assert evt.get_result() > 0
         assert "tax" in evt.log_message()
 
     def test_zero_networth_no_log(self):
         game = _make_game(cash=0)
-        evt = PayTaxEvent(payer_id=0, owner_id=1)
+        evt = PayTaxEvent(payer_id=0, owner_id=1, square_id=0)
         evt.execute(game)
         assert evt.get_result() == 0
         assert evt.log_message() is None
+
+    def test_closed_tax_office_pays_nothing(self):
+        game = _make_game()
+        game.players[0].ready_cash = 10000
+        add_square_status(game.board, 0, CLOSED, 0, 5)
+        payer_before = game.players[0].ready_cash
+        owner_before = game.players[1].ready_cash
+        evt = PayTaxEvent(payer_id=0, owner_id=1, square_id=0)
+        evt.execute(game)
+        assert evt.get_result() == 0
+        assert evt.log_message() is None
+        assert game.players[0].ready_cash == payer_before
+        assert game.players[1].ready_cash == owner_before
 
 
 class TestTaxOfficeOwnerBonusEvent:
