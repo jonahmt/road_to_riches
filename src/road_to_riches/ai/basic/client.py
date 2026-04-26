@@ -206,6 +206,8 @@ def _handle_buy_stock(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] |
         return None
 
     quantity = cash // price
+    held = ai._player().owned_stock.get(best_district, 0)
+    quantity = min(quantity, 99 - held)
     if quantity <= 0:
         return None
 

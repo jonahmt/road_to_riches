@@ -1553,6 +1553,11 @@ class GameLoop:
             self.log.log(f"Not enough cash to buy {qty} stock (costs {total_cost}G).")
             self.input.notify(self.state, self.log)
             return False
+        held = player.owned_stock.get(district_id, 0)
+        if held + qty > 99:
+            self.log.log(f"Cannot exceed 99 stock per district (have {held}, trying to buy {qty}).")
+            self.input.notify(self.state, self.log)
+            return False
         return True
 
     def _validate_stock_sell(self, player_id: int, district_id: int, qty: int) -> bool:

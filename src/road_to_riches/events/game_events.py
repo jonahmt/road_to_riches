@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from road_to_riches.engine.lut import max_cap_multiplier
 from road_to_riches.engine.property import (
@@ -128,6 +128,10 @@ class InvestInShopEvent(GameEvent):
     player_id: int
     square_id: int
     amount: int
+    _invested: int = field(default=0, repr=False)
+    _district_id: int = field(default=-1, repr=False)
+    _price_before: int = field(default=0, repr=False)
+    _price_after: int = field(default=0, repr=False)
 
     def execute(self, state: GameState) -> None:
         player = state.get_player(self.player_id)
@@ -150,11 +154,24 @@ class InvestInShopEvent(GameEvent):
         player.ready_cash -= invest
         square.shop_current_value += invest
 
-        # Stock value component updates immediately on investment
-        _update_district_stock_value(state, square.property_district)
+        # Stock value component updates immediately on investment.
+        # Capture before/after for logging.
+        d_id = square.property_district
+        self._district_id = d_id
+        self._invested = invest
+        self._price_before = state.stock.get_price(d_id).current_price
+        _update_district_stock_value(state, d_id)
+        self._price_after = state.stock.get_price(d_id).current_price
 
     def log_message(self) -> str | None:
-        return f"Player {self.player_id} invested {self.amount}G in square {self.square_id}!"
+        amount = self._invested if self._invested > 0 else self.amount
+        msg = f"Player {self.player_id} invested {amount}G in square {self.square_id}!"
+        if self._price_after != self._price_before and self._district_id >= 0:
+            msg += (
+                f" District {self._district_id} stock: "
+                f"{self._price_before} -> {self._price_after}"
+            )
+        return msg
 
 
 # =============================================================================

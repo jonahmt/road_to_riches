@@ -67,6 +67,7 @@ def _render_cell(
     board: BoardState | None = None,
     browsed: bool = False,
     state: GameState | None = None,
+    flash: bool = False,
 ) -> list[str]:
     """Render a single square as 4 lines of 8 visible characters (4x4 pixels).
 
@@ -196,6 +197,12 @@ def _render_cell(
     else:
         border_h = _color("┌" + "─" * INNER_W + "┐", highlight_color)
         vbar = _color("│", highlight_color)
+
+    # Flash: invert the border colors when this square is in the flashing district
+    # and the flash is in its "on" half-cycle.
+    if flash:
+        border_h = f"[reverse]{border_h}[/reverse]"
+        vbar = f"[reverse]{vbar}[/reverse]"
     if bg_color:
         content1 = vbar + f"[black on {bg_color}]{l1}[/]" + vbar
         content2 = vbar + f"[black on {bg_color}]{l2}[/]" + vbar
@@ -224,6 +231,8 @@ def _render_cell(
                 player_slots += _color(".", "grey37")
         sep = _color("──", highlight_color)
         sq_id = _color(f"{sq.id:02d}", "white")
+    if flash:
+        sep = f"[reverse]{sep}[/reverse]"
     bottom = player_slots + sep + sq_id
 
     return [border_h, content1, content2, bottom]
@@ -241,6 +250,8 @@ def render_board(
     camera_center: tuple[int, int] | None = None,
     viewport_w: int | None = None,
     viewport_h: int | None = None,
+    flash_district_id: int | None = None,
+    flash_on: bool = False,
 ) -> str:
     """Render the board onto a pixel buffer with camera support.
 
@@ -290,7 +301,14 @@ def render_board(
         sx, sy = sq.position[0], sq.position[1]
         pids = player_positions.get(sq.id, [])
         is_browsed = browsed_square_id is not None and sq.id == browsed_square_id
-        cell_lines = _render_cell(sq, pids, active_player_id, board, is_browsed, state)
+        do_flash = (
+            flash_on
+            and flash_district_id is not None
+            and sq.property_district == flash_district_id
+        )
+        cell_lines = _render_cell(
+            sq, pids, active_player_id, board, is_browsed, state, do_flash
+        )
 
         for row_offset in range(SQUARE_PX):
             py = sy + row_offset

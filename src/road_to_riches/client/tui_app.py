@@ -41,6 +41,25 @@ SUIT_COLORS = {
 _PLAYER_RE = re.compile(r"\bPlayer (\d)\b")
 _GOLD_RE = re.compile(r"\b(\d+)G\b")
 
+STOCK_MAX_PER_DISTRICT = 99
+
+
+def _stock_fluct_delta(current_price: int) -> int:
+    """Fluctuation delta applied when buying/selling >=10 stock in a turn."""
+    return current_price // 16 + 1
+
+
+def _format_delta(curr: int, nxt: int, money: bool = False) -> str:
+    """Render 'curr -> nxt' colored white (unchanged), green (up), red (down)."""
+    suffix = "G" if money else ""
+    if nxt > curr:
+        color = "green"
+    elif nxt < curr:
+        color = "red"
+    else:
+        color = "white"
+    return f"[{color}]{curr}{suffix} -> {nxt}{suffix}[/{color}]"
+
 
 def _colorize_log(text: str) -> str:
     """Colorize player names and gold amounts in log messages."""
@@ -177,6 +196,13 @@ class GameApp(App):
         display: none;
     }
 
+    #stock-overlay {
+        height: auto;
+        max-height: 16;
+        border: solid $accent;
+        display: none;
+    }
+
     #prompt-bar {
         height: 1;
         color: $text;
@@ -267,6 +293,14 @@ class GameApp(App):
         self._browse_row = 0
         self._browse_col = 0
         self._browse_grid: list[list[int | None]] = []
+        # Stock overlay state
+        self._stock_overlay_active = False
+        self._stock_overlay_mode: str | None = None  # "view" | "buy" | "sell"
+        self._stock_overlay_cursor = 0
+        self._stock_overlay_last_cursor = 0
+        self._stock_overlay_selected_district: int | None = None
+        self._stock_flash_on = False
+        self._stock_flash_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -276,6 +310,7 @@ class GameApp(App):
             yield RichLog(id="board-view", wrap=False, markup=True, auto_scroll=False)
             yield RichLog(id="game-log", wrap=True, markup=True)
             yield RichLog(id="info-area", wrap=True, markup=True)
+            yield RichLog(id="stock-overlay", wrap=False, markup=True)
             yield PromptBar(id="prompt-bar")
             yield Input(placeholder="Enter command...", id="command-input")
 
@@ -381,12 +416,38 @@ class GameApp(App):
                 self._toggle_browse_mode()
                 return
 
+        # Q toggles the view-only stock overlay
+        if char == "q" and self._current_request is not None:
+            # Close if currently in view-only mode
+            if (
+                self._stock_overlay_active
+                and self._stock_overlay_mode == "view"
+            ):
+                event.prevent_default()
+                event.stop()
+                self._stock_overlay_cancel_all()
+                return
+            # Open if idle and not in text/overlay states
+            if (
+                not self._stock_overlay_active
+                and self._input_mode != "text"
+            ):
+                event.prevent_default()
+                event.stop()
+                self._open_stock_overlay("view")
+                return
+
         # Browse mode consumes all keys
         if self._browse_mode:
             event.prevent_default()
             event.stop()
             self._handle_browse_key(event)
             return
+
+        # Stock overlay intercepts its own keys
+        if self._stock_overlay_active:
+            if self._stock_overlay_handle_key(event):
+                return
 
         if self._current_request is None:
             return
@@ -640,6 +701,8 @@ class GameApp(App):
         self._phase_data = {}
         self._dev_mode = None
         self._dev_data = {}
+        if self._stock_overlay_active:
+            self._close_stock_overlay()
         self._reset_input_mode()
         # Show waiting message until next input request arrives
         self._show_waiting()
@@ -673,41 +736,7 @@ class GameApp(App):
             return
 
         # ── Two-phase types: selection → text input ──
-
-        if rtype == InputRequestType.BUY_STOCK:
-            if value is None:
-                self._submit_response(None)
-            else:
-                self._phase_data["district_id"] = value
-                self._input_phase = 1
-                price = next(
-                    s["price"]
-                    for s in req.data.get("stocks", [])
-                    if s["district_id"] == value
-                )
-                self._exit_selection_mode()
-                prompt = self.query_one("#prompt-bar", PromptBar)
-                prompt.prompt_text = (
-                    f"Buy stock in d{value} (@{price}G each). Quantity:"
-                )
-                self._enter_text_mode("Enter quantity (default 1)")
-            return
-
-        if rtype == InputRequestType.SELL_STOCK:
-            if value is None:
-                self._submit_response(None)
-            else:
-                self._phase_data["district_id"] = value
-                self._input_phase = 1
-                holdings = req.data.get("holdings", {})
-                max_qty = holdings.get(str(value), {}).get("quantity", 0)
-                self._exit_selection_mode()
-                prompt = self.query_one("#prompt-bar", PromptBar)
-                prompt.prompt_text = (
-                    f"Sell stock in d{value}. Quantity (max {max_qty}):"
-                )
-                self._enter_text_mode(f"Enter quantity (default all={max_qty})")
-            return
+        # BUY_STOCK / SELL_STOCK use the stock overlay instead (see _open_stock_overlay).
 
         if rtype == InputRequestType.INVEST:
             if value is None:
@@ -723,11 +752,9 @@ class GameApp(App):
                 cash = req.data["cash"]
                 default = min(cash, max_cap)
                 self._exit_selection_mode()
-                prompt = self.query_one("#prompt-bar", PromptBar)
-                prompt.prompt_text = (
-                    f"Invest in sq{value}. Amount (max {max_cap}G):"
-                )
                 self._enter_text_mode(f"Enter amount (default {default})")
+                # Render the initial preview HUD (uses default when input is empty)
+                self._refresh_invest_prompt("")
             return
 
         if rtype == InputRequestType.AUCTION_BID:
@@ -1021,24 +1048,11 @@ class GameApp(App):
             return
 
         if req.type == InputRequestType.BUY_STOCK:
-            stocks = req.data.get("stocks", [])
-            options = [
-                (f"d{s['district_id']} @{s['price']}G", s["district_id"])
-                for s in stocks
-            ]
-            options.append(("Skip", None))
-            header = f"Buy stock? Cash: {req.data['cash']}G"
-            self._enter_selection_mode(header, options)
+            self._open_stock_overlay("buy")
             return
 
         if req.type == InputRequestType.SELL_STOCK:
-            holdings = req.data.get("holdings", {})
-            options = [
-                (f"d{d}: {h['quantity']}@{h['price']}G", int(d))
-                for d, h in holdings.items()
-            ]
-            options.append(("Skip", None))
-            self._enter_selection_mode("Sell stock?", options)
+            self._open_stock_overlay("sell")
             return
 
         if req.type == InputRequestType.INVEST:
@@ -1152,6 +1166,87 @@ class GameApp(App):
 
     # ── Text input handling ───────────────────────────────────────
 
+    @on(Input.Changed, "#command-input")
+    def handle_input_changed(self, event: Input.Changed) -> None:
+        """Live-update previews as the user types in the bottom input."""
+        if (
+            self._stock_overlay_active
+            and self._stock_overlay_selected_district is not None
+        ):
+            self._refresh_stock_overlay()
+            return
+
+        req = self._current_request
+        if (
+            req is not None
+            and req.type == InputRequestType.INVEST
+            and self._input_phase == 1
+        ):
+            self._refresh_invest_prompt(event.value)
+
+    def _refresh_invest_prompt(self, typed_value: str) -> None:
+        """Update the prompt bar with a live price/cash preview during INVEST qty entry."""
+        req = self._current_request
+        state = self._get_state()
+        if req is None or state is None:
+            return
+        sq_id = self._phase_data.get("square_id")
+        if sq_id is None:
+            return
+        try:
+            match = next(
+                s for s in req.data.get("investable", [])
+                if s["square_id"] == sq_id
+            )
+        except StopIteration:
+            return
+        max_cap = match["max_capital"]
+        cash = req.data["cash"]
+        default = min(cash, max_cap)
+
+        # Parse typed amount (empty/invalid -> default)
+        v = (typed_value or "").strip()
+        amount: int
+        if not v or v.upper() in ("ALL",):
+            amount = default
+        else:
+            try:
+                amount = int(v)
+            except ValueError:
+                amount = 0
+        invest = max(0, min(amount, max_cap, cash))
+
+        sq = state.board.squares[sq_id]
+        d_id = sq.property_district
+        curr_cash = cash
+        next_cash = curr_cash - invest
+
+        parts = [f"Invest in sq{sq_id}. Amount (max {max_cap}G):"]
+
+        if d_id is not None:
+            sp = state.stock.get_price(d_id)
+            curr_price = sp.current_price
+            # Simulate the value-component update
+            total_value = 0
+            num_shops = 0
+            for s in state.board.squares:
+                if s.property_district == d_id and s.shop_current_value is not None:
+                    val = s.shop_current_value
+                    if s.id == sq_id:
+                        val += invest
+                    total_value += val
+                    num_shops += 1
+            new_avg = total_value / num_shops if num_shops > 0 else 0
+            new_value_comp = round(new_avg * 0.04)
+            next_price = new_value_comp + sp.fluctuation_component
+            parts.append(
+                f"d{d_id} price: {_format_delta(curr_price, next_price)}"
+            )
+        parts.append(f"Cash: {_format_delta(curr_cash, next_cash, money=True)}")
+
+        prompt = self.query_one("#prompt-bar", PromptBar)
+        prompt.prompt_text = "  |  ".join(parts)
+
     @on(Input.Submitted, "#command-input")
     def handle_command(self, event: Input.Submitted) -> None:
         value = event.value.strip()
@@ -1243,7 +1338,7 @@ class GameApp(App):
                 return None
             try:
                 amount = int(value)
-                if amount > 0:
+                if 0 < amount <= max_cap and amount <= cash:
                     return (sq_id, amount)
             except ValueError:
                 pass
@@ -1378,7 +1473,15 @@ class GameApp(App):
             from road_to_riches.client.board_renderer import render_board
 
             active_pid = self._active_player_id()
-            board_text = render_board(state, active_player_id=active_pid)
+            flash_d = (
+                self._stock_overlay_cursor if self._stock_overlay_active else None
+            )
+            board_text = render_board(
+                state,
+                active_player_id=active_pid,
+                flash_district_id=flash_d,
+                flash_on=self._stock_flash_on,
+            )
             board_widget = self.query_one("#board-view", RichLog)
             board_widget.clear()
             for line in board_text.split("\n"):
@@ -1505,6 +1608,359 @@ class GameApp(App):
                 else:
                     row += f" | {qty:2d}"
             info_widget.write(row)
+
+    # ── Stock overlay ─────────────────────────────────────────────
+
+    def _open_stock_overlay(self, mode: str) -> None:
+        """Show the stock market overlay. mode: 'view' | 'buy' | 'sell'."""
+        state = self._get_state()
+        if state is None:
+            return
+        num_districts = len(state.stock.stocks)
+        if num_districts == 0:
+            # Nothing to show — for buy/sell, submit cancel; for view, noop.
+            if mode in ("buy", "sell"):
+                self._submit_response(None)
+            return
+
+        self._stock_overlay_active = True
+        self._stock_overlay_mode = mode
+        # Restore last cursor row if valid, else 0
+        cursor = self._stock_overlay_last_cursor
+        if cursor < 0 or cursor >= num_districts:
+            cursor = 0
+        self._stock_overlay_cursor = cursor
+        self._stock_overlay_selected_district = None
+
+        # Hide game-log so overlay takes its visual space
+        log_widget = self.query_one("#game-log", RichLog)
+        log_widget.display = False
+
+        overlay = self.query_one("#stock-overlay", RichLog)
+        overlay.display = True
+
+        # Hide the Input widget until a district is selected (or keep hidden for view-only)
+        inp = self.query_one("#command-input", Input)
+        inp.display = False
+        self._input_mode = "stock_overlay"
+
+        # Start flash timer (0.75s period = 0.375s on, 0.375s off)
+        self._stock_flash_on = True
+        if self._stock_flash_timer is not None:
+            self._stock_flash_timer.stop()
+        self._stock_flash_timer = self.set_interval(0.375, self._stock_flash_tick)
+
+        # Defer first paint: widget layout isn't finalized yet (we just toggled
+        # display), so writing now can render at the wrong width and look
+        # glitched until the next refresh. call_after_refresh waits for the
+        # layout pass to complete.
+        self.call_after_refresh(self._refresh_stock_overlay)
+        self._refresh_board()
+
+    def _stock_flash_tick(self) -> None:
+        self._stock_flash_on = not self._stock_flash_on
+        self._refresh_board()
+
+    def _close_stock_overlay(self) -> None:
+        """Hide the overlay and restore the game log."""
+        if not self._stock_overlay_active:
+            return
+        # Remember cursor for next open
+        self._stock_overlay_last_cursor = self._stock_overlay_cursor
+        self._stock_overlay_active = False
+        self._stock_overlay_mode = None
+        self._stock_overlay_selected_district = None
+
+        # Stop flash timer and clear flash state
+        if self._stock_flash_timer is not None:
+            self._stock_flash_timer.stop()
+            self._stock_flash_timer = None
+        self._stock_flash_on = False
+
+        overlay = self.query_one("#stock-overlay", RichLog)
+        overlay.display = False
+        log_widget = self.query_one("#game-log", RichLog)
+        log_widget.display = True
+        self._refresh_board()
+
+    def _stock_overlay_move_cursor(self, delta: int) -> None:
+        state = self._get_state()
+        if state is None:
+            return
+        n = len(state.stock.stocks)
+        if n == 0:
+            return
+        new_cursor = max(0, min(n - 1, self._stock_overlay_cursor + delta))
+        if new_cursor != self._stock_overlay_cursor:
+            self._stock_overlay_cursor = new_cursor
+            # Restart the flash "on" so the new district lights up immediately.
+            self._stock_flash_on = True
+            self._refresh_stock_overlay()
+            self._refresh_board()
+
+    def _stock_overlay_default_qty(self, district_id: int) -> int:
+        """Default qty to pre-fill when a district is selected."""
+        state = self._get_state()
+        if state is None or self._current_request is None:
+            return 1
+        pid = self._current_request.player_id
+        player = state.get_player(pid)
+        price = state.stock.get_price(district_id).current_price
+
+        if self._stock_overlay_mode == "buy":
+            affordable = player.ready_cash // price if price > 0 else 0
+            return max(1, min(affordable, STOCK_MAX_PER_DISTRICT))
+
+        if self._stock_overlay_mode == "sell":
+            held = player.owned_stock.get(district_id, 0)
+            # Forced-liquidation support deferred (bead ewn). For now: blank.
+            # An empty Input value means user must type a qty.
+            return 0  # 0 signals "blank" — caller will render empty string
+
+        return 0
+
+    def _stock_overlay_select_district(self) -> None:
+        """Handle Space on a district row. Validates eligibility then enters qty mode."""
+        if self._current_request is None:
+            return
+        state = self._get_state()
+        if state is None:
+            return
+        mode = self._stock_overlay_mode
+        if mode == "view":
+            return  # view-only: Space is a no-op
+        district_id = self._stock_overlay_cursor
+        req = self._current_request
+        pid = req.player_id
+
+        # Eligibility checks
+        if mode == "buy":
+            eligible_ids = {s["district_id"] for s in req.data.get("stocks", [])}
+            if district_id not in eligible_ids:
+                log_widget = self.query_one("#game-log", RichLog)
+                log_widget.write(f"[red]Cannot buy stock in d{district_id} right now.[/]")
+                return
+            player = state.get_player(pid)
+            price = state.stock.get_price(district_id).current_price
+            if price > player.ready_cash:
+                log_widget = self.query_one("#game-log", RichLog)
+                log_widget.write(f"[red]Not enough cash to buy any d{district_id} stock.[/]")
+                return
+        elif mode == "sell":
+            player = state.get_player(pid)
+            if player.owned_stock.get(district_id, 0) <= 0:
+                log_widget = self.query_one("#game-log", RichLog)
+                log_widget.write(f"[red]You hold no stock in d{district_id}.[/]")
+                return
+
+        # Enter qty-entry phase. Reuse the existing two-phase text input plumbing.
+        self._stock_overlay_selected_district = district_id
+        self._phase_data["district_id"] = district_id
+        self._phase_data["stock_overlay"] = True
+        self._input_phase = 1
+
+        default_qty = self._stock_overlay_default_qty(district_id)
+        inp = self.query_one("#command-input", Input)
+        inp.display = True
+        inp.placeholder = "Enter quantity (Esc=back)"
+        inp.value = str(default_qty) if default_qty > 0 else ""
+        inp.focus()
+        self._input_mode = "text"
+        self._refresh_stock_overlay()
+
+    def _stock_overlay_cancel_selection(self) -> None:
+        """Escape from qty entry — return to district navigation."""
+        self._stock_overlay_selected_district = None
+        self._phase_data.pop("district_id", None)
+        self._phase_data.pop("stock_overlay", None)
+        self._input_phase = 0
+        inp = self.query_one("#command-input", Input)
+        inp.value = ""
+        inp.display = False
+        self._input_mode = "stock_overlay"
+        self._refresh_stock_overlay()
+
+    def _stock_overlay_cancel_all(self) -> None:
+        """Escape from district nav — close overlay and cancel the input request."""
+        mode = self._stock_overlay_mode
+        self._close_stock_overlay()
+        if mode in ("buy", "sell"):
+            # Treat as Skip — server expects None for cancel.
+            self._submit_response(None)
+        else:
+            # View-only: re-present the prior input prompt to restore UI state.
+            if self._current_request is not None:
+                self._show_prompt(self._current_request)
+
+    def _stock_overlay_current_qty(self) -> int | None:
+        """Read the currently-typed qty from the Input widget. None if invalid/empty."""
+        try:
+            inp = self.query_one("#command-input", Input)
+        except Exception:
+            return None
+        v = inp.value.strip()
+        if not v:
+            return None
+        try:
+            q = int(v)
+        except ValueError:
+            return None
+        return q if q > 0 else None
+
+    def _refresh_stock_overlay(self) -> None:
+        """Redraw the overlay table, highlights, and preview lines."""
+        if not self._stock_overlay_active:
+            return
+        state = self._get_state()
+        if state is None:
+            return
+
+        from road_to_riches.client.board_renderer import DISTRICT_COLORS
+
+        overlay = self.query_one("#stock-overlay", RichLog)
+        overlay.clear()
+
+        mode = self._stock_overlay_mode or "view"
+        pid = self._current_request.player_id if self._current_request else None
+        players = list(state.active_players)
+
+        # Title bar
+        mode_label = {"view": "VIEW", "buy": "BUY", "sell": "SELL"}.get(mode, "?")
+        hint = "↑↓=move  Space=select  Esc=close"
+        if self._stock_overlay_selected_district is not None:
+            hint = "type qty  Enter=confirm  Esc=back"
+        overlay.write(f"[bold]Stock Market — {mode_label}[/]   [dim]{hint}[/]")
+
+        # Header row: District | Price | P0 | P1 | ...
+        # Column widths (visible): district=8 ("District"), price=5 ("Price"), player=3 ("P0 "/"999")
+        header_parts = ["District", "[gold1]Price[/gold1]"]
+        for p in players:
+            pc = PLAYER_COLORS[p.player_id % len(PLAYER_COLORS)]
+            label = f"P{p.player_id}".ljust(3)
+            if p.player_id == pid:
+                header_parts.append(f"[reverse][{pc}]{label}[/{pc}][/reverse]")
+            else:
+                header_parts.append(f"[{pc}]{label}[/{pc}]")
+        overlay.write("  " + " | ".join(header_parts))
+
+        # District rows
+        req = self._current_request
+        eligible_buy_ids: set[int] = set()
+        if mode == "buy" and req is not None:
+            eligible_buy_ids = {s["district_id"] for s in req.data.get("stocks", [])}
+
+        for sp in state.stock.stocks:
+            d_id = sp.district_id
+            dc = DISTRICT_COLORS[d_id % len(DISTRICT_COLORS)]
+            is_cursor = d_id == self._stock_overlay_cursor
+
+            # Eligibility dimming
+            dim = False
+            if mode == "buy" and d_id not in eligible_buy_ids:
+                dim = True
+            elif mode == "sell":
+                owner = state.get_player(pid) if pid is not None else None
+                if owner is None or owner.owned_stock.get(d_id, 0) <= 0:
+                    dim = True
+
+            cursor_mark = "> " if is_cursor else "  "
+            # District cell: "d{id}" padded to width 8
+            d_label = f"d{d_id}".ljust(8)
+            row = f"{cursor_mark}[{dc}]{d_label}[/{dc}]"
+            # Price cell: width 5, right-aligned
+            row_price = f"[gold1]{sp.current_price:>5d}[/gold1]"
+            row_cells = []
+            for p in players:
+                qty = p.owned_stock.get(d_id, 0)
+                qstr = f"{qty:>3d}"
+                if p.player_id == pid:
+                    if qty > 0:
+                        cell = f"[reverse][green]{qstr}[/green][/reverse]"
+                    else:
+                        cell = f"[reverse]{qstr}[/reverse]"
+                else:
+                    if qty > 0:
+                        cell = f"[green]{qstr}[/green]"
+                    else:
+                        cell = qstr
+                row_cells.append(cell)
+            line = f"{row} | {row_price} | " + " | ".join(row_cells)
+            if dim:
+                line = f"[dim]{line}[/dim]"
+            if is_cursor:
+                line = f"[reverse]{line}[/reverse]"
+            overlay.write(line)
+
+        # Preview lines (only during qty entry in buy/sell)
+        if (
+            mode in ("buy", "sell")
+            and self._stock_overlay_selected_district is not None
+            and pid is not None
+        ):
+            d_id = self._stock_overlay_selected_district
+            qty = self._stock_overlay_current_qty() or 0
+            sp = state.stock.get_price(d_id)
+            curr_price = sp.current_price
+            player = state.get_player(pid)
+            curr_cash = player.ready_cash
+
+            # Next price: pending fluctuation if qty >= 10
+            if qty >= 10:
+                delta = _stock_fluct_delta(curr_price)
+                next_price = curr_price + delta if mode == "buy" else curr_price - delta
+            else:
+                next_price = curr_price
+
+            # Next cash
+            if mode == "buy":
+                next_cash = curr_cash - curr_price * qty
+            else:
+                next_cash = curr_cash + curr_price * qty
+
+            overlay.write("")
+            overlay.write(
+                f"  d{d_id} price: {_format_delta(curr_price, next_price)}"
+            )
+            overlay.write(
+                f"  Cash:        {_format_delta(curr_cash, next_cash, money=True)}"
+            )
+
+    def _stock_overlay_handle_key(self, event) -> bool:
+        """Handle keys while the overlay is active. Returns True if consumed."""
+        key = event.key
+        char = (event.character or "").lower()
+
+        # Qty-entry phase: only Escape is intercepted here; Enter/typing go to Input.
+        if self._stock_overlay_selected_district is not None:
+            if key == "escape":
+                event.prevent_default()
+                event.stop()
+                self._stock_overlay_cancel_selection()
+                return True
+            return False  # let Input widget handle typing + Enter
+
+        # District-nav phase.
+        if key == "escape":
+            event.prevent_default()
+            event.stop()
+            self._stock_overlay_cancel_all()
+            return True
+        if key == "up" or char == "w":
+            event.prevent_default()
+            event.stop()
+            self._stock_overlay_move_cursor(-1)
+            return True
+        if key == "down" or char == "s":
+            event.prevent_default()
+            event.stop()
+            self._stock_overlay_move_cursor(1)
+            return True
+        if key == "space" or char == " ":
+            event.prevent_default()
+            event.stop()
+            self._stock_overlay_select_district()
+            return True
+        return True  # swallow other keys while overlay is open
 
     # ── Browse mode ───────────────────────────────────────────────
 
