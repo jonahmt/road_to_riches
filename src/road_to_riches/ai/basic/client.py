@@ -342,19 +342,10 @@ def _handle_script_decision(ai: BasicAIClient, req: InputRequest) -> object:
 
 
 def _handle_choose_any_square(ai: BasicAIClient, req: InputRequest) -> int:
-    """Choose the square closest to the AI's next promotion target.
-
-    Excludes the AI's current position — warping to where we already
-    stand is wasteful (the venture card is consumed for nothing).
-    """
+    """Choose the square closest to the AI's next promotion target."""
     squares = req.data.get("squares", [])
     if not squares or ai.state is None:
         return squares[0]["square_id"] if squares else 0
-
-    current_pos = ai._player().position
-    candidates = [s for s in squares if s["square_id"] != current_pos]
-    if not candidates:
-        candidates = squares
 
     # Replan so _next_target reflects suits collected on this turn
     # (e.g. AI just landed on the suit that was its previous target).
@@ -363,15 +354,15 @@ def _handle_choose_any_square(ai: BasicAIClient, req: InputRequest) -> int:
 
     if next_target is not None:
         target_dists = bfs_distances(ai.state.board, next_target)
-        best = min(candidates, key=lambda s: target_dists.get(s["square_id"], 999999))
+        best = min(squares, key=lambda s: target_dists.get(s["square_id"], 999999))
         return best["square_id"]
 
     # No target — pick bank squares first, then random
     bank_squares = find_bank_squares(ai.state.board)
-    for s in candidates:
+    for s in squares:
         if s["square_id"] in bank_squares:
             return s["square_id"]
-    return random.choice(candidates)["square_id"]
+    return random.choice(squares)["square_id"]
 
 
 def _handle_choose_venture_cell(ai: BasicAIClient, req: InputRequest) -> list[int]:
