@@ -293,6 +293,8 @@ class GameApp(App):
         self._browse_row = 0
         self._browse_col = 0
         self._browse_grid: list[list[int | None]] = []
+        self._browse_key_buffer: str = ""
+        self._browse_key_timer: Timer | None = None
         # Stock overlay state
         self._stock_overlay_active = False
         self._stock_overlay_mode: str | None = None  # "view" | "buy" | "sell"
@@ -2006,6 +2008,10 @@ class GameApp(App):
         """Exit browse mode and restore normal view."""
         self._browse_mode = False
         self._browse_grid = []
+        if self._browse_key_timer is not None:
+            self._browse_key_timer.stop()
+            self._browse_key_timer = None
+        self._browse_key_buffer = ""
         self._refresh_board()
         # Restore the prompt
         prompt = self.query_one("#prompt-bar", PromptBar)
@@ -2015,36 +2021,101 @@ class GameApp(App):
         else:
             prompt.prompt_text = ""
 
+    _BROWSE_DIRS: dict[str, tuple[int, int]] = {
+        "w": (-1, 0), "s": (1, 0), "a": (0, -1), "d": (0, 1),
+        "wa": (-1, -1), "aw": (-1, -1),
+        "wd": (-1, 1), "dw": (-1, 1),
+        "sa": (1, -1), "as": (1, -1),
+        "sd": (1, 1), "ds": (1, 1),
+    }
+
     def _handle_browse_key(self, event) -> None:
-        """Handle WASD/arrow navigation in browse mode."""
+        """Handle WASD/arrow navigation in browse mode.
+
+        Supports diagonal combos (wa, wd, sa, sd) by buffering the first
+        keypress for 250ms.
+        """
         char = (event.character or "").lower()
         key = event.key
+        # Map arrow keys to wasd
+        if key == "up":
+            char = "w"
+        elif key == "down":
+            char = "s"
+        elif key == "left":
+            char = "a"
+        elif key == "right":
+            char = "d"
 
-        if char in ("w",) or key == "up":
-            self._browse_move(-1, 0)
-        elif char in ("s",) or key == "down":
-            self._browse_move(1, 0)
-        elif char in ("a",) or key == "left":
-            self._browse_move(0, -1)
-        elif char in ("d",) or key == "right":
-            self._browse_move(0, 1)
+        if char not in ("w", "a", "s", "d"):
+            return
+        event.prevent_default()
+        event.stop()
+
+        # Cancel any pending timer
+        if self._browse_key_timer is not None:
+            self._browse_key_timer.stop()
+            self._browse_key_timer = None
+
+        if self._browse_key_buffer:
+            combo = self._browse_key_buffer + char
+            self._browse_key_buffer = ""
+            if combo in self._BROWSE_DIRS:
+                dr, dc = self._BROWSE_DIRS[combo]
+                self._browse_move(dr, dc)
+                return
+            # Same key twice or invalid combo: treat first key alone, then buffer this one
+            first_dir = self._BROWSE_DIRS.get(combo[0])
+            if first_dir is not None:
+                self._browse_move(*first_dir)
+
+        # Buffer this key and wait for a possible second key
+        self._browse_key_buffer = char
+        self._browse_key_timer = self.set_timer(0.25, self._flush_browse_key_buffer)
+
+    def _flush_browse_key_buffer(self) -> None:
+        """Timer callback: no second key arrived, execute single-key move."""
+        self._browse_key_timer = None
+        key = self._browse_key_buffer
+        self._browse_key_buffer = ""
+        direction = self._BROWSE_DIRS.get(key)
+        if direction is not None:
+            self._browse_move(*direction)
 
     def _browse_move(self, dr: int, dc: int) -> None:
-        """Move the browse cursor, skipping empty cells."""
+        """Move to the nearest filled cell in the half-plane of the pressed direction.
+
+        The half-plane is defined by all cells whose displacement from the
+        current position has a positive dot product with (dr, dc). Among
+        those, pick the closest by squared Euclidean distance, tiebreaking
+        by alignment with the direction (smaller perpendicular offset wins).
+        """
         rows = len(self._browse_grid)
         if rows == 0:
             return
         cols = len(self._browse_grid[0])
-        r, c = self._browse_row + dr, self._browse_col + dc
-        # Search in the move direction for the next non-None cell
-        while 0 <= r < rows and 0 <= c < cols:
-            if self._browse_grid[r][c] is not None:
-                self._browse_row = r
-                self._browse_col = c
-                self._refresh_browse()
-                return
-            r += dr
-            c += dc
+        r0, c0 = self._browse_row, self._browse_col
+
+        best: tuple[int, int] | None = None
+        best_key: tuple[int, int] | None = None
+        for r in range(rows):
+            row = self._browse_grid[r]
+            for c in range(cols):
+                if row[c] is None or (r == r0 and c == c0):
+                    continue
+                ddr, ddc = r - r0, c - c0
+                if ddr * dr + ddc * dc <= 0:
+                    continue
+                dist_sq = ddr * ddr + ddc * ddc
+                perp = abs(ddr * dc - ddc * dr)
+                key = (dist_sq, perp)
+                if best_key is None or key < best_key:
+                    best_key = key
+                    best = (r, c)
+
+        if best is not None:
+            self._browse_row, self._browse_col = best
+            self._refresh_browse()
 
     def _refresh_browse(self) -> None:
         """Redraw the board with browse highlight and show square info."""
