@@ -86,7 +86,6 @@ def _render_cell(
     line2_text = ""
     bg_color: str | None = None
 
-    shop_closed = False
     if sq.type == SquareType.SHOP:
         from road_to_riches.engine.statuses import is_shop_closed
         shop_closed = is_shop_closed(sq.statuses)
@@ -98,13 +97,14 @@ def _render_cell(
                 rent = current_rent(board, sq)
             else:
                 rent = sq.shop_base_rent or 0
-            rent_prefix = "X" if shop_closed else "$"
-            line2_text = f"{rent_prefix}{rent:>5}"
+            line2_text = f"${rent:>5}"
             main_color = "white"
             bg_color = PLAYER_COLORS[sq.property_owner % len(PLAYER_COLORS)]
         else:
             line2_text = ""
             main_color = "white"
+        if shop_closed:
+            line2_text = "CLOSED"
         d = sq.property_district or 0
         highlight_color = DISTRICT_COLORS[d % len(DISTRICT_COLORS)]
 
@@ -207,9 +207,6 @@ def _render_cell(
     if flash:
         border_h = f"[reverse]{border_h}[/reverse]"
         vbar = f"[reverse]{vbar}[/reverse]"
-    if shop_closed:
-        l1 = f"[strike]{l1}[/strike]"
-        l2 = f"[strike]{l2}[/strike]"
     if bg_color:
         content1 = vbar + f"[black on {bg_color}]{l1}[/]" + vbar
         content2 = vbar + f"[black on {bg_color}]{l2}[/]" + vbar
