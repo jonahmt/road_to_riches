@@ -29,8 +29,9 @@ def _make_board(squares: list[SquareInfo]) -> BoardState:
     )
 
 
-def _ring(n: int, types: list[SquareType] | None = None,
-          suits: dict[int, Suit] | None = None) -> BoardState:
+def _ring(
+    n: int, types: list[SquareType] | None = None, suits: dict[int, Suit] | None = None
+) -> BoardState:
     """Build a simple n-square ring board where square i connects to (i+1)%n."""
     squares = []
     for i in range(n):
@@ -38,19 +39,25 @@ def _ring(n: int, types: list[SquareType] | None = None,
         suit = (suits or {}).get(i)
         next_id = (i + 1) % n
         prev_id = (i - 1) % n
-        squares.append(SquareInfo(
-            id=i, position=(i, 0), type=sq_type, suit=suit,
-            waypoints=[
-                Waypoint(from_id=prev_id, to_ids=[next_id]),
-                Waypoint(from_id=next_id, to_ids=[prev_id]),
-            ],
-        ))
+        squares.append(
+            SquareInfo(
+                id=i,
+                position=(i, 0),
+                type=sq_type,
+                suit=suit,
+                waypoints=[
+                    Waypoint(from_id=prev_id, to_ids=[next_id]),
+                    Waypoint(from_id=next_id, to_ids=[prev_id]),
+                ],
+            )
+        )
     return _make_board(squares)
 
 
 # ---------------------------------------------------------------------------
 # bfs_distances
 # ---------------------------------------------------------------------------
+
 
 def test_bfs_distances_ring():
     board = _ring(6)
@@ -67,16 +74,27 @@ def test_bfs_distances_ring():
 def test_bfs_distances_linear_chain():
     """A linear chain: 0 - 1 - 2 - 3."""
     squares = [
-        SquareInfo(id=0, position=(0, 0), type=SquareType.SHOP,
-                   waypoints=[Waypoint(from_id=None, to_ids=[1])]),
-        SquareInfo(id=1, position=(1, 0), type=SquareType.SHOP,
-                   waypoints=[Waypoint(from_id=0, to_ids=[2]),
-                              Waypoint(from_id=2, to_ids=[0])]),
-        SquareInfo(id=2, position=(2, 0), type=SquareType.SHOP,
-                   waypoints=[Waypoint(from_id=1, to_ids=[3]),
-                              Waypoint(from_id=3, to_ids=[1])]),
-        SquareInfo(id=3, position=(3, 0), type=SquareType.SHOP,
-                   waypoints=[Waypoint(from_id=2, to_ids=[2])]),
+        SquareInfo(
+            id=0,
+            position=(0, 0),
+            type=SquareType.SHOP,
+            waypoints=[Waypoint(from_id=None, to_ids=[1])],
+        ),
+        SquareInfo(
+            id=1,
+            position=(1, 0),
+            type=SquareType.SHOP,
+            waypoints=[Waypoint(from_id=0, to_ids=[2]), Waypoint(from_id=2, to_ids=[0])],
+        ),
+        SquareInfo(
+            id=2,
+            position=(2, 0),
+            type=SquareType.SHOP,
+            waypoints=[Waypoint(from_id=1, to_ids=[3]), Waypoint(from_id=3, to_ids=[1])],
+        ),
+        SquareInfo(
+            id=3, position=(3, 0), type=SquareType.SHOP, waypoints=[Waypoint(from_id=2, to_ids=[2])]
+        ),
     ]
     board = _make_board(squares)
     dists = bfs_distances(board, 0)
@@ -89,10 +107,15 @@ def test_bfs_distances_linear_chain():
 def test_bfs_unreachable_square_not_in_dists():
     """A square with no waypoints to/from it is unreachable."""
     squares = [
-        SquareInfo(id=0, position=(0, 0), type=SquareType.SHOP,
-                   waypoints=[Waypoint(from_id=None, to_ids=[1])]),
-        SquareInfo(id=1, position=(1, 0), type=SquareType.SHOP,
-                   waypoints=[Waypoint(from_id=0, to_ids=[0])]),
+        SquareInfo(
+            id=0,
+            position=(0, 0),
+            type=SquareType.SHOP,
+            waypoints=[Waypoint(from_id=None, to_ids=[1])],
+        ),
+        SquareInfo(
+            id=1, position=(1, 0), type=SquareType.SHOP, waypoints=[Waypoint(from_id=0, to_ids=[0])]
+        ),
         SquareInfo(id=2, position=(2, 0), type=SquareType.SHOP, waypoints=[]),
     ]
     board = _make_board(squares)
@@ -104,6 +127,7 @@ def test_bfs_unreachable_square_not_in_dists():
 # ---------------------------------------------------------------------------
 # find_suit_squares / find_bank_squares
 # ---------------------------------------------------------------------------
+
 
 def test_find_suit_squares_groups_by_suit():
     suits = {1: Suit.SPADE, 2: Suit.HEART, 3: Suit.SPADE, 4: Suit.DIAMOND}
@@ -136,6 +160,7 @@ def test_find_bank_squares():
 # ---------------------------------------------------------------------------
 # compute_promotion_targets
 # ---------------------------------------------------------------------------
+
 
 def test_compute_targets_no_suits_collected():
     suits_map = {0: Suit.SPADE, 1: Suit.HEART, 2: Suit.DIAMOND, 3: Suit.CLUB}
@@ -177,6 +202,7 @@ def test_compute_targets_wilds_cover_missing():
 # optimal_tour
 # ---------------------------------------------------------------------------
 
+
 def test_optimal_tour_visits_all_then_end():
     board = _ring(8)
     # Start at 0, visit squares 2, 5, end at 7 (which is at distance 1 from 0)
@@ -205,6 +231,7 @@ def test_optimal_tour_picks_shortest_order():
 # next_step_toward
 # ---------------------------------------------------------------------------
 
+
 def test_next_step_toward_picks_closer():
     board = _ring(8)
     # From square 0, choices are 1 (dist to target 5 = 4) or 7 (dist = 2)
@@ -220,6 +247,7 @@ def test_next_step_toward_single_choice():
 # ---------------------------------------------------------------------------
 # plan_route (integration)
 # ---------------------------------------------------------------------------
+
 
 def test_plan_route_no_suits_goes_to_bank():
     """When all suits collected, route is just bank."""

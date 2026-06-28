@@ -10,34 +10,30 @@ from __future__ import annotations
 import re
 import threading
 import time
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from textual import on, work
-from textual.timer import Timer
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.reactive import reactive
+from textual.timer import Timer
 from textual.widgets import Input, RichLog, Static
 
 from road_to_riches.client.direction import compute_direction_keys, format_key_hints
+from road_to_riches.client.display import DISTRICT_COLORS, PLAYER_COLORS, SUIT_COLORS, SUIT_SYMBOLS
 from road_to_riches.client.tui_input import InputRequest, InputRequestType, TuiPlayerInput
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
 
+if TYPE_CHECKING:
+    from road_to_riches.events.event import GameEvent
+    from road_to_riches.models.board_state import SquareInfo
+    from road_to_riches.models.game_state import GameState
+    from road_to_riches.models.player_state import PlayerState
+
 # Type alias for the input source — either local or networked
 PlayerInputSource = Any
-
-# Player colors
-PLAYER_COLORS = ["bright_cyan", "orchid1", "bright_yellow", "bright_green"]
-
-# Suit display
-SUIT_SYMBOLS = {"SPADE": "♠", "HEART": "♥", "DIAMOND": "♦", "CLUB": "♣", "WILD": "★"}
-SUIT_COLORS = {
-    "SPADE": "dodger_blue1", "HEART": "bright_red",
-    "DIAMOND": "yellow", "CLUB": "green", "WILD": "white",
-}
-
 
 _PLAYER_RE = re.compile(r"\bPlayer (\d)\b")
 _GOLD_RE = re.compile(r"\b(\d+)G\b")
@@ -64,6 +60,7 @@ def _format_delta(curr: int, nxt: int, money: bool = False) -> str:
 
 def _colorize_log(text: str) -> str:
     """Colorize player names and gold amounts in log messages."""
+
     def _player_repl(m: re.Match) -> str:
         pid = int(m.group(1))
         color = PLAYER_COLORS[pid % len(PLAYER_COLORS)]
@@ -81,25 +78,26 @@ _MIN_STAT_WIDTH = 4
 
 
 def _compute_player_stats(
-    state: "GameState", players: list["PlayerState"],
+    state: "GameState",
+    players: list["PlayerState"],
 ) -> list[dict[str, int]]:
     """Compute NW, cash, property, and stock values for each player."""
     stats = []
     for p in players:
         prop_val = sum(
-            state.board.squares[sq_id].shop_current_value or 0
-            for sq_id in p.owned_properties
+            state.board.squares[sq_id].shop_current_value or 0 for sq_id in p.owned_properties
         )
         stock_val = sum(
-            qty * state.stock.get_price(d_id).current_price
-            for d_id, qty in p.owned_stock.items()
+            qty * state.stock.get_price(d_id).current_price for d_id, qty in p.owned_stock.items()
         )
-        stats.append({
-            "nw": state.net_worth(p),
-            "cash": p.ready_cash,
-            "prop": prop_val,
-            "stock": stock_val,
-        })
+        stats.append(
+            {
+                "nw": state.net_worth(p),
+                "cash": p.ready_cash,
+                "prop": prop_val,
+                "stock": stock_val,
+            }
+        )
     return stats
 
 
@@ -244,10 +242,12 @@ class GameApp(App):
 
     class StateChanged(Message):
         """The game state was updated via state_sync (networked mode)."""
+
         pass
 
     class RetractLog(Message):
         """Remove the last N log messages (move was undone)."""
+
         def __init__(self, count: int) -> None:
             super().__init__()
             self.count = count
@@ -299,6 +299,7 @@ class GameApp(App):
         # Safe to share: those modes are mutually exclusive at the dispatch
         # level, and the buffer is reset whenever either mode is entered/exited.
         from road_to_riches.client.chord_buffer import ChordBuffer
+
         self._chord = ChordBuffer(self)
         # Browse mode state
         self._browse_mode = False
@@ -339,7 +340,7 @@ class GameApp(App):
     def on_mount(self) -> None:
         self.player_input.set_log_callback(self._on_game_log)
         self.player_input.set_dice_callback(self._on_dice_update)
-        if hasattr(self.player_input, 'set_retract_callback'):
+        if hasattr(self.player_input, "set_retract_callback"):
             self.player_input.set_retract_callback(self._on_retract_log)
         if self._networked:
             self._client_bridge.set_retract_callback(self._on_retract_log)
@@ -400,7 +401,7 @@ class GameApp(App):
             visible = (
                 self._log_messages
                 if self._log_lines_cap is None
-                else self._log_messages[-self._log_lines_cap:]
+                else self._log_messages[-self._log_lines_cap :]
             )
             for i, msg in enumerate(visible):
                 c = _colorize_log(msg)
@@ -414,14 +415,14 @@ class GameApp(App):
     @on(RetractLog)
     def handle_retract_log(self, event: RetractLog) -> None:
         if event.count > 0 and self._log_messages:
-            del self._log_messages[-event.count:]
+            del self._log_messages[-event.count :]
             with self.batch_update():
                 log_widget = self.query_one("#game-log", RichLog)
                 log_widget.clear()
                 visible = (
                     self._log_messages
                     if self._log_lines_cap is None
-                    else self._log_messages[-self._log_lines_cap:]
+                    else self._log_messages[-self._log_lines_cap :]
                 )
                 for i, msg in enumerate(visible):
                     c = _colorize_log(msg)
@@ -467,19 +468,13 @@ class GameApp(App):
         # Q toggles the view-only stock overlay
         if char == "q" and self._current_request is not None:
             # Close if currently in view-only mode
-            if (
-                self._stock_overlay_active
-                and self._stock_overlay_mode == "view"
-            ):
+            if self._stock_overlay_active and self._stock_overlay_mode == "view":
                 event.prevent_default()
                 event.stop()
                 self._stock_overlay_cancel_all()
                 return
             # Open if idle and not in text/overlay states
-            if (
-                not self._stock_overlay_active
-                and self._input_mode != "text"
-            ):
+            if not self._stock_overlay_active and self._input_mode != "text":
                 event.prevent_default()
                 event.stop()
                 self._open_stock_overlay("view")
@@ -500,8 +495,10 @@ class GameApp(App):
         if self._current_request is None:
             return
         if self._input_mode == "keypress":
-            if (self._current_request
-                    and self._current_request.type == InputRequestType.CHOOSE_VENTURE_CELL):
+            if (
+                self._current_request
+                and self._current_request.type == InputRequestType.CHOOSE_VENTURE_CELL
+            ):
                 self._handle_venture_grid_key(event)
             else:
                 self._handle_keypress_key(event)
@@ -606,7 +603,9 @@ class GameApp(App):
         r, c = cursor
         cell_status = "empty" if cells[r][c] is None else f"P{cells[r][c]}"
         prompt = self.query_one("#prompt-bar", PromptBar)
-        prompt.prompt_text = f"Venture Grid | Cursor: ({r},{c}) [{cell_status}] | WASD=move Space=claim"
+        prompt.prompt_text = (
+            f"Venture Grid | Cursor: ({r},{c}) [{cell_status}] | WASD=move Space=claim"
+        )
 
     def _handle_selection_key(self, event) -> None:
         """Handle keys in selection bar mode."""
@@ -766,10 +765,7 @@ class GameApp(App):
             else:
                 self._phase_data["square_id"] = value
                 self._input_phase = 1
-                match = next(
-                    s for s in req.data.get("investable", [])
-                    if s["square_id"] == value
-                )
+                match = next(s for s in req.data.get("investable", []) if s["square_id"] == value)
                 max_cap = match["max_capital"]
                 cash = req.data["cash"]
                 default = min(cash, max_cap)
@@ -803,9 +799,7 @@ class GameApp(App):
                 self._input_phase = 1
                 self._exit_selection_mode()
                 prompt = self.query_one("#prompt-bar", PromptBar)
-                prompt.prompt_text = (
-                    f"Buy sq{sq_id} from P{target_pid}. Offer price:"
-                )
+                prompt.prompt_text = f"Buy sq{sq_id} from P{target_pid}. Offer price:"
                 self._enter_text_mode("Enter price")
             return
 
@@ -825,9 +819,7 @@ class GameApp(App):
                                 continue
                             options.append((f"Player {p.player_id}", p.player_id))
                     options.append(("Cancel", None))
-                    self._enter_selection_mode(
-                        f"Sell sq{value} to:", options
-                    )
+                    self._enter_selection_mode(f"Sell sq{value} to:", options)
                 return
             elif self._input_phase == 1:
                 # Phase 1: picked target player, now enter price
@@ -839,9 +831,7 @@ class GameApp(App):
                     sq_id = self._phase_data["sq_id"]
                     self._exit_selection_mode()
                     prompt = self.query_one("#prompt-bar", PromptBar)
-                    prompt.prompt_text = (
-                        f"Sell sq{sq_id} to P{value}. Asking price:"
-                    )
+                    prompt.prompt_text = f"Sell sq{sq_id} to P{value}. Asking price:"
                     self._enter_text_mode("Enter price")
                 return
 
@@ -899,9 +889,7 @@ class GameApp(App):
     def handle_game_over(self, event: GameOver) -> None:
         log_widget = self.query_one("#game-log", RichLog)
         if event.winner is not None:
-            log_widget.write(
-                f"\n[bold green]Game Over! Player {event.winner} wins![/]"
-            )
+            log_widget.write(f"\n[bold green]Game Over! Player {event.winner} wins![/]")
         else:
             log_widget.write("\n[bold red]Game Over! No winner.[/]")
         prompt = self.query_one("#prompt-bar", PromptBar)
@@ -941,14 +929,9 @@ class GameApp(App):
             current_pos = tuple(req.data.get("current_position", (0, 0)))
             undo_pos = req.data.get("undo_position")
 
-            choice_targets = [
-                (c["square_id"], tuple(c["position"]))
-                for c in choices
-            ]
+            choice_targets = [(c["square_id"], tuple(c["position"])) for c in choices]
             undo_pos_t = tuple(undo_pos) if undo_pos else None
-            mapping = compute_direction_keys(
-                current_pos, choice_targets, undo_pos_t
-            )
+            mapping = compute_direction_keys(current_pos, choice_targets, undo_pos_t)
 
             sq_types = {c["square_id"]: c["type"] for c in choices}
             hints = format_key_hints(mapping, sq_types)
@@ -970,11 +953,7 @@ class GameApp(App):
             options.append(("Save", "save"))
             options.append(("Info", "info"))
             options.append(("Dev", "dev"))
-            header = (
-                f"P{req.player_id} | "
-                f"Cash: {req.data['cash']}G | "
-                f"Lv{req.data['level']}"
-            )
+            header = f"P{req.player_id} | Cash: {req.data['cash']}G | Lv{req.data['level']}"
             self._enter_selection_mode(header, options)
             return
 
@@ -996,10 +975,7 @@ class GameApp(App):
             return
 
         if req.type == InputRequestType.FORCED_BUYOUT:
-            header = (
-                f"Force-buy sq{req.data['square_id']} "
-                f"for {req.data['cost']}G?"
-            )
+            header = f"Force-buy sq{req.data['square_id']} for {req.data['cost']}G?"
             self._enter_selection_mode(header, [("Buy", True), ("Skip", False)], initial_index=1)
             return
 
@@ -1008,10 +984,7 @@ class GameApp(App):
             otype = offer.get("type", "?")
             sq_id = offer.get("square_id", "?")
             price = offer.get("price", offer.get("gold_offer", "?"))
-            header = (
-                f"P{req.player_id}: {otype} offer for "
-                f"sq{sq_id} at {price}G"
-            )
+            header = f"P{req.player_id}: {otype} offer for sq{sq_id} at {price}G"
             options = [
                 ("Accept", "accept"),
                 ("Reject", "reject"),
@@ -1022,10 +995,7 @@ class GameApp(App):
 
         if req.type == InputRequestType.CANNON_TARGET:
             targets = req.data.get("targets", [])
-            options = [
-                (f"P{t['player_id']} (sq{t['position']})", t["player_id"])
-                for t in targets
-            ]
+            options = [(f"P{t['player_id']} (sq{t['position']})", t["player_id"]) for t in targets]
             self._enter_selection_mode("Cannon! Choose target:", options)
             return
 
@@ -1046,10 +1016,7 @@ class GameApp(App):
 
         if req.type == InputRequestType.CHOOSE_SHOP_AUCTION:
             shops = req.data.get("shops", [])
-            options = [
-                (f"sq{s['square_id']} ({s['value']}G)", s["square_id"])
-                for s in shops
-            ]
+            options = [(f"sq{s['square_id']} ({s['value']}G)", s["square_id"]) for s in shops]
             options.append(("Cancel", None))
             self._enter_selection_mode("Auction which shop?", options)
             return
@@ -1058,23 +1025,25 @@ class GameApp(App):
             options_data = req.data.get("options", {})
             options: list[tuple[str, Any]] = []
             for s in options_data.get("shops", []):
-                options.append((
-                    f"Shop sq{s['square_id']} ({s['sell_value']}G)",
-                    ("shop", s["square_id"], 0),
-                ))
+                options.append(
+                    (
+                        f"Shop sq{s['square_id']} ({s['sell_value']}G)",
+                        ("shop", s["square_id"], 0),
+                    )
+                )
             cash = req.data.get("cash", 0)
             for d_id, info in options_data.get("stock", {}).items():
                 held = int(info["quantity"])
                 price = int(info["price_per_share"])
                 deficit = max(1, 1 - cash)
                 default_qty = held if price <= 0 else min(held, (deficit + price - 1) // price)
-                options.append((
-                    f"Stock d{d_id} ({info['quantity']}x{info['price_per_share']}G)",
-                    ("stock", int(d_id), default_qty),
-                ))
-            self._enter_selection_mode(
-                f"Must sell assets! Cash: {cash}G", options
-            )
+                options.append(
+                    (
+                        f"Stock d{d_id} ({info['quantity']}x{info['price_per_share']}G)",
+                        ("stock", int(d_id), default_qty),
+                    )
+                )
+            self._enter_selection_mode(f"Must sell assets! Cash: {cash}G", options)
             return
 
         if req.type == InputRequestType.BUY_STOCK:
@@ -1088,8 +1057,7 @@ class GameApp(App):
         if req.type == InputRequestType.INVEST:
             shops = req.data.get("investable", [])
             options = [
-                (f"sq{s['square_id']} (max {s['max_capital']}G)", s["square_id"])
-                for s in shops
+                (f"sq{s['square_id']} (max {s['max_capital']}G)", s["square_id"]) for s in shops
             ]
             options.append(("Skip", None))
             header = f"Invest? Cash: {req.data['cash']}G"
@@ -1114,10 +1082,12 @@ class GameApp(App):
                     for sq_id in p.owned_properties:
                         sq = state.board.squares[sq_id]
                         val = sq.shop_current_value or 0
-                        options.append((
-                            f"P{p.player_id}: sq{sq_id} ({val}G)",
-                            (p.player_id, sq_id),
-                        ))
+                        options.append(
+                            (
+                                f"P{p.player_id}: sq{sq_id} ({val}G)",
+                                (p.player_id, sq_id),
+                            )
+                        )
             options.append(("Cancel", None))
             header = f"Buy a shop. Cash: {req.data['cash']}G"
             self._enter_selection_mode(header, options, initial_index=len(options) - 1)
@@ -1125,10 +1095,7 @@ class GameApp(App):
 
         if req.type == InputRequestType.CHOOSE_SHOP_SELL:
             shops = req.data.get("shops", [])
-            options = [
-                (f"sq{s['square_id']} ({s['value']}G)", s["square_id"])
-                for s in shops
-            ]
+            options = [(f"sq{s['square_id']} ({s['value']}G)", s["square_id"]) for s in shops]
             options.append(("Cancel", None))
             self._enter_selection_mode("Sell which shop?", options)
             return
@@ -1136,20 +1103,13 @@ class GameApp(App):
         # ── Text-only types ──
 
         if req.type == InputRequestType.COUNTER_PRICE:
-            prompt.prompt_text = (
-                f"Original: {req.data['original_price']}G. "
-                f"Counter-offer:"
-            )
+            prompt.prompt_text = f"Original: {req.data['original_price']}G. Counter-offer:"
             self._enter_text_mode("Enter amount")
             return
 
         if req.type == InputRequestType.TRADE:
-            prompt.prompt_text = (
-                f"Propose trade. Cash: {req.data['cash']}G"
-            )
-            self._enter_text_mode(
-                "target_pid your_shops their_shops gold / N"
-            )
+            prompt.prompt_text = f"Propose trade. Cash: {req.data['cash']}G"
+            self._enter_text_mode("target_pid your_shops their_shops gold / N")
             return
 
         if req.type == InputRequestType.SCRIPT_DECISION:
@@ -1183,7 +1143,8 @@ class GameApp(App):
             ids = sorted(s["square_id"] for s in squares)
             if ids:
                 id_hint = (
-                    f"{ids[0]}-{ids[-1]}" if ids == list(range(ids[0], ids[-1] + 1))
+                    f"{ids[0]}-{ids[-1]}"
+                    if ids == list(range(ids[0], ids[-1] + 1))
                     else ",".join(str(i) for i in ids)
                 )
             else:
@@ -1200,19 +1161,12 @@ class GameApp(App):
     @on(Input.Changed, "#command-input")
     def handle_input_changed(self, event: Input.Changed) -> None:
         """Live-update previews as the user types in the bottom input."""
-        if (
-            self._stock_overlay_active
-            and self._stock_overlay_selected_district is not None
-        ):
+        if self._stock_overlay_active and self._stock_overlay_selected_district is not None:
             self._refresh_stock_overlay()
             return
 
         req = self._current_request
-        if (
-            req is not None
-            and req.type == InputRequestType.INVEST
-            and self._input_phase == 1
-        ):
+        if req is not None and req.type == InputRequestType.INVEST and self._input_phase == 1:
             self._refresh_invest_prompt(event.value)
 
     def _refresh_invest_prompt(self, typed_value: str) -> None:
@@ -1225,10 +1179,7 @@ class GameApp(App):
         if sq_id is None:
             return
         try:
-            match = next(
-                s for s in req.data.get("investable", [])
-                if s["square_id"] == sq_id
-            )
+            match = next(s for s in req.data.get("investable", []) if s["square_id"] == sq_id)
         except StopIteration:
             return
         max_cap = match["max_capital"]
@@ -1270,9 +1221,7 @@ class GameApp(App):
             new_avg = total_value / num_shops if num_shops > 0 else 0
             new_value_comp = round(new_avg * 0.04)
             next_price = new_value_comp + sp.fluctuation_component
-            parts.append(
-                f"d{d_id} price: {_format_delta(curr_price, next_price)}"
-            )
+            parts.append(f"d{d_id} price: {_format_delta(curr_price, next_price)}")
         parts.append(f"Cash: {_format_delta(curr_cash, next_cash, money=True)}")
 
         prompt = self.query_one("#prompt-bar", PromptBar)
@@ -1317,9 +1266,7 @@ class GameApp(App):
 
         self._submit_response(response)
 
-    def _handle_phase_text_input(
-        self, req: InputRequest, value: str
-    ) -> Any:
+    def _handle_phase_text_input(self, req: InputRequest, value: str) -> Any:
         """Handle text input for phase 1+ of two-phase inputs."""
         v = value.strip().upper()
         rtype = req.type
@@ -1356,10 +1303,7 @@ class GameApp(App):
 
         if rtype == InputRequestType.INVEST and self._input_phase == 1:
             sq_id = self._phase_data["square_id"]
-            match = next(
-                s for s in req.data.get("investable", [])
-                if s["square_id"] == sq_id
-            )
+            match = next(s for s in req.data.get("investable", []) if s["square_id"] == sq_id)
             max_cap = match["max_capital"]
             cash = req.data["cash"]
             default = min(cash, max_cap)
@@ -1420,9 +1364,7 @@ class GameApp(App):
 
         return None
 
-    def _validate_and_parse(
-        self, req: InputRequest, value: str
-    ) -> object:
+    def _validate_and_parse(self, req: InputRequest, value: str) -> object:
         """Validate input for text-only request types."""
         v = value.upper()
 
@@ -1448,19 +1390,9 @@ class GameApp(App):
             try:
                 parts = value.split()
                 target_pid = int(parts[0])
-                offer_shops = (
-                    [int(x) for x in parts[1].split(",")]
-                    if parts[1] != "-"
-                    else []
-                )
-                request_shops = (
-                    [int(x) for x in parts[2].split(",")]
-                    if parts[2] != "-"
-                    else []
-                )
-                gold_offer = (
-                    int(parts[3]) if len(parts) > 3 else 0
-                )
+                offer_shops = [int(x) for x in parts[1].split(",")] if parts[1] != "-" else []
+                request_shops = [int(x) for x in parts[2].split(",")] if parts[2] != "-" else []
+                gold_offer = int(parts[3]) if len(parts) > 3 else 0
                 return {
                     "target_player_id": target_pid,
                     "offer_shops": offer_shops,
@@ -1504,9 +1436,7 @@ class GameApp(App):
             from road_to_riches.client.board_renderer import render_board
 
             active_pid = self._active_player_id()
-            flash_d = (
-                self._stock_overlay_cursor if self._stock_overlay_active else None
-            )
+            flash_d = self._stock_overlay_cursor if self._stock_overlay_active else None
             board_text = render_board(
                 state,
                 active_player_id=active_pid,
@@ -1544,8 +1474,7 @@ class GameApp(App):
             line.append(f" | S:{s['stock']:>{widths['stock']}} ", style=color)
             FIXED_ORDER = ["SPADE", "HEART", "DIAMOND", "CLUB"]
             suit_names = {
-                (s.value if hasattr(s, "value") else s): qty
-                for s, qty in p.suits.items()
+                (s.value if hasattr(s, "value") else s): qty for s, qty in p.suits.items()
             }
             for i, name in enumerate(FIXED_ORDER):
                 if i > 0:
@@ -1591,9 +1520,7 @@ class GameApp(App):
             return
 
         info_widget.write("[bold]=== Game Info ===[/]")
-        info_widget.write(
-            f"Target net worth: {state.board.target_networth}G"
-        )
+        info_widget.write(f"Target net worth: {state.board.target_networth}G")
         info_widget.write(f"Max dice roll: {state.board.max_dice_roll}")
         info_widget.write("")
 
@@ -1622,7 +1549,6 @@ class GameApp(App):
 
         info_widget.write("")
         info_widget.write("[bold]Stock Market:[/]")
-        from road_to_riches.client.board_renderer import DISTRICT_COLORS
 
         header = "District | [gold1]Price[/gold1]"
         for p in state.active_players:
@@ -1743,7 +1669,6 @@ class GameApp(App):
             return max(1, min(affordable, STOCK_MAX_PER_DISTRICT))
 
         if self._stock_overlay_mode == "sell":
-            held = player.owned_stock.get(district_id, 0)
             # Forced-liquidation support deferred (bead ewn). For now: blank.
             # An empty Input value means user must type a qty.
             return 0  # 0 signals "blank" — caller will render empty string
@@ -1845,9 +1770,6 @@ class GameApp(App):
         state = self._get_state()
         if state is None:
             return
-
-        from road_to_riches.client.board_renderer import DISTRICT_COLORS
-
         overlay = self.query_one("#stock-overlay", RichLog)
         overlay.clear()
 
@@ -1863,7 +1785,7 @@ class GameApp(App):
         overlay.write(f"[bold]Stock Market — {mode_label}[/]   [dim]{hint}[/]")
 
         # Header row: District | Price | P0 | P1 | ...
-        # Column widths (visible): district=8 ("District"), price=5 ("Price"), player=3 ("P0 "/"999")
+        # Column widths (visible): district=8, price=5, player=3.
         header_parts = ["District", "[gold1]Price[/gold1]"]
         for p in players:
             pc = PLAYER_COLORS[p.player_id % len(PLAYER_COLORS)]
@@ -1949,12 +1871,8 @@ class GameApp(App):
                 next_cash = curr_cash + curr_price * qty
 
             overlay.write("")
-            overlay.write(
-                f"  d{d_id} price: {_format_delta(curr_price, next_price)}"
-            )
-            overlay.write(
-                f"  Cash:        {_format_delta(curr_cash, next_cash, money=True)}"
-            )
+            overlay.write(f"  d{d_id} price: {_format_delta(curr_price, next_price)}")
+            overlay.write(f"  Cash:        {_format_delta(curr_cash, next_cash, money=True)}")
 
     def _stock_overlay_handle_key(self, event) -> bool:
         """Handle keys while the overlay is active. Returns True if consumed."""
@@ -2007,8 +1925,8 @@ class GameApp(App):
         state = self._get_state()
         if state is None:
             return
-        from road_to_riches.client.board_renderer import get_board_grid
         from road_to_riches.board.pathfinding import get_next_squares
+        from road_to_riches.client.board_renderer import get_board_grid
 
         self._browse_grid = get_board_grid(state.board)
         if not self._browse_grid:
@@ -2024,8 +1942,7 @@ class GameApp(App):
         # Build bidirectional neighbor map from waypoints, treating every
         # square as if entered from None (no forced direction).
         forward: dict[int, list[int]] = {
-            sq.id: get_next_squares(state.board, sq.id, None)
-            for sq in state.board.squares
+            sq.id: get_next_squares(state.board, sq.id, None) for sq in state.board.squares
         }
         self._browse_neighbors = {sq_id: set(nexts) for sq_id, nexts in forward.items()}
         for sq_id, nexts in forward.items():
@@ -2072,11 +1989,18 @@ class GameApp(App):
         self._browse_restore_prompt_text = ""
 
     _BROWSE_DIRS: dict[str, tuple[int, int]] = {
-        "w": (-1, 0), "s": (1, 0), "a": (0, -1), "d": (0, 1),
-        "wa": (-1, -1), "aw": (-1, -1),
-        "wd": (-1, 1), "dw": (-1, 1),
-        "sa": (1, -1), "as": (1, -1),
-        "sd": (1, 1), "ds": (1, 1),
+        "w": (-1, 0),
+        "s": (1, 0),
+        "a": (0, -1),
+        "d": (0, 1),
+        "wa": (-1, -1),
+        "aw": (-1, -1),
+        "wd": (-1, 1),
+        "dw": (-1, 1),
+        "sa": (1, -1),
+        "as": (1, -1),
+        "sd": (1, 1),
+        "ds": (1, 1),
     }
 
     def _handle_browse_key(self, event) -> None:
@@ -2167,8 +2091,11 @@ class GameApp(App):
 
         from road_to_riches.client.board_renderer import render_board
 
-        active_pid = self._current_request.player_id if self._current_request else None
-        board_text = render_board(state, active_player_id=self._active_player_id(), browsed_square_id=sq_id)
+        board_text = render_board(
+            state,
+            active_player_id=self._active_player_id(),
+            browsed_square_id=sq_id,
+        )
         board_widget = self.query_one("#board-view", RichLog)
         board_widget.clear()
         for line in board_text.split("\n"):
@@ -2185,6 +2112,7 @@ class GameApp(App):
         parts = [f"[bright_white]sq{sq.id}[/] {sq.type.value}"]
         if sq.property_district is not None:
             from road_to_riches.client.board_renderer import DISTRICT_COLORS
+
             dc = DISTRICT_COLORS[sq.property_district % len(DISTRICT_COLORS)]
             parts.append(f"[{dc}]d{sq.property_district}[/{dc}]")
         if sq.property_owner is not None:
@@ -2205,10 +2133,7 @@ class GameApp(App):
             sc = SUIT_COLORS.get(name, "white")
             parts.append(f"[{sc}]{symbol}[/{sc}]")
         # Players on this square
-        players_here = [
-            p for p in state.players
-            if not p.bankrupt and p.position == sq.id
-        ]
+        players_here = [p for p in state.players if not p.bankrupt and p.position == sq.id]
         if players_here:
             player_strs = []
             for p in players_here:
@@ -2227,6 +2152,7 @@ class GameApp(App):
         if state is None:
             return
         from road_to_riches.save import save_game
+
         config = None
         if self.game_loop is not None:
             config = self.game_loop.config
@@ -2300,10 +2226,6 @@ class GameApp(App):
             DebugGrantPropertyEvent,
             DebugRemovePropertyEvent,
             DebugRemoveSuitEvent,
-            DebugSetShopValueEvent,
-            DebugSetStockEvent,
-            TransferCashEvent,
-            WarpEvent,
         )
 
         state = self._get_state()
@@ -2341,12 +2263,13 @@ class GameApp(App):
             if "player_id" not in self._dev_data:
                 self._dev_data["player_id"] = value
                 suits = [
-                    ("Spade", "SPADE"), ("Heart", "HEART"),
-                    ("Diamond", "DIAMOND"), ("Club", "CLUB"), ("Wild", "WILD"),
+                    ("Spade", "SPADE"),
+                    ("Heart", "HEART"),
+                    ("Diamond", "DIAMOND"),
+                    ("Club", "CLUB"),
+                    ("Wild", "WILD"),
                 ]
-                self._enter_selection_mode(
-                    f"[grey50]DEV[/grey50] Suit for P{value}:", suits
-                )
+                self._enter_selection_mode(f"[grey50]DEV[/grey50] Suit for P{value}:", suits)
                 return
             if "suit" not in self._dev_data:
                 self._dev_data["suit"] = value
@@ -2367,13 +2290,8 @@ class GameApp(App):
         if self._dev_mode == "stock":
             if "player_id" not in self._dev_data:
                 self._dev_data["player_id"] = value
-                options = [
-                    (f"District {d}", d)
-                    for d in range(state.board.num_districts)
-                ]
-                self._enter_selection_mode(
-                    f"[grey50]DEV[/grey50] Stock for P{value}:", options
-                )
+                options = [(f"District {d}", d) for d in range(state.board.num_districts)]
+                self._enter_selection_mode(f"[grey50]DEV[/grey50] Stock for P{value}:", options)
                 return
             if "district_id" not in self._dev_data:
                 self._dev_data["district_id"] = value
@@ -2386,12 +2304,9 @@ class GameApp(App):
                 self._dev_data["action"] = value
                 if value == "give":
                     players = [
-                        (f"P{p.player_id}", p.player_id)
-                        for p in state.players if not p.bankrupt
+                        (f"P{p.player_id}", p.player_id) for p in state.players if not p.bankrupt
                     ]
-                    self._enter_selection_mode(
-                        "[grey50]DEV[/grey50] Give property to:", players
-                    )
+                    self._enter_selection_mode("[grey50]DEV[/grey50] Give property to:", players)
                 else:
                     # Remove: pick a shop that's owned
                     options = [
@@ -2403,9 +2318,7 @@ class GameApp(App):
                         self._log_dev("No owned properties")
                         self._open_dev_menu()
                         return
-                    self._enter_selection_mode(
-                        "[grey50]DEV[/grey50] Remove ownership:", options
-                    )
+                    self._enter_selection_mode("[grey50]DEV[/grey50] Remove ownership:", options)
                 return
             if self._dev_data["action"] == "give":
                 if "player_id" not in self._dev_data:
@@ -2415,14 +2328,10 @@ class GameApp(App):
                         for sq in state.board.squares
                         if sq.shop_base_value is not None
                     ]
-                    self._enter_selection_mode(
-                        f"[grey50]DEV[/grey50] Give to P{value}:", options
-                    )
+                    self._enter_selection_mode(f"[grey50]DEV[/grey50] Give to P{value}:", options)
                     return
                 self._execute_dev_event(
-                    DebugGrantPropertyEvent(
-                        player_id=self._dev_data["player_id"], square_id=value
-                    )
+                    DebugGrantPropertyEvent(player_id=self._dev_data["player_id"], square_id=value)
                 )
                 self._open_dev_menu()
                 return
@@ -2437,17 +2346,12 @@ class GameApp(App):
                 self._dev_data["square_id"] = value
                 self._exit_selection_mode()
                 sq = state.board.squares[value]
-                self._enter_text_mode(
-                    f"New value (current: {sq.shop_current_value})"
-                )
+                self._enter_text_mode(f"New value (current: {sq.shop_current_value})")
                 return
 
     def _show_dev_submenu(self, state: Any) -> None:
         """Show the appropriate submenu for the current dev command."""
-        players = [
-            (f"P{p.player_id}", p.player_id)
-            for p in state.players if not p.bankrupt
-        ]
+        players = [(f"P{p.player_id}", p.player_id) for p in state.players if not p.bankrupt]
 
         if self._dev_mode in ("gold", "teleport", "suit", "stock"):
             self._enter_selection_mode(
@@ -2573,9 +2477,7 @@ class GameApp(App):
     @work(thread=True)
     def _poll_for_requests(self) -> None:
         """Poll for input requests from the game thread (local mode)."""
-        game_thread = threading.Thread(
-            target=self._run_game, daemon=True
-        )
+        game_thread = threading.Thread(target=self._run_game, daemon=True)
         game_thread.start()
 
         while game_thread.is_alive():
@@ -2609,6 +2511,7 @@ def run_tui(
     saved_state = None
     if resume:
         from road_to_riches.save import load_save
+
         result = load_save()
         if result is not None:
             saved_state, config = result

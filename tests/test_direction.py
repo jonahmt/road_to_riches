@@ -21,17 +21,13 @@ class TestDirectionKeys:
         assert mapping == {"w": 15}
 
     def test_fork_two_directions(self):
-        mapping = compute_direction_keys(
-            (8, 0), [(3, (12, 0)), (99, (8, 4))]
-        )
-        assert mapping["d"] == 3   # right
+        mapping = compute_direction_keys((8, 0), [(3, (12, 0)), (99, (8, 4))])
+        assert mapping["d"] == 3  # right
         assert mapping["s"] == 99  # down
 
     def test_undo_direction(self):
-        mapping = compute_direction_keys(
-            (8, 0), [(3, (12, 0))], undo_pos=(4, 0)
-        )
-        assert mapping["d"] == 3       # right = forward
+        mapping = compute_direction_keys((8, 0), [(3, (12, 0))], undo_pos=(4, 0))
+        assert mapping["d"] == 3  # right = forward
         assert mapping["a"] == "undo"  # left = undo
 
     def test_undo_only(self):
@@ -49,9 +45,7 @@ class TestDirectionKeys:
 
     def test_conflict_resolution(self):
         # Two choices in the same direction (both right)
-        mapping = compute_direction_keys(
-            (0, 0), [(1, (4, 0)), (2, (8, 0))]
-        )
+        mapping = compute_direction_keys((0, 0), [(1, (4, 0)), (2, (8, 0))])
         assert 1 in mapping.values()
         assert 2 in mapping.values()
         assert len(mapping) == 2  # both assigned different keys

@@ -133,6 +133,7 @@ class LiquidationAuctionSellEvent(GameEvent):
             winner.owned_properties.append(self.square_id)
             if square.property_district is not None:
                 from road_to_riches.events.game_events import _update_district_stock_value
+
                 _update_district_stock_value(state, square.property_district)
         return None
 

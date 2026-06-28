@@ -81,7 +81,8 @@ class WebSocketPlayerInput(PlayerInput):
             if player_id != self._expecting_player:
                 logger.warning(
                     "Ignoring response from player %d (expecting player %d)",
-                    player_id, self._expecting_player,
+                    player_id,
+                    self._expecting_player,
                 )
                 return
         self._response = value
@@ -144,8 +145,13 @@ class WebSocketPlayerInput(PlayerInput):
         )
 
     def choose_path(
-        self, state: GameState, player_id: int, choices: list[int],
-        remaining: int, can_undo: bool, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        choices: list[int],
+        remaining: int,
+        can_undo: bool,
+        log: GameLog,
     ) -> int | str:
         self._flush_log(log)
         player = state.get_player(player_id)
@@ -153,11 +159,13 @@ class WebSocketPlayerInput(PlayerInput):
         descs = []
         for sq_id in choices:
             sq = state.board.squares[sq_id]
-            descs.append({
-                "square_id": sq_id,
-                "type": sq.type.value,
-                "position": list(sq.position),
-            })
+            descs.append(
+                {
+                    "square_id": sq_id,
+                    "type": sq.type.value,
+                    "position": list(sq.position),
+                }
+            )
         from_pos = None
         if can_undo and player.from_square is not None:
             from_sq = state.board.squares[player.from_square]
@@ -178,8 +186,12 @@ class WebSocketPlayerInput(PlayerInput):
         )
 
     def confirm_stop(
-        self, state: GameState, player_id: int, square_id: int,
-        can_undo: bool, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        square_id: int,
+        can_undo: bool,
+        log: GameLog,
     ) -> bool:
         self._flush_log(log)
         player = state.get_player(player_id)
@@ -243,8 +255,7 @@ class WebSocketPlayerInput(PlayerInput):
         self._flush_log(log)
         player = state.get_player(player_id)
         stocks = [
-            {"district_id": sp.district_id, "price": sp.current_price}
-            for sp in state.stock.stocks
+            {"district_id": sp.district_id, "price": sp.current_price} for sp in state.stock.stocks
         ]
         return self._request_input(
             InputRequest(
@@ -415,9 +426,7 @@ class WebSocketPlayerInput(PlayerInput):
             state,
         )
 
-    def choose_trade(
-        self, state: GameState, player_id: int, log: GameLog
-    ) -> dict | None:
+    def choose_trade(self, state: GameState, player_id: int, log: GameLog) -> dict | None:
         self._flush_log(log)
         player = state.get_player(player_id)
         shops = [
@@ -447,8 +456,12 @@ class WebSocketPlayerInput(PlayerInput):
         )
 
     def choose_script_decision(
-        self, state: GameState, player_id: int, prompt: str,
-        options: dict[str, Any], log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        prompt: str,
+        options: dict[str, Any],
+        log: GameLog,
     ) -> Any:
         self._flush_log(log)
         return self._request_input(
@@ -461,7 +474,11 @@ class WebSocketPlayerInput(PlayerInput):
         )
 
     def choose_any_square(
-        self, state: GameState, player_id: int, prompt: str, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        prompt: str,
+        log: GameLog,
     ) -> int:
         self._flush_log(log)
         squares = [
@@ -478,7 +495,10 @@ class WebSocketPlayerInput(PlayerInput):
         )
 
     def choose_venture_cell(
-        self, state: GameState, player_id: int, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        log: GameLog,
     ) -> tuple[int, int]:
         self._flush_log(log)
         grid = state.venture_grid

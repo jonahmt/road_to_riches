@@ -40,11 +40,7 @@ class TestLoadScriptGenerator:
         assert list(result) == [("start", 7), ("end", 7)]
 
     def test_generator_not_advanced_on_load(self, tmp_path):
-        body = (
-            "def run(state, player_id):\n"
-            "    state['ran'] = True\n"
-            "    yield 1\n"
-        )
+        body = "def run(state, player_id):\n    state['ran'] = True\n    yield 1\n"
         path = _write_script(tmp_path, body)
         state = {}
         gen = load_script_generator(path, state, 0)
@@ -54,10 +50,7 @@ class TestLoadScriptGenerator:
         assert state == {"ran": True}
 
     def test_plain_function_receives_state_and_player_id(self, tmp_path):
-        body = (
-            "def run(state, player_id):\n"
-            "    state['pid'] = player_id\n"
-        )
+        body = "def run(state, player_id):\n    state['pid'] = player_id\n"
         path = _write_script(tmp_path, body)
         state: dict = {}
         load_script_generator(path, state, 42)

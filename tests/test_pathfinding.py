@@ -17,7 +17,9 @@ def _make_board(squares: list[SquareInfo]) -> BoardState:
 
 def test_exact_match():
     sq = SquareInfo(
-        id=0, position=(0, 0), type=SquareType.SHOP,
+        id=0,
+        position=(0, 0),
+        type=SquareType.SHOP,
         waypoints=[Waypoint(from_id=1, to_ids=[2]), Waypoint(from_id=3, to_ids=[4])],
     )
     board = _make_board([sq])
@@ -27,7 +29,9 @@ def test_exact_match():
 
 def test_null_waypoint_fallback():
     sq = SquareInfo(
-        id=0, position=(0, 0), type=SquareType.SHOP,
+        id=0,
+        position=(0, 0),
+        type=SquareType.SHOP,
         waypoints=[Waypoint(from_id=None, to_ids=[5])],
     )
     board = _make_board([sq])
@@ -40,7 +44,9 @@ def test_from_none_union_fallback():
     """When from_id is None and no explicit null waypoint exists,
     return the union of all to_ids."""
     sq = SquareInfo(
-        id=0, position=(0, 0), type=SquareType.SHOP,
+        id=0,
+        position=(0, 0),
+        type=SquareType.SHOP,
         waypoints=[Waypoint(from_id=1, to_ids=[2]), Waypoint(from_id=3, to_ids=[4, 5])],
     )
     board = _make_board([sq])
@@ -57,7 +63,9 @@ def test_no_waypoints_returns_empty():
 def test_unknown_from_id_no_null_returns_empty():
     """When from_id is a specific int with no match and no null waypoint, return empty."""
     sq = SquareInfo(
-        id=0, position=(0, 0), type=SquareType.SHOP,
+        id=0,
+        position=(0, 0),
+        type=SquareType.SHOP,
         waypoints=[Waypoint(from_id=1, to_ids=[2])],
     )
     board = _make_board([sq])

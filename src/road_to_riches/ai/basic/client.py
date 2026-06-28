@@ -99,6 +99,7 @@ class BasicAIClient:
 # Handler functions
 # ---------------------------------------------------------------------------
 
+
 def _handle_pre_roll(ai: BasicAIClient, req: InputRequest) -> str:
     return "roll"
 
@@ -180,7 +181,11 @@ def _handle_buy_stock(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] |
     # Score each district by total max_capital of ALL shops in it
     district_scores: dict[int, float] = {}
     for sq in board.squares:
-        if sq.type == SquareType.SHOP and sq.property_district is not None and sq.property_owner is not None:
+        if (
+            sq.type == SquareType.SHOP
+            and sq.property_district is not None
+            and sq.property_owner is not None
+        ):
             mc = max_capital(board, sq)
             d = sq.property_district
             district_scores[d] = district_scores.get(d, 0) + mc
@@ -543,8 +548,7 @@ def main() -> None:
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--player-id", type=int, required=True)
-    parser.add_argument("--delay", type=float, default=0.5,
-                        help="Response delay in seconds")
+    parser.add_argument("--delay", type=float, default=0.5, help="Response delay in seconds")
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 

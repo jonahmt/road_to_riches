@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
+from road_to_riches import save as save_mod
 from road_to_riches.board import load_board
 from road_to_riches.engine.game_loop import GameConfig
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
+from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.suit import Suit
-from road_to_riches import save as save_mod
 
 
 @pytest.fixture
@@ -23,13 +23,12 @@ def tmp_save_dir(tmp_path, monkeypatch):
 
 def _make_state() -> GameState:
     board, stock = load_board("boards/test_board.json")
-    players = [
-        PlayerState(player_id=i, position=i, ready_cash=1000 + i * 100)
-        for i in range(2)
-    ]
+    players = [PlayerState(player_id=i, position=i, ready_cash=1000 + i * 100) for i in range(2)]
     players[0].suits = {Suit.SPADE: 1, Suit.HEART: 1}
     players[0].owned_properties = [1]
     board.squares[1].property_owner = 0
+    board.starting_cash = 2345
+    board.squares[5].vacant_plot_options = [SquareType.VP_TAX_OFFICE]
     players[1].owned_stock = {0: 5}
     return GameState(board=board, stock=stock, players=players)
 
@@ -88,6 +87,12 @@ class TestLoadSave:
         assert state.players[1].position == 1
         assert state.players[0].owned_properties == [1]
         assert state.players[1].owned_stock == {0: 5}
+
+    def test_round_trip_preserves_board_metadata(self, tmp_save_dir):
+        save_mod.save_game(_make_state(), _make_config())
+        state, _ = save_mod.load_save()
+        assert state.board.starting_cash == 2345
+        assert state.board.squares[5].vacant_plot_options == [SquareType.VP_TAX_OFFICE]
 
     def test_load_ignores_legacy_starting_cash_field(self, tmp_save_dir):
         # Write a save with a legacy `starting_cash` key to exercise the pop.

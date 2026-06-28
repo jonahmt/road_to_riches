@@ -16,24 +16,34 @@ def main() -> None:
         help="Run mode (default: local)",
     )
     parser.add_argument(
-        "board", nargs="?", default="boards/test_board.json", help="Board file path",
+        "board",
+        nargs="?",
+        default="boards/test_board.json",
+        help="Board file path",
     )
-    parser.add_argument("players", nargs="?", type=int, default=4,
-                        help="Number of players (local/text mode)")
-    parser.add_argument("--humans", type=int, default=1,
-                        help="Number of human players (server mode)")
-    parser.add_argument("--ai", type=int, default=3,
-                        help="Number of AI players (server mode)")
-    parser.add_argument("--ai-delay", type=float, default=1.0,
-                        help="AI response delay in seconds (server mode, default 1.0)")
+    parser.add_argument(
+        "players", nargs="?", type=int, default=4, help="Number of players (local/text mode)"
+    )
+    parser.add_argument(
+        "--humans", type=int, default=1, help="Number of human players (server mode)"
+    )
+    parser.add_argument("--ai", type=int, default=3, help="Number of AI players (server mode)")
+    parser.add_argument(
+        "--ai-delay",
+        type=float,
+        default=1.0,
+        help="AI response delay in seconds (server mode, default 1.0)",
+    )
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=8765)
-    parser.add_argument("--log-lines", type=int, default=None,
-                        help="Max log lines kept in the TUI (local/client mode). "
-                             "Default: unlimited (entire game).")
+    parser.add_argument(
+        "--log-lines",
+        type=int,
+        default=None,
+        help="Max log lines kept in the TUI (local/client mode). Default: unlimited (entire game).",
+    )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
-    parser.add_argument("--resume", action="store_true",
-                        help="Resume from most recent save file")
+    parser.add_argument("--resume", action="store_true", help="Resume from most recent save file")
 
     args = parser.parse_args()
 

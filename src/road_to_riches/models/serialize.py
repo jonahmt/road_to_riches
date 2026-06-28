@@ -63,6 +63,7 @@ def _board_to_dict(board: BoardState) -> dict:
         "target_networth": board.target_networth,
         "max_bankruptcies": board.max_bankruptcies,
         "num_districts": board.num_districts,
+        "starting_cash": board.starting_cash,
         "promotion_info": {
             "base_salary": board.promotion_info.base_salary,
             "salary_increment": board.promotion_info.salary_increment,
@@ -80,6 +81,7 @@ def _board_from_dict(d: dict) -> BoardState:
         target_networth=d["target_networth"],
         max_bankruptcies=d["max_bankruptcies"],
         num_districts=d["num_districts"],
+        starting_cash=d.get("starting_cash", 1500),
         promotion_info=PromotionInfo(
             base_salary=pi["base_salary"],
             salary_increment=pi["salary_increment"],
@@ -95,9 +97,7 @@ def _square_to_dict(sq: SquareInfo) -> dict:
         "id": sq.id,
         "position": list(sq.position),
         "type": sq.type.value,
-        "waypoints": [
-            {"from_id": wp.from_id, "to_ids": wp.to_ids} for wp in sq.waypoints
-        ],
+        "waypoints": [{"from_id": wp.from_id, "to_ids": wp.to_ids} for wp in sq.waypoints],
         "statuses": [
             {"type": s.type, "modifier": s.modifier, "remaining_turns": s.remaining_turns}
             for s in sq.statuses
@@ -109,6 +109,7 @@ def _square_to_dict(sq: SquareInfo) -> dict:
         "shop_current_value": sq.shop_current_value,
         "suit": sq.suit.value if sq.suit else None,
         "checkpoint_toll": sq.checkpoint_toll,
+        "vacant_plot_options": [option.value for option in sq.vacant_plot_options],
         "backstreet_destination": sq.backstreet_destination,
         "doorway_destination": sq.doorway_destination,
         "switch_next_state": sq.switch_next_state,
@@ -123,7 +124,11 @@ def _square_from_dict(d: dict) -> SquareInfo:
         type=SquareType(d["type"]),
         waypoints=[Waypoint(from_id=wp["from_id"], to_ids=wp["to_ids"]) for wp in d["waypoints"]],
         statuses=[
-            SquareStatus(type=s["type"], modifier=s["modifier"], remaining_turns=s["remaining_turns"])
+            SquareStatus(
+                type=s["type"],
+                modifier=s["modifier"],
+                remaining_turns=s["remaining_turns"],
+            )
             for s in d.get("statuses", [])
         ],
         property_owner=d.get("property_owner"),
@@ -133,6 +138,7 @@ def _square_from_dict(d: dict) -> SquareInfo:
         shop_current_value=d.get("shop_current_value"),
         suit=Suit(d["suit"]) if d.get("suit") else None,
         checkpoint_toll=d.get("checkpoint_toll", 0),
+        vacant_plot_options=[SquareType(option) for option in d.get("vacant_plot_options", [])],
         backstreet_destination=d.get("backstreet_destination"),
         doorway_destination=d.get("doorway_destination"),
         switch_next_state=d.get("switch_next_state"),
@@ -203,7 +209,11 @@ def _player_from_dict(d: dict) -> PlayerState:
         owned_properties=list(d.get("owned_properties", [])),
         owned_stock={int(k): v for k, v in d.get("owned_stock", {}).items()},
         statuses=[
-            PlayerStatus(type=s["type"], modifier=s["modifier"], remaining_turns=s["remaining_turns"])
+            PlayerStatus(
+                type=s["type"],
+                modifier=s["modifier"],
+                remaining_turns=s["remaining_turns"],
+            )
             for s in d.get("statuses", [])
         ],
         bankrupt=d.get("bankrupt", False),

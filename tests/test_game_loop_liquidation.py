@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import create_autospec
 
 from road_to_riches.board import load_board
-from road_to_riches.engine.bankruptcy import LiquidationAuctionSellEvent
 from road_to_riches.engine.game_loop import GameConfig, GameLoop, PlayerInput
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
@@ -21,9 +20,7 @@ def _make_input() -> PlayerInput:
 
 def _make_loop(num_players: int = 3) -> GameLoop:
     board, stock = load_board("boards/test_board.json")
-    players = [
-        PlayerState(player_id=i, position=0, ready_cash=2000) for i in range(num_players)
-    ]
+    players = [PlayerState(player_id=i, position=0, ready_cash=2000) for i in range(num_players)]
     state = GameState(board=board, stock=stock, players=players)
     config = GameConfig(board_path="boards/test_board.json", num_players=num_players)
     return GameLoop(config, _make_input(), saved_state=state)

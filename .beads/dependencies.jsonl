@@ -1,6 +1,7 @@
 {"created_at":"2026-03-25T23:40:14Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-rug","issue_id":"road_to_riches-06d","type":"blocks"}
 {"created_at":"2026-03-12T23:19:39Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-38u","issue_id":"road_to_riches-0h7","type":"blocks"}
 {"created_at":"2026-03-12T23:17:44Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-6pa","issue_id":"road_to_riches-13m","type":"blocks"}
+{"created_at":"2026-06-28T14:54:41Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-r0oq","issue_id":"road_to_riches-1e4t","type":"discovered-from"}
 {"created_at":"2026-03-12T23:20:56Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-6pa","issue_id":"road_to_riches-1i0","type":"blocks"}
 {"created_at":"2026-03-12T23:20:56Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-8eh","issue_id":"road_to_riches-1i0","type":"blocks"}
 {"created_at":"2026-03-12T23:20:56Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-u26","issue_id":"road_to_riches-1i0","type":"blocks"}
@@ -69,6 +70,7 @@
 {"created_at":"2026-03-12T23:17:43Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-6pa","issue_id":"road_to_riches-c55","type":"blocks"}
 {"created_at":"2026-04-12T00:08:37Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-dmx","issue_id":"road_to_riches-c59","type":"blocks"}
 {"created_at":"2026-04-20T17:21:53Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-7z5","issue_id":"road_to_riches-ccq","type":"blocks"}
+{"created_at":"2026-06-28T14:54:10Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-r0oq","issue_id":"road_to_riches-d27l","type":"discovered-from"}
 {"created_at":"2026-04-20T18:00:19Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-5hs","issue_id":"road_to_riches-d4j","type":"blocks"}
 {"created_at":"2026-04-20T18:00:19Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-67r","issue_id":"road_to_riches-d4j","type":"blocks"}
 {"created_at":"2026-04-20T18:00:19Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-9jt","issue_id":"road_to_riches-d4j","type":"blocks"}
@@ -93,6 +95,7 @@
 {"created_at":"2026-04-11T18:36:17Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-kkx","issue_id":"road_to_riches-gmj","type":"blocks"}
 {"created_at":"2026-04-11T18:36:17Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-kqs","issue_id":"road_to_riches-gmj","type":"blocks"}
 {"created_at":"2026-03-12T23:21:05Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-6pa","issue_id":"road_to_riches-guk","type":"blocks"}
+{"created_at":"2026-06-28T14:54:06Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-r0oq","issue_id":"road_to_riches-i5zu","type":"discovered-from"}
 {"created_at":"2026-03-12T23:21:00Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-27k","issue_id":"road_to_riches-jq2","type":"blocks"}
 {"created_at":"2026-03-12T23:17:34Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-e0f","issue_id":"road_to_riches-kiz","type":"blocks"}
 {"created_at":"2026-03-12T23:17:34Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-vw7","issue_id":"road_to_riches-kiz","type":"blocks"}
@@ -105,6 +108,7 @@
 {"created_at":"2026-03-12T23:20:55Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-8eh","issue_id":"road_to_riches-m64","type":"blocks"}
 {"created_at":"2026-03-12T23:20:55Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-u26","issue_id":"road_to_riches-m64","type":"blocks"}
 {"created_at":"2026-03-12T23:20:55Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-vuz","issue_id":"road_to_riches-m64","type":"blocks"}
+{"created_at":"2026-06-28T14:54:40Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-r0oq","issue_id":"road_to_riches-m7k8","type":"discovered-from"}
 {"created_at":"2026-03-12T23:21:17Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-u26","issue_id":"road_to_riches-mad","type":"blocks"}
 {"created_at":"2026-03-12T23:21:06Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-6pa","issue_id":"road_to_riches-n2v","type":"blocks"}
 {"created_at":"2026-03-12T23:19:31Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-bxl","issue_id":"road_to_riches-nuc","type":"blocks"}
@@ -129,12 +133,16 @@
 {"created_at":"2026-03-12T23:19:40Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-0h7","issue_id":"road_to_riches-tku","type":"blocks"}
 {"created_at":"2026-03-12T23:19:40Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-6sq","issue_id":"road_to_riches-tku","type":"blocks"}
 {"created_at":"2026-03-12T23:17:36Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-kiz","issue_id":"road_to_riches-u26","type":"blocks"}
+{"created_at":"2026-06-28T14:54:11Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-r0oq","issue_id":"road_to_riches-vjyr","type":"discovered-from"}
 {"created_at":"2026-03-12T23:17:37Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-vw7","issue_id":"road_to_riches-vuz","type":"blocks"}
 {"created_at":"2026-03-12T23:17:32Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-38u","issue_id":"road_to_riches-vw7","type":"blocks"}
 {"created_at":"2026-03-12T23:17:47Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-e0f","issue_id":"road_to_riches-w09","type":"blocks"}
+{"created_at":"2026-06-28T14:54:41Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-r0oq","issue_id":"road_to_riches-w0ly","type":"discovered-from"}
 {"created_at":"2026-03-12T23:17:38Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-6pa","issue_id":"road_to_riches-wl8","type":"blocks"}
 {"created_at":"2026-03-12T23:17:40Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-8eh","issue_id":"road_to_riches-wl8","type":"blocks"}
 {"created_at":"2026-03-12T23:17:39Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-u26","issue_id":"road_to_riches-wl8","type":"blocks"}
 {"created_at":"2026-03-12T23:17:41Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-vuz","issue_id":"road_to_riches-wl8","type":"blocks"}
+{"created_at":"2026-06-28T14:54:09Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-r0oq","issue_id":"road_to_riches-wv7u","type":"discovered-from"}
+{"created_at":"2026-06-28T14:54:42Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-r0oq","issue_id":"road_to_riches-x8d7","type":"discovered-from"}
 {"created_at":"2026-03-12T23:20:56Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-la0","issue_id":"road_to_riches-xvt","type":"blocks"}
 {"created_at":"2026-03-12T23:21:14Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-wl8","issue_id":"road_to_riches-y2d","type":"blocks"}

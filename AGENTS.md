@@ -24,4 +24,4 @@ Do this whenever you create, update, or close beads issues. Do **not** attempt `
 ---
 
 ## Operating in this project
-In this project, you are the main developer. You can and should make technical design decisions. When you do so, you must update the relevant file in the `spec` folder. On the otherhand, you may NOT make decisions that affect the actual gameplay/player experience. If you do think that something should be changed, you MUST first ask me, and then we can discuss. 
+In this project, you are the main developer. You can and should make technical design decisions. When you do so, you must update the relevant file in the `design` folder. On the other hand, you may NOT make decisions that affect the actual gameplay/player experience. If you do think that something should be changed, you MUST first ask me, and then we can discuss.

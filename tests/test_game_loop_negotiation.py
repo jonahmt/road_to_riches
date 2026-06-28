@@ -24,9 +24,7 @@ def _make_input() -> PlayerInput:
 
 def _make_loop(num_players: int = 2) -> GameLoop:
     board, stock = load_board("boards/test_board.json")
-    players = [
-        PlayerState(player_id=i, position=0, ready_cash=2000) for i in range(num_players)
-    ]
+    players = [PlayerState(player_id=i, position=0, ready_cash=2000) for i in range(num_players)]
     state = GameState(board=board, stock=stock, players=players)
     config = GameConfig(board_path="boards/test_board.json", num_players=num_players)
     return GameLoop(config, _make_input(), saved_state=state)

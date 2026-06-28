@@ -14,7 +14,6 @@ from road_to_riches.protocol import (
     msg_state_sync,
 )
 
-
 # --- Encode/decode round-trip tests ---
 
 

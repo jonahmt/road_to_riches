@@ -6,6 +6,7 @@ from unittest.mock import create_autospec
 
 from road_to_riches.board import load_board
 from road_to_riches.engine.game_loop import GameConfig, GameLoop, PlayerInput
+from road_to_riches.events.game_events import BuyShopEvent
 from road_to_riches.events.turn_events import (
     InitBuyShopEvent,
     InitBuyStockEvent,
@@ -18,7 +19,6 @@ from road_to_riches.events.turn_events import (
 )
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
-from road_to_riches.models.square_type import SquareType
 
 
 def _make_input() -> PlayerInput:
@@ -31,9 +31,7 @@ def _make_input() -> PlayerInput:
 
 def _make_loop(num_players: int = 2) -> GameLoop:
     board, stock = load_board("boards/test_board.json")
-    players = [
-        PlayerState(player_id=i, position=0, ready_cash=2000) for i in range(num_players)
-    ]
+    players = [PlayerState(player_id=i, position=0, ready_cash=2000) for i in range(num_players)]
     state = GameState(board=board, stock=stock, players=players)
     config = GameConfig(board_path="boards/test_board.json", num_players=num_players)
     return GameLoop(config, _make_input(), saved_state=state)
@@ -56,6 +54,33 @@ class TestInitBuyShop:
         loop.input.choose_buy_shop.return_value = False
         loop._handle_init_buy_shop(InitBuyShopEvent(player_id=0, square_id=1, cost=200))
         assert loop.pipeline.is_empty
+
+    def test_accept_rejects_if_player_can_no_longer_afford_shop(self):
+        loop = _make_loop()
+        shop = loop.state.board.squares[1]
+        assert shop.shop_base_value is not None
+        loop.state.players[0].ready_cash = shop.shop_base_value - 1
+        loop.input.choose_buy_shop.return_value = True
+
+        loop._handle_init_buy_shop(
+            InitBuyShopEvent(player_id=0, square_id=1, cost=shop.shop_base_value)
+        )
+
+        assert loop.pipeline.is_empty
+        assert shop.property_owner is None
+        assert any("enough ready cash" in msg for msg in loop.log.messages)
+
+    def test_accept_rejects_if_shop_is_no_longer_available(self):
+        loop = _make_loop()
+        shop = loop.state.board.squares[1]
+        shop.property_owner = 1
+        loop.input.choose_buy_shop.return_value = True
+
+        loop._handle_init_buy_shop(InitBuyShopEvent(player_id=0, square_id=1, cost=200))
+
+        assert loop.pipeline.is_empty
+        assert not any(isinstance(event, BuyShopEvent) for event in loop.pipeline._queue)
+        assert any("no longer available" in msg for msg in loop.log.messages)
 
 
 class TestInitBuyVacantPlot:
@@ -248,33 +273,25 @@ class TestInitSellStock:
 class TestInitRenovate:
     def test_no_options(self):
         loop = _make_loop()
-        loop._handle_init_renovate(
-            InitRenovateEvent(player_id=0, square_id=1, options=[])
-        )
+        loop._handle_init_renovate(InitRenovateEvent(player_id=0, square_id=1, options=[]))
         loop.input.choose_renovation.assert_not_called()
 
     def test_cancel(self):
         loop = _make_loop()
         loop.input.choose_renovation.return_value = None
-        loop._handle_init_renovate(
-            InitRenovateEvent(player_id=0, square_id=1, options=["SHOP"])
-        )
+        loop._handle_init_renovate(InitRenovateEvent(player_id=0, square_id=1, options=["SHOP"]))
         assert loop.pipeline.is_empty
 
     def test_invalid_type(self):
         loop = _make_loop()
         loop.input.choose_renovation.return_value = "GARBAGE"
-        loop._handle_init_renovate(
-            InitRenovateEvent(player_id=0, square_id=1, options=["SHOP"])
-        )
+        loop._handle_init_renovate(InitRenovateEvent(player_id=0, square_id=1, options=["SHOP"]))
         assert loop.pipeline.is_empty
 
     def test_valid(self):
         loop = _make_loop()
         loop.input.choose_renovation.return_value = "SHOP"
-        loop._handle_init_renovate(
-            InitRenovateEvent(player_id=0, square_id=1, options=["SHOP"])
-        )
+        loop._handle_init_renovate(InitRenovateEvent(player_id=0, square_id=1, options=["SHOP"]))
         assert not loop.pipeline.is_empty
 
 
@@ -287,17 +304,13 @@ class TestInitCannon:
     def test_invalid_target(self):
         loop = _make_loop()
         loop.input.choose_cannon_target.return_value = 99
-        loop._handle_init_cannon(
-            InitCannonEvent(player_id=0, targets=[{"player_id": 1}])
-        )
+        loop._handle_init_cannon(InitCannonEvent(player_id=0, targets=[{"player_id": 1}]))
         assert loop.pipeline.is_empty
 
     def test_valid_target_enqueues_warp(self):
         loop = _make_loop()
         loop.state.players[1].position = 5
         loop.input.choose_cannon_target.return_value = 1
-        loop._handle_init_cannon(
-            InitCannonEvent(player_id=0, targets=[{"player_id": 1}])
-        )
+        loop._handle_init_cannon(InitCannonEvent(player_id=0, targets=[{"player_id": 1}]))
         # Warp event was enqueued
         assert not loop.pipeline.is_empty

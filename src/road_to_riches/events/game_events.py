@@ -106,17 +106,14 @@ class PayRentEvent(GameEvent):
         if self._rent_amount <= 0:
             return None
         lines = [
-            f"Player {self.payer_id} pays {self._rent_amount}G rent to "
-            f"Player {self.owner_id}."
+            f"Player {self.payer_id} pays {self._rent_amount}G rent to Player {self.owner_id}."
         ]
         if self._dividends:
             for pid, amount in self._dividends:
                 lines.append(f"  Dividend: Player {pid} receives {amount}G.")
         if self._commissions:
             for pid, amount, pct in self._commissions:
-                lines.append(
-                    f"  Commission: Player {pid} receives {amount}G ({pct:g}%)."
-                )
+                lines.append(f"  Commission: Player {pid} receives {amount}G ({pct:g}%).")
         return "\n".join(lines)
 
 
@@ -168,8 +165,7 @@ class InvestInShopEvent(GameEvent):
         msg = f"Player {self.player_id} invested {amount}G in square {self.square_id}!"
         if self._price_after != self._price_before and self._district_id >= 0:
             msg += (
-                f" District {self._district_id} stock: "
-                f"{self._price_before} -> {self._price_after}"
+                f" District {self._district_id} stock: {self._price_before} -> {self._price_after}"
             )
         return msg
 
@@ -207,8 +203,7 @@ class BuyStockEvent(GameEvent):
 
     def log_message(self) -> str | None:
         return (
-            f"Player {self.player_id} bought {self.quantity} stock "
-            f"in district {self.district_id}."
+            f"Player {self.player_id} bought {self.quantity} stock in district {self.district_id}."
         )
 
 
@@ -239,10 +234,7 @@ class SellStockEvent(GameEvent):
             price.pending_fluctuation -= delta
 
     def log_message(self) -> str | None:
-        return (
-            f"Player {self.player_id} sold {self.quantity} stock "
-            f"in district {self.district_id}."
-        )
+        return f"Player {self.player_id} sold {self.quantity} stock in district {self.district_id}."
 
 
 # =============================================================================
@@ -379,8 +371,7 @@ class GainCommissionEvent(GameEvent):
 
     def log_message(self) -> str | None:
         return (
-            f"Player {self.player_id} gains {self.percent}% commission "
-            f"for {self._duration} turns."
+            f"Player {self.player_id} gains {self.percent}% commission for {self._duration} turns."
         )
 
 
@@ -508,6 +499,7 @@ class PayTaxEvent(GameEvent):
 
     def execute(self, state: GameState) -> None:
         from road_to_riches.engine.statuses import is_shop_closed
+
         square = state.board.squares[self.square_id]
         if is_shop_closed(square.statuses):
             self._tax_amount = 0
@@ -525,10 +517,7 @@ class PayTaxEvent(GameEvent):
     def log_message(self) -> str | None:
         if self._tax_amount <= 0:
             return None
-        return (
-            f"Player {self.payer_id} pays {self._tax_amount}G tax to "
-            f"Player {self.owner_id}."
-        )
+        return f"Player {self.payer_id} pays {self._tax_amount}G tax to Player {self.owner_id}."
 
 
 @register_event
@@ -584,10 +573,7 @@ class RenovatePropertyEvent(GameEvent):
             _update_district_stock_value(state, square.property_district)
 
     def log_message(self) -> str | None:
-        return (
-            f"Player {self.player_id} renovated square {self.square_id} "
-            f"to {self.new_type}!"
-        )
+        return f"Player {self.player_id} renovated square {self.square_id} to {self.new_type}!"
 
 
 # =============================================================================
@@ -708,10 +694,7 @@ class AuctionSellEvent(GameEvent):
                 f"Player {self.winner_id} wins auction for square "
                 f"{self.square_id} at {self.winning_bid}G!"
             )
-        return (
-            f"No bids for square {self.square_id}. "
-            f"Player {self.seller_id} receives base value."
-        )
+        return f"No bids for square {self.square_id}. Player {self.seller_id} receives base value."
 
 
 # =============================================================================
@@ -786,6 +769,7 @@ class WarpEvent(GameEvent):
                 PassActionEvent,
                 StopActionEvent,
             )
+
             return [
                 PassActionEvent(player_id=self.player_id, square_id=self.target_square_id),
                 StopActionEvent(player_id=self.player_id, square_id=self.target_square_id),

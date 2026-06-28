@@ -1,15 +1,15 @@
 """Tests for venture deck and grid serialization round-trips."""
 
+from road_to_riches.models.board_state import BoardState, PromotionInfo
+from road_to_riches.models.game_state import GameState
+from road_to_riches.models.player_state import PlayerState
+from road_to_riches.models.serialize import (
+    game_state_from_dict,
+    game_state_to_dict,
+)
+from road_to_riches.models.stock_state import StockState
 from road_to_riches.models.venture_deck import VentureCard, VentureDeck
 from road_to_riches.models.venture_grid import VentureGrid
-from road_to_riches.models.serialize import (
-    game_state_to_dict,
-    game_state_from_dict,
-)
-from road_to_riches.models.game_state import GameState
-from road_to_riches.models.board_state import BoardState, PromotionInfo
-from road_to_riches.models.player_state import PlayerState
-from road_to_riches.models.stock_state import StockState
 
 
 def _minimal_state(

@@ -18,9 +18,9 @@ GRID_SIZE = 8
 class VentureGrid:
     """8x8 grid where players claim cells during venture card draws."""
 
-    cells: list[list[int | None]] = field(default_factory=lambda: [
-        [None] * GRID_SIZE for _ in range(GRID_SIZE)
-    ])
+    cells: list[list[int | None]] = field(
+        default_factory=lambda: [[None] * GRID_SIZE for _ in range(GRID_SIZE)]
+    )
     """cells[row][col] = player_id or None if unclaimed."""
 
     def claim(self, row: int, col: int, player_id: int) -> int:
@@ -34,29 +34,24 @@ class VentureGrid:
         return self._check_line_bonuses(row, col, player_id)
 
     def is_full(self) -> bool:
-        return all(
-            self.cells[r][c] is not None
-            for r in range(GRID_SIZE) for c in range(GRID_SIZE)
-        )
+        return all(self.cells[r][c] is not None for r in range(GRID_SIZE) for c in range(GRID_SIZE))
 
     def reset(self) -> None:
         self.cells = [[None] * GRID_SIZE for _ in range(GRID_SIZE)]
 
     def unclaimed_cells(self) -> list[tuple[int, int]]:
         return [
-            (r, c)
-            for r in range(GRID_SIZE) for c in range(GRID_SIZE)
-            if self.cells[r][c] is None
+            (r, c) for r in range(GRID_SIZE) for c in range(GRID_SIZE) if self.cells[r][c] is None
         ]
 
     def _check_line_bonuses(self, row: int, col: int, player_id: int) -> int:
         """Check all lines through (row, col) for bonuses. Returns total gold."""
         # 8 directions grouped into 4 axis pairs
         axes = [
-            ((0, 1), (0, -1)),    # horizontal
-            ((1, 0), (-1, 0)),    # vertical
-            ((1, 1), (-1, -1)),   # diagonal \
-            ((1, -1), (-1, 1)),   # diagonal /
+            ((0, 1), (0, -1)),  # horizontal
+            ((1, 0), (-1, 0)),  # vertical
+            ((1, 1), (-1, -1)),  # diagonal \
+            ((1, -1), (-1, 1)),  # diagonal /
         ]
 
         total_bonus = 0
@@ -72,7 +67,12 @@ class VentureGrid:
         return total_bonus
 
     def _count_direction(
-        self, row: int, col: int, dr: int, dc: int, player_id: int,
+        self,
+        row: int,
+        col: int,
+        dr: int,
+        dc: int,
+        player_id: int,
     ) -> int:
         """Count consecutive cells owned by player_id in one direction."""
         count = 0

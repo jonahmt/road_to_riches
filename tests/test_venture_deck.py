@@ -1,11 +1,5 @@
 """Tests for VentureDeck: draw, reshuffle, card loading, deck building."""
 
-import os
-import tempfile
-from pathlib import Path
-
-import pytest
-
 from road_to_riches.models.venture_deck import (
     VentureCard,
     VentureDeck,

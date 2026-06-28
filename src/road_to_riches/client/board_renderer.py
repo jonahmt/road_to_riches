@@ -10,27 +10,19 @@ Based on the design spec in design/p0_client.md.
 
 from __future__ import annotations
 
+from road_to_riches.client.display import DISTRICT_COLORS, PLAYER_COLORS, SUIT_ABBR, SUIT_COLORS
+from road_to_riches.client.display import SUIT_SYMBOLS as DISPLAY_SUIT_SYMBOLS
 from road_to_riches.models.board_state import BoardState, SquareInfo
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.square_type import SquareType
 
 # A pixel is 2 chars wide, 1 char tall.
 # Each square is 4x4 pixels.
-SQUARE_PX = 4      # square size in pixels (both axes)
-PX_CHARS = 2        # chars per pixel horizontally
+SQUARE_PX = 4  # square size in pixels (both axes)
+PX_CHARS = 2  # chars per pixel horizontally
 
-# Suit symbols and colors
-SUIT_SYMBOLS = {"SPADE": "♠", "HEART": "♥", "DIAMOND": "♦", "CLUB": "♣"}
-SUIT_COLORS = {"SPADE": "dodger_blue1", "HEART": "bright_red", "DIAMOND": "yellow", "CLUB": "green"}
-SUIT_ABBR = {"SPADE": "SPADE", "HEART": "HEART", "DIAMOND": "Dmnd", "CLUB": "CLUB"}
-
-# District border colors
-DISTRICT_COLORS = [
-    "cyan", "magenta", "bright_green", "bright_yellow", "bright_red", "bright_blue",
-]
-
-# Player text colors
-PLAYER_COLORS = ["bright_cyan", "orchid1", "bright_yellow", "bright_green"]
+# Renderer only supports board suit squares; WILD is a player/card symbol.
+SUIT_SYMBOLS = {name: DISPLAY_SUIT_SYMBOLS[name] for name in ("SPADE", "HEART", "DIAMOND", "CLUB")}
 
 # Square type display config: (line1_text, line2_text, main_color, highlight_color)
 _SPECIAL_DISPLAY: dict[SquareType, tuple[str, str, str, str]] = {
@@ -87,6 +79,7 @@ def _render_cell(
     bg_color: str | None = None
 
     from road_to_riches.engine.statuses import is_shop_closed
+
     closed = is_shop_closed(sq.statuses)
 
     if sq.type == SquareType.SHOP:
@@ -95,6 +88,7 @@ def _render_cell(
         if sq.property_owner is not None:
             if board is not None:
                 from road_to_riches.engine.property import current_rent
+
                 rent = current_rent(board, sq)
             else:
                 rent = sq.shop_base_rent or 0
@@ -311,13 +305,9 @@ def render_board(
         pids = player_positions.get(sq.id, [])
         is_browsed = browsed_square_id is not None and sq.id == browsed_square_id
         do_flash = (
-            flash_on
-            and flash_district_id is not None
-            and sq.property_district == flash_district_id
+            flash_on and flash_district_id is not None and sq.property_district == flash_district_id
         )
-        cell_lines = _render_cell(
-            sq, pids, active_player_id, board, is_browsed, state, do_flash
-        )
+        cell_lines = _render_cell(sq, pids, active_player_id, board, is_browsed, state, do_flash)
 
         for row_offset in range(SQUARE_PX):
             py = sy + row_offset
@@ -353,7 +343,9 @@ def get_board_grid(board: "BoardState") -> list[list[int | None]]:
     """
     if not board.squares:
         return []
-    positions = [(sq, sq.position[0] // SQUARE_PX, sq.position[1] // SQUARE_PX) for sq in board.squares]
+    positions = [
+        (sq, sq.position[0] // SQUARE_PX, sq.position[1] // SQUARE_PX) for sq in board.squares
+    ]
     cols = max(p[1] for p in positions) + 1
     rows = max(p[2] for p in positions) + 1
     grid: list[list[int | None]] = [[None] * cols for _ in range(rows)]

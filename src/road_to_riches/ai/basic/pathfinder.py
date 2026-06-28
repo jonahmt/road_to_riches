@@ -144,6 +144,7 @@ def compute_promotion_targets(
     # and return the targets for the best combo (let optimal_tour decide)
     best_targets: list[int] = []
     from itertools import combinations
+
     for combo in combinations(missing, need_count):
         targets = []
         for s in combo:
@@ -207,7 +208,6 @@ def plan_route(
 
     # Deduplicate: for each suit, pick nearest square
     selected: list[int] = []
-    seen_suits: set[Suit] = set()
     standard_suits = [Suit.SPADE, Suit.HEART, Suit.DIAMOND, Suit.CLUB]
     wilds = player_suits.get(Suit.WILD, 0)
     missing = [s for s in standard_suits if player_suits.get(s, 0) == 0]
@@ -217,6 +217,7 @@ def plan_route(
     if wilds > 0 and len(missing) > need_count:
         # Try all combos, pick the one with shortest total distance
         from itertools import combinations
+
         best_combo_targets: list[int] = []
         best_combo_cost = float("inf")
         for combo in combinations(missing, need_count):

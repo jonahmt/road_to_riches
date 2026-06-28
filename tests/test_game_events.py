@@ -46,9 +46,7 @@ from road_to_riches.models.venture_grid import VentureGrid
 
 def _make_game(num_players: int = 2, cash: int = 2000) -> GameState:
     board, stock = load_board("boards/test_board.json")
-    players = [
-        PlayerState(player_id=i, position=0, ready_cash=cash) for i in range(num_players)
-    ]
+    players = [PlayerState(player_id=i, position=0, ready_cash=cash) for i in range(num_players)]
     return GameState(board=board, stock=stock, players=players)
 
 
@@ -318,9 +316,7 @@ class TestForcedBuyoutEvent:
 
 class TestAuctionSellEvent:
     def test_winner_log(self):
-        msg = AuctionSellEvent(
-            seller_id=0, square_id=1, winner_id=2, winning_bid=300
-        ).log_message()
+        msg = AuctionSellEvent(seller_id=0, square_id=1, winner_id=2, winning_bid=300).log_message()
         assert "Player 2" in msg and "300" in msg
 
     def test_no_winner_log(self):

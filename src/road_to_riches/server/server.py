@@ -16,14 +16,17 @@ import logging
 import subprocess
 import sys
 import threading
+from typing import TYPE_CHECKING
 
 import websockets
 from websockets.asyncio.server import ServerConnection
 
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
-from road_to_riches.models.serialize import game_state_to_dict
-from road_to_riches.protocol import decode, encode, msg_assign_player, msg_state_sync
+from road_to_riches.protocol import decode, encode, msg_assign_player
 from road_to_riches.server.server_input import WebSocketPlayerInput
+
+if TYPE_CHECKING:
+    from road_to_riches.models.game_state import GameState
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +79,12 @@ class GameServer:
                         continue
                     self._register_player(ws, pid)
                     self._player_input.set_client_for_player(pid, ws)
-                    logger.info("AI player %d connected (%d/%d total)",
-                                pid, len(self._player_to_ws), self.config.num_players)
+                    logger.info(
+                        "AI player %d connected (%d/%d total)",
+                        pid,
+                        len(self._player_to_ws),
+                        self.config.num_players,
+                    )
                     self._check_all_connected()
 
                 elif msg_type == "input_response":
@@ -123,8 +130,12 @@ class GameServer:
 
         # Tell the client which player they are
         await ws.send(encode(msg_assign_player(player_id)))
-        logger.info("Human player %d connected (%d/%d humans)",
-                    player_id, self._next_human_id, self.num_humans)
+        logger.info(
+            "Human player %d connected (%d/%d humans)",
+            player_id,
+            self._next_human_id,
+            self.num_humans,
+        )
         return player_id
 
     def _check_all_connected(self) -> None:
@@ -138,11 +149,17 @@ class GameServer:
         for i in range(self.num_ai):
             player_id = self.num_humans + i
             cmd = [
-                sys.executable, "-m", "road_to_riches.ai.basic.client",
-                "--host", host,
-                "--port", str(port),
-                "--player-id", str(player_id),
-                "--delay", str(self.ai_delay),
+                sys.executable,
+                "-m",
+                "road_to_riches.ai.basic.client",
+                "--host",
+                host,
+                "--port",
+                str(port),
+                "--player-id",
+                str(player_id),
+                "--delay",
+                str(self.ai_delay),
             ]
             logger.info("Spawning AI player %d: %s", player_id, " ".join(cmd))
             proc = subprocess.Popen(cmd)
@@ -154,6 +171,7 @@ class GameServer:
             logger.warning("Dev event received but game not running")
             return
         from road_to_riches.events.event import GameEvent
+
         event_data = dict(msg["event_data"])
         event_data["event_type"] = msg["event_type"]
         try:
@@ -174,9 +192,13 @@ class GameServer:
         assert self._loop is not None
 
         self._game_loop = GameLoop(self.config, self._player_input, saved_state=self._saved_state)
-        logger.info("Game started: %s, %d players (%d human, %d AI)",
-                    self.config.board_path, self.config.num_players,
-                    self.num_humans, self.num_ai)
+        logger.info(
+            "Game started: %s, %d players (%d human, %d AI)",
+            self.config.board_path,
+            self.config.num_players,
+            self.num_humans,
+            self.num_ai,
+        )
 
         winner = self._game_loop.run()
         logger.info("Game over. Winner: %s", winner)
@@ -195,7 +217,7 @@ class GameServer:
         async def handler(ws: ServerConnection) -> None:
             # Assign human IDs to early connections, before AI spawning
             if self._next_human_id < self.num_humans:
-                player_id = await self._assign_human(ws)
+                await self._assign_human(ws)
                 if self._next_human_id >= self.num_humans and self.num_ai > 0:
                     # All humans connected, spawn AI clients
                     self._spawn_ai_clients(host, port)
@@ -206,6 +228,9 @@ class GameServer:
         async with websockets.serve(handler, host, port):
             logger.info("Server listening on ws://%s:%d", host, port)
             logger.info("Waiting for %d human client(s)...", self.num_humans)
+
+            if self.num_humans == 0 and self.num_ai > 0:
+                self._spawn_ai_clients(host, port)
 
             # Wait for all players (human + AI) to connect
             await self._all_connected.wait()
@@ -241,11 +266,13 @@ def run_server(
     saved_state = None
     if resume:
         from road_to_riches.save import load_save
+
         result = load_save()
         if result is not None:
             saved_state, config = result
-            logger.info("Resuming saved game (%d players, board: %s)",
-                        config.num_players, config.board_path)
+            logger.info(
+                "Resuming saved game (%d players, board: %s)", config.num_players, config.board_path
+            )
         else:
             logger.warning("No save file found, starting new game.")
 
@@ -256,7 +283,10 @@ def run_server(
             num_players=num_players,
         )
     server = GameServer(
-        config, num_humans=num_humans, num_ai=num_ai, ai_delay=ai_delay,
+        config,
+        num_humans=num_humans,
+        num_ai=num_ai,
+        ai_delay=ai_delay,
         saved_state=saved_state,
     )
     asyncio.run(server.serve(host, port))

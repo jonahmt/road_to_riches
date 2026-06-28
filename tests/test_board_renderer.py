@@ -129,8 +129,7 @@ class TestRenderBoard:
     def _make_state(self, board_path: str, num_players: int = 1) -> GameState:
         board, stock = load_board(board_path)
         players = [
-            PlayerState(player_id=i, position=0, ready_cash=1500)
-            for i in range(num_players)
+            PlayerState(player_id=i, position=0, ready_cash=1500) for i in range(num_players)
         ]
         return GameState(board=board, stock=stock, players=players)
 

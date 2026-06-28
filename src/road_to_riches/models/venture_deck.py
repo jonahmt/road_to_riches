@@ -10,7 +10,6 @@ deck is reshuffled.
 
 from __future__ import annotations
 
-import os
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,6 +18,7 @@ from pathlib import Path
 @dataclass
 class VentureCard:
     """A single venture card definition."""
+
     card_id: int
     name: str
     description: str

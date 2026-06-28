@@ -34,9 +34,7 @@ from road_to_riches.models.player_state import PlayerState
 
 def _make_game(num_players: int = 2) -> GameState:
     board, stock = load_board("boards/test_board.json")
-    players = [
-        PlayerState(player_id=i, position=0, ready_cash=1000) for i in range(num_players)
-    ]
+    players = [PlayerState(player_id=i, position=0, ready_cash=1000) for i in range(num_players)]
     return GameState(board=board, stock=stock, players=players)
 
 

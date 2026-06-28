@@ -1,7 +1,5 @@
 """Tests for Stockbroker square and dividend system."""
 
-import pytest
-
 from road_to_riches.engine.square_handler import PlayerAction, handle_land
 from road_to_riches.events.game_events import PayRentEvent, _pay_dividends
 from road_to_riches.models.board_state import BoardState, PromotionInfo, SquareInfo, Waypoint
@@ -19,13 +17,19 @@ def _make_state(
     if squares is None:
         squares = [
             SquareInfo(
-                id=0, position=(0, 0), type=SquareType.BANK,
+                id=0,
+                position=(0, 0),
+                type=SquareType.BANK,
                 waypoints=[Waypoint(from_id=0, to_ids=[1])],
             ),
             SquareInfo(
-                id=1, position=(1, 0), type=SquareType.SHOP,
+                id=1,
+                position=(1, 0),
+                type=SquareType.SHOP,
                 waypoints=[Waypoint(from_id=0, to_ids=[])],
-                property_district=0, shop_base_value=100, shop_base_rent=10,
+                property_district=0,
+                shop_base_value=100,
+                shop_base_rent=10,
                 shop_current_value=100,
             ),
         ]
@@ -41,12 +45,16 @@ def _make_state(
             max_bankruptcies=1,
             num_districts=num_districts,
             promotion_info=PromotionInfo(
-                base_salary=100, salary_increment=50,
-                shop_value_multiplier=0.1, comeback_multiplier=0.5,
+                base_salary=100,
+                salary_increment=50,
+                shop_value_multiplier=0.1,
+                comeback_multiplier=0.5,
             ),
             squares=squares,
         ),
-        stock=StockState(stocks=[StockPrice(district_id=i, value_component=10) for i in range(num_districts)]),
+        stock=StockState(
+            stocks=[StockPrice(district_id=i, value_component=10) for i in range(num_districts)]
+        ),
         players=players,
     )
 
@@ -87,7 +95,7 @@ class TestDividends:
         payouts = _pay_dividends(state, 0, 100)
         assert len(payouts) == 2
         payout_dict = dict(payouts)
-        assert payout_dict[0] == 6   # 20 * 3/10 = 6
+        assert payout_dict[0] == 6  # 20 * 3/10 = 6
         assert payout_dict[1] == 14  # 20 * 7/10 = 14
         assert state.get_player(0).ready_cash == 1006
         assert state.get_player(1).ready_cash == 1014
@@ -135,10 +143,15 @@ class TestDividends:
         """PayRentEvent should trigger dividend payments."""
         squares = [
             SquareInfo(
-                id=0, position=(0, 0), type=SquareType.SHOP,
-                waypoints=[], property_district=0,
-                shop_base_value=100, shop_base_rent=10,
-                shop_current_value=100, property_owner=1,
+                id=0,
+                position=(0, 0),
+                type=SquareType.SHOP,
+                waypoints=[],
+                property_district=0,
+                shop_base_value=100,
+                shop_base_rent=10,
+                shop_current_value=100,
+                property_owner=1,
             ),
         ]
         players = [

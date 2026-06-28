@@ -7,11 +7,10 @@ mock methods it expects to be called.
 
 from __future__ import annotations
 
-from unittest.mock import create_autospec, call, patch
+from unittest.mock import create_autospec
 
 from road_to_riches.board import load_board
 from road_to_riches.engine.game_loop import GameConfig, GameLog, GameLoop, PlayerInput
-from road_to_riches.engine.square_handler import PlayerAction, SquareResult
 from road_to_riches.events.event import GameEvent
 from road_to_riches.events.game_events import (
     BuyShopEvent,
@@ -19,7 +18,6 @@ from road_to_riches.events.game_events import (
     BuyVacantPlotEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
-    PayRentEvent,
     RenovatePropertyEvent,
     SellStockEvent,
     WarpEvent,
@@ -50,10 +48,10 @@ from road_to_riches.events.turn_events import (
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_input() -> PlayerInput:
     """Create a PlayerInput autospec mock with no-op defaults for notifications."""
@@ -67,10 +65,7 @@ def _make_mock_input() -> PlayerInput:
 def _make_game(num_players: int = 4) -> tuple[GameState, EventPipeline]:
     """Create a GameState from test_board.json with the given number of players."""
     board, stock = load_board("boards/test_board.json")
-    players = [
-        PlayerState(player_id=i, position=0, ready_cash=1500)
-        for i in range(num_players)
-    ]
+    players = [PlayerState(player_id=i, position=0, ready_cash=1500) for i in range(num_players)]
     return GameState(board=board, stock=stock, players=players), EventPipeline()
 
 
@@ -108,6 +103,7 @@ def _event_types(events: list[GameEvent]) -> list[type]:
 # GameLog tests
 # ===========================================================================
 
+
 class TestGameLog:
     def test_log_and_clear(self):
         log = GameLog()
@@ -133,6 +129,7 @@ class TestGameLog:
 # GameLoop initialization
 # ===========================================================================
 
+
 class TestGameLoopInit:
     def test_creates_players_from_config(self):
         inp = _make_mock_input()
@@ -153,6 +150,7 @@ class TestGameLoopInit:
 # ===========================================================================
 # Turn lifecycle: TurnEvent → RollEvent → WillMoveEvent flow
 # ===========================================================================
+
 
 class TestTurnEvent:
     def test_roll_action_enqueues_roll_event(self):
@@ -253,6 +251,7 @@ class TestRollEvent:
 # ===========================================================================
 # Movement: WillMoveEvent, MoveEvent, undo
 # ===========================================================================
+
 
 class TestWillMoveEvent:
     def test_no_remaining_auto_stops(self):
@@ -482,6 +481,7 @@ class TestUndo:
 # EndTurnEvent → sub-events
 # ===========================================================================
 
+
 class TestEndTurnEvent:
     def test_end_turn_produces_sub_events(self):
         loop = _make_loop()
@@ -503,6 +503,7 @@ class TestEndTurnEvent:
 # StopAction → Init event → mutation event flow
 # ===========================================================================
 
+
 class TestStopAction:
     def test_stop_on_empty_shop_enqueues_init_buy(self):
         """Landing on an unowned shop enqueues InitBuyShopEvent."""
@@ -523,6 +524,7 @@ class TestStopAction:
 # ===========================================================================
 # Init event handlers
 # ===========================================================================
+
 
 class TestInitBuyShop:
     def test_accept_enqueues_buy_shop_event(self):
@@ -575,9 +577,7 @@ class TestInitBuyVacantPlot:
         loop.input.choose_buy_shop.return_value = True
         loop.input.choose_vacant_plot_type.return_value = "INVALID"
 
-        init = InitBuyVacantPlotEvent(
-            player_id=0, square_id=5, cost=250, options=["SHOP"]
-        )
+        init = InitBuyVacantPlotEvent(player_id=0, square_id=5, cost=250, options=["SHOP"])
         loop.pipeline.enqueue(init)
         loop.pipeline.process_next(loop.state)
         loop._dispatch(init)
@@ -657,9 +657,7 @@ class TestInitInvest:
         loop = _make_loop()
         loop.input.choose_investment.return_value = (1, 600)
 
-        init = InitInvestEvent(
-            player_id=0, investable_shops=[{"square_id": 1, "max_capital": 500}]
-        )
+        init = InitInvestEvent(player_id=0, investable_shops=[{"square_id": 1, "max_capital": 500}])
         loop.pipeline.enqueue(init)
         loop.pipeline.process_next(loop.state)
         loop._dispatch(init)
@@ -672,9 +670,7 @@ class TestInitInvest:
         loop.state.players[0].ready_cash = 50
         loop.input.choose_investment.return_value = (1, 100)
 
-        init = InitInvestEvent(
-            player_id=0, investable_shops=[{"square_id": 1, "max_capital": 500}]
-        )
+        init = InitInvestEvent(player_id=0, investable_shops=[{"square_id": 1, "max_capital": 500}])
         loop.pipeline.enqueue(init)
         loop.pipeline.process_next(loop.state)
         loop._dispatch(init)
@@ -851,6 +847,7 @@ class TestInitCannon:
 # Stock validation
 # ===========================================================================
 
+
 class TestStockValidation:
     def test_buy_invalid_quantity(self):
         loop = _make_loop()
@@ -893,6 +890,7 @@ class TestStockValidation:
 # Game over
 # ===========================================================================
 
+
 class TestGameOver:
     def test_game_over_check_sets_flags(self):
         loop = _make_loop()
@@ -922,6 +920,7 @@ class TestGameOver:
 # ===========================================================================
 # Liquidation
 # ===========================================================================
+
 
 class TestLiquidation:
     def test_liquidation_sells_shop(self):
@@ -1055,6 +1054,7 @@ class TestLiquidation:
 # Full turn integration
 # ===========================================================================
 
+
 class TestFullTurn:
     def test_simple_roll_move_stop_cycle(self):
         """Test a complete turn: roll → move → stop → end turn → next player.
@@ -1091,15 +1091,13 @@ class TestFullTurn:
         assert BankruptcyCheckEvent in types
         assert AdvanceTurnEvent in types
         # AdvanceTurnEvent should produce a TurnEvent for player 1
-        assert any(
-            isinstance(e, TurnEvent) and e.player_id == 1
-            for e in events
-        )
+        assert any(isinstance(e, TurnEvent) and e.player_id == 1 for e in events)
 
 
 # ===========================================================================
 # WarpEvent voluntary follow-ups
 # ===========================================================================
+
 
 class TestWarpEventVoluntary:
     def test_involuntary_warp_no_followups(self):
@@ -1132,7 +1130,10 @@ class TestWarpEventVoluntary:
 
         loop = _make_loop(num_players=2)
         loop.state.players[0].suits = {
-            Suit.SPADE: 1, Suit.HEART: 1, Suit.DIAMOND: 1, Suit.CLUB: 1,
+            Suit.SPADE: 1,
+            Suit.HEART: 1,
+            Suit.DIAMOND: 1,
+            Suit.CLUB: 1,
         }
         loop._execute_event(PromotionEvent(player_id=0))
 

@@ -6,7 +6,6 @@ Save files are stored in ~/.road_to_riches/saves/ as JSON.
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 from road_to_riches.engine.game_loop import GameConfig

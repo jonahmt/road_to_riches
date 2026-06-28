@@ -33,9 +33,7 @@ def _make_input() -> PlayerInput:
 
 def _make_loop(num_players: int = 2) -> GameLoop:
     board, stock = load_board("boards/test_board.json")
-    players = [
-        PlayerState(player_id=i, position=0, ready_cash=1000) for i in range(num_players)
-    ]
+    players = [PlayerState(player_id=i, position=0, ready_cash=1000) for i in range(num_players)]
     state = GameState(board=board, stock=stock, players=players)
     config = GameConfig(board_path="boards/test_board.json", num_players=num_players)
     return GameLoop(config, _make_input(), saved_state=state)
@@ -124,10 +122,7 @@ class TestRunScript:
         assert loop.state.players[0].position == 5
 
     def test_unknown_yield_type_raises(self, tmp_path):
-        script = (
-            "def run(state, player_id):\n"
-            "    yield 42\n"
-        )
+        script = "def run(state, player_id):\n    yield 42\n"
         path = _write_script(str(tmp_path), script)
         loop = _make_loop()
         with pytest.raises(ValueError, match="unexpected type"):
@@ -173,9 +168,7 @@ class TestRunScript:
             isinstance(entry.event, (EndTurnEvent, AdvanceTurnEvent, TurnEvent))
             for entry in loop.pipeline.history
         )
-        assert any(
-            isinstance(entry.event, RollEvent) for entry in loop.pipeline.history
-        )
+        assert any(isinstance(entry.event, RollEvent) for entry in loop.pipeline.history)
 
 
 class TestHandleScriptIo:
@@ -188,9 +181,7 @@ class TestHandleScriptIo:
     def test_decision_delegates_to_input(self):
         loop = _make_loop()
         loop.input.choose_script_decision.return_value = "picked"
-        result = loop._handle_script_io(
-            Decision(prompt="?", options={"a": "picked"}), player_id=0
-        )
+        result = loop._handle_script_io(Decision(prompt="?", options={"a": "picked"}), player_id=0)
         assert result == "picked"
         # defaults player_id to current player when None
         call_args = loop.input.choose_script_decision.call_args
@@ -199,18 +190,14 @@ class TestHandleScriptIo:
     def test_decision_with_explicit_player_id(self):
         loop = _make_loop()
         loop.input.choose_script_decision.return_value = "x"
-        loop._handle_script_io(
-            Decision(prompt="?", options={}, player_id=1), player_id=0
-        )
+        loop._handle_script_io(Decision(prompt="?", options={}, player_id=1), player_id=0)
         call_args = loop.input.choose_script_decision.call_args
         assert call_args[0][1] == 1
 
     def test_choose_square_delegates(self):
         loop = _make_loop()
         loop.input.choose_any_square.return_value = 7
-        result = loop._handle_script_io(
-            ChooseSquare(player_id=0, prompt="pick"), player_id=0
-        )
+        result = loop._handle_script_io(ChooseSquare(player_id=0, prompt="pick"), player_id=0)
         assert result == 7
 
     def test_unknown_command_raises(self):
@@ -246,9 +233,7 @@ class TestHandleVentureCard:
         path = _write_script(str(tmp_path), script)
         loop = _make_loop()
         card = VentureCard(card_id=1, name="T", description="desc", script_path=path)
-        loop.state.venture_deck = VentureDeck(
-            cards={1: card}, remaining=[1], full_deck=[1]
-        )
+        loop.state.venture_deck = VentureDeck(cards={1: card}, remaining=[1], full_deck=[1])
         loop.input.choose_venture_cell.return_value = (0, 0)
 
         loop._handle_venture_card(player_id=0)
@@ -270,16 +255,10 @@ class TestHandleVentureCard:
         second_path = _write_script(str(second_dir), second_script)
         loop = _make_loop()
         cards = {
-            1: VentureCard(
-                card_id=1, name="Again", description="draw", script_path=first_path
-            ),
-            2: VentureCard(
-                card_id=2, name="Done", description="stop", script_path=second_path
-            ),
+            1: VentureCard(card_id=1, name="Again", description="draw", script_path=first_path),
+            2: VentureCard(card_id=2, name="Done", description="stop", script_path=second_path),
         }
-        loop.state.venture_deck = VentureDeck(
-            cards=cards, remaining=[2, 1], full_deck=[1, 2]
-        )
+        loop.state.venture_deck = VentureDeck(cards=cards, remaining=[2, 1], full_deck=[1, 2])
 
         seen_before_pick: list[int | None] = []
 
@@ -295,7 +274,8 @@ class TestHandleVentureCard:
         assert loop.state.venture_grid.cells[0][0] == 0
         assert loop.state.venture_grid.cells[0][1] == 0
         claim_events = [
-            entry.event for entry in loop.pipeline.history
+            entry.event
+            for entry in loop.pipeline.history
             if isinstance(entry.event, ClaimVentureCellEvent)
         ]
         assert [(event.row, event.col) for event in claim_events] == [(0, 0), (0, 1)]
@@ -305,9 +285,7 @@ class TestHandleVentureCard:
         path = _write_script(str(tmp_path), script)
         loop = _make_loop()
         card = VentureCard(card_id=1, name="T", description="d", script_path=path)
-        loop.state.venture_deck = VentureDeck(
-            cards={1: card}, remaining=[1], full_deck=[1]
-        )
+        loop.state.venture_deck = VentureDeck(cards={1: card}, remaining=[1], full_deck=[1])
         # Pre-fill grid
         grid = VentureGrid()
         for r in range(8):
@@ -328,9 +306,7 @@ class TestHandleVentureCard:
         path = _write_script(str(tmp_path), script)
         loop = _make_loop()
         card = VentureCard(card_id=1, name="T", description="d", script_path=path)
-        loop.state.venture_deck = VentureDeck(
-            cards={1: card}, remaining=[1], full_deck=[1]
-        )
+        loop.state.venture_deck = VentureDeck(cards={1: card}, remaining=[1], full_deck=[1])
         # Pre-claim 3 cells in a row so the 4th completes a line
         grid = VentureGrid()
         grid.cells[0][0] = 0

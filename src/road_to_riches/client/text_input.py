@@ -45,8 +45,13 @@ class TextPlayerInput(PlayerInput):
                 print("  Invalid choice.")
 
     def choose_path(
-        self, state: GameState, player_id: int, choices: list[int],
-        remaining: int, can_undo: bool, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        choices: list[int],
+        remaining: int,
+        can_undo: bool,
+        log: GameLog,
     ) -> int | str:
         self.notify(state, log)
         descs = []
@@ -69,8 +74,12 @@ class TextPlayerInput(PlayerInput):
             print("  Invalid choice.")
 
     def confirm_stop(
-        self, state: GameState, player_id: int, square_id: int,
-        can_undo: bool, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        square_id: int,
+        can_undo: bool,
+        log: GameLog,
     ) -> bool:
         self.notify(state, log)
         sq = state.board.squares[square_id]
@@ -380,9 +389,7 @@ class TextPlayerInput(PlayerInput):
                 pass
             print("  Invalid choice.")
 
-    def choose_trade(
-        self, state: GameState, player_id: int, log: GameLog
-    ) -> dict | None:
+    def choose_trade(self, state: GameState, player_id: int, log: GameLog) -> dict | None:
         self.notify(state, log)
         player = state.get_player(player_id)
         print("  Propose a trade.")
@@ -438,9 +445,7 @@ class TextPlayerInput(PlayerInput):
                 qty, val = info["quantity"], info["total_value"]
                 print(f"    [stock {d_id}] {qty} shares, total: {val}G")
         while True:
-            choice = input(
-                "  > sell shop <id> / sell stock <id> <qty>: "
-            ).strip().lower()
+            choice = input("  > sell shop <id> / sell stock <id> <qty>: ").strip().lower()
             parts = choice.split()
             try:
                 if len(parts) >= 3 and parts[0] == "sell":
@@ -457,8 +462,12 @@ class TextPlayerInput(PlayerInput):
             print("  Invalid. Use: sell shop <id> or sell stock <id> <qty>")
 
     def choose_script_decision(
-        self, state: GameState, player_id: int, prompt: str,
-        options: dict[str, Any], log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        prompt: str,
+        options: dict[str, Any],
+        log: GameLog,
     ) -> Any:
         self.notify(state, log)
         print(f"  {prompt}")
@@ -475,7 +484,11 @@ class TextPlayerInput(PlayerInput):
             print("  Invalid choice.")
 
     def choose_any_square(
-        self, state: GameState, player_id: int, prompt: str, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        prompt: str,
+        log: GameLog,
     ) -> int:
         self.notify(state, log)
         print(f"  {prompt}")
@@ -491,7 +504,10 @@ class TextPlayerInput(PlayerInput):
             print("  Invalid square ID.")
 
     def choose_venture_cell(
-        self, state: GameState, player_id: int, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        log: GameLog,
     ) -> tuple[int, int]:
         self.notify(state, log)
         grid = state.venture_grid

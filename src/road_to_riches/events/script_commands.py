@@ -39,12 +39,14 @@ from typing import Any
 @dataclass
 class ScriptCommand:
     """Base class for script I/O commands (non-pipeline operations)."""
+
     pass
 
 
 @dataclass
 class Message(ScriptCommand):
     """Display a message to all players. Returns None."""
+
     text: str
 
 
@@ -54,14 +56,15 @@ class Decision(ScriptCommand):
 
     options: dict mapping display label -> return value
     """
+
     prompt: str
     options: dict[str, Any]
     player_id: int | None = None  # defaults to current player
 
 
-
 @dataclass
 class ChooseSquare(ScriptCommand):
     """Let a player choose any square on the board. Returns the chosen square_id (int)."""
+
     player_id: int
     prompt: str = "Choose a square"

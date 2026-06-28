@@ -12,11 +12,11 @@ import math
 # 8 directions ordered by angle (from atan2), mapped to key labels.
 # atan2 returns angles in (-π, π] where 0 = right, π/2 = down, -π/2 = up.
 _DIRECTION_KEYS: list[tuple[float, str]] = [
-    (0.0, "d"),          # right
-    (math.pi / 4, "sd"), # down-right  (not used as single key — see _DIAG_KEYS)
+    (0.0, "d"),  # right
+    (math.pi / 4, "sd"),  # down-right  (not used as single key — see _DIAG_KEYS)
     (math.pi / 2, "s"),  # down
     (3 * math.pi / 4, "as"),  # down-left
-    (math.pi, "a"),      # left
+    (math.pi, "a"),  # left
     (-3 * math.pi / 4, "wa"),  # up-left
     (-math.pi / 2, "w"),  # up
     (-math.pi / 4, "dw"),  # up-right
@@ -34,9 +34,7 @@ _DIAG_FALLBACKS: dict[str, tuple[str, str]] = {
 _CARDINAL_KEYS = {"w", "a", "s", "d"}
 
 
-def _angle_between(
-    origin: tuple[int, int], target: tuple[int, int]
-) -> float:
+def _angle_between(origin: tuple[int, int], target: tuple[int, int]) -> float:
     """Compute angle from origin to target in radians."""
     dx = target[0] - origin[0]
     dy = target[1] - origin[1]

@@ -137,6 +137,16 @@ class TestPeekAndClear:
         pipe.clear()
         assert len(pipe.history) == 1
 
+    def test_drain_pending_returns_events_in_order_and_clears_queue(self):
+        pipe = EventPipeline()
+        a = RecordEvent(name="a")
+        b = RecordEvent(name="b")
+        pipe.enqueue(a)
+        pipe.enqueue(b)
+
+        assert pipe.drain_pending() == [a, b]
+        assert pipe.is_empty
+
 
 class TestDebugLogging:
     def test_debug_log_emitted_on_enqueue(self, caplog):

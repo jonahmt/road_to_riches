@@ -97,4 +97,3 @@ def test_forced_liquidation_prioritizes_lowest_remaining_max_capital():
     )
 
     assert ai.decide(req) == ("stock", 0, 1)
-

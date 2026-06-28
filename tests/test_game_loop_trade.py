@@ -21,9 +21,7 @@ def _make_input() -> PlayerInput:
 
 def _make_loop(num_players: int = 2) -> GameLoop:
     board, stock = load_board("boards/test_board.json")
-    players = [
-        PlayerState(player_id=i, position=0, ready_cash=2000) for i in range(num_players)
-    ]
+    players = [PlayerState(player_id=i, position=0, ready_cash=2000) for i in range(num_players)]
     state = GameState(board=board, stock=stock, players=players)
     config = GameConfig(board_path="boards/test_board.json", num_players=num_players)
     return GameLoop(config, _make_input(), saved_state=state)
@@ -49,7 +47,10 @@ class TestHandleTrade:
     def test_invalid_target_self(self):
         loop = _make_loop()
         loop.input.choose_trade.return_value = {
-            "target_player_id": 0, "offer_shops": [], "request_shops": [], "gold_offer": 0,
+            "target_player_id": 0,
+            "offer_shops": [],
+            "request_shops": [],
+            "gold_offer": 0,
         }
         loop._handle_trade(InitTradeShopEvent(player_id=0))
         loop.input.choose_accept_offer.assert_not_called()
@@ -57,7 +58,10 @@ class TestHandleTrade:
     def test_invalid_target_none(self):
         loop = _make_loop()
         loop.input.choose_trade.return_value = {
-            "target_player_id": None, "offer_shops": [], "request_shops": [], "gold_offer": 0,
+            "target_player_id": None,
+            "offer_shops": [],
+            "request_shops": [],
+            "gold_offer": 0,
         }
         loop._handle_trade(InitTradeShopEvent(player_id=0))
         loop.input.choose_accept_offer.assert_not_called()
@@ -65,7 +69,10 @@ class TestHandleTrade:
     def test_invalid_target_out_of_range(self):
         loop = _make_loop()
         loop.input.choose_trade.return_value = {
-            "target_player_id": 99, "offer_shops": [], "request_shops": [], "gold_offer": 0,
+            "target_player_id": 99,
+            "offer_shops": [],
+            "request_shops": [],
+            "gold_offer": 0,
         }
         loop._handle_trade(InitTradeShopEvent(player_id=0))
         loop.input.choose_accept_offer.assert_not_called()
@@ -73,7 +80,10 @@ class TestHandleTrade:
     def test_offer_shop_not_owned_by_proposer(self):
         loop = _make_loop()
         loop.input.choose_trade.return_value = {
-            "target_player_id": 1, "offer_shops": [1], "request_shops": [], "gold_offer": 0,
+            "target_player_id": 1,
+            "offer_shops": [1],
+            "request_shops": [],
+            "gold_offer": 0,
         }
         loop._handle_trade(InitTradeShopEvent(player_id=0))
         loop.input.choose_accept_offer.assert_not_called()
@@ -82,7 +92,10 @@ class TestHandleTrade:
         loop = _make_loop()
         _give_shop(loop.state, 0, 1)
         loop.input.choose_trade.return_value = {
-            "target_player_id": 1, "offer_shops": [1], "request_shops": [2], "gold_offer": 0,
+            "target_player_id": 1,
+            "offer_shops": [1],
+            "request_shops": [2],
+            "gold_offer": 0,
         }
         loop._handle_trade(InitTradeShopEvent(player_id=0))
         loop.input.choose_accept_offer.assert_not_called()
@@ -92,7 +105,10 @@ class TestHandleTrade:
         _give_shop(loop.state, 0, 1)
         _give_shop(loop.state, 1, 2)
         loop.input.choose_trade.return_value = {
-            "target_player_id": 1, "offer_shops": [1], "request_shops": [2], "gold_offer": 0,
+            "target_player_id": 1,
+            "offer_shops": [1],
+            "request_shops": [2],
+            "gold_offer": 0,
         }
         loop.input.choose_accept_offer.return_value = "accept"
         loop._handle_trade(InitTradeShopEvent(player_id=0))
@@ -104,7 +120,10 @@ class TestHandleTrade:
         loop = _make_loop()
         _give_shop(loop.state, 1, 2)
         loop.input.choose_trade.return_value = {
-            "target_player_id": 1, "offer_shops": [], "request_shops": [2], "gold_offer": 300,
+            "target_player_id": 1,
+            "offer_shops": [],
+            "request_shops": [2],
+            "gold_offer": 300,
         }
         loop.input.choose_accept_offer.return_value = "accept"
         loop._handle_trade(InitTradeShopEvent(player_id=0))
@@ -117,7 +136,10 @@ class TestHandleTrade:
         loop = _make_loop()
         _give_shop(loop.state, 0, 1)
         loop.input.choose_trade.return_value = {
-            "target_player_id": 1, "offer_shops": [1], "request_shops": [], "gold_offer": -250,
+            "target_player_id": 1,
+            "offer_shops": [1],
+            "request_shops": [],
+            "gold_offer": -250,
         }
         loop.input.choose_accept_offer.return_value = "accept"
         loop._handle_trade(InitTradeShopEvent(player_id=0))
@@ -130,7 +152,10 @@ class TestHandleTrade:
         loop = _make_loop()
         _give_shop(loop.state, 0, 1)
         loop.input.choose_trade.return_value = {
-            "target_player_id": 1, "offer_shops": [1], "request_shops": [], "gold_offer": 0,
+            "target_player_id": 1,
+            "offer_shops": [1],
+            "request_shops": [],
+            "gold_offer": 0,
         }
         loop.input.choose_accept_offer.return_value = "reject"
         loop._handle_trade(InitTradeShopEvent(player_id=0))
@@ -141,7 +166,10 @@ class TestHandleTrade:
         loop = _make_loop()
         _give_shop(loop.state, 1, 2)
         loop.input.choose_trade.return_value = {
-            "target_player_id": 1, "offer_shops": [], "request_shops": [2], "gold_offer": 100,
+            "target_player_id": 1,
+            "offer_shops": [],
+            "request_shops": [2],
+            "gold_offer": 100,
         }
         loop.input.choose_accept_offer.side_effect = ["counter", "accept"]
         loop.input.choose_counter_price.return_value = 500
@@ -154,7 +182,10 @@ class TestHandleTrade:
         loop = _make_loop()
         _give_shop(loop.state, 1, 2)
         loop.input.choose_trade.return_value = {
-            "target_player_id": 1, "offer_shops": [], "request_shops": [2], "gold_offer": 100,
+            "target_player_id": 1,
+            "offer_shops": [],
+            "request_shops": [2],
+            "gold_offer": 100,
         }
         loop.input.choose_accept_offer.side_effect = ["counter", "reject"]
         loop.input.choose_counter_price.return_value = 999

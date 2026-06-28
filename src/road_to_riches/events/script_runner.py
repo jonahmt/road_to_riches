@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 def load_script_generator(
-    script_path: str, state: Any, player_id: int,
+    script_path: str,
+    state: Any,
+    player_id: int,
 ) -> Generator | None:
     """Load a script file and call its run() function.
 

@@ -18,8 +18,6 @@ from road_to_riches.engine.square_handler import SquareResult, handle_land, hand
 from road_to_riches.events.event import GameEvent
 from road_to_riches.events.registry import register_event
 from road_to_riches.models.game_state import GameState
-from road_to_riches.models.square_type import SquareType
-
 
 # ---------------------------------------------------------------------------
 # Snapshot for undo (migrated from turn.py)
@@ -122,9 +120,7 @@ class WillMoveEvent(GameEvent):
             self._choices = []
             return
         player = state.get_player(self.player_id)
-        self._choices = get_next_squares(
-            state.board, player.position, player.from_square
-        )
+        self._choices = get_next_squares(state.board, player.position, player.from_square)
 
     def get_result(self) -> list[int]:
         return self._choices
@@ -269,9 +265,7 @@ class StockFluctuationEvent(GameEvent):
         lines = []
         for district_id, delta in self._changes:
             direction = "up" if delta > 0 else "down"
-            lines.append(
-                f"District {district_id} stock price went {direction} by {abs(delta)}!"
-            )
+            lines.append(f"District {district_id} stock price went {direction} by {abs(delta)}!")
         return "\n".join(lines)
 
 
@@ -375,7 +369,10 @@ class InitBuyVacantPlotEvent(GameEvent):
 @register_event
 @dataclass
 class InitForcedBuyoutEvent(GameEvent):
-    """Player may force-buy another player's shop. Handler prompts and enqueues ForcedBuyoutEvent."""
+    """Player may force-buy another player's shop.
+
+    Handler prompts and enqueues ForcedBuyoutEvent.
+    """
 
     player_id: int
     square_id: int

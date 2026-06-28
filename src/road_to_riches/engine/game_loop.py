@@ -22,32 +22,27 @@ from road_to_riches.engine.bankruptcy import (
     LiquidationPhaseEvent,
     SellShopToBankEvent,
     VictoryEvent,
-    check_victory,
     get_liquidation_options,
     needs_liquidation,
 )
-from road_to_riches.engine.square_handler import PlayerAction, SquareResult
+from road_to_riches.engine.square_handler import PlayerAction
 from road_to_riches.events.event import GameEvent
 from road_to_riches.events.game_events import (
     AuctionSellEvent,
     BuyShopEvent,
     BuyStockEvent,
     BuyVacantPlotEvent,
+    ClaimVentureCellEvent,
+    ClearDirectionLockEvent,
     CollectSuitEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
-    PayCheckpointTollEvent,
-    PayRentEvent,
-    PayTaxEvent,
-    PromotionEvent,
     RenovatePropertyEvent,
-    ScriptEvent,
     SellStockEvent,
-    ClaimVentureCellEvent,
-    ClearDirectionLockEvent,
     TransferCashEvent,
     WarpEvent,
 )
+from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.events.script_commands import (
     ChooseSquare,
     Decision,
@@ -55,7 +50,6 @@ from road_to_riches.events.script_commands import (
     ScriptCommand,
 )
 from road_to_riches.events.script_runner import load_script_generator
-from road_to_riches.events.pipeline import EventPipeline
 from road_to_riches.events.turn_events import (
     AdvanceTurnEvent,
     BankruptcyCheckEvent,
@@ -134,15 +128,24 @@ class PlayerInput(ABC):
 
     @abstractmethod
     def choose_path(
-        self, state: GameState, player_id: int, choices: list[int],
-        remaining: int, can_undo: bool, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        choices: list[int],
+        remaining: int,
+        can_undo: bool,
+        log: GameLog,
     ) -> int | str:
         """Choose which square to move to. Return a square_id or 'undo'."""
 
     @abstractmethod
     def confirm_stop(
-        self, state: GameState, player_id: int, square_id: int,
-        can_undo: bool, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        square_id: int,
+        can_undo: bool,
+        log: GameLog,
     ) -> bool:
         """Confirm stopping on this square. Return True to stop, False to undo."""
 
@@ -238,9 +241,7 @@ class PlayerInput(ABC):
         """Choose whether to renovate a VP property and what type. Return new type or None."""
 
     @abstractmethod
-    def choose_trade(
-        self, state: GameState, player_id: int, log: GameLog
-    ) -> dict | None:
+    def choose_trade(self, state: GameState, player_id: int, log: GameLog) -> dict | None:
         """Propose a multi-shop trade.
 
         Return dict with keys: target_player_id, offer_shops (list of sq_ids),
@@ -261,8 +262,12 @@ class PlayerInput(ABC):
 
     @abstractmethod
     def choose_script_decision(
-        self, state: GameState, player_id: int, prompt: str,
-        options: dict[str, Any], log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        prompt: str,
+        options: dict[str, Any],
+        log: GameLog,
     ) -> Any:
         """Choose from options presented by a venture card script.
 
@@ -272,13 +277,20 @@ class PlayerInput(ABC):
 
     @abstractmethod
     def choose_any_square(
-        self, state: GameState, player_id: int, prompt: str, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        prompt: str,
+        log: GameLog,
     ) -> int:
         """Choose any square on the board. Returns square_id."""
 
     @abstractmethod
     def choose_venture_cell(
-        self, state: GameState, player_id: int, log: GameLog,
+        self,
+        state: GameState,
+        player_id: int,
+        log: GameLog,
     ) -> tuple[int, int]:
         """Choose a cell on the 8x8 venture grid. Returns (row, col)."""
 
@@ -297,7 +309,6 @@ class PlayerInput(ABC):
         'undone' annotation. Default is a no-op for backends that don't
         support retraction.
         """
-
 
 
 class GameLoop:
@@ -351,6 +362,7 @@ class GameLoop:
     def _init_venture_deck(self) -> None:
         """Build the venture deck from the cards directory and board config."""
         import json
+
         from road_to_riches.models.venture_deck import build_deck, load_cards_from_directory
 
         cards = load_cards_from_directory(self.config.cards_dir)
@@ -566,7 +578,11 @@ class GameLoop:
             player = self.state.get_player(player_id)
             sq = self.state.board.squares[player.position]
             confirmed = self.input.confirm_stop(
-                self.state, player_id, sq.id, can_undo, self.log,
+                self.state,
+                player_id,
+                sq.id,
+                can_undo,
+                self.log,
             )
             if confirmed:
                 self._enqueue_stop_and_end(player_id, event.total_roll)
@@ -576,7 +592,12 @@ class GameLoop:
 
         # Player has moves remaining — choose a path
         choice = self.input.choose_path(
-            self.state, player_id, choices, remaining, can_undo, self.log,
+            self.state,
+            player_id,
+            choices,
+            remaining,
+            can_undo,
+            self.log,
         )
         if choice == "undo":
             self._undo_move(player_id, event.total_roll)
@@ -610,7 +631,14 @@ class GameLoop:
         self._path_taken.append(MoveStep(square_id=choice, from_id=from_sq))
 
         # Enqueue: MoveEvent → PassActionEvent → WillMoveEvent(remaining-1)
-        self.pipeline.enqueue(MoveEvent(player_id=player_id, from_sq=from_sq, to_sq=choice, remaining=new_remaining))
+        self.pipeline.enqueue(
+            MoveEvent(
+                player_id=player_id,
+                from_sq=from_sq,
+                to_sq=choice,
+                remaining=new_remaining,
+            )
+        )
         self.pipeline.enqueue(PassActionEvent(player_id=player_id, square_id=choice))
         self.pipeline.enqueue(
             WillMoveEvent(
@@ -624,9 +652,7 @@ class GameLoop:
         """After a move: log it and update dice remaining."""
         player = self.state.get_player(event.player_id)
         sq = self.state.board.squares[player.position]
-        self.log.log(
-            f"Moved to square {sq.id} ({sq.type.value})."
-        )
+        self.log.log(f"Moved to square {sq.id} ({sq.type.value}).")
         self.input.notify_dice(self._current_dice_roll, event.remaining)
         self.input.notify(self.state, self.log)
 
@@ -682,40 +708,56 @@ class GameLoop:
         sequence.extend(result.auto_events)
 
         if PlayerAction.BUY_SHOP in result.available_actions:
-            sequence.append(InitBuyShopEvent(
-                player_id=player_id, square_id=result.info["square_id"],
-                cost=result.info["cost"],
-            ))
+            sequence.append(
+                InitBuyShopEvent(
+                    player_id=player_id,
+                    square_id=result.info["square_id"],
+                    cost=result.info["cost"],
+                )
+            )
         if PlayerAction.BUY_VACANT_PLOT in result.available_actions:
-            sequence.append(InitBuyVacantPlotEvent(
-                player_id=player_id, square_id=result.info["square_id"],
-                cost=result.info["cost"],
-                options=result.info.get("options", []),
-            ))
+            sequence.append(
+                InitBuyVacantPlotEvent(
+                    player_id=player_id,
+                    square_id=result.info["square_id"],
+                    cost=result.info["cost"],
+                    options=result.info.get("options", []),
+                )
+            )
         if PlayerAction.FORCED_BUYOUT in result.available_actions:
-            sequence.append(InitForcedBuyoutEvent(
-                player_id=player_id, square_id=result.info["square_id"],
-                buyout_cost=result.info["buyout_cost"],
-            ))
+            sequence.append(
+                InitForcedBuyoutEvent(
+                    player_id=player_id,
+                    square_id=result.info["square_id"],
+                    buyout_cost=result.info["buyout_cost"],
+                )
+            )
         if PlayerAction.INVEST in result.available_actions:
-            sequence.append(InitInvestEvent(
-                player_id=player_id,
-                investable_shops=result.info.get("investable_shops", []),
-            ))
+            sequence.append(
+                InitInvestEvent(
+                    player_id=player_id,
+                    investable_shops=result.info.get("investable_shops", []),
+                )
+            )
         if PlayerAction.BUY_STOCK in result.available_actions:
             sequence.append(InitBuyStockEvent(player_id=player_id))
         if PlayerAction.SELL_STOCK in result.available_actions:
             sequence.append(InitSellStockEvent(player_id=player_id))
         if PlayerAction.RENOVATE in result.available_actions:
-            sequence.append(InitRenovateEvent(
-                player_id=player_id, square_id=result.info["square_id"],
-                options=result.info.get("renovate_options", []),
-            ))
+            sequence.append(
+                InitRenovateEvent(
+                    player_id=player_id,
+                    square_id=result.info["square_id"],
+                    options=result.info.get("renovate_options", []),
+                )
+            )
         if PlayerAction.CHOOSE_CANNON_TARGET in result.available_actions:
-            sequence.append(InitCannonEvent(
-                player_id=player_id,
-                targets=result.info.get("cannon_targets", []),
-            ))
+            sequence.append(
+                InitCannonEvent(
+                    player_id=player_id,
+                    targets=result.info.get("cannon_targets", []),
+                )
+            )
         if result.info.get("venture_card"):
             sequence.append(VentureCardEvent(player_id=player_id))
         if result.info.get("can_win"):
@@ -740,9 +782,7 @@ class GameLoop:
     def _enqueue_stop_and_end(self, player_id: int, total_roll: int) -> None:
         """Enqueue StopActionEvent + EndTurnEvent + TurnEvent(next)."""
         player = self.state.get_player(player_id)
-        self.pipeline.enqueue(
-            StopActionEvent(player_id=player_id, square_id=player.position)
-        )
+        self.pipeline.enqueue(StopActionEvent(player_id=player_id, square_id=player.position))
         self.pipeline.enqueue(EndTurnEvent(player_id=player_id))
 
     def _take_snapshot(self, player_id: int, remaining: int) -> None:
@@ -758,38 +798,46 @@ class GameLoop:
         other_snaps = []
         for p in self.state.players:
             if p.player_id != player_id:
-                other_snaps.append({
-                    "player_id": p.player_id,
-                    "ready_cash": p.ready_cash,
-                })
+                other_snaps.append(
+                    {
+                        "player_id": p.player_id,
+                        "ready_cash": p.ready_cash,
+                    }
+                )
         sq_snaps = []
         for sq in self.state.board.squares:
-            sq_snaps.append({
-                "id": sq.id,
-                "checkpoint_toll": sq.checkpoint_toll,
-                "suit": sq.suit,
-            })
+            sq_snaps.append(
+                {
+                    "id": sq.id,
+                    "checkpoint_toll": sq.checkpoint_toll,
+                    "suit": sq.suit,
+                }
+            )
         stock_snaps = []
         for price in self.state.stock.stocks:
-            stock_snaps.append({
-                "district_id": price.district_id,
-                "value_component": price.value_component,
-                "fluctuation_component": price.fluctuation_component,
-                "pending_fluctuation": price.pending_fluctuation,
-            })
+            stock_snaps.append(
+                {
+                    "district_id": price.district_id,
+                    "value_component": price.value_component,
+                    "fluctuation_component": price.fluctuation_component,
+                    "pending_fluctuation": price.pending_fluctuation,
+                }
+            )
 
-        self._move_snapshots.append(MoveSnapshot(
-            player_position=player.position,
-            player_from_square=player.from_square,
-            remaining_moves=remaining,
-            pass_results_len=0,  # not used in new system
-            state_snapshot={
-                "player": player_snap,
-                "other_players": other_snaps,
-                "squares": sq_snaps,
-                "stock_prices": stock_snaps,
-            },
-        ))
+        self._move_snapshots.append(
+            MoveSnapshot(
+                player_position=player.position,
+                player_from_square=player.from_square,
+                remaining_moves=remaining,
+                pass_results_len=0,  # not used in new system
+                state_snapshot={
+                    "player": player_snap,
+                    "other_players": other_snaps,
+                    "squares": sq_snaps,
+                    "stock_prices": stock_snaps,
+                },
+            )
+        )
 
     def _undo_move(self, player_id: int, total_roll: int) -> None:
         """Undo the last move step: restore state, retract log, re-enqueue WillMoveEvent."""
@@ -878,22 +926,31 @@ class GameLoop:
     def _handle_init_buy_shop(self, event: InitBuyShopEvent) -> None:
         pid, sq_id, cost = event.player_id, event.square_id, event.cost
         if self.input.choose_buy_shop(self.state, pid, sq_id, cost, self.log):
+            player = self.state.get_player(pid)
+            square = self.state.board.squares[sq_id]
+            actual_cost = square.shop_base_value
+            if square.property_owner is not None or actual_cost is None:
+                self.log.log("Shop is no longer available to buy.")
+                self.input.notify(self.state, self.log)
+                return
+            if player.ready_cash < actual_cost:
+                self.log.log("You do not have enough ready cash to buy this shop.")
+                self.input.notify(self.state, self.log)
+                return
             self.pipeline.enqueue_front(BuyShopEvent(player_id=pid, square_id=sq_id))
 
     def _handle_init_buy_vacant_plot(self, event: InitBuyVacantPlotEvent) -> None:
         pid, sq_id, cost = event.player_id, event.square_id, event.cost
         options = event.options
         if self.input.choose_buy_shop(self.state, pid, sq_id, cost, self.log):
-            dev_type = self.input.choose_vacant_plot_type(
-                self.state, pid, sq_id, options, self.log
-            )
+            dev_type = self.input.choose_vacant_plot_type(self.state, pid, sq_id, options, self.log)
             if dev_type not in options:
                 self.log.log(f"Invalid development type: {dev_type}")
                 self.input.notify(self.state, self.log)
             else:
-                self.pipeline.enqueue_front(BuyVacantPlotEvent(
-                    player_id=pid, square_id=sq_id, development_type=dev_type
-                ))
+                self.pipeline.enqueue_front(
+                    BuyVacantPlotEvent(player_id=pid, square_id=sq_id, development_type=dev_type)
+                )
 
     def _handle_init_forced_buyout(self, event: InitForcedBuyoutEvent) -> None:
         pid, sq_id = event.player_id, event.square_id
@@ -982,18 +1039,18 @@ class GameLoop:
         # Cannon: warp without firing pass/land actions, but still collect a
         # suit if the destination is a suit-granting square.
         suit_to_collect: str | None = None
-        if target_sq.type in (SquareType.SUIT, SquareType.CHANGE_OF_SUIT) and target_sq.suit is not None:
+        if (
+            target_sq.type in (SquareType.SUIT, SquareType.CHANGE_OF_SUIT)
+            and target_sq.suit is not None
+        ):
             suit_to_collect = target_sq.suit
         elif target_sq.type == SquareType.SUIT_YOURSELF:
             from road_to_riches.models.suit import Suit
+
             suit_to_collect = Suit.WILD.value
         if suit_to_collect is not None:
-            self.pipeline.enqueue_front(
-                CollectSuitEvent(player_id=pid, suit=suit_to_collect)
-            )
-        self.pipeline.enqueue_front(
-            WarpEvent(player_id=pid, target_square_id=target.position)
-        )
+            self.pipeline.enqueue_front(CollectSuitEvent(player_id=pid, suit=suit_to_collect))
+        self.pipeline.enqueue_front(WarpEvent(player_id=pid, target_square_id=target.position))
 
     def _handle_venture_card_event(self, event: VentureCardEvent) -> None:
         self._handle_venture_card(event.player_id)
@@ -1006,9 +1063,7 @@ class GameLoop:
         self._move_log_checkpoints.clear()
         self._path_taken.clear()
         # Remove pending EndTurnEvent/TurnEvent — the new roll cycle will produce new ones.
-        saved_events = []
-        while not self.pipeline.is_empty:
-            saved_events.append(self.pipeline._queue.popleft())
+        saved_events = self.pipeline.drain_pending()
         self.pipeline.enqueue(RollEvent(player_id=pid))
         for evt in saved_events:
             if isinstance(evt, (EndTurnEvent, TurnEvent)):
@@ -1041,9 +1096,7 @@ class GameLoop:
             options = get_liquidation_options(self.state, player_id)
             if not options["shops"] and not options["stock"]:
                 break
-            choice = self.input.choose_liquidation(
-                self.state, player_id, options, self.log
-            )
+            choice = self.input.choose_liquidation(self.state, player_id, options, self.log)
             try:
                 asset_type, asset_id, quantity = choice
             except (TypeError, ValueError):
@@ -1055,9 +1108,7 @@ class GameLoop:
                     self.log.log("Invalid liquidation choice.")
                     self.input.notify(self.state, self.log)
                     continue
-                self._execute_event(
-                    SellShopToBankEvent(player_id=player_id, square_id=asset_id)
-                )
+                self._execute_event(SellShopToBankEvent(player_id=player_id, square_id=asset_id))
                 auction_queue.append(asset_id)
             elif asset_type == "stock":
                 held = self.state.get_player(player_id).owned_stock.get(asset_id, 0)
@@ -1072,9 +1123,9 @@ class GameLoop:
                     continue
                 qty = quantity if quantity > 0 else held
                 qty = min(qty, held)
-                self._execute_event(SellStockEvent(
-                    player_id=player_id, district_id=asset_id, quantity=qty
-                ))
+                self._execute_event(
+                    SellStockEvent(player_id=player_id, district_id=asset_id, quantity=qty)
+                )
             else:
                 self.log.log("Invalid liquidation type.")
                 self.input.notify(self.state, self.log)
@@ -1088,8 +1139,7 @@ class GameLoop:
         """Run a blind auction for a shop the bank is holding after liquidation."""
         base_value = self.state.board.squares[square_id].shop_base_value or 0
         self.log.log(
-            f"Auctioning square {square_id} (base value: {base_value}G) — "
-            f"proceeds go to the bank."
+            f"Auctioning square {square_id} (base value: {base_value}G) — proceeds go to the bank."
         )
         self.input.notify(self.state, self.log)
 
@@ -1105,11 +1155,13 @@ class GameLoop:
                 best_bid = bid
                 best_bidder = p.player_id
 
-        self._execute_event(LiquidationAuctionSellEvent(
-            square_id=square_id,
-            winner_id=best_bidder,
-            winning_bid=best_bid,
-        ))
+        self._execute_event(
+            LiquidationAuctionSellEvent(
+                square_id=square_id,
+                winner_id=best_bidder,
+                winning_bid=best_bid,
+            )
+        )
 
     # ------------------------------------------------------------------
     # Venture card handling
@@ -1121,6 +1173,7 @@ class GameLoop:
         if deck is None:
             # Fallback to legacy single-script mode
             import os
+
             script_path = self.config.venture_script
             if not os.path.isabs(script_path):
                 script_path = os.path.join(os.getcwd(), script_path)
@@ -1130,6 +1183,7 @@ class GameLoop:
         # Initialize grid if needed
         if self.state.venture_grid is None:
             from road_to_riches.models.venture_grid import VentureGrid
+
             self.state.venture_grid = VentureGrid()
 
         grid = self.state.venture_grid
@@ -1148,9 +1202,7 @@ class GameLoop:
         self.input.notify(self.state, self.log)
         if bonus > 0:
             self._execute_event(
-                TransferCashEvent(
-                    from_player_id=None, to_player_id=player_id, amount=bonus
-                )
+                TransferCashEvent(from_player_id=None, to_player_id=player_id, amount=bonus)
             )
             self.log.log(f"Player {player_id} completed a line! Bonus: {bonus}G!")
             self.input.notify(self.state, self.log)
@@ -1174,6 +1226,7 @@ class GameLoop:
         - ScriptCommand instances: handled for I/O (messages, decisions, dice rolls)
         """
         import os
+
         if not os.path.exists(script_path):
             self.log.log(f"[yellow]Script not found: {script_path}, skipping.[/yellow]")
             return
@@ -1218,12 +1271,19 @@ class GameLoop:
         if isinstance(cmd, Decision):
             target_pid = cmd.player_id if cmd.player_id is not None else player_id
             return self.input.choose_script_decision(
-                self.state, target_pid, cmd.prompt, cmd.options, self.log,
+                self.state,
+                target_pid,
+                cmd.prompt,
+                cmd.options,
+                self.log,
             )
 
         if isinstance(cmd, ChooseSquare):
             return self.input.choose_any_square(
-                self.state, cmd.player_id, cmd.prompt, self.log,
+                self.state,
+                cmd.player_id,
+                cmd.prompt,
+                self.log,
             )
 
         raise ValueError(f"Unknown script command: {type(cmd).__name__}")
@@ -1305,12 +1365,14 @@ class GameLoop:
                 best_bid = bid
                 best_bidder = p.player_id
 
-        self.pipeline.enqueue_front(AuctionSellEvent(
-            seller_id=player_id,
-            square_id=sq_id,
-            winner_id=best_bidder,
-            winning_bid=best_bid,
-        ))
+        self.pipeline.enqueue_front(
+            AuctionSellEvent(
+                seller_id=player_id,
+                square_id=sq_id,
+                winner_id=best_bidder,
+                winning_bid=best_bid,
+            )
+        )
 
     def _handle_buy_negotiation(self, event: InitBuyShopOfferEvent) -> None:
         """Player offers to buy another player's shop."""
@@ -1356,10 +1418,14 @@ class GameLoop:
         }
         response = self.input.choose_accept_offer(self.state, target_pid, offer, self.log)
         if response == "accept":
-            self.pipeline.enqueue_front(TransferPropertyEvent(
-                from_player_id=target_pid, to_player_id=player_id,
-                square_id=sq_id, price=offer_price,
-            ))
+            self.pipeline.enqueue_front(
+                TransferPropertyEvent(
+                    from_player_id=target_pid,
+                    to_player_id=player_id,
+                    square_id=sq_id,
+                    price=offer_price,
+                )
+            )
             self.log.log(f"Deal accepted! Square {sq_id} sold for {offer_price}G.")
         elif response == "counter":
             counter_price = self.input.choose_counter_price(
@@ -1369,10 +1435,14 @@ class GameLoop:
             offer["price"] = counter_price
             final = self.input.choose_accept_offer(self.state, player_id, offer, self.log)
             if final == "accept":
-                self.pipeline.enqueue_front(TransferPropertyEvent(
-                    from_player_id=target_pid, to_player_id=player_id,
-                    square_id=sq_id, price=counter_price,
-                ))
+                self.pipeline.enqueue_front(
+                    TransferPropertyEvent(
+                        from_player_id=target_pid,
+                        to_player_id=player_id,
+                        square_id=sq_id,
+                        price=counter_price,
+                    )
+                )
                 self.log.log(f"Counter accepted! Square {sq_id} sold for {counter_price}G.")
             else:
                 self.log.log("Deal rejected.")
@@ -1399,11 +1469,7 @@ class GameLoop:
             self.log.log("Invalid sell offer.")
             return
         sq = self.state.board.squares[sq_id]
-        if (
-            target_pid == player_id
-            or sq.property_owner != player_id
-            or asking_price <= 0
-        ):
+        if target_pid == player_id or sq.property_owner != player_id or asking_price <= 0:
             self.log.log("Invalid sell offer.")
             return
 
@@ -1422,10 +1488,14 @@ class GameLoop:
         }
         response = self.input.choose_accept_offer(self.state, target_pid, offer, self.log)
         if response == "accept":
-            self.pipeline.enqueue_front(TransferPropertyEvent(
-                from_player_id=player_id, to_player_id=target_pid,
-                square_id=sq_id, price=asking_price,
-            ))
+            self.pipeline.enqueue_front(
+                TransferPropertyEvent(
+                    from_player_id=player_id,
+                    to_player_id=target_pid,
+                    square_id=sq_id,
+                    price=asking_price,
+                )
+            )
             self.log.log(f"Deal accepted! Square {sq_id} sold for {asking_price}G.")
         elif response == "counter":
             counter_price = self.input.choose_counter_price(
@@ -1435,10 +1505,14 @@ class GameLoop:
             offer["price"] = counter_price
             final = self.input.choose_accept_offer(self.state, player_id, offer, self.log)
             if final == "accept":
-                self.pipeline.enqueue_front(TransferPropertyEvent(
-                    from_player_id=player_id, to_player_id=target_pid,
-                    square_id=sq_id, price=counter_price,
-                ))
+                self.pipeline.enqueue_front(
+                    TransferPropertyEvent(
+                        from_player_id=player_id,
+                        to_player_id=target_pid,
+                        square_id=sq_id,
+                        price=counter_price,
+                    )
+                )
                 self.log.log(f"Counter accepted! Square {sq_id} sold for {counter_price}G.")
             else:
                 self.log.log("Deal rejected.")
@@ -1490,8 +1564,7 @@ class GameLoop:
         elif gold_offer < 0:
             desc_parts.append(f"requesting {-gold_offer}G")
         self.log.log(
-            f"Player {player_id} proposes trade with Player {target_pid}: "
-            + ", ".join(desc_parts)
+            f"Player {player_id} proposes trade with Player {target_pid}: " + ", ".join(desc_parts)
         )
         self.input.notify(self.state, self.log)
 
@@ -1511,9 +1584,7 @@ class GameLoop:
             counter_gold = self.input.choose_counter_price(
                 self.state, target_pid, gold_offer, self.log
             )
-            self.log.log(
-                f"Player {target_pid} counter-offers with gold: {counter_gold}G."
-            )
+            self.log.log(f"Player {target_pid} counter-offers with gold: {counter_gold}G.")
             offer["gold_offer"] = counter_gold
             final = self.input.choose_accept_offer(self.state, player_id, offer, self.log)
             if final == "accept":
@@ -1537,23 +1608,39 @@ class GameLoop:
 
         events: list[GameEvent] = []
         for sq_id in offer_shops:
-            events.append(TransferPropertyEvent(
-                from_player_id=proposer_id, to_player_id=target_id,
-                square_id=sq_id, price=0,
-            ))
+            events.append(
+                TransferPropertyEvent(
+                    from_player_id=proposer_id,
+                    to_player_id=target_id,
+                    square_id=sq_id,
+                    price=0,
+                )
+            )
         for sq_id in request_shops:
-            events.append(TransferPropertyEvent(
-                from_player_id=target_id, to_player_id=proposer_id,
-                square_id=sq_id, price=0,
-            ))
+            events.append(
+                TransferPropertyEvent(
+                    from_player_id=target_id,
+                    to_player_id=proposer_id,
+                    square_id=sq_id,
+                    price=0,
+                )
+            )
         if gold_offer > 0:
-            events.append(TransferCashEvent(
-                from_player_id=proposer_id, to_player_id=target_id, amount=gold_offer,
-            ))
+            events.append(
+                TransferCashEvent(
+                    from_player_id=proposer_id,
+                    to_player_id=target_id,
+                    amount=gold_offer,
+                )
+            )
         elif gold_offer < 0:
-            events.append(TransferCashEvent(
-                from_player_id=target_id, to_player_id=proposer_id, amount=-gold_offer,
-            ))
+            events.append(
+                TransferCashEvent(
+                    from_player_id=target_id,
+                    to_player_id=proposer_id,
+                    amount=-gold_offer,
+                )
+            )
         # enqueue_front in reverse to preserve order
         for evt in reversed(events):
             self.pipeline.enqueue_front(evt)

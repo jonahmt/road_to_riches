@@ -46,12 +46,14 @@ def _board(squares: list[SquareInfo]) -> BoardState:
 
 class TestCountDistrictShops:
     def test_counts_only_shops_in_district(self):
-        board = _board([
-            _shop(0, district=0),
-            _shop(1, district=0),
-            _shop(2, district=1),
-            _shop(3, district=0, sq_type=SquareType.BANK),  # not a shop
-        ])
+        board = _board(
+            [
+                _shop(0, district=0),
+                _shop(1, district=0),
+                _shop(2, district=1),
+                _shop(3, district=0, sq_type=SquareType.BANK),  # not a shop
+            ]
+        )
         assert count_district_shops(board, 0) == 2
         assert count_district_shops(board, 1) == 1
         assert count_district_shops(board, 99) == 0
@@ -59,12 +61,14 @@ class TestCountDistrictShops:
 
 class TestCountOwnedInDistrict:
     def test_counts_player_owned_shops(self):
-        board = _board([
-            _shop(0, district=0, owner=1),
-            _shop(1, district=0, owner=1),
-            _shop(2, district=0, owner=2),
-            _shop(3, district=1, owner=1),
-        ])
+        board = _board(
+            [
+                _shop(0, district=0, owner=1),
+                _shop(1, district=0, owner=1),
+                _shop(2, district=0, owner=2),
+                _shop(3, district=1, owner=1),
+            ]
+        )
         assert count_owned_in_district(board, 0, 1) == 2
         assert count_owned_in_district(board, 0, 2) == 1
         assert count_owned_in_district(board, 1, 1) == 1

@@ -11,14 +11,14 @@ from __future__ import annotations
 import json
 import struct
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 # --- Binary format constants ---
 
 HEADER_MAGIC = b"I4DT"
 SQUARE_SECTION_MAGIC = b"I4PL"
-HEADER_SIZE = 0x30       # Two I4DT headers + board config
+HEADER_SIZE = 0x30  # Two I4DT headers + board config
 SQUARE_HEADER_SIZE = 16  # I4PL + size + padding + count + padding
 SQUARE_RECORD_SIZE = 32
 MAX_WAYPOINT_ENTRIES = 4
@@ -106,19 +106,26 @@ FRB_TYPE_TO_SUIT: dict[int, str] = {
 }
 
 FRB_BACKSTREET_TYPES: set[int] = {
-    FRB_TYPE_WARP_A, FRB_TYPE_WARP_B, FRB_TYPE_WARP_C,
-    FRB_TYPE_WARP_D, FRB_TYPE_WARP_E,
+    FRB_TYPE_WARP_A,
+    FRB_TYPE_WARP_B,
+    FRB_TYPE_WARP_C,
+    FRB_TYPE_WARP_D,
+    FRB_TYPE_WARP_E,
 }
 
 FRB_DOORWAY_TYPES: set[int] = {
-    FRB_TYPE_GATEWAY_A, FRB_TYPE_GATEWAY_B, FRB_TYPE_GATEWAY_C,
-    FRB_TYPE_GATEWAY_D, FRB_TYPE_GATEWAY_END,
+    FRB_TYPE_GATEWAY_A,
+    FRB_TYPE_GATEWAY_B,
+    FRB_TYPE_GATEWAY_C,
+    FRB_TYPE_GATEWAY_D,
+    FRB_TYPE_GATEWAY_END,
 }
 
 # Combined set for transport squares
 FRB_TRANSPORT_TYPES = FRB_BACKSTREET_TYPES | FRB_DOORWAY_TYPES
 
 # --- Data structures ---
+
 
 @dataclass
 class FrbWaypoint:
@@ -151,13 +158,14 @@ class FrbBoard:
 
 # --- Parsing ---
 
+
 def parse_frb(data: bytes) -> FrbBoard:
     """Parse a .frb binary file into an FrbBoard."""
     # Validate header
     if data[0:4] != HEADER_MAGIC:
         raise ValueError(f"Invalid magic: expected {HEADER_MAGIC}, got {data[0:4]}")
     if data[0x10:0x14] != HEADER_MAGIC:
-        raise ValueError(f"Invalid second header magic at 0x10")
+        raise ValueError("Invalid second header magic at 0x10")
 
     # Board config at 0x20
     initial_cash = struct.unpack(">H", data[0x20:0x22])[0]
@@ -169,7 +177,7 @@ def parse_frb(data: bytes) -> FrbBoard:
 
     # Square section at 0x30
     if data[0x30:0x34] != SQUARE_SECTION_MAGIC:
-        raise ValueError(f"Invalid square section magic at 0x30")
+        raise ValueError("Invalid square section magic at 0x30")
     num_squares = struct.unpack(">H", data[0x3C:0x3E])[0]
 
     squares: list[FrbSquare] = []
@@ -197,11 +205,18 @@ def parse_frb(data: bytes) -> FrbBoard:
         value = struct.unpack(">H", rec[26:28])[0]
         price = struct.unpack(">H", rec[28:30])[0]
 
-        squares.append(FrbSquare(
-            index=i, frb_type=frb_type, x=x, y=y,
-            waypoints=waypoints, district=district,
-            value=value, price=price,
-        ))
+        squares.append(
+            FrbSquare(
+                index=i,
+                frb_type=frb_type,
+                x=x,
+                y=y,
+                waypoints=waypoints,
+                district=district,
+                value=value,
+                price=price,
+            )
+        )
 
     return FrbBoard(
         initial_cash=initial_cash,
@@ -215,6 +230,7 @@ def parse_frb(data: bytes) -> FrbBoard:
 
 
 # --- Conversion ---
+
 
 def convert_to_json(frb: FrbBoard) -> dict:
     """Convert a parsed FRB board to our JSON board format."""
@@ -326,10 +342,12 @@ def convert_to_json(frb: FrbBoard) -> dict:
                     continue  # from_id refers to a non-playable square, skip
                 remapped_to = [old_to_new[tid] for tid in wp.to_ids if tid in old_to_new]
                 if remapped_to:
-                    wp_list.append({
-                        "from_id": old_to_new[wp.from_id],
-                        "to_ids": remapped_to,
-                    })
+                    wp_list.append(
+                        {
+                            "from_id": old_to_new[wp.from_id],
+                            "to_ids": remapped_to,
+                        }
+                    )
             entry["waypoints"] = wp_list
         else:
             entry["waypoints"] = []
@@ -358,6 +376,7 @@ def convert_to_json(frb: FrbBoard) -> dict:
 
 # --- Main ---
 
+
 def main():
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <input.frb> [output.json]", file=sys.stderr)
@@ -370,15 +389,21 @@ def main():
     frb = parse_frb(data)
 
     print(f"Parsed {len(frb.squares)} squares from {input_path.name}", file=sys.stderr)
-    print(f"Board: cash={frb.initial_cash}, salary={frb.base_salary}+{frb.salary_increment}, "
-          f"dice={frb.max_dice_roll}, districts={frb.num_districts}", file=sys.stderr)
+    print(
+        f"Board: cash={frb.initial_cash}, salary={frb.base_salary}+{frb.salary_increment}, "
+        f"dice={frb.max_dice_roll}, districts={frb.num_districts}",
+        file=sys.stderr,
+    )
 
     board = convert_to_json(frb)
 
     connected = [sq for sq in board["squares"] if sq.get("waypoints")]
     disconnected = [sq for sq in board["squares"] if not sq.get("waypoints")]
-    print(f"Output: {len(board['squares'])} squares "
-          f"({len(connected)} connected, {len(disconnected)} disconnected)", file=sys.stderr)
+    print(
+        f"Output: {len(board['squares'])} squares "
+        f"({len(connected)} connected, {len(disconnected)} disconnected)",
+        file=sys.stderr,
+    )
 
     output = json.dumps(board, indent=2)
 

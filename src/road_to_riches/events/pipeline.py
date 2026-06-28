@@ -64,6 +64,13 @@ class EventPipeline:
         """Remove all pending events from the queue."""
         self._queue.clear()
 
+    def drain_pending(self) -> list[GameEvent]:
+        """Remove and return all pending events in queue order."""
+        events = list(self._queue)
+        self._queue.clear()
+        self._log_queue("drain_pending")
+        return events
+
     @property
     def pending(self) -> int:
         return len(self._queue)
