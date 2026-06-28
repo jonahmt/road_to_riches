@@ -309,6 +309,14 @@ The server should log all events it executes. Not in full json format, but an ab
 
 ## Start Up
 
+### Current P0/P0.5 Implementation
+
+The current implementation intentionally uses a **single-session server** for local playable development. A server process is launched with a resolved board path, human count, AI count, and options; it owns exactly one `GameLoop`. Human clients are assigned player IDs as they connect, AI clients are spawned by the server, and the game starts once all configured player slots are connected. The legacy `start_game` protocol message is accepted only for compatibility and does not currently create or configure games.
+
+This is a development simplification, not the final online architecture. Before P3 online/multi-game support, introduce a session manager that owns game IDs, host configuration, join/discovery behavior, and routing between connections and game instances.
+
+### Target Multi-Game Architecture
+
 A single server is capable of running multiple games. On startup, the server simply initializes itself with an empty dictionary of game instances, and waits for a client to send a start game request. Once a start game request is received, the server initializes a Game object with a random (unique) game id, adds it to the map, and returns the game id to the client. It adds the client that requested the game (from now on called the host) to the game and waits for the host to configure the game. Possible configurations are:
 
 - How many players and how many NPCs  
@@ -402,4 +410,3 @@ is that converting to/from json is super easy with the standard python library. 
 	  
 	  
 	
-
