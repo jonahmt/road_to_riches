@@ -114,6 +114,10 @@ behind a flag or stay untracked.
 # Local (default): TUI with local game loop, 4 players
 python -m road_to_riches local
 
+# Resume a local saved game (defaults to ~/.road_to_riches/saves/latest.json)
+python -m road_to_riches local --resume
+python -m road_to_riches local --resume checkpoint
+
 # Server: WebSocket server with per-player routing
 python -m road_to_riches server --humans 1 --ai 3
 

@@ -77,6 +77,15 @@ class TestLoadSave:
         assert config.venture_script == "scripts/venture_placeholder.py"
         assert config.cards_dir == "cards"
 
+    def test_load_named_save_uses_save_directory_and_json_suffix(self, tmp_save_dir):
+        save_mod.save_game(_make_state(), _make_config())
+        (tmp_save_dir / "latest.json").rename(tmp_save_dir / "checkpoint.json")
+
+        state, config = save_mod.load_save("checkpoint")
+
+        assert config.board_path == "boards/test_board.json"
+        assert len(state.players) == 2
+
     def test_round_trip_preserves_player_state(self, tmp_save_dir):
         save_mod.save_game(_make_state(), _make_config())
         state, _ = save_mod.load_save()

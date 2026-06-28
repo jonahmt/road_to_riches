@@ -106,31 +106,29 @@ def main() -> None:
                         help="File to write server stdout/stderr to")
     parser.add_argument("--startup_timeout", type=float, default=5.0,
                         help="Seconds to wait for the server to start listening")
-    parser.add_argument("--resume", action="store_true",
-                        help="Resume from most recent save file")
+    parser.add_argument("--resume", nargs="?", const="latest", default=None, metavar="SAVE",
+                        help="Resume from SAVE, defaulting to the most recent save")
     args = parser.parse_args()
 
-    if args.resume:
+    if args.resume is not None:
+        if args.board != parser.get_default("board"):
+            parser.error("--resume loads the board from the save file.")
+        if args.ai_players != parser.get_default("ai_players"):
+            parser.error("--resume derives AI players from the saved player count.")
+
         # Load save to determine actual game parameters
         sys.path.insert(0, "src")
         from road_to_riches.save import load_save
-        result = load_save()
+
+        result = load_save(args.resume)
         if result is None:
-            print("No save file found.", file=sys.stderr)
+            print(f"No save file found: {args.resume}", file=sys.stderr)
             sys.exit(1)
         _, saved_config = result
         board = saved_config.board_path
         num_players = saved_config.num_players
         human_players = min(args.human_players, num_players)
         ai_players = num_players - human_players
-        # Warn if user passed flags that conflict with the save
-        if args.board != parser.get_default("board") and args.board != board:
-            print(f"Warning: --board ignored when resuming (save uses {board})")
-        if args.ai_players != parser.get_default("ai_players") and args.ai_players != ai_players:
-            print(
-                "Warning: --ai_players ignored when resuming "
-                f"(save has {num_players} total players)"
-            )
     else:
         board = args.board
         human_players = args.human_players
@@ -142,17 +140,18 @@ def main() -> None:
 
     server_cmd = [
         sys.executable, "-m", "road_to_riches.main", "server",
-        board,
         "--humans", str(human_players),
         "--ai", str(ai_players),
         "--ai-delay", str(args.ai_delay),
         "--host", args.host,
         "--port", str(args.port),
     ]
+    if args.resume is None:
+        server_cmd += ["--board", board]
     if args.debug:
         server_cmd.append("--debug")
-    if args.resume:
-        server_cmd.append("--resume")
+    if args.resume is not None:
+        server_cmd += ["--resume", args.resume]
 
     print(f"Server log: {args.server_log}")
     log_file = open(args.server_log, "w")

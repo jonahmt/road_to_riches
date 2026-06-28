@@ -2505,14 +2505,14 @@ def run_tui(
     board_path: str = "boards/test_board.json",
     num_players: int = 4,
     log_lines: int | None = None,
-    resume: bool = False,
+    resume: str | None = None,
 ) -> None:
     """Run the TUI in local mode (game loop runs in-process)."""
     saved_state = None
-    if resume:
+    if resume is not None:
         from road_to_riches.save import load_save
 
-        result = load_save()
+        result = load_save(resume)
         if result is not None:
             saved_state, config = result
             print(f"Resuming saved game ({config.num_players} players, board: {config.board_path})")

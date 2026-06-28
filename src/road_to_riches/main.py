@@ -4,9 +4,28 @@ from __future__ import annotations
 
 import argparse
 import logging
+from dataclasses import dataclass
+
+DEFAULT_BOARD = "boards/test_board.json"
+DEFAULT_PLAYERS = 4
 
 
-def main() -> None:
+@dataclass(frozen=True)
+class ParsedRunConfig:
+    mode: str
+    board: str
+    players: int
+    humans: int
+    ai: int
+    ai_delay: float
+    host: str
+    port: int
+    log_lines: int | None
+    debug: bool
+    resume: str | None
+
+
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Road to Riches")
     parser.add_argument(
         "mode",
@@ -16,13 +35,28 @@ def main() -> None:
         help="Run mode (default: local)",
     )
     parser.add_argument(
-        "board",
+        "board_arg",
         nargs="?",
-        default="boards/test_board.json",
-        help="Board file path",
+        help="Legacy board file path positional. Prefer --board.",
     )
     parser.add_argument(
-        "players", nargs="?", type=int, default=4, help="Number of players (local/text mode)"
+        "players_arg",
+        nargs="?",
+        type=int,
+        help="Legacy player count positional. Prefer --players.",
+    )
+    parser.add_argument(
+        "--board",
+        dest="board_flag",
+        default=None,
+        help="Board file path (local/server/text modes)",
+    )
+    parser.add_argument(
+        "--players",
+        dest="players_flag",
+        type=int,
+        default=None,
+        help="Number of players (local/text modes)",
     )
     parser.add_argument(
         "--humans", type=int, default=1, help="Number of human players (server mode)"
@@ -43,9 +77,84 @@ def main() -> None:
         help="Max log lines kept in the TUI (local/client mode). Default: unlimited (entire game).",
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
-    parser.add_argument("--resume", action="store_true", help="Resume from most recent save file")
+    parser.add_argument(
+        "--resume",
+        nargs="?",
+        const="latest",
+        default=None,
+        metavar="SAVE",
+        help="Resume from SAVE, defaulting to the most recent save",
+    )
+    return parser
 
-    args = parser.parse_args()
+
+def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> ParsedRunConfig:
+    if args.board_flag is not None and args.board_arg is not None:
+        parser.error("Use either positional board or --board, not both.")
+    if args.players_flag is not None and args.players_arg is not None:
+        parser.error("Use either positional players or --players, not both.")
+
+    if args.mode in {"client", "text"} and args.resume is not None:
+        parser.error("--resume is only supported for local and server modes.")
+
+    if args.resume is not None and (
+        args.board_arg is not None
+        or args.players_arg is not None
+        or args.board_flag is not None
+        or args.players_flag is not None
+    ):
+        parser.error("--resume loads the board and player count from the save file.")
+
+    if args.mode == "client":
+        if (
+            args.board_arg is not None
+            or args.players_arg is not None
+            or args.board_flag is not None
+        ):
+            parser.error("client mode does not accept board or player arguments.")
+        if args.players_flag is not None:
+            parser.error("client mode does not accept --players.")
+
+    board_arg = args.board_arg
+    players_arg = args.players_arg
+    if (
+        args.mode in {"local", "text"}
+        and args.board_flag is None
+        and args.players_flag is None
+        and args.players_arg is None
+        and args.board_arg is not None
+        and args.board_arg.isdecimal()
+    ):
+        players_arg = int(args.board_arg)
+        board_arg = None
+
+    board = args.board_flag or board_arg or DEFAULT_BOARD
+    players = args.players_flag if args.players_flag is not None else players_arg
+    if players is None:
+        players = DEFAULT_PLAYERS
+
+    return ParsedRunConfig(
+        mode=args.mode,
+        board=board,
+        players=players,
+        humans=args.humans,
+        ai=args.ai,
+        ai_delay=args.ai_delay,
+        host=args.host,
+        port=args.port,
+        log_lines=args.log_lines,
+        debug=args.debug,
+        resume=args.resume,
+    )
+
+
+def parse_run_config(argv: list[str] | None = None) -> ParsedRunConfig:
+    parser = _build_parser()
+    return _resolve_args(parser, parser.parse_args(argv))
+
+
+def main() -> None:
+    args = parse_run_config()
 
     if args.debug:
         logging.basicConfig(

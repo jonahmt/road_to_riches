@@ -254,7 +254,7 @@ def run_server(
     host: str = "localhost",
     port: int = 8765,
     debug: bool = False,
-    resume: bool = False,
+    resume: str | None = None,
 ) -> None:
     """Entry point: start a game server."""
     logging.basicConfig(
@@ -264,10 +264,10 @@ def run_server(
     logging.getLogger("websockets").setLevel(logging.INFO)
 
     saved_state = None
-    if resume:
+    if resume is not None:
         from road_to_riches.save import load_save
 
-        result = load_save()
+        result = load_save(resume)
         if result is not None:
             saved_state, config = result
             logger.info(
