@@ -47,6 +47,35 @@ def test_start_server_process_uses_new_session_on_posix(monkeypatch):
     assert calls[0][1]["start_new_session"] is True
 
 
+def test_arg_parser_accepts_documented_launcher_aliases():
+    args = play.build_arg_parser().parse_args(
+        [
+            "--board",
+            "boards/large_test_board.json",
+            "--humans",
+            "2",
+            "--ai",
+            "2",
+            "--ai-delay",
+            "0.1",
+            "--log-lines",
+            "20",
+            "--server-log",
+            "/tmp/server.log",
+            "--startup-timeout",
+            "10",
+        ]
+    )
+
+    assert args.board == "boards/large_test_board.json"
+    assert args.human_players == 2
+    assert args.ai_players == 2
+    assert args.ai_delay == 0.1
+    assert args.log_lines == 20
+    assert args.server_log == "/tmp/server.log"
+    assert args.startup_timeout == 10
+
+
 def test_terminate_process_tree_signals_process_group_on_posix(monkeypatch):
     sent = []
     process = FakeProcess()

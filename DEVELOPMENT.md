@@ -111,6 +111,13 @@ behind a flag or stay untracked.
 ## Run Modes
 
 ```bash
+# Recommended local launcher: starts the server, connects the TUI client, and
+# cleans up the server/AI process tree when the TUI exits.
+./play.sh
+./play.sh --board boards/large_test_board.json --humans 1 --ai 3
+./play.sh --resume
+./play.sh --resume checkpoint
+
 # Local (default): TUI with local game loop, 4 players
 python -m road_to_riches local
 

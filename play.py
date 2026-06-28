@@ -5,12 +5,13 @@ orchestrates: launch the server in the background, wait for it to listen,
 then run the TUI client in the foreground. When the client exits (or this
 script is interrupted), the server is terminated.
 
-All configuration is via flags — no positional args:
+All configuration is via flags - no positional args:
 
-    python play.py
-    python play.py --ai_delay=0.25
-    python play.py --board=boards/large_test_board.json --humans=1 --ai=3
-    python play.py --debug
+    ./play.sh
+    ./play.sh --ai-delay=0.25
+    ./play.sh --board=boards/large_test_board.json --humans=1 --ai=3
+    ./play.sh --resume
+    ./play.sh --resume checkpoint
 """
 
 from __future__ import annotations
@@ -81,33 +82,40 @@ def _terminate_process_tree(process: subprocess.Popen, timeout: float = 2.0) -> 
         process.wait()
 
 
-def main() -> None:
+def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Launch a Road to Riches game with AI opponents.",
     )
     parser.add_argument("--board", default="boards/test_board.json",
                         help="Board file path")
-    parser.add_argument("--human_players", type=int, default=1,
+    parser.add_argument("--human_players", "--humans", dest="human_players", type=int, default=1,
                         help="Number of human players (0 = AI-only watch mode)")
-    parser.add_argument("--ai_players", type=int, default=3,
+    parser.add_argument("--ai_players", "--ai", dest="ai_players", type=int, default=3,
                         help="Number of AI players")
-    parser.add_argument("--ai_delay", type=float, default=1.0,
+    parser.add_argument("--ai_delay", "--ai-delay", dest="ai_delay", type=float, default=1.0,
                         help="AI response delay in seconds (default 1.0)")
     parser.add_argument("--host", default="localhost",
                         help="Server host")
     parser.add_argument("--port", type=int, default=8765,
                         help="Server port")
-    parser.add_argument("--log_lines", type=int, default=None,
+    parser.add_argument("--log_lines", "--log-lines", dest="log_lines", type=int, default=None,
                         help="Max log lines kept in the TUI scrollback. "
                              "Default: unlimited (entire game).")
     parser.add_argument("--debug", action="store_true",
                         help="Enable debug logging on server and client")
-    parser.add_argument("--server_log", default="/tmp/road_to_riches_server.log",
+    parser.add_argument("--server_log", "--server-log", dest="server_log",
+                        default="/tmp/road_to_riches_server.log",
                         help="File to write server stdout/stderr to")
-    parser.add_argument("--startup_timeout", type=float, default=5.0,
+    parser.add_argument("--startup_timeout", "--startup-timeout", dest="startup_timeout",
+                        type=float, default=5.0,
                         help="Seconds to wait for the server to start listening")
     parser.add_argument("--resume", nargs="?", const="latest", default=None, metavar="SAVE",
                         help="Resume from SAVE, defaulting to the most recent save")
+    return parser
+
+
+def main() -> None:
+    parser = build_arg_parser()
     args = parser.parse_args()
 
     if args.resume is not None:

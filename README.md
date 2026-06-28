@@ -7,12 +7,13 @@ A Fortune Street / Itadaki Street inspired board game. Players roll dice, buy sh
 ```bash
 pip install -e .
 
-# Play locally (4 players, hot-seat)
-python -m road_to_riches local
+# Play locally with one human TUI client and AI opponents
+./play.sh
+./play.sh --board boards/large_test_board.json --humans 1 --ai 3
+./play.sh --resume
 
-# Play with AI opponents
-python -m road_to_riches server --humans 1 --ai 3
-# Then in another terminal:
+# Manual client/server mode
+python -m road_to_riches server --board boards/test_board.json --humans 1 --ai 3
 python -m road_to_riches client
 ```
 
