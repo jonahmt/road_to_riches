@@ -724,11 +724,11 @@ class GameApp(App):
         self.player_input.submit_response(value)
 
     def _clear_command_input(self) -> None:
-        """Return the command input to its neutral idle presentation."""
+        """Clear command input while waiting for the next prompt."""
         inp = self.query_one("#command-input", Input)
         inp.value = ""
         inp.placeholder = "Enter command..."
-        inp.display = True
+        inp.display = False
 
     # ── Selection callbacks ───────────────────────────────────────
 

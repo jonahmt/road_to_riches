@@ -192,3 +192,36 @@ async def _liquidation_options_submit_canonical_three_tuple():
         app._on_selection_confirmed(("stock", 0, 3))
 
         assert app.submitted == [("stock", 0, 3)]
+
+
+def test_selection_submit_keeps_command_input_hidden_while_waiting():
+    asyncio.run(_selection_submit_keeps_command_input_hidden_while_waiting())
+
+
+async def _selection_submit_keeps_command_input_hidden_while_waiting():
+    app = HarnessGameApp(_state())
+    app.player_input = RecordingInput(app)
+
+    async with app.run_test():
+        req = InputRequest(
+            type=InputRequestType.PRE_ROLL,
+            player_id=0,
+            data={
+                "cash": 500,
+                "level": 1,
+                "has_stock": False,
+                "has_shops": False,
+            },
+        )
+        app._current_request = req
+        app._show_prompt(req)
+
+        command_input = app.query_one("#command-input", Input)
+        assert command_input.display is False
+
+        app._on_selection_confirmed("roll")
+
+        assert app.submitted == ["roll"]
+        assert command_input.value == ""
+        assert command_input.placeholder == "Enter command..."
+        assert command_input.display is False
