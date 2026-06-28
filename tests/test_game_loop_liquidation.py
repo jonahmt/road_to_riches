@@ -152,16 +152,19 @@ class TestLiquidationPhase:
 
         assert p0.owned_stock == {}
 
-    def test_two_field_stock_choice_sells_minimum_needed(self):
+    def test_two_field_stock_choice_is_invalid_and_retried(self):
         loop = _make_loop()
         p0 = loop.state.players[0]
         p0.ready_cash = -20
         p0.owned_stock = {0: 5}  # district 0 price = 9
-        # TUI liquidation selection returns only asset type and district.
-        loop.input.choose_liquidation.return_value = ("stock", 0)
+        loop.input.choose_liquidation.side_effect = [
+            ("stock", 0),
+            ("stock", 0, 3),
+        ]
 
         loop._handle_liquidation_phase(0)
 
+        assert loop.input.choose_liquidation.call_count == 2
         assert p0.ready_cash == 7
         assert p0.owned_stock == {0: 2}
 

@@ -1060,14 +1060,18 @@ class GameApp(App):
             for s in options_data.get("shops", []):
                 options.append((
                     f"Shop sq{s['square_id']} ({s['sell_value']}G)",
-                    ("shop", s["square_id"]),
-                ))
-            for d_id, info in options_data.get("stock", {}).items():
-                options.append((
-                    f"Stock d{d_id} ({info['quantity']}x{info['price_per_share']}G)",
-                    ("stock", int(d_id)),
+                    ("shop", s["square_id"], 0),
                 ))
             cash = req.data.get("cash", 0)
+            for d_id, info in options_data.get("stock", {}).items():
+                held = int(info["quantity"])
+                price = int(info["price_per_share"])
+                deficit = max(1, 1 - cash)
+                default_qty = held if price <= 0 else min(held, (deficit + price - 1) // price)
+                options.append((
+                    f"Stock d{d_id} ({info['quantity']}x{info['price_per_share']}G)",
+                    ("stock", int(d_id), default_qty),
+                ))
             self._enter_selection_mode(
                 f"Must sell assets! Cash: {cash}G", options
             )

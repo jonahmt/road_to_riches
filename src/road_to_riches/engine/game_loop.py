@@ -1046,20 +1046,10 @@ class GameLoop:
             )
             try:
                 asset_type, asset_id, quantity = choice
-                omitted_quantity = False
             except (TypeError, ValueError):
-                if (
-                    isinstance(choice, (list, tuple))
-                    and len(choice) == 2
-                    and choice[0] in {"shop", "stock"}
-                ):
-                    asset_type, asset_id = choice
-                    quantity = 0
-                    omitted_quantity = True
-                else:
-                    self.log.log("Invalid liquidation choice.")
-                    self.input.notify(self.state, self.log)
-                    continue
+                self.log.log("Invalid liquidation choice.")
+                self.input.notify(self.state, self.log)
+                continue
             if asset_type == "shop":
                 if asset_id not in [s["square_id"] for s in options["shops"]]:
                     self.log.log("Invalid liquidation choice.")
@@ -1080,12 +1070,7 @@ class GameLoop:
                     self.log.log("Cannot liquidate stock with nonpositive price.")
                     self.input.notify(self.state, self.log)
                     continue
-                deficit = -self.state.get_player(player_id).ready_cash
-                minimum_needed = (deficit + price - 1) // price
-                if omitted_quantity:
-                    qty = minimum_needed
-                else:
-                    qty = quantity if quantity > 0 else held
+                qty = quantity if quantity > 0 else held
                 qty = min(qty, held)
                 self._execute_event(SellStockEvent(
                     player_id=player_id, district_id=asset_id, quantity=qty
