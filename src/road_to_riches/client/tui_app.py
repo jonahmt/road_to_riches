@@ -307,6 +307,7 @@ class GameApp(App):
         self._browse_grid: list[list[int | None]] = []
         self._browse_positions: dict[int, tuple[int, int]] = {}
         self._browse_neighbors: dict[int, set[int]] = {}
+        self._browse_restore_prompt_text = ""
         # Front-end-only pause: buffer log messages until deadline so the
         # player can read a key message before subsequent ones arrive.
         # Engine inserts "<<PAUSE:n>>" markers in the log stream.
@@ -717,9 +718,17 @@ class GameApp(App):
         except Exception:
             pass
         self._reset_input_mode()
+        self._clear_command_input()
         # Show waiting message until next input request arrives
         self._show_waiting()
         self.player_input.submit_response(value)
+
+    def _clear_command_input(self) -> None:
+        """Return the command input to its neutral idle presentation."""
+        inp = self.query_one("#command-input", Input)
+        inp.value = ""
+        inp.placeholder = "Enter command..."
+        inp.display = True
 
     # ── Selection callbacks ───────────────────────────────────────
 
@@ -913,6 +922,10 @@ class GameApp(App):
 
     def _show_prompt(self, req: InputRequest) -> None:
         """Set up the UI for the given input request."""
+        if self._browse_mode:
+            self._exit_browse_mode(restore_prompt=False)
+        if self._stock_overlay_active:
+            self._close_stock_overlay()
         self._reset_input_mode()
         self._input_phase = 0
         self._phase_data = {}
@@ -2034,10 +2047,12 @@ class GameApp(App):
                 break
 
         self._browse_mode = True
+        prompt = self.query_one("#prompt-bar", PromptBar)
+        self._browse_restore_prompt_text = prompt.prompt_text
         self._chord.reset()
         self._refresh_browse()
 
-    def _exit_browse_mode(self) -> None:
+    def _exit_browse_mode(self, restore_prompt: bool = True) -> None:
         """Exit browse mode and restore normal view."""
         self._browse_mode = False
         self._browse_grid = []
@@ -2045,13 +2060,12 @@ class GameApp(App):
         self._browse_neighbors = {}
         self._chord.reset()
         self._refresh_board()
-        # Restore the prompt
-        prompt = self.query_one("#prompt-bar", PromptBar)
-        req = self._current_request
-        if req is not None:
-            self._show_prompt(req)
-        else:
-            prompt.prompt_text = ""
+        if restore_prompt:
+            prompt = self.query_one("#prompt-bar", PromptBar)
+            prompt.prompt_text = self._browse_restore_prompt_text
+            if self._stock_overlay_active:
+                self._refresh_stock_overlay()
+        self._browse_restore_prompt_text = ""
 
     _BROWSE_DIRS: dict[str, tuple[int, int]] = {
         "w": (-1, 0), "s": (1, 0), "a": (0, -1), "d": (0, 1),

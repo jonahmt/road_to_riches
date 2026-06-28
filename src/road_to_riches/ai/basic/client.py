@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import math
 import random
 import time
 
@@ -318,13 +319,45 @@ def _handle_trade(ai: BasicAIClient, req: InputRequest) -> dict | None:
 
 
 def _handle_liquidation(ai: BasicAIClient, req: InputRequest) -> tuple[str, int, int]:
-    """Sell stock first (all shares of the first district), then shops."""
+    """Sell the minimum useful stock first, then shops.
+
+    Stock districts with lower remaining max capital are less attractive to
+    hold, so sell from those first when forced to recover from negative cash.
+    """
     options = req.data.get("options", {})
+    cash = req.data.get("cash", 0)
 
     stock = options.get("stock") or {}
     if stock:
-        district_id, info = next(iter(stock.items()))
-        return ("stock", int(district_id), int(info.get("quantity", 0)))
+        target_cash = max(1, 1 - cash)
+
+        def remaining_max_capital(district_id: int) -> int:
+            if ai.state is None:
+                return 0
+            return sum(
+                max_capital(ai.state.board, sq)
+                for sq in ai.state.board.squares
+                if sq.property_district == district_id
+            )
+
+        candidates = []
+        for district_key, info in stock.items():
+            district_id = int(district_key)
+            held = int(info.get("quantity", 0))
+            price = int(info.get("price_per_share", 0))
+            if held <= 0 or price <= 0:
+                continue
+            quantity = min(held, math.ceil(target_cash / price))
+            candidates.append(
+                (
+                    remaining_max_capital(district_id),
+                    district_id,
+                    quantity,
+                )
+            )
+        if candidates:
+            _, district_id, quantity = min(candidates)
+            return ("stock", district_id, quantity)
 
     shops = options.get("shops") or []
     if shops:

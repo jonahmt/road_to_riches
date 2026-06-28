@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import os
-import tempfile
-from unittest.mock import create_autospec
+from unittest.mock import create_autospec, patch
 
 import pytest
 
 from road_to_riches.board import load_board
 from road_to_riches.engine.game_loop import GameConfig, GameLoop, PlayerInput
-from road_to_riches.events.game_events import TransferCashEvent
+from road_to_riches.events.game_events import ClaimVentureCellEvent
 from road_to_riches.events.script_commands import ChooseSquare, Decision, Message
-from road_to_riches.events.turn_events import RollForEventEvent
+from road_to_riches.events.turn_events import (
+    AdvanceTurnEvent,
+    EndTurnEvent,
+    RollEvent,
+    TurnEvent,
+)
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
 from road_to_riches.models.venture_deck import VentureCard, VentureDeck
@@ -129,6 +133,50 @@ class TestRunScript:
         with pytest.raises(ValueError, match="unexpected type"):
             loop.run_script(path, player_id=0)
 
+    def test_lucky_roll_does_not_advance_turn(self):
+        loop = _make_loop(num_players=2)
+        with patch("road_to_riches.events.turn_events.roll_dice", return_value=3):
+            loop.run_script("cards/004/004.py", player_id=0)
+
+        assert loop.state.current_player.player_id == 0
+        assert loop.state.players[0].ready_cash == 1120
+        assert not any(
+            isinstance(entry.event, (AdvanceTurnEvent, TurnEvent))
+            for entry in loop.pipeline.history
+        )
+        assert not any("Player 1" in message for message in loop.log.messages)
+
+    def test_roll_again_card_stops_before_next_player_turn(self, tmp_path):
+        script = (
+            "from road_to_riches.events.turn_events import RollEvent\n"
+            "def run(state, player_id):\n"
+            "    yield RollEvent(player_id=player_id)\n"
+        )
+        path = _write_script(str(tmp_path), script)
+        loop = _make_loop(num_players=2)
+        player = loop.state.players[0]
+        player.position = 0
+        player.from_square = 17
+        loop.input.choose_path.return_value = 1
+        loop.input.confirm_stop.return_value = True
+        loop.input.choose_buy_shop.return_value = False
+        loop.input.choose_pre_roll_action.side_effect = AssertionError(
+            "bonus roll advanced to a pre-roll turn"
+        )
+
+        with patch("road_to_riches.events.turn_events.roll_dice", return_value=1):
+            loop.run_script(path, player_id=0)
+
+        assert loop.state.current_player.player_id == 0
+        assert player.position == 1
+        assert not any(
+            isinstance(entry.event, (EndTurnEvent, AdvanceTurnEvent, TurnEvent))
+            for entry in loop.pipeline.history
+        )
+        assert any(
+            isinstance(entry.event, RollEvent) for entry in loop.pipeline.history
+        )
+
 
 class TestHandleScriptIo:
     def test_message_returns_none_and_logs(self):
@@ -208,6 +256,49 @@ class TestHandleVentureCard:
         assert loop.state.players[0].ready_cash == 1011
         assert loop.state.venture_grid is not None
         assert loop.state.venture_grid.cells[0][0] == 0
+
+    def test_multiple_claims_in_one_turn_see_prior_pick(self, tmp_path):
+        first_script = (
+            "from road_to_riches.events.turn_events import VentureCardEvent\n"
+            "def run(state, player_id):\n"
+            "    yield VentureCardEvent(player_id=player_id)\n"
+        )
+        second_script = "def run(state, player_id):\n    pass\n"
+        first_path = _write_script(str(tmp_path), first_script)
+        second_dir = tmp_path / "second"
+        second_dir.mkdir()
+        second_path = _write_script(str(second_dir), second_script)
+        loop = _make_loop()
+        cards = {
+            1: VentureCard(
+                card_id=1, name="Again", description="draw", script_path=first_path
+            ),
+            2: VentureCard(
+                card_id=2, name="Done", description="stop", script_path=second_path
+            ),
+        }
+        loop.state.venture_deck = VentureDeck(
+            cards=cards, remaining=[2, 1], full_deck=[1, 2]
+        )
+
+        seen_before_pick: list[int | None] = []
+
+        def choose_cell(state, player_id, log):
+            seen_before_pick.append(state.venture_grid.cells[0][0])
+            return (0, 0) if len(seen_before_pick) == 1 else (0, 1)
+
+        loop.input.choose_venture_cell.side_effect = choose_cell
+
+        loop._handle_venture_card(player_id=0)
+
+        assert seen_before_pick == [None, 0]
+        assert loop.state.venture_grid.cells[0][0] == 0
+        assert loop.state.venture_grid.cells[0][1] == 0
+        claim_events = [
+            entry.event for entry in loop.pipeline.history
+            if isinstance(entry.event, ClaimVentureCellEvent)
+        ]
+        assert [(event.row, event.col) for event in claim_events] == [(0, 0), (0, 1)]
 
     def test_full_grid_is_reset(self, tmp_path):
         script = "def run(state, player_id):\n    pass\n"

@@ -753,6 +753,7 @@ class GameLoop:
             "ready_cash": player.ready_cash,
             "suits": dict(player.suits),
             "level": player.level,
+            "owned_stock": dict(player.owned_stock),
         }
         other_snaps = []
         for p in self.state.players:
@@ -768,6 +769,14 @@ class GameLoop:
                 "checkpoint_toll": sq.checkpoint_toll,
                 "suit": sq.suit,
             })
+        stock_snaps = []
+        for price in self.state.stock.stocks:
+            stock_snaps.append({
+                "district_id": price.district_id,
+                "value_component": price.value_component,
+                "fluctuation_component": price.fluctuation_component,
+                "pending_fluctuation": price.pending_fluctuation,
+            })
 
         self._move_snapshots.append(MoveSnapshot(
             player_position=player.position,
@@ -778,6 +787,7 @@ class GameLoop:
                 "player": player_snap,
                 "other_players": other_snaps,
                 "squares": sq_snaps,
+                "stock_prices": stock_snaps,
             },
         ))
 
@@ -798,6 +808,7 @@ class GameLoop:
         player.ready_cash = saved_player["ready_cash"]
         player.suits = dict(saved_player["suits"])
         player.level = saved_player["level"]
+        player.owned_stock = dict(saved_player.get("owned_stock", {}))
 
         # Restore other players
         for p_snap in snapshot.state_snapshot.get("other_players", []):
@@ -810,6 +821,14 @@ class GameLoop:
             sq.checkpoint_toll = sq_snap["checkpoint_toll"]
             if sq_snap.get("suit") is not None:
                 sq.suit = sq_snap["suit"]
+
+        # Restore stock market state affected by undoable movement actions,
+        # such as bank-pass stock purchases that add pending fluctuations.
+        for stock_snap in snapshot.state_snapshot.get("stock_prices", []):
+            price = self.state.stock.get_price(stock_snap["district_id"])
+            price.value_component = stock_snap["value_component"]
+            price.fluctuation_component = stock_snap["fluctuation_component"]
+            price.pending_fluctuation = stock_snap["pending_fluctuation"]
 
         remaining = snapshot.remaining_moves
 
@@ -1022,9 +1041,25 @@ class GameLoop:
             options = get_liquidation_options(self.state, player_id)
             if not options["shops"] and not options["stock"]:
                 break
-            asset_type, asset_id, quantity = self.input.choose_liquidation(
+            choice = self.input.choose_liquidation(
                 self.state, player_id, options, self.log
             )
+            try:
+                asset_type, asset_id, quantity = choice
+                omitted_quantity = False
+            except (TypeError, ValueError):
+                if (
+                    isinstance(choice, (list, tuple))
+                    and len(choice) == 2
+                    and choice[0] in {"shop", "stock"}
+                ):
+                    asset_type, asset_id = choice
+                    quantity = 0
+                    omitted_quantity = True
+                else:
+                    self.log.log("Invalid liquidation choice.")
+                    self.input.notify(self.state, self.log)
+                    continue
             if asset_type == "shop":
                 if asset_id not in [s["square_id"] for s in options["shops"]]:
                     self.log.log("Invalid liquidation choice.")
@@ -1040,7 +1075,17 @@ class GameLoop:
                     self.log.log("Invalid liquidation choice.")
                     self.input.notify(self.state, self.log)
                     continue
-                qty = quantity if quantity > 0 else held
+                price = self.state.stock.get_price(asset_id).current_price
+                if price <= 0:
+                    self.log.log("Cannot liquidate stock with nonpositive price.")
+                    self.input.notify(self.state, self.log)
+                    continue
+                deficit = -self.state.get_player(player_id).ready_cash
+                minimum_needed = (deficit + price - 1) // price
+                if omitted_quantity:
+                    qty = minimum_needed
+                else:
+                    qty = quantity if quantity > 0 else held
                 qty = min(qty, held)
                 self._execute_event(SellStockEvent(
                     player_id=player_id, district_id=asset_id, quantity=qty
@@ -1113,14 +1158,15 @@ class GameLoop:
 
         # Claim the cell and check for line bonuses
         claim_event = ClaimVentureCellEvent(player_id=player_id, row=row, col=col)
-        self.pipeline.enqueue(claim_event)
-        self.pipeline.process_next(self.state)
+        self._execute_event(claim_event)
         bonus = claim_event.get_result()
+        self.input.notify(self.state, self.log)
         if bonus > 0:
-            self.pipeline.enqueue(TransferCashEvent(
-                from_player_id=None, to_player_id=player_id, amount=bonus
-            ))
-            self.pipeline.process_next(self.state)
+            self._execute_event(
+                TransferCashEvent(
+                    from_player_id=None, to_player_id=player_id, amount=bonus
+                )
+            )
             self.log.log(f"Player {player_id} completed a line! Bonus: {bonus}G!")
             self.input.notify(self.state, self.log)
 
@@ -1179,8 +1225,6 @@ class GameLoop:
 
     def _handle_script_io(self, cmd: ScriptCommand, player_id: int) -> Any:
         """Handle a script I/O command (not a pipeline event)."""
-        from road_to_riches.engine.dice import roll_dice
-
         if isinstance(cmd, Message):
             self.log.log(cmd.text)
             self.input.notify(self.state, self.log)
@@ -1206,13 +1250,6 @@ class GameLoop:
         and needs to run a synchronous movement sub-loop before returning
         control to the script.
         """
-        from road_to_riches.engine.dice import roll_dice as _roll_dice
-
-        roll = _roll_dice(self.state.board.max_dice_roll)
-        self.log.log(f"Player {player_id} rolls a {roll}! (bonus roll)")
-        self.input.notify_dice(roll, roll)
-        self.input.notify(self.state, self.log)
-
         # Clear undo state for the bonus roll
         self._move_snapshots.clear()
         self._move_log_checkpoints.clear()
@@ -1225,18 +1262,20 @@ class GameLoop:
         main_pipeline = self.pipeline
         self.pipeline = sub_pipeline
 
-        # Enqueue movement events
-        self.pipeline.enqueue(
-            WillMoveEvent(player_id=player_id, total_roll=roll, remaining=roll)
-        )
+        self.pipeline.enqueue(RollEvent(player_id=player_id))
 
-        # Dispatch until we hit StopActionEvent (which will handle land)
+        # Dispatch through the bonus roll's land actions, but leave turn
+        # advancement to the caller's already-pending EndTurnEvent.
         while not self.pipeline.is_empty:
+            if isinstance(self.pipeline.peek(), EndTurnEvent):
+                break
             event = self.pipeline.process_next(self.state)
             if event is None:
                 break
             self._dispatch(event)
             self._log_event(event)
+
+        main_pipeline.history.extend(sub_pipeline.history)
 
         # Restore main pipeline
         self.pipeline = main_pipeline

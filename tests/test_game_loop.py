@@ -385,6 +385,63 @@ class TestUndo:
         assert p.position == 0
         assert p.ready_cash == 1500
 
+    def test_undo_restores_stock_purchase_state(self):
+        loop = _make_loop()
+        p = loop.state.players[0]
+        p.position = 0
+        p.ready_cash = 1500
+        p.owned_stock = {0: 3}
+        loop.state.stock.get_price(0).pending_fluctuation = 2
+
+        loop._take_snapshot(0, 3)
+        loop._move_log_checkpoints.append(loop.log.total_count)
+
+        BuyStockEvent(player_id=0, district_id=0, quantity=10).execute(loop.state)
+        assert p.owned_stock[0] == 13
+        assert loop.state.stock.get_price(0).pending_fluctuation > 2
+
+        loop._undo_move(0, total_roll=3)
+
+        assert p.ready_cash == 1500
+        assert p.owned_stock == {0: 3}
+        assert loop.state.stock.get_price(0).pending_fluctuation == 2
+
+    def test_undo_bank_pass_stock_purchase_restores_cash_holdings_and_pending_price(self):
+        loop = _make_loop()
+        p = loop.state.players[0]
+        p.position = 17
+        p.from_square = 16
+        p.ready_cash = 1500
+        price = loop.state.stock.get_price(0)
+        starting_cash = p.ready_cash
+        starting_stock = dict(p.owned_stock)
+        starting_pending = price.pending_fluctuation
+
+        loop.input.choose_path.return_value = 0
+        loop.input.choose_stock_buy.return_value = (0, 10)
+        loop.pipeline.enqueue(WillMoveEvent(player_id=0, total_roll=2, remaining=2))
+
+        for _ in range(5):
+            ev = loop.pipeline.process_next(loop.state)
+            assert ev is not None
+            loop._dispatch(ev)
+
+        assert p.position == 0
+        assert p.ready_cash == starting_cash - 10 * price.current_price
+        assert p.owned_stock == {0: 10}
+        assert price.pending_fluctuation > starting_pending
+
+        loop.input.choose_path.return_value = "undo"
+        ev = loop.pipeline.process_next(loop.state)
+        assert isinstance(ev, WillMoveEvent)
+        loop._dispatch(ev)
+
+        assert p.position == 17
+        assert p.from_square == 16
+        assert p.ready_cash == starting_cash
+        assert p.owned_stock == starting_stock
+        assert price.pending_fluctuation == starting_pending
+
     def test_undo_clears_pipeline(self):
         loop = _make_loop()
         loop._take_snapshot(0, 3)
