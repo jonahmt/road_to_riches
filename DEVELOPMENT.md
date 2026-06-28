@@ -10,6 +10,17 @@ Python 3.10+. Install as editable package:
 pip install -e .
 ```
 
+Use the project virtualenv for local checks when it exists:
+```bash
+source venv/bin/activate
+python -m pytest
+```
+
+On this machine, the Miniconda base Python can segfault when importing
+`readline`, which causes the bare `pytest` command to exit with code 139 before
+test collection. Running `venv/bin/python -m pytest` uses the Homebrew-backed
+project virtualenv and is the known-good test path.
+
 ### Style
 - **Formatter/linter**: ruff (both linter and formatter)
 - **Type checking**: pyright
@@ -17,6 +28,11 @@ pip install -e .
 ### Issue Tracking
 All task management uses [Beads](https://github.com/steveyegge/beads) (`bd` CLI).
 Do not use markdown TODO lists or other tracking methods.
+
+Inside restricted agent sandboxes, `bd` commands may need elevated execution
+because the Dolt backend is reached via localhost TCP. Outside the sandbox,
+`bd stats`, `bd ready`, and other normal commands work against the local Dolt
+server.
 
 ## Project Structure
 
