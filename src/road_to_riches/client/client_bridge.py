@@ -151,7 +151,7 @@ class ClientBridge:
             # Only surface prompts that target the player this client controls.
             # All clients still receive the message (so they can update their
             # display), but only the matching client should respond.
-            if self._player_id is None or req.player_id == self._player_id:
+            if self._player_id is not None and req.player_id == self._player_id:
                 self._request = req
                 self._request_ready.set()
 

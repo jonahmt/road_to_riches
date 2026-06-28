@@ -72,19 +72,35 @@ class WebSocketPlayerInput(PlayerInput):
                     if ws in self._all_ws:
                         self._all_ws.remove(ws)
 
-    def receive_response(self, value: Any, player_id: int | None = None) -> None:
+    def receive_response(self, value: Any, ws: Any, player_id: int | None = None) -> None:
         """Called by the server when a client sends an input_response.
 
-        If player_id is provided, only accept if it matches the expected player.
+        Accept only explicit responses from the WebSocket assigned to the
+        player currently being prompted.
         """
-        if self._expecting_player is not None and player_id is not None:
-            if player_id != self._expecting_player:
-                logger.warning(
-                    "Ignoring response from player %d (expecting player %d)",
-                    player_id,
-                    self._expecting_player,
-                )
-                return
+        if self._expecting_player is None:
+            logger.warning("Ignoring input response when no player is expected")
+            return
+        if player_id is None:
+            logger.warning(
+                "Ignoring response without player_id (expecting player %d)",
+                self._expecting_player,
+            )
+            return
+        if player_id != self._expecting_player:
+            logger.warning(
+                "Ignoring response from player %d (expecting player %d)",
+                player_id,
+                self._expecting_player,
+            )
+            return
+        expected_ws = self._player_ws.get(self._expecting_player)
+        if expected_ws is not ws:
+            logger.warning(
+                "Ignoring response for player %d from unassigned WebSocket",
+                self._expecting_player,
+            )
+            return
         self._response = value
         self._response_ready.set()
 
@@ -111,6 +127,7 @@ class WebSocketPlayerInput(PlayerInput):
         """Broadcast input request to all clients, accept response only from target player."""
         self._send_state(state)
         self._response_ready.clear()
+        self._response = None
         self._expecting_player = req.player_id
         # Broadcast so all clients can update their display
         self._broadcast(msg_input_request(req))

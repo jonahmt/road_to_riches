@@ -92,7 +92,7 @@ class GameServer:
                     if isinstance(value, list):
                         value = tuple(value)
                     resp_pid = msg.get("player_id")
-                    self._player_input.receive_response(value, resp_pid)
+                    self._player_input.receive_response(value, ws, resp_pid)
 
                 elif msg_type == "start_game":
                     # Legacy: ignored, game starts when all clients connect
