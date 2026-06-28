@@ -36,8 +36,17 @@ engine, event, serialization, protocol, and save/load changes. UI-only changes
 should run targeted tests at minimum, with the full suite preferred before
 shipping.
 
-Ruff and pyright are configured but are not yet clean release gates. Track the
-cleanup in Beads before requiring them as mandatory session-close checks.
+Ruff is clean and should be run before shipping code:
+```bash
+venv/bin/python -m ruff check src tests tools cards scripts
+```
+
+Pyright is available through the project wrapper, which selects a working
+Node.js runtime before invoking the pyright Python package. Treat it as advisory
+until the existing type issues are cleaned up:
+```bash
+venv/bin/python tools/run_pyright.py
+```
 
 ### Issue Tracking
 All task management uses [Beads](https://github.com/steveyegge/beads) (`bd` CLI).
