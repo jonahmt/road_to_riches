@@ -14,6 +14,8 @@ import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from road_to_riches.paths import resolve_resource_path
+
 
 @dataclass
 class VentureCard:
@@ -54,7 +56,7 @@ def load_cards_from_directory(cards_dir: str | Path) -> dict[int, VentureCard]:
     - A .py file: the card script
     - A .txt file: filename is card name, contents are description
     """
-    cards_dir = Path(cards_dir)
+    cards_dir = resolve_resource_path(cards_dir)
     cards: dict[int, VentureCard] = {}
 
     if not cards_dir.is_dir():

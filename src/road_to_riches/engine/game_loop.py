@@ -84,6 +84,7 @@ from road_to_riches.events.turn_events import (
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
 from road_to_riches.models.square_type import SquareType
+from road_to_riches.paths import resolve_resource_path
 
 
 @dataclass
@@ -365,14 +366,14 @@ class GameLoop:
 
         from road_to_riches.models.venture_deck import build_deck, load_cards_from_directory
 
-        cards = load_cards_from_directory(self.config.cards_dir)
+        cards = load_cards_from_directory(resolve_resource_path(self.config.cards_dir))
         if not cards:
             return  # no cards available, venture_deck stays None
 
         # Check board JSON for optional deck composition
         deck_composition = None
         try:
-            with open(self.config.board_path) as f:
+            with open(resolve_resource_path(self.config.board_path)) as f:
                 board_data = json.load(f)
             deck_composition = board_data.get("venture_deck")
         except (OSError, json.JSONDecodeError):
@@ -1172,12 +1173,7 @@ class GameLoop:
         deck = self.state.venture_deck
         if deck is None:
             # Fallback to legacy single-script mode
-            import os
-
-            script_path = self.config.venture_script
-            if not os.path.isabs(script_path):
-                script_path = os.path.join(os.getcwd(), script_path)
-            self.run_script(script_path, player_id)
+            self.run_script(str(resolve_resource_path(self.config.venture_script)), player_id)
             return
 
         # Initialize grid if needed

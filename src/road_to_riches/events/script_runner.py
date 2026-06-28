@@ -13,6 +13,8 @@ import inspect
 import logging
 from typing import Any, Generator
 
+from road_to_riches.paths import resolve_resource_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +28,7 @@ def load_script_generator(
     Returns a generator if run() is a generator function, or None if it's
     a plain function (which has already executed by the time we return).
     """
+    script_path = str(resolve_resource_path(script_path))
     spec = importlib.util.spec_from_file_location("venture_script", script_path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)

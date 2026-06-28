@@ -12,6 +12,7 @@ from road_to_riches.models.board_state import (
 from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.stock_state import StockPrice, StockState
 from road_to_riches.models.suit import Suit
+from road_to_riches.paths import resolve_resource_path
 
 
 def load_board(path: str | Path) -> tuple[BoardState, StockState]:
@@ -19,7 +20,7 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
 
     Returns (BoardState, StockState) with initial stock prices computed from district values.
     """
-    path = Path(path)
+    path = resolve_resource_path(path)
     with open(path) as f:
         data = json.load(f)
 
