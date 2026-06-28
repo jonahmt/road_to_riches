@@ -1,5 +1,7 @@
 """Tests for VentureDeck: draw, reshuffle, card loading, deck building."""
 
+import pytest
+
 from road_to_riches.models.venture_deck import (
     VentureCard,
     VentureDeck,
@@ -125,23 +127,40 @@ class TestLoadCardsFromDirectory:
         assert len(cards) == 1
         assert 1 in cards
 
-    def test_load_skips_dir_without_py(self, tmp_path):
+    def test_load_rejects_dir_without_py(self, tmp_path):
         card_dir = tmp_path / "001"
         card_dir.mkdir()
         (card_dir / "name.txt").write_text("desc")
 
-        cards = load_cards_from_directory(tmp_path)
-        assert len(cards) == 0
+        with pytest.raises(ValueError, match="exactly one .py"):
+            load_cards_from_directory(tmp_path)
 
-    def test_load_missing_txt_uses_defaults(self, tmp_path):
+    def test_load_rejects_missing_txt(self, tmp_path):
         card_dir = tmp_path / "005"
         card_dir.mkdir()
         (card_dir / "card.py").write_text("def run(s,p): pass")
 
-        cards = load_cards_from_directory(tmp_path)
-        assert 5 in cards
-        assert cards[5].name == "Card 5"
-        assert cards[5].description == ""
+        with pytest.raises(ValueError, match="exactly one .txt"):
+            load_cards_from_directory(tmp_path)
+
+    def test_load_rejects_multiple_py_files(self, tmp_path):
+        card_dir = tmp_path / "001"
+        card_dir.mkdir()
+        (card_dir / "a.py").write_text("def run(s,p): pass")
+        (card_dir / "b.py").write_text("def run(s,p): pass")
+        (card_dir / "name.txt").write_text("desc")
+
+        with pytest.raises(ValueError, match="exactly one .py"):
+            load_cards_from_directory(tmp_path)
+
+    def test_load_rejects_script_without_run(self, tmp_path):
+        card_dir = tmp_path / "001"
+        card_dir.mkdir()
+        (card_dir / "card.py").write_text("VALUE = 1")
+        (card_dir / "name.txt").write_text("desc")
+
+        with pytest.raises(ValueError, match="callable run"):
+            load_cards_from_directory(tmp_path)
 
     def test_load_nonexistent_directory(self, tmp_path):
         cards = load_cards_from_directory(tmp_path / "nonexistent")

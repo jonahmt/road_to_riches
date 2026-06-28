@@ -10,6 +10,7 @@ deck is reshuffled.
 
 from __future__ import annotations
 
+import importlib.util
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -70,20 +71,22 @@ def load_cards_from_directory(cards_dir: str | Path) -> dict[int, VentureCard]:
         except ValueError:
             continue
 
-        # Find .py script
-        py_files = list(entry.glob("*.py"))
-        if not py_files:
-            continue
+        py_files = sorted(entry.glob("*.py"))
+        if len(py_files) != 1:
+            raise ValueError(
+                f"Card directory {entry} must contain exactly one .py script; found {len(py_files)}"
+            )
         script_path = str(py_files[0])
+        _validate_card_script(py_files[0])
 
-        # Find .txt file (name = card name, contents = description)
-        txt_files = list(entry.glob("*.txt"))
-        if txt_files:
-            name = txt_files[0].stem
-            description = txt_files[0].read_text().strip()
-        else:
-            name = f"Card {card_id}"
-            description = ""
+        txt_files = sorted(entry.glob("*.txt"))
+        if len(txt_files) != 1:
+            raise ValueError(
+                f"Card directory {entry} must contain exactly one .txt description; "
+                f"found {len(txt_files)}"
+            )
+        name = txt_files[0].stem
+        description = txt_files[0].read_text().strip()
 
         cards[card_id] = VentureCard(
             card_id=card_id,
@@ -93,6 +96,19 @@ def load_cards_from_directory(cards_dir: str | Path) -> dict[int, VentureCard]:
         )
 
     return cards
+
+
+def _validate_card_script(script_path: Path) -> None:
+    spec = importlib.util.spec_from_file_location(
+        f"venture_card_validation_{script_path.stem}", script_path
+    )
+    if spec is None or spec.loader is None:
+        raise ValueError(f"Card script {script_path} cannot be imported")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    run = getattr(module, "run", None)
+    if not callable(run):
+        raise ValueError(f"Card script {script_path} must define callable run(state, player_id)")
 
 
 def build_deck(

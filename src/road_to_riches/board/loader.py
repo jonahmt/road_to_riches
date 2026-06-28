@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 from road_to_riches.models.board_state import (
@@ -14,6 +15,50 @@ from road_to_riches.models.stock_state import StockPrice, StockState
 from road_to_riches.models.suit import Suit
 from road_to_riches.paths import resolve_resource_path
 
+logger = logging.getLogger(__name__)
+
+
+def validate_board_data(data: dict, *, require_transport_destinations: bool = False) -> None:
+    """Validate structural board data before building runtime state.
+
+    This catches malformed board files at load time: non-contiguous square IDs,
+    bad waypoint references, and invalid square types. Transport destination
+    checks can be made strict by callers/tests, but remain warnings for now so
+    existing content with unresolved gameplay decisions still loads.
+    """
+    squares = data.get("squares", [])
+    ids = [sq.get("id") for sq in squares]
+    expected_ids = list(range(len(squares)))
+    if ids != expected_ids:
+        raise ValueError(
+            f"Board square IDs must be contiguous from 0; got {ids}, expected {expected_ids}"
+        )
+
+    id_set = set(ids)
+    for sq in squares:
+        square_id = sq["id"]
+        square_type = SquareType(sq["type"])
+        for waypoint in sq.get("waypoints", []):
+            from_id = waypoint.get("from_id")
+            if from_id not in id_set:
+                raise ValueError(
+                    f"Square {square_id} waypoint references missing from_id {from_id}"
+                )
+            for to_id in waypoint.get("to_ids", []):
+                if to_id not in id_set:
+                    raise ValueError(
+                        f"Square {square_id} waypoint references missing to_id {to_id}"
+                    )
+
+        missing_destination = (
+            square_type == SquareType.BACKSTREET and "backstreet_destination" not in sq
+        ) or (square_type == SquareType.DOORWAY and "doorway_destination" not in sq)
+        if missing_destination:
+            message = f"Square {square_id} ({square_type.value}) is missing a destination"
+            if require_transport_destinations:
+                raise ValueError(message)
+            logger.warning(message)
+
 
 def load_board(path: str | Path) -> tuple[BoardState, StockState]:
     """Load a board definition from a JSON file.
@@ -23,6 +68,7 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
     path = resolve_resource_path(path)
     with open(path) as f:
         data = json.load(f)
+    validate_board_data(data)
 
     promo_data = data.get("promotion", {})
     promotion = PromotionInfo(
