@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import threading
+import time
 from typing import Any, ClassVar
 
 from textual import on, work
@@ -203,6 +204,14 @@ class GameApp(App):
         display: none;
     }
 
+    #venture-grid {
+        height: auto;
+        max-height: 20;
+        border: solid $accent;
+        display: none;
+        padding: 0 1;
+    }
+
     #prompt-bar {
         height: 1;
         color: $text;
@@ -298,6 +307,12 @@ class GameApp(App):
         self._browse_grid: list[list[int | None]] = []
         self._browse_positions: dict[int, tuple[int, int]] = {}
         self._browse_neighbors: dict[int, set[int]] = {}
+        # Front-end-only pause: buffer log messages until deadline so the
+        # player can read a key message before subsequent ones arrive.
+        # Engine inserts "<<PAUSE:n>>" markers in the log stream.
+        self._log_pause_until: float = 0.0
+        self._pending_log_messages: list[str] = []
+        self._log_flush_timer: Timer | None = None
         # Stock overlay state
         self._stock_overlay_active = False
         self._stock_overlay_mode: str | None = None  # "view" | "buy" | "sell"
@@ -316,10 +331,14 @@ class GameApp(App):
             yield RichLog(id="game-log", wrap=True, markup=True)
             yield RichLog(id="info-area", wrap=True, markup=True)
             yield RichLog(id="stock-overlay", wrap=False, markup=True)
+            yield Static("", id="venture-grid", markup=True)
             yield PromptBar(id="prompt-bar")
             yield Input(placeholder="Enter command...", id="command-input")
 
     def on_mount(self) -> None:
+        from road_to_riches import debug_log
+        debug_log.reset()
+        debug_log.log("app", "TUI mounted")
         self.player_input.set_log_callback(self._on_game_log)
         self.player_input.set_dice_callback(self._on_dice_update)
         if hasattr(self.player_input, 'set_retract_callback'):
@@ -348,9 +367,35 @@ class GameApp(App):
         """Called from game thread to update dice display."""
         self.post_message(self.DiceUpdate(value, remaining))
 
+    _PAUSE_RE: ClassVar = re.compile(r"^<<PAUSE:([\d.]+)>>$")
+
     @on(LogMessage)
     def handle_log_message(self, event: LogMessage) -> None:
-        self._log_messages.append(event.text)
+        m = self._PAUSE_RE.match(event.text)
+        if m:
+            self._log_pause_until = max(self._log_pause_until, time.monotonic() + float(m.group(1)))
+            self._ensure_log_flush_timer()
+            return
+        if time.monotonic() < self._log_pause_until:
+            self._pending_log_messages.append(event.text)
+            self._ensure_log_flush_timer()
+            return
+        self._render_log_append(event.text)
+
+    def _ensure_log_flush_timer(self) -> None:
+        if self._log_flush_timer is not None:
+            return
+        delay = max(0.0, self._log_pause_until - time.monotonic())
+        self._log_flush_timer = self.set_timer(delay, self._flush_pending_logs)
+
+    def _flush_pending_logs(self) -> None:
+        self._log_flush_timer = None
+        pending, self._pending_log_messages = self._pending_log_messages, []
+        for text in pending:
+            self._render_log_append(text)
+
+    def _render_log_append(self, text: str) -> None:
+        self._log_messages.append(text)
         with self.batch_update():
             log_widget = self.query_one("#game-log", RichLog)
             log_widget.clear()
@@ -524,6 +569,11 @@ class GameApp(App):
                 moved = True
         elif key == "space" or key == "enter":
             r, c = cursor
+            from road_to_riches import debug_log
+            debug_log.log(
+                "venture_submit",
+                f"cursor=({r},{c}) cell={cells[r][c]} accepted={cells[r][c] is None}",
+            )
             if cells[r][c] is None:
                 self._submit_response([r, c])
             # If cell is claimed, do nothing (user must pick unclaimed)
@@ -536,37 +586,35 @@ class GameApp(App):
             self._render_venture_grid()
 
     def _render_venture_grid(self) -> None:
-        """Render the venture grid in the log area and update prompt bar with cursor info."""
+        """Render the venture grid into the #venture-grid Static widget."""
         cells = self._phase_data.get("grid_cells", [])
         cursor = self._phase_data.get("grid_cursor", [0, 0])
         size = len(cells)
+        from road_to_riches import debug_log
+        debug_log.log(
+            "render_grid",
+            f"id={id(cells)} cursor={cursor} cells={cells}",
+        )
 
-        # Retract previous grid render (if any)
-        prev_lines = self._phase_data.get("grid_log_lines", 0)
-        if prev_lines > 0:
-            self.post_message(self.RetractLog(prev_lines))
-
-        # Build grid display
         header = "    " + " ".join(str(c) for c in range(size))
         lines = [header]
         for r in range(size):
             row_parts = [f" {r}  "]
             for c in range(size):
                 cell = cells[r][c]
-                if r == cursor[0] and c == cursor[1]:
-                    sym = "X" if cell is None else str(cell)
-                elif cell is not None:
-                    sym = str(cell)
-                else:
+                if cell is None:
                     sym = "·"
+                else:
+                    color = PLAYER_COLORS[cell % len(PLAYER_COLORS)]
+                    sym = f"[{color}]{cell}[/{color}]"
+                if r == cursor[0] and c == cursor[1]:
+                    sym = f"[reverse]{sym}[/reverse]"
                 row_parts.append(sym + " ")
             lines.append("".join(row_parts))
 
-        for line in lines:
-            self.post_message(self.LogMessage(line))
-        self._phase_data["grid_log_lines"] = len(lines)
+        widget = self.query_one("#venture-grid", Static)
+        widget.update("\n".join(lines))
 
-        # Update prompt bar with cursor position and instructions
         r, c = cursor
         cell_status = "empty" if cells[r][c] is None else f"P{cells[r][c]}"
         prompt = self.query_one("#prompt-bar", PromptBar)
@@ -677,6 +725,10 @@ class GameApp(App):
         self._dev_data = {}
         if self._stock_overlay_active:
             self._close_stock_overlay()
+        try:
+            self.query_one("#venture-grid", Static).display = False
+        except Exception:
+            pass
         self._reset_input_mode()
         # Show waiting message until next input request arrives
         self._show_waiting()
@@ -1105,6 +1157,11 @@ class GameApp(App):
 
         if req.type == InputRequestType.CHOOSE_VENTURE_CELL:
             cells = req.data.get("cells", [])
+            from road_to_riches import debug_log
+            debug_log.log(
+                "show_prompt_venture",
+                f"pid={req.player_id} id={id(cells)} cells={cells}",
+            )
             self._phase_data["grid_cells"] = cells
             self._phase_data["grid_cursor"] = [0, 0]
             # Find first unclaimed cell for initial cursor
@@ -1117,6 +1174,7 @@ class GameApp(App):
                     continue
                 break
             self._enter_keypress_mode()
+            self.query_one("#venture-grid", Static).display = True
             self._render_venture_grid()
             return
 
