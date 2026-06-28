@@ -16,10 +16,13 @@ All configuration is via flags — no positional args:
 from __future__ import annotations
 
 import argparse
+import os
+import signal
 import socket
 import subprocess
 import sys
 import time
+from typing import IO
 
 
 def _wait_for_port(host: str, port: int, timeout: float = 5.0) -> bool:
@@ -32,6 +35,50 @@ def _wait_for_port(host: str, port: int, timeout: float = 5.0) -> bool:
         except OSError:
             time.sleep(0.05)
     return False
+
+
+def _start_server_process(
+    server_cmd: list[str],
+    log_file: IO[str],
+) -> subprocess.Popen:
+    """Start the server in its own process group so cleanup reaches AI children."""
+    kwargs = {
+        "stdout": log_file,
+        "stderr": subprocess.STDOUT,
+    }
+    if os.name != "nt":
+        kwargs["start_new_session"] = True
+    return subprocess.Popen(server_cmd, **kwargs)
+
+
+def _signal_process_tree(process: subprocess.Popen, sig: signal.Signals) -> None:
+    """Signal the server process group, falling back to the server process."""
+    if os.name != "nt":
+        try:
+            os.killpg(process.pid, sig)
+            return
+        except ProcessLookupError:
+            return
+        except OSError:
+            pass
+
+    if sig == signal.SIGTERM:
+        process.terminate()
+    else:
+        process.kill()
+
+
+def _terminate_process_tree(process: subprocess.Popen, timeout: float = 2.0) -> None:
+    """Terminate a server and any child AI clients it spawned."""
+    if process.poll() is not None:
+        return
+
+    _signal_process_tree(process, signal.SIGTERM)
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _signal_process_tree(process, signal.SIGKILL)
+        process.wait()
 
 
 def main() -> None:
@@ -80,7 +127,10 @@ def main() -> None:
         if args.board != parser.get_default("board") and args.board != board:
             print(f"Warning: --board ignored when resuming (save uses {board})")
         if args.ai_players != parser.get_default("ai_players") and args.ai_players != ai_players:
-            print(f"Warning: --ai_players ignored when resuming (save has {num_players} total players)")
+            print(
+                "Warning: --ai_players ignored when resuming "
+                f"(save has {num_players} total players)"
+            )
     else:
         board = args.board
         human_players = args.human_players
@@ -106,7 +156,7 @@ def main() -> None:
 
     print(f"Server log: {args.server_log}")
     log_file = open(args.server_log, "w")
-    server = subprocess.Popen(server_cmd, stdout=log_file, stderr=subprocess.STDOUT)
+    server = _start_server_process(server_cmd, log_file)
 
     exit_code = 0
     try:
@@ -135,12 +185,7 @@ def main() -> None:
     except KeyboardInterrupt:
         exit_code = 130
     finally:
-        if server.poll() is None:
-            server.terminate()
-            try:
-                server.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                server.kill()
+        _terminate_process_tree(server)
         log_file.close()
 
     sys.exit(exit_code)
