@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from road_to_riches.engine.affordability import can_cover_with_cash_and_stock
 from road_to_riches.engine.property import current_rent, max_capital
 from road_to_riches.events.game_events import (
     CloseShopsEvent,
@@ -237,7 +238,7 @@ def _handle_shop_land(
     if square.property_owner is None:
         if square.shop_base_value is not None:
             player = state.get_player(player_id)
-            if player.ready_cash >= square.shop_base_value:
+            if can_cover_with_cash_and_stock(state, player, square.shop_base_value):
                 actions.append(PlayerAction.BUY_SHOP)
                 info["cost"] = square.shop_base_value
 

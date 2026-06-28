@@ -55,7 +55,7 @@ class TestInitBuyShop:
         loop._handle_init_buy_shop(InitBuyShopEvent(player_id=0, square_id=1, cost=200))
         assert loop.pipeline.is_empty
 
-    def test_accept_rejects_if_player_can_no_longer_afford_shop(self):
+    def test_accept_rejects_if_cash_plus_stock_cannot_cover_shop(self):
         loop = _make_loop()
         shop = loop.state.board.squares[1]
         assert shop.shop_base_value is not None
@@ -68,7 +68,21 @@ class TestInitBuyShop:
 
         assert loop.pipeline.is_empty
         assert shop.property_owner is None
-        assert any("enough ready cash" in msg for msg in loop.log.messages)
+        assert any("enough cash and stock" in msg for msg in loop.log.messages)
+
+    def test_accept_allows_shop_when_cash_plus_stock_covers_price(self):
+        loop = _make_loop()
+        shop = loop.state.board.squares[1]
+        assert shop.shop_base_value is not None
+        loop.state.players[0].ready_cash = shop.shop_base_value - 1
+        loop.state.players[0].owned_stock = {0: 1}
+        loop.input.choose_buy_shop.return_value = True
+
+        loop._handle_init_buy_shop(
+            InitBuyShopEvent(player_id=0, square_id=1, cost=shop.shop_base_value)
+        )
+
+        assert not loop.pipeline.is_empty
 
     def test_accept_rejects_if_shop_is_no_longer_available(self):
         loop = _make_loop()

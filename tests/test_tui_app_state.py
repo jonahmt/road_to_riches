@@ -191,6 +191,45 @@ async def _liquidation_options_submit_canonical_three_tuple():
 
         app._on_selection_confirmed(("stock", 0, 3))
 
+        command_input = app.query_one("#command-input", Input)
+        assert command_input.placeholder == "Enter stock quantity (default 3)"
+
+        app.handle_command(Input.Submitted(command_input, "2"))
+
+        assert app.submitted == [("stock", 0, 2)]
+
+
+def test_liquidation_stock_default_quantity_can_be_submitted_blank():
+    asyncio.run(_liquidation_stock_default_quantity_can_be_submitted_blank())
+
+
+async def _liquidation_stock_default_quantity_can_be_submitted_blank():
+    state = _state()
+    player = state.players[0]
+    player.ready_cash = -20
+    player.owned_stock = {0: 5}
+    app = HarnessGameApp(state)
+    app.player_input = RecordingInput(app)
+
+    async with app.run_test():
+        req = InputRequest(
+            type=InputRequestType.LIQUIDATION,
+            player_id=0,
+            data={
+                "cash": -20,
+                "options": {
+                    "shops": [],
+                    "stock": {0: {"quantity": 5, "price_per_share": 10}},
+                },
+            },
+        )
+        app._current_request = req
+        app._show_prompt(req)
+
+        app._on_selection_confirmed(("stock", 0, 3))
+        command_input = app.query_one("#command-input", Input)
+        app.handle_command(Input.Submitted(command_input, ""))
+
         assert app.submitted == [("stock", 0, 3)]
 
 

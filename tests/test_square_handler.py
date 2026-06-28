@@ -168,6 +168,17 @@ class TestLandShop:
         assert PlayerAction.BUY_SHOP not in res.available_actions
         assert "cost" not in res.info
 
+    def test_unowned_shop_offers_buy_when_cash_plus_stock_covers_price(self):
+        game = _make_game()
+        game.players[0].ready_cash = 190
+        game.players[0].owned_stock = {0: 2}
+        sq = _sq(SquareType.SHOP, property_owner=None, shop_base_value=200)
+
+        res = handle_land(game, 0, sq)
+
+        assert PlayerAction.BUY_SHOP in res.available_actions
+        assert res.info["cost"] == 200
+
     def test_own_shop_offers_invest(self):
         game = _make_game()
         # Borrow a real shop from the board so max_capital lookups work.

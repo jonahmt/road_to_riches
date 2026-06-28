@@ -1,0 +1,1247 @@
+{
+  "name": "Large Test Board",
+  "max_dice_roll": 8,
+  "target_networth": 20000,
+  "max_bankruptcies": 1,
+  "num_districts": 5,
+  "starting_cash": 2000,
+  "num_players": 4,
+  "promotion": {
+    "base_salary": 300,
+    "salary_increment": 200,
+    "shop_value_multiplier": 0.1,
+    "comeback_multiplier": 0.1
+  },
+  "squares": [
+    {
+      "id": 0,
+      "type": "BANK",
+      "position": [
+        0,
+        0
+      ],
+      "waypoints": [
+        {
+          "from_id": 1,
+          "to_ids": [
+            20
+          ]
+        },
+        {
+          "from_id": 20,
+          "to_ids": [
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "type": "SHOP",
+      "position": [
+        4,
+        0
+      ],
+      "district": 0,
+      "base_value": 180,
+      "base_rent": 26,
+      "waypoints": [
+        {
+          "from_id": 0,
+          "to_ids": [
+            2
+          ]
+        },
+        {
+          "from_id": 2,
+          "to_ids": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "SHOP",
+      "position": [
+        8,
+        0
+      ],
+      "district": 0,
+      "base_value": 220,
+      "base_rent": 34,
+      "waypoints": [
+        {
+          "from_id": 1,
+          "to_ids": [
+            3
+          ]
+        },
+        {
+          "from_id": 3,
+          "to_ids": [
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "SUIT",
+      "position": [
+        12,
+        0
+      ],
+      "suit": "SPADE",
+      "waypoints": [
+        {
+          "from_id": 2,
+          "to_ids": [
+            4,
+            48
+          ]
+        },
+        {
+          "from_id": 4,
+          "to_ids": [
+            2,
+            48
+          ]
+        },
+        {
+          "from_id": 48,
+          "to_ids": [
+            2,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "SHOP",
+      "position": [
+        16,
+        0
+      ],
+      "district": 0,
+      "base_value": 200,
+      "base_rent": 30,
+      "waypoints": [
+        {
+          "from_id": 3,
+          "to_ids": [
+            5
+          ]
+        },
+        {
+          "from_id": 5,
+          "to_ids": [
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "SHOP",
+      "position": [
+        20,
+        0
+      ],
+      "district": 0,
+      "base_value": 240,
+      "base_rent": 38,
+      "waypoints": [
+        {
+          "from_id": 4,
+          "to_ids": [
+            6,
+            45
+          ]
+        },
+        {
+          "from_id": 6,
+          "to_ids": [
+            4,
+            45
+          ]
+        },
+        {
+          "from_id": 45,
+          "to_ids": [
+            4,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "VENTURE",
+      "position": [
+        24,
+        0
+      ],
+      "waypoints": [
+        {
+          "from_id": 5,
+          "to_ids": [
+            7
+          ]
+        },
+        {
+          "from_id": 7,
+          "to_ids": [
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "SHOP",
+      "position": [
+        28,
+        0
+      ],
+      "district": 1,
+      "base_value": 260,
+      "base_rent": 44,
+      "waypoints": [
+        {
+          "from_id": 6,
+          "to_ids": [
+            8
+          ]
+        },
+        {
+          "from_id": 8,
+          "to_ids": [
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "SHOP",
+      "position": [
+        32,
+        0
+      ],
+      "district": 1,
+      "base_value": 300,
+      "base_rent": 52,
+      "waypoints": [
+        {
+          "from_id": 7,
+          "to_ids": [
+            9,
+            30
+          ]
+        },
+        {
+          "from_id": 9,
+          "to_ids": [
+            7,
+            30
+          ]
+        },
+        {
+          "from_id": 30,
+          "to_ids": [
+            7,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "STOCKBROKER",
+      "position": [
+        36,
+        0
+      ],
+      "waypoints": [
+        {
+          "from_id": 8,
+          "to_ids": [
+            10
+          ]
+        },
+        {
+          "from_id": 10,
+          "to_ids": [
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "SHOP",
+      "position": [
+        40,
+        0
+      ],
+      "district": 1,
+      "base_value": 280,
+      "base_rent": 48,
+      "waypoints": [
+        {
+          "from_id": 9,
+          "to_ids": [
+            11
+          ]
+        },
+        {
+          "from_id": 11,
+          "to_ids": [
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "SUIT",
+      "position": [
+        44,
+        0
+      ],
+      "suit": "HEART",
+      "waypoints": [
+        {
+          "from_id": 10,
+          "to_ids": [
+            12
+          ]
+        },
+        {
+          "from_id": 12,
+          "to_ids": [
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "SHOP",
+      "position": [
+        44,
+        4
+      ],
+      "district": 2,
+      "base_value": 320,
+      "base_rent": 56,
+      "waypoints": [
+        {
+          "from_id": 11,
+          "to_ids": [
+            13
+          ]
+        },
+        {
+          "from_id": 13,
+          "to_ids": [
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "SHOP",
+      "position": [
+        44,
+        8
+      ],
+      "district": 2,
+      "base_value": 350,
+      "base_rent": 60,
+      "waypoints": [
+        {
+          "from_id": 12,
+          "to_ids": [
+            14
+          ]
+        },
+        {
+          "from_id": 14,
+          "to_ids": [
+            12
+          ]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "TAKE_A_BREAK",
+      "position": [
+        44,
+        12
+      ],
+      "waypoints": [
+        {
+          "from_id": 13,
+          "to_ids": [
+            15
+          ]
+        },
+        {
+          "from_id": 15,
+          "to_ids": [
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "SHOP",
+      "position": [
+        44,
+        16
+      ],
+      "district": 2,
+      "base_value": 290,
+      "base_rent": 50,
+      "waypoints": [
+        {
+          "from_id": 14,
+          "to_ids": [
+            16
+          ]
+        },
+        {
+          "from_id": 16,
+          "to_ids": [
+            14
+          ]
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "CHANGE_OF_SUIT",
+      "position": [
+        44,
+        20
+      ],
+      "suit": "SPADE",
+      "waypoints": [
+        {
+          "from_id": 15,
+          "to_ids": [
+            17
+          ]
+        },
+        {
+          "from_id": 17,
+          "to_ids": [
+            15
+          ]
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "SHOP",
+      "position": [
+        44,
+        24
+      ],
+      "district": 2,
+      "base_value": 310,
+      "base_rent": 54,
+      "waypoints": [
+        {
+          "from_id": 16,
+          "to_ids": [
+            18
+          ]
+        },
+        {
+          "from_id": 18,
+          "to_ids": [
+            16
+          ]
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "BOON",
+      "position": [
+        44,
+        28
+      ],
+      "waypoints": [
+        {
+          "from_id": 17,
+          "to_ids": [
+            19
+          ]
+        },
+        {
+          "from_id": 19,
+          "to_ids": [
+            17
+          ]
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "SUIT",
+      "position": [
+        40,
+        28
+      ],
+      "suit": "DIAMOND",
+      "waypoints": [
+        {
+          "from_id": 18,
+          "to_ids": [
+            44
+          ]
+        },
+        {
+          "from_id": 44,
+          "to_ids": [
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "SHOP",
+      "position": [
+        0,
+        4
+      ],
+      "district": 3,
+      "base_value": 190,
+      "base_rent": 28,
+      "waypoints": [
+        {
+          "from_id": 0,
+          "to_ids": [
+            21
+          ]
+        },
+        {
+          "from_id": 21,
+          "to_ids": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "SHOP",
+      "position": [
+        0,
+        8
+      ],
+      "district": 3,
+      "base_value": 230,
+      "base_rent": 36,
+      "waypoints": [
+        {
+          "from_id": 20,
+          "to_ids": [
+            22,
+            48
+          ]
+        },
+        {
+          "from_id": 22,
+          "to_ids": [
+            20,
+            48
+          ]
+        },
+        {
+          "from_id": 48,
+          "to_ids": [
+            20,
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "SUIT",
+      "position": [
+        0,
+        12
+      ],
+      "suit": "CLUB",
+      "waypoints": [
+        {
+          "from_id": 21,
+          "to_ids": [
+            23,
+            39,
+            47
+          ]
+        },
+        {
+          "from_id": 23,
+          "to_ids": [
+            21,
+            39,
+            47
+          ]
+        },
+        {
+          "from_id": 39,
+          "to_ids": [
+            21,
+            23,
+            47
+          ]
+        },
+        {
+          "from_id": 47,
+          "to_ids": [
+            21,
+            23,
+            39
+          ]
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "SHOP",
+      "position": [
+        0,
+        16
+      ],
+      "district": 3,
+      "base_value": 250,
+      "base_rent": 42,
+      "waypoints": [
+        {
+          "from_id": 22,
+          "to_ids": [
+            24
+          ]
+        },
+        {
+          "from_id": 24,
+          "to_ids": [
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "BOOM",
+      "position": [
+        0,
+        20
+      ],
+      "waypoints": [
+        {
+          "from_id": 23,
+          "to_ids": [
+            25
+          ]
+        },
+        {
+          "from_id": 25,
+          "to_ids": [
+            23
+          ]
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "SHOP",
+      "position": [
+        0,
+        24
+      ],
+      "district": 3,
+      "base_value": 270,
+      "base_rent": 46,
+      "waypoints": [
+        {
+          "from_id": 24,
+          "to_ids": [
+            26
+          ]
+        },
+        {
+          "from_id": 26,
+          "to_ids": [
+            24
+          ]
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "type": "SHOP",
+      "position": [
+        0,
+        28
+      ],
+      "district": 3,
+      "base_value": 210,
+      "base_rent": 32,
+      "waypoints": [
+        {
+          "from_id": 25,
+          "to_ids": [
+            27
+          ]
+        },
+        {
+          "from_id": 27,
+          "to_ids": [
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "type": "SHOP",
+      "position": [
+        4,
+        28
+      ],
+      "district": 4,
+      "base_value": 240,
+      "base_rent": 38,
+      "waypoints": [
+        {
+          "from_id": 26,
+          "to_ids": [
+            28
+          ]
+        },
+        {
+          "from_id": 28,
+          "to_ids": [
+            26
+          ]
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "type": "SHOP",
+      "position": [
+        8,
+        28
+      ],
+      "district": 4,
+      "base_value": 340,
+      "base_rent": 58,
+      "waypoints": [
+        {
+          "from_id": 27,
+          "to_ids": [
+            29
+          ]
+        },
+        {
+          "from_id": 29,
+          "to_ids": [
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "type": "SHOP",
+      "position": [
+        12,
+        28
+      ],
+      "district": 4,
+      "base_value": 360,
+      "base_rent": 62,
+      "waypoints": [
+        {
+          "from_id": 28,
+          "to_ids": [
+            40
+          ]
+        },
+        {
+          "from_id": 40,
+          "to_ids": [
+            28
+          ]
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "SHOP",
+      "position": [
+        36,
+        4
+      ],
+      "district": 1,
+      "base_value": 270,
+      "base_rent": 46,
+      "waypoints": [
+        {
+          "from_id": 8,
+          "to_ids": [
+            31
+          ]
+        },
+        {
+          "from_id": 31,
+          "to_ids": [
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "ROLL_ON",
+      "position": [
+        40,
+        8
+      ],
+      "waypoints": [
+        {
+          "from_id": 30,
+          "to_ids": [
+            32
+          ]
+        },
+        {
+          "from_id": 32,
+          "to_ids": [
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "SHOP",
+      "position": [
+        36,
+        12
+      ],
+      "district": 4,
+      "base_value": 380,
+      "base_rent": 66,
+      "waypoints": [
+        {
+          "from_id": 31,
+          "to_ids": [
+            33
+          ]
+        },
+        {
+          "from_id": 33,
+          "to_ids": [
+            31
+          ]
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "VACANT_PLOT",
+      "position": [
+        32,
+        16
+      ],
+      "district": 4,
+      "base_value": 250,
+      "base_rent": 40,
+      "waypoints": [
+        {
+          "from_id": 32,
+          "to_ids": [
+            34
+          ]
+        },
+        {
+          "from_id": 34,
+          "to_ids": [
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "SUIT_YOURSELF",
+      "position": [
+        28,
+        20
+      ],
+      "waypoints": [
+        {
+          "from_id": 33,
+          "to_ids": [
+            35
+          ]
+        },
+        {
+          "from_id": 35,
+          "to_ids": [
+            33
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "SHOP",
+      "position": [
+        24,
+        24
+      ],
+      "district": 4,
+      "base_value": 330,
+      "base_rent": 58,
+      "waypoints": [
+        {
+          "from_id": 34,
+          "to_ids": [
+            37
+          ]
+        },
+        {
+          "from_id": 37,
+          "to_ids": [
+            34
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "type": "BACKSTREET",
+      "position": [
+        20,
+        28
+      ],
+      "waypoints": [
+        {
+          "from_id": 40,
+          "to_ids": [
+            41
+          ]
+        },
+        {
+          "from_id": 41,
+          "to_ids": [
+            40
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "type": "STOCKBROKER",
+      "position": [
+        16,
+        24
+      ],
+      "waypoints": [
+        {
+          "from_id": 35,
+          "to_ids": [
+            38
+          ]
+        },
+        {
+          "from_id": 38,
+          "to_ids": [
+            35
+          ]
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "type": "SHOP",
+      "position": [
+        12,
+        20
+      ],
+      "district": 3,
+      "base_value": 210,
+      "base_rent": 32,
+      "waypoints": [
+        {
+          "from_id": 37,
+          "to_ids": [
+            39
+          ]
+        },
+        {
+          "from_id": 39,
+          "to_ids": [
+            37
+          ]
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "type": "VENTURE",
+      "position": [
+        8,
+        16
+      ],
+      "waypoints": [
+        {
+          "from_id": 22,
+          "to_ids": [
+            38
+          ]
+        },
+        {
+          "from_id": 38,
+          "to_ids": [
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "type": "SHOP",
+      "position": [
+        16,
+        28
+      ],
+      "district": 4,
+      "base_value": 400,
+      "base_rent": 72,
+      "waypoints": [
+        {
+          "from_id": 29,
+          "to_ids": [
+            36
+          ]
+        },
+        {
+          "from_id": 36,
+          "to_ids": [
+            29
+          ]
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "type": "SUIT",
+      "position": [
+        24,
+        28
+      ],
+      "suit": "HEART",
+      "waypoints": [
+        {
+          "from_id": 36,
+          "to_ids": [
+            42
+          ]
+        },
+        {
+          "from_id": 42,
+          "to_ids": [
+            36
+          ]
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "SHOP",
+      "position": [
+        28,
+        28
+      ],
+      "district": 2,
+      "base_value": 280,
+      "base_rent": 48,
+      "waypoints": [
+        {
+          "from_id": 41,
+          "to_ids": [
+            43
+          ]
+        },
+        {
+          "from_id": 43,
+          "to_ids": [
+            41
+          ]
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "type": "VENTURE",
+      "position": [
+        32,
+        28
+      ],
+      "waypoints": [
+        {
+          "from_id": 42,
+          "to_ids": [
+            44
+          ]
+        },
+        {
+          "from_id": 44,
+          "to_ids": [
+            42
+          ]
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "type": "SHOP",
+      "position": [
+        36,
+        28
+      ],
+      "district": 2,
+      "base_value": 260,
+      "base_rent": 44,
+      "waypoints": [
+        {
+          "from_id": 19,
+          "to_ids": [
+            43
+          ]
+        },
+        {
+          "from_id": 43,
+          "to_ids": [
+            19
+          ]
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "type": "SHOP",
+      "position": [
+        20,
+        8
+      ],
+      "district": 0,
+      "base_value": 160,
+      "base_rent": 22,
+      "waypoints": [
+        {
+          "from_id": 5,
+          "to_ids": [
+            46
+          ]
+        },
+        {
+          "from_id": 46,
+          "to_ids": [
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "type": "ROLL_ON",
+      "position": [
+        16,
+        12
+      ],
+      "waypoints": [
+        {
+          "from_id": 45,
+          "to_ids": [
+            47
+          ]
+        },
+        {
+          "from_id": 47,
+          "to_ids": [
+            45
+          ]
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "type": "SHOP",
+      "position": [
+        12,
+        16
+      ],
+      "district": 0,
+      "base_value": 200,
+      "base_rent": 30,
+      "waypoints": [
+        {
+          "from_id": 22,
+          "to_ids": [
+            46
+          ]
+        },
+        {
+          "from_id": 46,
+          "to_ids": [
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "type": "VACANT_PLOT",
+      "position": [
+        8,
+        8
+      ],
+      "district": 3,
+      "base_value": 220,
+      "base_rent": 34,
+      "waypoints": [
+        {
+          "from_id": 3,
+          "to_ids": [
+            21
+          ]
+        },
+        {
+          "from_id": 21,
+          "to_ids": [
+            3
+          ]
+        }
+      ]
+    }
+  ]
+}

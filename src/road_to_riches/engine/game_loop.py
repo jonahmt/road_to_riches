@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from road_to_riches.board.loader import load_board
+from road_to_riches.engine.affordability import can_cover_with_cash_and_stock
 from road_to_riches.engine.bankruptcy import (
     LiquidationAuctionSellEvent,
     LiquidationPhaseEvent,
@@ -934,8 +935,8 @@ class GameLoop:
                 self.log.log("Shop is no longer available to buy.")
                 self.input.notify(self.state, self.log)
                 return
-            if player.ready_cash < actual_cost:
-                self.log.log("You do not have enough ready cash to buy this shop.")
+            if not can_cover_with_cash_and_stock(self.state, player, actual_cost):
+                self.log.log("You do not have enough cash and stock to buy this shop.")
                 self.input.notify(self.state, self.log)
                 return
             self.pipeline.enqueue_front(BuyShopEvent(player_id=pid, square_id=sq_id))

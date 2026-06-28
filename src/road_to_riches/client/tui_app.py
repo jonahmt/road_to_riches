@@ -835,6 +835,18 @@ class GameApp(App):
                     self._enter_text_mode("Enter price")
                 return
 
+        if rtype == InputRequestType.LIQUIDATION:
+            asset_type, asset_id, quantity = value
+            if asset_type != "stock":
+                self._submit_response(value)
+                return
+            self._phase_data["asset_id"] = asset_id
+            self._phase_data["default_quantity"] = quantity
+            self._input_phase = 1
+            self._exit_selection_mode()
+            self._enter_text_mode(f"Enter stock quantity (default {quantity})")
+            return
+
         # ── Simple direct-response types ──
         self._submit_response(value)
 
@@ -1358,6 +1370,19 @@ class GameApp(App):
                         self._phase_data["sq_id"],
                         price,
                     )
+            except ValueError:
+                pass
+            return None
+
+        if rtype == InputRequestType.LIQUIDATION and self._input_phase == 1:
+            asset_id = self._phase_data["asset_id"]
+            default_quantity = self._phase_data["default_quantity"]
+            if not value:
+                return ("stock", asset_id, default_quantity)
+            try:
+                quantity = int(value)
+                if quantity > 0:
+                    return ("stock", asset_id, quantity)
             except ValueError:
                 pass
             return None
