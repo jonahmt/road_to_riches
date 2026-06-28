@@ -394,11 +394,6 @@ class TuiPlayerInput(PlayerInput):
         self._flush_log(log)
         grid = state.venture_grid
         cells = grid.cells if grid else []
-        from road_to_riches import debug_log
-        debug_log.log(
-            "request_venture",
-            f"pid={player_id} cells_id={id(cells)} cells={cells}",
-        )
         return self._request_input(
             InputRequest(
                 type=InputRequestType.CHOOSE_VENTURE_CELL,

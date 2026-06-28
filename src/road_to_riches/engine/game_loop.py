@@ -1108,24 +1108,14 @@ class GameLoop:
         if grid.is_full():
             grid.reset()
 
-        from road_to_riches import debug_log
-        debug_log.log(
-            "venture_card_pre",
-            f"pid={player_id} grid_id={id(grid.cells)} input_cls={type(self.input).__name__} cells={grid.cells}",
-        )
         # Player picks an unclaimed cell
         row, col = self.input.choose_venture_cell(self.state, player_id, self.log)
-        debug_log.log("venture_card_choice", f"pid={player_id} row={row} col={col}")
 
         # Claim the cell and check for line bonuses
         claim_event = ClaimVentureCellEvent(player_id=player_id, row=row, col=col)
         self.pipeline.enqueue(claim_event)
         self.pipeline.process_next(self.state)
         bonus = claim_event.get_result()
-        debug_log.log(
-            "venture_card_post",
-            f"pid={player_id} grid_id={id(grid.cells)} cells={grid.cells}",
-        )
         if bonus > 0:
             self.pipeline.enqueue(TransferCashEvent(
                 from_player_id=None, to_player_id=player_id, amount=bonus
@@ -1589,4 +1579,3 @@ class GameLoop:
             self.input.notify(self.state, self.log)
             return False
         return True
-

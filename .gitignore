@@ -9,6 +9,7 @@ venv/
 .coverage
 .coverage.*
 htmlcov/
+debug.log
 
 # IDE
 .vscode/

@@ -336,9 +336,6 @@ class GameApp(App):
             yield Input(placeholder="Enter command...", id="command-input")
 
     def on_mount(self) -> None:
-        from road_to_riches import debug_log
-        debug_log.reset()
-        debug_log.log("app", "TUI mounted")
         self.player_input.set_log_callback(self._on_game_log)
         self.player_input.set_dice_callback(self._on_dice_update)
         if hasattr(self.player_input, 'set_retract_callback'):
@@ -569,11 +566,6 @@ class GameApp(App):
                 moved = True
         elif key == "space" or key == "enter":
             r, c = cursor
-            from road_to_riches import debug_log
-            debug_log.log(
-                "venture_submit",
-                f"cursor=({r},{c}) cell={cells[r][c]} accepted={cells[r][c] is None}",
-            )
             if cells[r][c] is None:
                 self._submit_response([r, c])
             # If cell is claimed, do nothing (user must pick unclaimed)
@@ -590,11 +582,6 @@ class GameApp(App):
         cells = self._phase_data.get("grid_cells", [])
         cursor = self._phase_data.get("grid_cursor", [0, 0])
         size = len(cells)
-        from road_to_riches import debug_log
-        debug_log.log(
-            "render_grid",
-            f"id={id(cells)} cursor={cursor} cells={cells}",
-        )
 
         header = "    " + " ".join(str(c) for c in range(size))
         lines = [header]
@@ -1157,11 +1144,6 @@ class GameApp(App):
 
         if req.type == InputRequestType.CHOOSE_VENTURE_CELL:
             cells = req.data.get("cells", [])
-            from road_to_riches import debug_log
-            debug_log.log(
-                "show_prompt_venture",
-                f"pid={req.player_id} id={id(cells)} cells={cells}",
-            )
             self._phase_data["grid_cells"] = cells
             self._phase_data["grid_cursor"] = [0, 0]
             # Find first unclaimed cell for initial cursor

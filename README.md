@@ -16,6 +16,11 @@ python -m road_to_riches server --humans 1 --ai 3
 python -m road_to_riches client
 ```
 
+Run the known-good test command from the project virtualenv:
+```bash
+venv/bin/python -m pytest
+```
+
 See `DEVELOPMENT.md` for full setup and architecture details.
 See `design/` for game rules and technical specs.
 

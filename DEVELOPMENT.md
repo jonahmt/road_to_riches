@@ -25,6 +25,20 @@ project virtualenv and is the known-good test path.
 - **Formatter/linter**: ruff (both linter and formatter)
 - **Type checking**: pyright
 
+### Quality Gates
+Use the project virtualenv explicitly. The current reliable gate is:
+```bash
+venv/bin/python -m pytest
+```
+
+Before ending a coding session with code changes, run the full test suite for
+engine, event, serialization, protocol, and save/load changes. UI-only changes
+should run targeted tests at minimum, with the full suite preferred before
+shipping.
+
+Ruff and pyright are configured but are not yet clean release gates. Track the
+cleanup in Beads before requiring them as mandatory session-close checks.
+
 ### Issue Tracking
 All task management uses [Beads](https://github.com/steveyegge/beads) (`bd` CLI).
 Do not use markdown TODO lists or other tracking methods.
@@ -68,8 +82,22 @@ src/road_to_riches/
 
 boards/              # Board definition JSON files
 design/              # Game design and technical specs (source of truth for game rules)
-tests/               # 122 tests covering all game systems
+tests/               # 514 tests covering all game systems
 ```
+
+## Current Stabilization Baseline
+
+The next playable milestone is **P0.5 Local Playable Loop**: one human plus AI
+opponents can play on a representative board through the common turn loop
+without debug artifacts, with clear enough TUI feedback to understand movement,
+cash changes, property ownership, stock actions, venture cards, liquidation,
+save/load, and game end.
+
+Stabilization work should preserve the existing engine architecture rather than
+rewrite it. The main development risks to keep visible are client legibility,
+tracker/code drift, and accidental one-off debugging code in normal execution
+paths. Temporary diagnostics should either use the standard logging module
+behind a flag or stay untracked.
 
 ## Run Modes
 
