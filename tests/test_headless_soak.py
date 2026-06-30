@@ -4,9 +4,24 @@ from __future__ import annotations
 
 import random
 
+import pytest
+
 from road_to_riches.ai.basic.player_input import BasicAIPlayerInput
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
 from road_to_riches.events.turn_events import AdvanceTurnEvent, TurnEvent
+
+SOAK_CASES = [
+    pytest.param("boards/test_board.json", 20260630, 60, 9000, id="test-board-seed-20260630"),
+    pytest.param("boards/test_board.json", 17, 60, 9000, id="test-board-seed-17"),
+    pytest.param("boards/test_board.json", 99, 60, 9000, id="test-board-seed-99"),
+    pytest.param(
+        "boards/large_test_board.json",
+        20260630,
+        50,
+        12000,
+        id="large-test-board-seed-20260630",
+    ),
+]
 
 
 def _run_until_turns_or_game_over(
@@ -48,19 +63,25 @@ def test_basic_ai_player_input_defaults_to_zero_delay():
     assert all(ai.delay == 0 for ai in player_input.ais.values())
 
 
-def test_headless_basic_ai_runs_many_turns_without_hanging():
-    random.seed(20260630)
+@pytest.mark.parametrize(("board_path", "seed", "min_turns", "max_events"), SOAK_CASES)
+def test_headless_basic_ai_runs_many_turns_without_hanging(
+    board_path: str,
+    seed: int,
+    min_turns: int,
+    max_events: int,
+):
+    random.seed(seed)
     player_input = BasicAIPlayerInput(player_ids=[0, 1, 2, 3], delay=0)
     loop = GameLoop(
-        GameConfig(board_path="boards/test_board.json", num_players=4),
+        GameConfig(board_path=board_path, num_players=4),
         player_input,
     )
 
     completed_turns = _run_until_turns_or_game_over(
         loop,
-        min_completed_turns=40,
-        max_events=6000,
+        min_completed_turns=min_turns,
+        max_events=max_events,
     )
 
-    assert completed_turns >= 40 or loop.game_over
+    assert completed_turns >= min_turns or loop.game_over
     assert player_input.dice_updates
