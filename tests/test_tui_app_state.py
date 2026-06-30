@@ -157,6 +157,36 @@ async def _default_invest_submission_clears_amount_prompt_immediately():
         assert "Invest in sq1" not in prompt.prompt_text
 
 
+def test_invest_uses_cash_plus_stock_for_default_and_validation():
+    asyncio.run(_invest_uses_cash_plus_stock_for_default_and_validation())
+
+
+async def _invest_uses_cash_plus_stock_for_default_and_validation():
+    app = HarnessGameApp(_state())
+    app.player_input = RecordingInput(app)
+
+    async with app.run_test():
+        req = InputRequest(
+            type=InputRequestType.INVEST,
+            player_id=0,
+            data={
+                "investable": [{"square_id": 1, "max_capital": 100}],
+                "cash": 50,
+                "spendable_cash": 100,
+            },
+        )
+        app._current_request = req
+        app._show_prompt(req)
+        app._on_selection_confirmed(1)
+
+        command_input = app.query_one("#command-input", Input)
+        assert command_input.placeholder == "Enter amount (default 100)"
+
+        app.handle_command(Input.Submitted(command_input, "100"))
+
+        assert app.submitted == [(1, 100)]
+
+
 def test_liquidation_options_submit_canonical_three_tuple():
     asyncio.run(_liquidation_options_submit_canonical_three_tuple())
 

@@ -678,6 +678,22 @@ class TestInitInvest:
         assert loop.pipeline.is_empty
         assert any("cash" in m.lower() for m in loop.log.messages)
 
+    def test_stock_value_can_cover_investment(self):
+        loop = _make_loop()
+        loop.state.players[0].ready_cash = 50
+        loop.state.players[0].owned_stock = {0: 10}
+        loop.input.choose_investment.return_value = (1, 100)
+
+        init = InitInvestEvent(player_id=0, investable_shops=[{"square_id": 1, "max_capital": 500}])
+        loop.pipeline.enqueue(init)
+        loop.pipeline.process_next(loop.state)
+        loop._dispatch(init)
+
+        queued = list(loop.pipeline._queue)
+        assert len(queued) == 1
+        assert isinstance(queued[0], InvestInShopEvent)
+        assert queued[0].amount == 100
+
 
 class TestInitBuyStock:
     def test_valid_buy_enqueues_event(self):

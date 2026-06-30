@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from road_to_riches.engine.affordability import stock_liquidation_value
 from road_to_riches.engine.game_loop import GameLog, PlayerInput
 from road_to_riches.engine.property import current_rent, max_capital
 from road_to_riches.models.game_state import GameState
@@ -112,7 +113,8 @@ class TextPlayerInput(PlayerInput):
     ) -> tuple[int, int] | None:
         self.notify(state, log)
         player = state.get_player(player_id)
-        print(f"  Invest in a shop? (Cash: {player.ready_cash}G)")
+        spendable_cash = player.ready_cash + stock_liquidation_value(state, player)
+        print(f"  Invest in a shop? (Cash: {player.ready_cash}G, cash+stock: {spendable_cash}G)")
         for shop in investable:
             print(
                 f"    Square {shop['square_id']}: "
@@ -127,7 +129,7 @@ class TextPlayerInput(PlayerInput):
         try:
             parts = choice.split()
             sq_id = int(parts[0])
-            amount = int(parts[1]) if len(parts) > 1 else player.ready_cash
+            amount = int(parts[1]) if len(parts) > 1 else spendable_cash
             valid_ids = [s["square_id"] for s in investable]
             if sq_id in valid_ids:
                 return (sq_id, amount)

@@ -979,8 +979,8 @@ class GameLoop:
             self.input.notify(self.state, self.log)
             return
         player = self.state.get_player(pid)
-        if player.ready_cash < amount:
-            self.log.log("Not enough cash to invest.")
+        if not can_cover_with_cash_and_stock(self.state, player, amount):
+            self.log.log("Not enough cash and stock to invest.")
             self.input.notify(self.state, self.log)
             return
         self.pipeline.enqueue_front(

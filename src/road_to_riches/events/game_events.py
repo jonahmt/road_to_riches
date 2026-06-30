@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from road_to_riches.engine.affordability import stock_liquidation_value
 from road_to_riches.engine.lut import max_cap_multiplier
 from road_to_riches.engine.property import (
     count_district_shops,
@@ -143,7 +144,8 @@ class InvestInShopEvent(GameEvent):
         num_owned = count_owned_in_district(state.board, square.property_district, self.player_id)
         lut = max_cap_multiplier(num_owned, num_total)
         max_cap = max(0, int(lut * square.shop_base_value - square.shop_current_value))
-        invest = min(self.amount, max_cap, player.ready_cash)
+        spendable_cash = player.ready_cash + stock_liquidation_value(state, player)
+        invest = min(self.amount, max_cap, spendable_cash)
 
         if invest <= 0:
             return

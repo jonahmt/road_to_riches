@@ -11,6 +11,7 @@ from __future__ import annotations
 import threading
 from typing import Any
 
+from road_to_riches.engine.affordability import stock_liquidation_value
 from road_to_riches.engine.game_loop import GameLog, PlayerInput
 from road_to_riches.models.game_state import GameState
 from road_to_riches.protocol import InputRequest, InputRequestType
@@ -161,11 +162,16 @@ class TuiPlayerInput(PlayerInput):
     ) -> tuple[int, int] | None:
         self._flush_log(log)
         player = state.get_player(player_id)
+        spendable_cash = player.ready_cash + stock_liquidation_value(state, player)
         return self._request_input(
             InputRequest(
                 type=InputRequestType.INVEST,
                 player_id=player_id,
-                data={"investable": investable, "cash": player.ready_cash},
+                data={
+                    "investable": investable,
+                    "cash": player.ready_cash,
+                    "spendable_cash": spendable_cash,
+                },
             )
         )
 

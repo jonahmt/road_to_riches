@@ -205,6 +205,19 @@ class TestInitInvest:
         )
         assert loop.pipeline.is_empty
 
+    def test_cash_plus_stock_can_cover_investment(self):
+        loop = _make_loop()
+        loop.state.players[0].ready_cash = 10
+        loop.state.players[0].owned_stock = {0: 5}
+        loop.input.choose_investment.return_value = (1, 50)
+        loop._handle_init_invest(
+            InitInvestEvent(
+                player_id=0,
+                investable_shops=[{"square_id": 1, "max_capital": 100}],
+            )
+        )
+        assert not loop.pipeline.is_empty
+
     def test_valid_investment(self):
         loop = _make_loop()
         loop.input.choose_investment.return_value = (1, 50)

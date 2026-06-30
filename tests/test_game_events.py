@@ -116,6 +116,16 @@ class TestInvestInShopEvent:
         assert game.players[0].ready_cash == before_cash
         assert game.board.squares[1].shop_current_value == 200
 
+    def test_invest_can_exceed_ready_cash_when_stock_covers_amount(self):
+        game = _make_game(cash=50)
+        _give_shop(game, 0, 1)
+        game.players[0].owned_stock = {0: 10}
+
+        InvestInShopEvent(player_id=0, square_id=1, amount=100).execute(game)
+
+        assert game.players[0].ready_cash == -50
+        assert game.board.squares[1].shop_current_value == 300
+
     def test_log_message(self):
         msg = InvestInShopEvent(player_id=0, square_id=1, amount=50).log_message()
         assert "50" in msg

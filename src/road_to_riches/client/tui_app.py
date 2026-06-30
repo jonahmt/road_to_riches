@@ -767,8 +767,8 @@ class GameApp(App):
                 self._input_phase = 1
                 match = next(s for s in req.data.get("investable", []) if s["square_id"] == value)
                 max_cap = match["max_capital"]
-                cash = req.data["cash"]
-                default = min(cash, max_cap)
+                spendable_cash = req.data.get("spendable_cash", req.data["cash"])
+                default = min(spendable_cash, max_cap)
                 self._exit_selection_mode()
                 self._enter_text_mode(f"Enter amount (default {default})")
                 # Render the initial preview HUD (uses default when input is empty)
@@ -1072,7 +1072,8 @@ class GameApp(App):
                 (f"sq{s['square_id']} (max {s['max_capital']}G)", s["square_id"]) for s in shops
             ]
             options.append(("Skip", None))
-            header = f"Invest? Cash: {req.data['cash']}G"
+            spendable_cash = req.data.get("spendable_cash", req.data["cash"])
+            header = f"Invest? Cash: {req.data['cash']}G | Cash+stock: {spendable_cash}G"
             self._enter_selection_mode(header, options)
             return
 
@@ -1196,7 +1197,8 @@ class GameApp(App):
             return
         max_cap = match["max_capital"]
         cash = req.data["cash"]
-        default = min(cash, max_cap)
+        spendable_cash = req.data.get("spendable_cash", cash)
+        default = min(spendable_cash, max_cap)
 
         # Parse typed amount (empty/invalid -> default)
         v = (typed_value or "").strip()
@@ -1208,7 +1210,7 @@ class GameApp(App):
                 amount = int(v)
             except ValueError:
                 amount = 0
-        invest = max(0, min(amount, max_cap, cash))
+        invest = max(0, min(amount, max_cap, spendable_cash))
 
         sq = state.board.squares[sq_id]
         d_id = sq.property_district
@@ -1235,6 +1237,8 @@ class GameApp(App):
             next_price = new_value_comp + sp.fluctuation_component
             parts.append(f"d{d_id} price: {_format_delta(curr_price, next_price)}")
         parts.append(f"Cash: {_format_delta(curr_cash, next_cash, money=True)}")
+        if spendable_cash != cash:
+            parts.append(f"Cash+stock cap: [gold1]{spendable_cash}G[/gold1]")
 
         prompt = self.query_one("#prompt-bar", PromptBar)
         prompt.prompt_text = "  |  ".join(parts)
@@ -1318,14 +1322,15 @@ class GameApp(App):
             match = next(s for s in req.data.get("investable", []) if s["square_id"] == sq_id)
             max_cap = match["max_capital"]
             cash = req.data["cash"]
-            default = min(cash, max_cap)
+            spendable_cash = req.data.get("spendable_cash", cash)
+            default = min(spendable_cash, max_cap)
             if not value or v in ("ALL", ""):
                 return (sq_id, default)
             if v in ("N", "NO", "0"):
                 return None
             try:
                 amount = int(value)
-                if 0 < amount <= max_cap and amount <= cash:
+                if 0 < amount <= max_cap and amount <= spendable_cash:
                     return (sq_id, amount)
             except ValueError:
                 pass

@@ -142,8 +142,8 @@ def _handle_invest(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] | No
         return None
 
     player = ai._player()
-    cash = req.data.get("cash", player.ready_cash)
-    if cash <= 0:
+    spendable_cash = req.data.get("spendable_cash", req.data.get("cash", player.ready_cash))
+    if spendable_cash <= 0:
         return None
 
     # Separate into stock-district shops and others
@@ -153,7 +153,7 @@ def _handle_invest(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] | No
 
     # Pick the one with lowest current value
     best = min(candidates, key=lambda s: s.get("current_value", 999999))
-    amount = min(cash, best.get("max_capital", 0))
+    amount = min(spendable_cash, best.get("max_capital", 0))
     if amount <= 0:
         return None
 
