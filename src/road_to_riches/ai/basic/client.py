@@ -94,6 +94,16 @@ class BasicAIClient:
         handler = _HANDLERS.get(req.type, _default_handler)
         return handler(self, req)
 
+    def response_message(self, req: InputRequest) -> dict | None:
+        """Build the websocket response for a request addressed to this AI."""
+        if req.player_id != self.player_id:
+            return None
+
+        response = self.decide(req)
+        if isinstance(response, tuple):
+            response = list(response)
+        return msg_input_response(response, self.player_id)
+
 
 # ---------------------------------------------------------------------------
 # Handler functions
@@ -523,11 +533,9 @@ async def run(host: str, port: int, player_id: int, delay: float = 0.5) -> None:
                     player_id=msg["player_id"],
                     data=msg.get("data", {}),
                 )
-                response = ai.decide(req)
+                response = ai.response_message(req)
                 if response is not None:
-                    if isinstance(response, tuple):
-                        response = list(response)
-                    await ws.send(encode(msg_input_response(response, player_id)))
+                    await ws.send(encode(response))
 
             elif msg_type == "log":
                 logger.debug("[log] %s", msg.get("text"))
