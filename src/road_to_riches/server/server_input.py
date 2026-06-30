@@ -42,6 +42,8 @@ class WebSocketPlayerInput(PlayerInput):
         self._player_ws: dict[int, Any] = {}  # player_id -> WebSocket
         self._ws_players: dict[int, list[int]] = {}  # ws id -> list of player_ids
         self._all_ws: list[Any] = []  # all connected WebSockets (for broadcast)
+        self._send_queues: dict[Any, asyncio.Queue[str | None]] = {}
+        self._send_tasks: dict[Any, asyncio.Task] = {}
         self._response: Any = None
         self._response_ready = threading.Event()
         self._expecting_player: int | None = None  # which player_id we're waiting for
@@ -72,6 +74,7 @@ class WebSocketPlayerInput(PlayerInput):
                     del self._ws_players[ws_id]
                     if ws in self._all_ws:
                         self._all_ws.remove(ws)
+                    self._stop_sender(ws)
 
     def receive_response(self, value: Any, ws: Any, player_id: int | None = None) -> None:
         """Called by the server when a client sends an input_response.
@@ -109,7 +112,7 @@ class WebSocketPlayerInput(PlayerInput):
         """Send a message to all connected clients (from game thread)."""
         raw = encode(msg)
         for ws in list(self._all_ws):
-            asyncio.run_coroutine_threadsafe(ws.send(raw), self._loop)
+            self._send_raw(ws, raw)
 
     def _send_to_player(self, player_id: int, msg: dict) -> None:
         """Send a message to a specific player's client."""
@@ -118,7 +121,72 @@ class WebSocketPlayerInput(PlayerInput):
             logger.error("No client for player %d", player_id)
             return
         raw = encode(msg)
-        asyncio.run_coroutine_threadsafe(ws.send(raw), self._loop)
+        self._send_raw(ws, raw)
+
+    def _send_raw(self, ws: Any, raw: str) -> None:
+        """Queue one websocket message on that connection's ordered sender."""
+        self._ensure_sender(ws)
+        queue = self._send_queues.get(ws)
+        if queue is None:
+            return
+
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop is self._loop:
+            queue.put_nowait(raw)
+            return
+
+        if self._loop.is_running():
+            self._loop.call_soon_threadsafe(queue.put_nowait, raw)
+
+    def _ensure_sender(self, ws: Any) -> None:
+        """Start the per-websocket sender task if it does not exist yet."""
+        if ws not in self._send_queues:
+            self._send_queues[ws] = asyncio.Queue()
+
+        if ws in self._send_tasks or not self._loop.is_running():
+            return
+
+        def start() -> None:
+            if ws in self._send_tasks:
+                return
+            queue = self._send_queues.get(ws)
+            if queue is not None:
+                self._send_tasks[ws] = self._loop.create_task(self._send_loop(ws, queue))
+
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop is self._loop:
+            start()
+        else:
+            self._loop.call_soon_threadsafe(start)
+
+    async def _send_loop(self, ws: Any, queue: asyncio.Queue[str | None]) -> None:
+        """Send queued messages sequentially so one client observes engine order."""
+        while True:
+            raw = await queue.get()
+            if raw is None:
+                return
+            try:
+                await ws.send(raw)
+            except Exception:
+                logger.exception("Failed to send websocket message")
+                return
+
+    def _stop_sender(self, ws: Any) -> None:
+        """Stop and forget the sender task for a disconnected websocket."""
+        queue = self._send_queues.pop(ws, None)
+        task = self._send_tasks.pop(ws, None)
+        if queue is not None and self._loop.is_running():
+            self._loop.call_soon_threadsafe(queue.put_nowait, None)
+        if task is not None and task.done():
+            task.result()
 
     def _send_state(self, state: GameState) -> None:
         """Send full game state to all clients."""

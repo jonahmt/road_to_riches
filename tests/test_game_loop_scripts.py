@@ -141,6 +141,21 @@ class TestRunScript:
         )
         assert not any("Player 1" in message for message in loop.log.messages)
 
+    def test_lucky_roll_log_order(self):
+        loop = _make_loop(num_players=2)
+        with patch("road_to_riches.events.turn_events.roll_dice", return_value=3):
+            loop.run_script("cards/004/004.py", player_id=0)
+
+        roll_index = next(
+            i for i, message in enumerate(loop.log.messages) if "Player 0 rolls a 3!" in message
+        )
+        payout_index = next(
+            i
+            for i, message in enumerate(loop.log.messages)
+            if "Rolled 3" in message and "received 120G" in message
+        )
+        assert roll_index < payout_index
+
     def test_roll_again_card_stops_before_next_player_turn(self, tmp_path):
         script = (
             "from road_to_riches.events.turn_events import RollEvent\n"

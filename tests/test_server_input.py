@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 
 from road_to_riches.server.server_input import WebSocketPlayerInput
 
@@ -12,8 +13,58 @@ class FakeWebSocket:
         return None
 
 
+class SlowRecordingWebSocket:
+    def __init__(self) -> None:
+        self.sent: list[str] = []
+        self.active_sends = 0
+        self.max_active_sends = 0
+
+    async def send(self, raw: str) -> None:
+        self.active_sends += 1
+        self.max_active_sends = max(self.max_active_sends, self.active_sends)
+        await asyncio.sleep(0.01)
+        self.sent.append(raw)
+        self.active_sends -= 1
+
+
+async def _wait_for_sent(ws: SlowRecordingWebSocket, count: int) -> None:
+    for _ in range(100):
+        if len(ws.sent) >= count:
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError(f"timed out waiting for {count} sent messages")
+
+
 def _make_input() -> WebSocketPlayerInput:
     return WebSocketPlayerInput(asyncio.new_event_loop())
+
+
+def test_broadcast_sends_to_each_websocket_in_order_without_overlap():
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever)
+    thread.start()
+    try:
+        player_input = WebSocketPlayerInput(loop)
+        ws = SlowRecordingWebSocket()
+        player_input.set_client_for_player(0, ws)
+
+        player_input._broadcast({"msg": "log", "text": "Lucky Roll"})
+        player_input._broadcast({"msg": "log", "text": "Rolled 3"})
+        player_input._broadcast({"msg": "log", "text": "Next turn"})
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(ws, 3), loop).result(timeout=2)
+
+        assert ws.sent == [
+            '{"msg": "log", "text": "Lucky Roll"}',
+            '{"msg": "log", "text": "Rolled 3"}',
+            '{"msg": "log", "text": "Next turn"}',
+        ]
+        assert ws.max_active_sends == 1
+        player_input.remove_client_for_player(0)
+        asyncio.run_coroutine_threadsafe(asyncio.sleep(0.05), loop).result(timeout=2)
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join()
+        loop.close()
 
 
 def test_receive_response_accepts_expected_player_from_assigned_websocket():
