@@ -879,6 +879,17 @@ class TestStockValidation:
         loop.state.players[0].ready_cash = 1
         assert not loop._validate_stock_buy(0, 0, 100)
 
+    def test_buy_rejects_more_than_99_in_one_opportunity(self):
+        loop = _make_loop()
+        loop.state.players[0].ready_cash = 9999
+        assert not loop._validate_stock_buy(0, 0, 100)
+
+    def test_buy_allows_holdings_above_99(self):
+        loop = _make_loop()
+        loop.state.players[0].ready_cash = 9999
+        loop.state.players[0].owned_stock[0] = 99
+        assert loop._validate_stock_buy(0, 0, 99)
+
     def test_sell_invalid_quantity(self):
         loop = _make_loop()
         assert not loop._validate_stock_sell(0, 0, 0)

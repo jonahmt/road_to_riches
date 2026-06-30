@@ -208,26 +208,21 @@ def _handle_buy_stock(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] |
     if not district_scores:
         return None
 
-    # Pick highest scoring district
-    best_district = max(district_scores, key=lambda d: district_scores[d])
+    prices = {s["district_id"]: s["price"] for s in stocks}
+    for district_id, _score in sorted(
+        district_scores.items(),
+        key=lambda item: item[1],
+        reverse=True,
+    ):
+        price = prices.get(district_id)
+        if price is None or price <= 0:
+            continue
 
-    # Find price for that district
-    price = None
-    for s in stocks:
-        if s["district_id"] == best_district:
-            price = s["price"]
-            break
+        quantity = min(cash // price, 99)
+        if quantity > 0:
+            return (district_id, quantity)
 
-    if price is None or price <= 0:
-        return None
-
-    quantity = cash // price
-    held = ai._player().owned_stock.get(best_district, 0)
-    quantity = min(quantity, 99 - held)
-    if quantity <= 0:
-        return None
-
-    return (best_district, quantity)
+    return None
 
 
 def _handle_sell_stock(ai: BasicAIClient, req: InputRequest) -> tuple[int, int] | None:

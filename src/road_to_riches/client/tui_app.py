@@ -38,7 +38,7 @@ PlayerInputSource = Any
 _PLAYER_RE = re.compile(r"\bPlayer (\d)\b")
 _GOLD_RE = re.compile(r"\b(\d+)G\b")
 
-STOCK_MAX_PER_DISTRICT = 99
+STOCK_MAX_PER_BUY = 99
 
 
 def _stock_fluct_delta(current_price: int) -> int:
@@ -1696,7 +1696,7 @@ class GameApp(App):
 
         if self._stock_overlay_mode == "buy":
             affordable = player.ready_cash // price if price > 0 else 0
-            return max(1, min(affordable, STOCK_MAX_PER_DISTRICT))
+            return max(1, min(affordable, STOCK_MAX_PER_BUY))
 
         if self._stock_overlay_mode == "sell":
             # Forced-liquidation support deferred (bead ewn). For now: blank.
