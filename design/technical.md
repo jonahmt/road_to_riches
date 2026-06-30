@@ -14,6 +14,27 @@ This section does not have a clear overarching structure and instead is a random
 
 The game **will** be implemented with a client server model. This cannot be changed. The server is the source of truth for the game state and all events and actions that occur. The client is simply the UI that players use to interact with the game. A server may connect to up to N clients, where N is the number of players. 
 
+## P0.5 Local Playable and Backend Readiness
+
+Before starting the web app client in earnest, the project should reach a
+P0.5 stabilization milestone with both local-playability and backend-readiness
+criteria:
+
+* A complete game can be played end to end without any known or reproducible
+  bug, including minor state, log, UI, or timing inconsistencies that would make
+  the game confusing to review.
+* Save and resume works between turns. Quitting in the middle of a turn is out
+  of scope for this milestone.
+* The backend event system remains scalable: each event type should fit the
+  normal event pipeline, serialization, logging, and replay/debugging model
+  without one-off control flow or fragile special cases.
+* One server process can host multiple simultaneous games, and socket messages
+  are routed to the correct game, connection, and player slot.
+* A detailed append-only diagnostic log can be enabled for a game. This log is
+  separate from the TUI presentation log and records enough event/input detail
+  to review the complete game after the fact, including actions that were later
+  undone in the UI.
+
 ## Benefits of this design:
 
 * Easy to switch to add support for (P3) online play  
