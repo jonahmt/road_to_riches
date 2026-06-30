@@ -256,6 +256,7 @@ class TestHandleVentureCard:
         assert loop.state.players[0].ready_cash == 1011
         assert loop.state.venture_grid is not None
         assert loop.state.venture_grid.cells[0][0] == 0
+        assert not any(message.startswith("<<PAUSE:") for message in loop.log.messages)
 
     def test_multiple_claims_in_one_turn_see_prior_pick(self, tmp_path):
         first_script = (

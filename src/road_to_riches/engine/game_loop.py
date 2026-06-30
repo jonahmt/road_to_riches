@@ -1207,7 +1207,6 @@ class GameLoop:
         # Draw and execute the card
         card = deck.draw()
         self.log.log(f"Venture Card: {card.name} — {card.description}")
-        self.log.log("<<PAUSE:1.5>>")
         self.input.notify(self.state, self.log)
         self.run_script(card.script_path, player_id)
 

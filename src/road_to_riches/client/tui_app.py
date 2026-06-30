@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 import threading
-import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from textual import on, work
@@ -309,12 +308,6 @@ class GameApp(App):
         self._browse_positions: dict[int, tuple[int, int]] = {}
         self._browse_neighbors: dict[int, set[int]] = {}
         self._browse_restore_prompt_text = ""
-        # Front-end-only pause: buffer log messages until deadline so the
-        # player can read a key message before subsequent ones arrive.
-        # Engine inserts "<<PAUSE:n>>" markers in the log stream.
-        self._log_pause_until: float = 0.0
-        self._pending_log_messages: list[str] = []
-        self._log_flush_timer: Timer | None = None
         # Stock overlay state
         self._stock_overlay_active = False
         self._stock_overlay_mode: str | None = None  # "view" | "buy" | "sell"
@@ -366,32 +359,9 @@ class GameApp(App):
         """Called from game thread to update dice display."""
         self.post_message(self.DiceUpdate(value, remaining))
 
-    _PAUSE_RE: ClassVar = re.compile(r"^<<PAUSE:([\d.]+)>>$")
-
     @on(LogMessage)
     def handle_log_message(self, event: LogMessage) -> None:
-        m = self._PAUSE_RE.match(event.text)
-        if m:
-            self._log_pause_until = max(self._log_pause_until, time.monotonic() + float(m.group(1)))
-            self._ensure_log_flush_timer()
-            return
-        if time.monotonic() < self._log_pause_until:
-            self._pending_log_messages.append(event.text)
-            self._ensure_log_flush_timer()
-            return
         self._render_log_append(event.text)
-
-    def _ensure_log_flush_timer(self) -> None:
-        if self._log_flush_timer is not None:
-            return
-        delay = max(0.0, self._log_pause_until - time.monotonic())
-        self._log_flush_timer = self.set_timer(delay, self._flush_pending_logs)
-
-    def _flush_pending_logs(self) -> None:
-        self._log_flush_timer = None
-        pending, self._pending_log_messages = self._pending_log_messages, []
-        for text in pending:
-            self._render_log_append(text)
 
     def _render_log_append(self, text: str) -> None:
         self._log_messages.append(text)
