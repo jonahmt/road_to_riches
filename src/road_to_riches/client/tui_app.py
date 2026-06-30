@@ -2506,6 +2506,7 @@ def run_tui(
     num_players: int = 4,
     log_lines: int | None = None,
     resume: str | None = None,
+    diagnostic_log_path: str | None = None,
 ) -> None:
     """Run the TUI in local mode (game loop runs in-process)."""
     saved_state = None
@@ -2515,6 +2516,7 @@ def run_tui(
         result = load_save(resume)
         if result is not None:
             saved_state, config = result
+            config.diagnostic_log_path = diagnostic_log_path
             print(f"Resuming saved game ({config.num_players} players, board: {config.board_path})")
         else:
             print("No save file found, starting new game.")
@@ -2522,6 +2524,7 @@ def run_tui(
         config = GameConfig(
             board_path=board_path,
             num_players=num_players,
+            diagnostic_log_path=diagnostic_log_path,
         )
     app = GameApp(config=config, log_lines=log_lines, saved_state=saved_state)
     app.run()

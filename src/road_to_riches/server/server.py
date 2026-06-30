@@ -255,6 +255,7 @@ def run_server(
     port: int = 8765,
     debug: bool = False,
     resume: str | None = None,
+    diagnostic_log_path: str | None = None,
 ) -> None:
     """Entry point: start a game server."""
     logging.basicConfig(
@@ -270,6 +271,7 @@ def run_server(
         result = load_save(resume)
         if result is not None:
             saved_state, config = result
+            config.diagnostic_log_path = diagnostic_log_path
             logger.info(
                 "Resuming saved game (%d players, board: %s)", config.num_players, config.board_path
             )
@@ -281,6 +283,7 @@ def run_server(
         config = GameConfig(
             board_path=board_path,
             num_players=num_players,
+            diagnostic_log_path=diagnostic_log_path,
         )
     server = GameServer(
         config,

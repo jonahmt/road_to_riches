@@ -35,6 +35,11 @@ criteria:
   to review the complete game after the fact, including actions that were later
   undone in the UI.
 
+The diagnostic log is written as JSON Lines by the backend game loop when
+enabled through runtime configuration. It is not saved inside normal save files
+and should record backend events, player input results, presentation messages,
+and log retractions without deleting or rewriting earlier entries.
+
 ## Benefits of this design:
 
 * Easy to switch to add support for (P3) online play  

@@ -7,6 +7,7 @@ mock methods it expects to be called.
 
 from __future__ import annotations
 
+import json
 from unittest.mock import create_autospec
 
 from road_to_riches.board import load_board
@@ -145,6 +146,60 @@ class TestGameLoopInit:
         config = GameConfig(board_path="boards/test_board.json", num_players=2)
         loop = GameLoop(config, inp, saved_state=state)
         assert loop.state.players[0].ready_cash == 9999
+
+
+class TestDiagnosticLog:
+    def test_records_messages_and_events_append_only(self, tmp_path):
+        state, _ = _make_game(2)
+        inp = _make_mock_input()
+        path = tmp_path / "game.jsonl"
+        config = GameConfig(
+            board_path="boards/test_board.json",
+            num_players=2,
+            diagnostic_log_path=str(path),
+        )
+        loop = GameLoop(config, inp, saved_state=state)
+
+        loop.log.log("manual note")
+        loop._execute_event(BuyStockEvent(player_id=0, district_id=0, quantity=1))
+
+        records = [json.loads(line) for line in path.read_text().splitlines()]
+
+        assert [record["sequence"] for record in records] == [1, 2, 3]
+        assert records[0]["kind"] == "message"
+        assert records[0]["message"] == "manual note"
+        assert records[1]["kind"] == "message"
+        assert records[2]["kind"] == "event"
+        assert records[2]["event"]["event_type"] == "BuyStockEvent"
+        assert records[2]["event"]["quantity"] == 1
+
+    def test_records_player_input_results(self, tmp_path):
+        state, _ = _make_game(2)
+        inp = _make_mock_input()
+        inp.choose_pre_roll_action.return_value = "roll"
+        path = tmp_path / "game.jsonl"
+        config = GameConfig(
+            board_path="boards/test_board.json",
+            num_players=2,
+            diagnostic_log_path=str(path),
+        )
+        loop = GameLoop(config, inp, saved_state=state)
+
+        assert loop.input.choose_pre_roll_action(loop.state, 0, loop.log) == "roll"
+
+        records = [json.loads(line) for line in path.read_text().splitlines()]
+
+        assert records == [
+            {
+                "current_player": 0,
+                "kind": "input",
+                "method": "choose_pre_roll_action",
+                "player_id": 0,
+                "result": "roll",
+                "sequence": 1,
+                "timestamp": records[0]["timestamp"],
+            }
+        ]
 
 
 # ===========================================================================

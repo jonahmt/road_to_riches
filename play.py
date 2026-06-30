@@ -10,6 +10,7 @@ All configuration is via flags - no positional args:
     ./play.sh
     ./play.sh --ai-delay=0.25
     ./play.sh --board=boards/large_test_board.json --humans=1 --ai=3
+    ./play.sh --diagnostic-log=/tmp/road_to_riches_game.jsonl
     ./play.sh --resume
     ./play.sh --resume checkpoint
 """
@@ -103,6 +104,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
                              "Default: unlimited (entire game).")
     parser.add_argument("--debug", action="store_true",
                         help="Enable debug logging on server and client")
+    parser.add_argument("--diagnostic_log", "--diagnostic-log", dest="diagnostic_log",
+                        default=None,
+                        help="Write append-only backend diagnostic JSONL to PATH")
     parser.add_argument("--server_log", "--server-log", dest="server_log",
                         default="/tmp/road_to_riches_server.log",
                         help="File to write server stdout/stderr to")
@@ -158,6 +162,8 @@ def main() -> None:
         server_cmd += ["--board", board]
     if args.debug:
         server_cmd.append("--debug")
+    if args.diagnostic_log is not None:
+        server_cmd += ["--diagnostic-log", args.diagnostic_log]
     if args.resume is not None:
         server_cmd += ["--resume", args.resume]
 

@@ -54,3 +54,17 @@ def test_server_resume_accepts_named_save_without_board():
     assert config.mode == "server"
     assert config.resume == "checkpoint"
     assert config.humans == 2
+
+
+def test_diagnostic_log_is_runtime_config():
+    config = parse_run_config(
+        ["server", "--resume", "checkpoint", "--diagnostic-log", "game.jsonl"]
+    )
+
+    assert config.resume == "checkpoint"
+    assert config.diagnostic_log == "game.jsonl"
+
+
+def test_client_diagnostic_log_is_rejected():
+    with pytest.raises(SystemExit):
+        parse_run_config(["client", "--diagnostic-log", "game.jsonl"])

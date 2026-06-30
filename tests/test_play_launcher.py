@@ -62,6 +62,8 @@ def test_arg_parser_accepts_documented_launcher_aliases():
             "20",
             "--server-log",
             "/tmp/server.log",
+            "--diagnostic-log",
+            "/tmp/game.jsonl",
             "--startup-timeout",
             "10",
         ]
@@ -73,6 +75,7 @@ def test_arg_parser_accepts_documented_launcher_aliases():
     assert args.ai_delay == 0.1
     assert args.log_lines == 20
     assert args.server_log == "/tmp/server.log"
+    assert args.diagnostic_log == "/tmp/game.jsonl"
     assert args.startup_timeout == 10
 
 

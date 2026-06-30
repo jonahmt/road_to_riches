@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 from road_to_riches.board.loader import load_board
 from road_to_riches.engine.affordability import can_cover_with_cash_and_stock
@@ -26,6 +26,7 @@ from road_to_riches.engine.bankruptcy import (
     get_liquidation_options,
     needs_liquidation,
 )
+from road_to_riches.engine.diagnostic_log import DiagnosticLog, DiagnosticPlayerInput
 from road_to_riches.engine.square_handler import PlayerAction
 from road_to_riches.events.event import GameEvent
 from road_to_riches.events.game_events import (
@@ -94,6 +95,7 @@ class GameConfig:
     num_players: int = 4
     venture_script: str = "scripts/venture_placeholder.py"
     cards_dir: str = "cards"
+    diagnostic_log_path: str | None = None
 
 
 class GameLog:
@@ -103,12 +105,15 @@ class GameLog:
     how many client-side messages to retract when a move is undone.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, on_message: Callable[[str], None] | None = None) -> None:
         self.messages: list[str] = []
         self._flushed_count: int = 0
+        self._on_message = on_message
 
     def log(self, msg: str) -> None:
         self.messages.append(msg)
+        if self._on_message is not None:
+            self._on_message(msg)
 
     def clear(self) -> None:
         self._flushed_count += len(self.messages)
@@ -348,8 +353,15 @@ class GameLoop:
         if self.state.venture_deck is None:
             self._init_venture_deck()
         self.pipeline = EventPipeline()
-        self.input = player_input
-        self.log = GameLog()
+        self.diagnostic_log = (
+            DiagnosticLog(config.diagnostic_log_path) if config.diagnostic_log_path else None
+        )
+        self.input = (
+            DiagnosticPlayerInput(player_input, self.diagnostic_log)
+            if self.diagnostic_log is not None
+            else player_input
+        )
+        self.log = GameLog(self._record_diagnostic_message)
         # Undo support: snapshot stack + log checkpoints
         self._move_snapshots: list[MoveSnapshot] = []
         self._move_log_checkpoints: list[int] = []
@@ -388,6 +400,8 @@ class GameLoop:
 
     def run(self) -> int | None:
         """Run the game to completion. Returns the winner's player_id or None."""
+        if self.diagnostic_log is not None:
+            self.diagnostic_log.record_game_start(self.state, self.config)
         self.log.log("Game started!")
         self.input.notify(self.state, self.log)
 
@@ -399,16 +413,20 @@ class GameLoop:
             if event is None:
                 break
             self._dispatch(event)
-            self._log_event(event)
+            msg = self._log_event(event)
+            self._record_diagnostic_event(event, msg)
 
+        if self.diagnostic_log is not None:
+            self.diagnostic_log.record_game_over(self.state, self.winner)
         return self.winner
 
-    def _log_event(self, event: GameEvent) -> None:
+    def _log_event(self, event: GameEvent) -> str | None:
         """Emit an event's log_message() and notify clients, if any."""
         msg = event.log_message()
         if msg is not None:
             self.log.log(msg)
             self.input.notify(self.state, self.log)
+        return msg
 
     def _dispatch(self, event: GameEvent) -> None:
         """Route an event to its handler after execute() has been called.
@@ -496,8 +514,28 @@ class GameLoop:
         self.pipeline.enqueue_front(event)
         processed = self.pipeline.process_next(self.state)
         self._dispatch(processed)
-        self._log_event(processed)
+        msg = self._log_event(processed)
+        self._record_diagnostic_event(processed, msg)
         return processed
+
+    def _record_diagnostic_event(self, event: GameEvent, message: str | None) -> None:
+        if self.diagnostic_log is None:
+            return
+        self.diagnostic_log.record_event(
+            event,
+            self.state,
+            message=message,
+            result=event.get_result(),
+            queue_pending=self.pipeline.pending,
+        )
+
+    def _record_diagnostic_message(self, message: str) -> None:
+        if self.diagnostic_log is not None:
+            self.diagnostic_log.record_message(message, self.state)
+
+    def _record_diagnostic_log_retract(self, count: int) -> None:
+        if self.diagnostic_log is not None:
+            self.diagnostic_log.record_log_retract(count, self.state)
 
     # ------------------------------------------------------------------
     # Lifecycle event handlers
@@ -905,6 +943,8 @@ class GameLoop:
         if self._move_log_checkpoints:
             checkpoint = self._move_log_checkpoints.pop()
             retract = self.log.total_count - checkpoint
+            if retract > 0:
+                self._record_diagnostic_log_retract(retract)
             unflushed = min(len(self.log.messages), retract)
             if unflushed > 0:
                 del self.log.messages[-unflushed:]
@@ -1314,7 +1354,8 @@ class GameLoop:
             if event is None:
                 break
             self._dispatch(event)
-            self._log_event(event)
+            msg = self._log_event(event)
+            self._record_diagnostic_event(event, msg)
 
         main_pipeline.history.extend(sub_pipeline.history)
 

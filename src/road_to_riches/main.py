@@ -21,6 +21,7 @@ class ParsedRunConfig:
     host: str
     port: int
     log_lines: int | None
+    diagnostic_log: str | None
     debug: bool
     resume: str | None
 
@@ -78,6 +79,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument(
+        "--diagnostic-log",
+        default=None,
+        metavar="PATH",
+        help="Write append-only backend diagnostic JSONL to PATH",
+    )
+    parser.add_argument(
         "--resume",
         nargs="?",
         const="latest",
@@ -114,6 +121,8 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
             parser.error("client mode does not accept board or player arguments.")
         if args.players_flag is not None:
             parser.error("client mode does not accept --players.")
+        if args.diagnostic_log is not None:
+            parser.error("--diagnostic-log is only supported by backend modes.")
 
     board_arg = args.board_arg
     players_arg = args.players_arg
@@ -143,6 +152,7 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         host=args.host,
         port=args.port,
         log_lines=args.log_lines,
+        diagnostic_log=args.diagnostic_log,
         debug=args.debug,
         resume=args.resume,
     )
@@ -174,6 +184,7 @@ def main() -> None:
             port=args.port,
             debug=args.debug,
             resume=args.resume,
+            diagnostic_log_path=args.diagnostic_log,
         )
 
     elif args.mode == "client":
@@ -185,7 +196,13 @@ def main() -> None:
     elif args.mode == "local":
         from road_to_riches.client.tui_app import run_tui
 
-        run_tui(args.board, args.players, log_lines=args.log_lines, resume=args.resume)
+        run_tui(
+            args.board,
+            args.players,
+            log_lines=args.log_lines,
+            resume=args.resume,
+            diagnostic_log_path=args.diagnostic_log,
+        )
 
     else:  # text
         from road_to_riches.client.text_input import TextPlayerInput
@@ -194,6 +211,7 @@ def main() -> None:
         config = GameConfig(
             board_path=args.board,
             num_players=args.players,
+            diagnostic_log_path=args.diagnostic_log,
         )
         player_input = TextPlayerInput()
         game = GameLoop(config, player_input)
