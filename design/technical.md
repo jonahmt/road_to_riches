@@ -341,6 +341,14 @@ The current implementation intentionally uses a **single-session server** for lo
 
 This is a development simplification, not the final online architecture. Before P3 online/multi-game support, introduce a session manager that owns game IDs, host configuration, join/discovery behavior, and routing between connections and game instances.
 
+The first session-routing step keeps the current local launcher behavior as a
+default session while introducing `game_id` as the stable routing envelope.
+Messages without `game_id` are routed to the default session for backward
+compatibility. Session-aware clients should treat `assign_player.game_id` as
+the authoritative game session and echo it on input, identify, and debug
+messages. Server-to-client gameplay messages may include `game_id` so one
+connection can eventually distinguish updates from multiple games.
+
 ### Target Multi-Game Architecture
 
 A single server is capable of running multiple games. On startup, the server simply initializes itself with an empty dictionary of game instances, and waits for a client to send a start game request. Once a start game request is received, the server initializes a Game object with a random (unique) game id, adds it to the map, and returns the game id to the client. It adds the client that requested the game (from now on called the host) to the game and waits for the host to configure the game. Possible configurations are:

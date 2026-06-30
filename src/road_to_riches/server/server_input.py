@@ -23,6 +23,7 @@ from road_to_riches.protocol import (
     msg_game_over,
     msg_input_request,
     msg_log,
+    msg_log_retract,
     msg_state_sync,
 )
 
@@ -37,8 +38,9 @@ class WebSocketPlayerInput(PlayerInput):
     until the correct client responds.
     """
 
-    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
+    def __init__(self, loop: asyncio.AbstractEventLoop, game_id: str | None = None) -> None:
         self._loop = loop
+        self._game_id = game_id
         self._player_ws: dict[int, Any] = {}  # player_id -> WebSocket
         self._ws_players: dict[int, list[int]] = {}  # ws id -> list of player_ids
         self._all_ws: list[Any] = []  # all connected WebSockets (for broadcast)
@@ -190,7 +192,7 @@ class WebSocketPlayerInput(PlayerInput):
 
     def _send_state(self, state: GameState) -> None:
         """Send full game state to all clients."""
-        self._broadcast(msg_state_sync(game_state_to_dict(state)))
+        self._broadcast(msg_state_sync(game_state_to_dict(state), game_id=self._game_id))
 
     def _request_input(self, req: InputRequest, state: GameState) -> Any:
         """Broadcast input request to all clients, accept response only from target player."""
@@ -199,7 +201,7 @@ class WebSocketPlayerInput(PlayerInput):
         self._response = None
         self._expecting_player = req.player_id
         # Broadcast so all clients can update their display
-        self._broadcast(msg_input_request(req))
+        self._broadcast(msg_input_request(req, game_id=self._game_id))
         logger.debug("Waiting for response to %s (player %d)", req.type, req.player_id)
         self._response_ready.wait()
         self._expecting_player = None
@@ -208,7 +210,7 @@ class WebSocketPlayerInput(PlayerInput):
 
     def _flush_log(self, log: GameLog) -> None:
         for msg in log.messages:
-            self._broadcast(msg_log(msg))
+            self._broadcast(msg_log(msg, game_id=self._game_id))
         log.clear()
 
     # --- PlayerInput interface ---
@@ -608,10 +610,10 @@ class WebSocketPlayerInput(PlayerInput):
         self._send_state(state)
 
     def notify_dice(self, value: int, remaining: int) -> None:
-        self._broadcast(msg_dice(value, remaining))
+        self._broadcast(msg_dice(value, remaining, game_id=self._game_id))
 
     def retract_log(self, count: int) -> None:
-        self._broadcast({"msg": "log_retract", "count": count})
+        self._broadcast(msg_log_retract(count, game_id=self._game_id))
 
     def send_game_over(self, winner: int | None) -> None:
-        self._broadcast(msg_game_over(winner))
+        self._broadcast(msg_game_over(winner, game_id=self._game_id))

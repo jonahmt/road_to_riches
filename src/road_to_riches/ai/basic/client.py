@@ -94,7 +94,7 @@ class BasicAIClient:
         handler = _HANDLERS.get(req.type, _default_handler)
         return handler(self, req)
 
-    def response_message(self, req: InputRequest) -> dict | None:
+    def response_message(self, req: InputRequest, game_id: str | None = None) -> dict | None:
         """Build the websocket response for a request addressed to this AI."""
         if req.player_id != self.player_id:
             return None
@@ -102,7 +102,7 @@ class BasicAIClient:
         response = self.decide(req)
         if isinstance(response, tuple):
             response = list(response)
-        return msg_input_response(response, self.player_id)
+        return msg_input_response(response, self.player_id, game_id=game_id)
 
 
 # ---------------------------------------------------------------------------
@@ -505,14 +505,20 @@ _HANDLERS: dict[InputRequestType, object] = {
 }
 
 
-async def run(host: str, port: int, player_id: int, delay: float = 0.5) -> None:
+async def run(
+    host: str,
+    port: int,
+    player_id: int,
+    delay: float = 0.5,
+    game_id: str | None = None,
+) -> None:
     """Connect to the server and play the game."""
     uri = f"ws://{host}:{port}"
     ai = BasicAIClient(player_id=player_id, delay=delay)
 
     async with websockets.connect(uri) as ws:
         # Identify ourselves to the server
-        await ws.send(encode(msg_identify(player_id)))
+        await ws.send(encode(msg_identify(player_id, game_id=game_id)))
         logger.info("AI player %d connected to %s", player_id, uri)
 
         async for raw in ws:
@@ -528,7 +534,7 @@ async def run(host: str, port: int, player_id: int, delay: float = 0.5) -> None:
                     player_id=msg["player_id"],
                     data=msg.get("data", {}),
                 )
-                response = ai.response_message(req)
+                response = ai.response_message(req, game_id=msg.get("game_id") or game_id)
                 if response is not None:
                     await ws.send(encode(response))
 
@@ -551,6 +557,7 @@ def main() -> None:
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--player-id", type=int, required=True)
+    parser.add_argument("--game-id", default=None)
     parser.add_argument("--delay", type=float, default=0.5, help="Response delay in seconds")
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
@@ -561,7 +568,7 @@ def main() -> None:
     )
     logging.getLogger("websockets").setLevel(logging.WARNING)
 
-    asyncio.run(run(args.host, args.port, args.player_id, args.delay))
+    asyncio.run(run(args.host, args.port, args.player_id, args.delay, game_id=args.game_id))
 
 
 if __name__ == "__main__":

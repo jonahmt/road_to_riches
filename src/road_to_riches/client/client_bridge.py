@@ -49,6 +49,7 @@ class ClientBridge:
         self._state_callback: Any = None
         self._retract_callback: Any = None
         self._player_id: int | None = None  # assigned by server
+        self._game_id: str | None = None  # assigned by server
 
     @property
     def state(self) -> Any:
@@ -59,6 +60,11 @@ class ClientBridge:
     def player_id(self) -> int | None:
         """Player ID assigned by the server."""
         return self._player_id
+
+    @property
+    def game_id(self) -> str | None:
+        """Game session ID assigned by the server."""
+        return self._game_id
 
     def set_log_callback(self, callback: Any) -> None:
         self._log_callback = callback
@@ -89,7 +95,7 @@ class ClientBridge:
         # Convert tuples to lists for JSON serialization
         if isinstance(response, tuple):
             response = list(response)
-        msg = encode(msg_input_response(response, self._player_id))
+        msg = encode(msg_input_response(response, self._player_id, game_id=self._game_id))
         asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
 
     def connect(self) -> None:
@@ -102,14 +108,14 @@ class ClientBridge:
         """Send a dev/debug event to the server."""
         if self._loop is None or self._ws is None:
             return
-        msg = encode(msg_dev_event(event_type, event_data))
+        msg = encode(msg_dev_event(event_type, event_data, game_id=self._game_id))
         asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
 
     def send_start_game(self) -> None:
         """Tell the server to start the game."""
         if self._loop is None or self._ws is None:
             return
-        msg = encode(msg_start_game({}))
+        msg = encode(msg_start_game({}, game_id=self._game_id))
         asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
 
     def _run_loop(self) -> None:
@@ -136,6 +142,14 @@ class ClientBridge:
     def _handle_message(self, msg: dict) -> None:
         """Route an incoming server message."""
         msg_type = msg.get("msg")
+        msg_game_id = msg.get("game_id")
+        if (
+            msg_type != "assign_player"
+            and self._game_id is not None
+            and msg_game_id is not None
+            and msg_game_id != self._game_id
+        ):
+            return
 
         if msg_type == "state_sync":
             self._state = game_state_from_dict(msg["state"])
@@ -169,6 +183,7 @@ class ClientBridge:
 
         elif msg_type == "assign_player":
             self._player_id = msg["player_id"]
+            self._game_id = msg.get("game_id")
             logger.info("Assigned player_id: %d", self._player_id)
 
         elif msg_type == "game_over":

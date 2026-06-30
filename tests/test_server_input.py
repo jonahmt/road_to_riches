@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import threading
 
+from road_to_riches.engine.game_loop import GameLog
 from road_to_riches.server.server_input import WebSocketPlayerInput
 
 
@@ -132,3 +133,23 @@ def test_receive_response_rejects_when_no_player_is_expected():
 
     assert player_input._response is None
     assert not player_input._response_ready.is_set()
+
+
+def test_session_player_input_tags_outbound_messages():
+    player_input = WebSocketPlayerInput(asyncio.new_event_loop(), game_id="game-1")
+    messages = []
+    player_input._broadcast = messages.append  # type: ignore[method-assign]
+
+    log = GameLog()
+    log.log("hello")
+    player_input._flush_log(log)
+    player_input.notify_dice(3, 2)
+    player_input.retract_log(1)
+    player_input.send_game_over(0)
+
+    assert messages == [
+        {"msg": "log", "text": "hello", "game_id": "game-1"},
+        {"msg": "dice", "value": 3, "remaining": 2, "game_id": "game-1"},
+        {"msg": "log_retract", "count": 1, "game_id": "game-1"},
+        {"msg": "game_over", "winner": 0, "game_id": "game-1"},
+    ]

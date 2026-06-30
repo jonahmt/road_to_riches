@@ -5,11 +5,14 @@ from road_to_riches.protocol import (
     InputRequestType,
     decode,
     encode,
+    msg_assign_player,
     msg_dice,
     msg_game_over,
+    msg_identify,
     msg_input_request,
     msg_input_response,
     msg_log,
+    msg_log_retract,
     msg_start_game,
     msg_state_sync,
 )
@@ -53,6 +56,11 @@ def test_round_trip_input_response():
     assert decode(encode(original)) == original
 
 
+def test_round_trip_input_response_with_game_id():
+    original = msg_input_response("yes", player_id=1, game_id="game-1")
+    assert decode(encode(original)) == original
+
+
 def test_round_trip_start_game():
     original = msg_start_game({"num_players": 4, "board": "default"})
     assert decode(encode(original)) == original
@@ -75,6 +83,13 @@ def test_input_request_with_data():
     assert msg["type"] == "BUY_SHOP"
     assert msg["player_id"] == 1
     assert msg["data"] == data
+
+
+def test_input_request_can_include_game_id():
+    req = InputRequest(InputRequestType.BUY_SHOP, player_id=1)
+    msg = msg_input_request(req, game_id="game-1")
+
+    assert msg["game_id"] == "game-1"
 
 
 def test_input_request_serialization_uses_enum_value():
@@ -115,3 +130,20 @@ def test_msg_field_input_response():
 
 def test_msg_field_start_game():
     assert msg_start_game({})["msg"] == "start_game"
+
+
+def test_session_aware_builders_omit_game_id_by_default():
+    assert "game_id" not in msg_assign_player(1)
+    assert "game_id" not in msg_identify(1)
+    assert "game_id" not in msg_log_retract(1)
+
+
+def test_session_aware_builders_include_game_id_when_provided():
+    assert msg_assign_player(1, game_id="game-1")["game_id"] == "game-1"
+    assert msg_identify(1, game_id="game-1")["game_id"] == "game-1"
+    assert msg_start_game({}, game_id="game-1")["game_id"] == "game-1"
+    assert msg_log_retract(2, game_id="game-1")["game_id"] == "game-1"
+    assert msg_state_sync({}, game_id="game-1")["game_id"] == "game-1"
+    assert msg_log("hello", game_id="game-1")["game_id"] == "game-1"
+    assert msg_dice(3, 1, game_id="game-1")["game_id"] == "game-1"
+    assert msg_game_over(0, game_id="game-1")["game_id"] == "game-1"

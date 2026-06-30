@@ -24,6 +24,12 @@ from websockets.asyncio.server import ServerConnection
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
 from road_to_riches.protocol import decode, encode, msg_assign_player
 from road_to_riches.server.server_input import WebSocketPlayerInput
+from road_to_riches.server.session import (
+    GameSession,
+    GameSessionSettings,
+    ServerSessionManager,
+    SessionError,
+)
 
 if TYPE_CHECKING:
     from road_to_riches.models.game_state import GameState
@@ -47,107 +53,120 @@ class GameServer:
         ai_delay: float = 1.0,
         saved_state: "GameState | None" = None,
     ) -> None:
-        self.config = config
-        self.num_humans = num_humans
-        self.num_ai = num_ai
-        self.ai_delay = ai_delay
-        self._saved_state = saved_state
+        settings = GameSessionSettings(
+            config=config,
+            num_humans=num_humans,
+            num_ai=num_ai,
+            ai_delay=ai_delay,
+            saved_state=saved_state,
+        )
+        self._sessions = ServerSessionManager()
+        self._default_session = self._sessions.create_session(
+            settings,
+            session_id="default",
+            make_default=True,
+        )
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._player_input: WebSocketPlayerInput | None = None
-        self._game_loop: GameLoop | None = None
         self._all_connected = asyncio.Event()
-        # Player assignment: player_id -> ws (a client can have multiple player_ids)
-        self._player_to_ws: dict[int, ServerConnection] = {}
-        self._ws_to_players: dict[ServerConnection, list[int]] = {}
-        self._next_human_id = 0
-        self._ai_processes: list[subprocess.Popen] = []
+
+    @property
+    def config(self) -> GameConfig:
+        return self._default_session.config
+
+    @property
+    def num_humans(self) -> int:
+        return self._default_session.num_humans
+
+    @property
+    def num_ai(self) -> int:
+        return self._default_session.num_ai
+
+    @property
+    def ai_delay(self) -> float:
+        return self._default_session.ai_delay
 
     async def _handle_client(self, ws: ServerConnection) -> None:
         """Handle a single WebSocket client connection."""
-        assert self._player_input is not None
-
         try:
             async for raw in ws:
                 msg = decode(raw)
                 msg_type = msg.get("msg")
+                try:
+                    session = self._sessions.resolve_message_session(msg)
+                except SessionError:
+                    logger.warning("Message references unknown game session: %s", msg)
+                    continue
 
                 # AI clients identify themselves with a pre-assigned player_id
                 if msg_type == "identify":
                     pid = msg["player_id"]
-                    if pid in self._player_to_ws:
+                    if pid in session.player_to_ws:
                         logger.warning("Player %d already connected, rejecting", pid)
                         continue
-                    self._register_player(ws, pid)
-                    self._player_input.set_client_for_player(pid, ws)
+                    session.register_player(ws, pid)
+                    self._sessions.bind_connection(ws, session.session_id)
                     logger.info(
-                        "AI player %d connected (%d/%d total)",
+                        "AI player %d connected to %s (%d/%d total)",
                         pid,
-                        len(self._player_to_ws),
-                        self.config.num_players,
+                        session.session_id,
+                        len(session.player_to_ws),
+                        session.config.num_players,
                     )
-                    self._check_all_connected()
+                    self._check_all_connected(session)
 
                 elif msg_type == "input_response":
                     value = msg.get("value")
                     if isinstance(value, list):
                         value = tuple(value)
                     resp_pid = msg.get("player_id")
-                    self._player_input.receive_response(value, ws, resp_pid)
+                    assert session.player_input is not None
+                    session.player_input.receive_response(value, ws, resp_pid)
 
                 elif msg_type == "start_game":
                     # Legacy: ignored, game starts when all clients connect
                     pass
 
                 elif msg_type == "dev_event":
-                    self._handle_dev_event(msg)
+                    self._handle_dev_event(session, msg)
 
                 else:
                     logger.warning("Unknown message type: %s", msg_type)
 
         except websockets.exceptions.ConnectionClosed:
-            pids = self._ws_to_players.get(ws, [])
-            logger.info("Client disconnected (players %s)", pids)
+            logger.info("Client disconnected")
         finally:
-            for pid in list(self._ws_to_players.get(ws, [])):
-                self._player_input.remove_client_for_player(pid)
-                self._player_to_ws.pop(pid, None)
-            self._ws_to_players.pop(ws, None)
+            for session_id in self._sessions.sessions_for_connection(ws):
+                session = self._sessions.require(session_id)
+                pids = session.remove_connection(ws)
+                self._sessions.unbind_connection(ws, session_id)
+                logger.info("Client removed from %s (players %s)", session_id, pids)
 
-    def _register_player(self, ws: ServerConnection, player_id: int) -> None:
-        """Register a player_id for a WebSocket client."""
-        self._player_to_ws[player_id] = ws
-        if ws not in self._ws_to_players:
-            self._ws_to_players[ws] = []
-        self._ws_to_players[ws].append(player_id)
-
-    async def _assign_human(self, ws: ServerConnection) -> int:
+    async def _assign_human(self, session: GameSession, ws: ServerConnection) -> int:
         """Assign the next available human player_id to a WebSocket client."""
-        assert self._player_input is not None
-        player_id = self._next_human_id
-        self._next_human_id += 1
-        self._register_player(ws, player_id)
-        self._player_input.set_client_for_player(player_id, ws)
+        player_id = session.assign_next_human(ws)
+        self._sessions.bind_connection(ws, session.session_id)
 
         # Tell the client which player they are
-        await ws.send(encode(msg_assign_player(player_id)))
+        await ws.send(encode(msg_assign_player(player_id, game_id=session.session_id)))
         logger.info(
-            "Human player %d connected (%d/%d humans)",
+            "Human player %d connected to %s (%d/%d humans)",
             player_id,
-            self._next_human_id,
-            self.num_humans,
+            session.session_id,
+            session.next_human_id,
+            session.num_humans,
         )
         return player_id
 
-    def _check_all_connected(self) -> None:
+    def _check_all_connected(self, session: GameSession) -> None:
         """Check if all players (human + AI) are connected."""
-        if len(self._player_to_ws) >= self.config.num_players:
+        if session.is_ready_to_start():
             if self._loop:
                 self._loop.call_soon_threadsafe(self._all_connected.set)
 
-    def _spawn_ai_clients(self, host: str, port: int) -> None:
+    def _spawn_ai_clients(self, session: GameSession, host: str, port: int) -> None:
         """Spawn AI client subprocesses for each AI player slot."""
-        for i in range(self.num_ai):
-            player_id = self.num_humans + i
+        for i in range(session.num_ai):
+            player_id = session.num_humans + i
             cmd = [
                 sys.executable,
                 "-m",
@@ -159,15 +178,17 @@ class GameServer:
                 "--player-id",
                 str(player_id),
                 "--delay",
-                str(self.ai_delay),
+                str(session.ai_delay),
+                "--game-id",
+                session.session_id,
             ]
             logger.info("Spawning AI player %d: %s", player_id, " ".join(cmd))
             proc = subprocess.Popen(cmd)
-            self._ai_processes.append(proc)
+            session.ai_processes.append(proc)
 
-    def _handle_dev_event(self, msg: dict) -> None:
+    def _handle_dev_event(self, session: GameSession, msg: dict) -> None:
         """Execute a dev/debug event from a client."""
-        if self._game_loop is None:
+        if session.game_loop is None:
             logger.warning("Dev event received but game not running")
             return
         from road_to_riches.events.event import GameEvent
@@ -179,49 +200,54 @@ class GameServer:
         except KeyError:
             logger.warning("Unknown dev event type: %s", msg["event_type"])
             return
-        self._game_loop.pipeline.enqueue(event)
-        self._game_loop.pipeline.process_next(self._game_loop.state)
+        session.game_loop.pipeline.enqueue(event)
+        session.game_loop.pipeline.process_next(session.game_loop.state)
         # Broadcast updated state to all clients
-        assert self._player_input is not None
-        self._player_input._send_state(self._game_loop.state)
+        assert session.player_input is not None
+        session.player_input._send_state(session.game_loop.state)
         logger.info("Dev event executed: %s", msg["event_type"])
 
-    def _run_game(self) -> None:
+    def _run_game(self, session: GameSession) -> None:
         """Run the game loop (blocking, called from game thread)."""
-        assert self._player_input is not None
+        assert session.player_input is not None
         assert self._loop is not None
 
-        self._game_loop = GameLoop(self.config, self._player_input, saved_state=self._saved_state)
+        session.game_loop = GameLoop(
+            session.config,
+            session.player_input,
+            saved_state=session.saved_state,
+        )
         logger.info(
             "Game started: %s, %d players (%d human, %d AI)",
-            self.config.board_path,
-            self.config.num_players,
-            self.num_humans,
-            self.num_ai,
+            session.config.board_path,
+            session.config.num_players,
+            session.num_humans,
+            session.num_ai,
         )
 
-        winner = self._game_loop.run()
+        winner = session.game_loop.run()
         logger.info("Game over. Winner: %s", winner)
-        self._player_input.send_game_over(winner)
+        session.player_input.send_game_over(winner)
 
         # Terminate AI subprocesses
-        for proc in self._ai_processes:
+        for proc in session.ai_processes:
             proc.terminate()
 
     async def serve(self, host: str = "localhost", port: int = 8765) -> None:
         """Start the WebSocket server and wait for clients."""
         self._loop = asyncio.get_running_loop()
-        self._player_input = WebSocketPlayerInput(self._loop)
+        session = self._default_session
+        session.attach_player_input(WebSocketPlayerInput(self._loop, game_id=session.session_id))
 
         # Handler that assigns human player_ids on first connect
         async def handler(ws: ServerConnection) -> None:
             # Assign human IDs to early connections, before AI spawning
-            if self._next_human_id < self.num_humans:
-                await self._assign_human(ws)
-                if self._next_human_id >= self.num_humans and self.num_ai > 0:
+            if session.next_human_id < session.num_humans:
+                await self._assign_human(session, ws)
+                if session.next_human_id >= session.num_humans and session.num_ai > 0:
                     # All humans connected, spawn AI clients
-                    self._spawn_ai_clients(host, port)
-                self._check_all_connected()
+                    self._spawn_ai_clients(session, host, port)
+                self._check_all_connected(session)
             # For AI clients (or extra connections), they'll identify via message
             await self._handle_client(ws)
 
@@ -229,15 +255,15 @@ class GameServer:
             logger.info("Server listening on ws://%s:%d", host, port)
             logger.info("Waiting for %d human client(s)...", self.num_humans)
 
-            if self.num_humans == 0 and self.num_ai > 0:
-                self._spawn_ai_clients(host, port)
+            if session.num_humans == 0 and session.num_ai > 0:
+                self._spawn_ai_clients(session, host, port)
 
             # Wait for all players (human + AI) to connect
             await self._all_connected.wait()
-            logger.info("All %d players connected, starting game", self.config.num_players)
+            logger.info("All %d players connected, starting game", session.config.num_players)
 
             # Run game in a background thread
-            game_thread = threading.Thread(target=self._run_game, daemon=True)
+            game_thread = threading.Thread(target=self._run_game, args=(session,), daemon=True)
             game_thread.start()
 
             # Keep serving until game thread finishes
