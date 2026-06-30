@@ -38,6 +38,7 @@ class GameSessionSettings:
     num_ai: int = 0
     ai_delay: float = 1.0
     saved_state: Any = None
+    public: bool = True
 
 
 class GameSession:
@@ -56,6 +57,7 @@ class GameSession:
         self.started = False
         self.finished = False
         self.game_thread: Any = None
+        self.host_ws: Any | None = None
 
     @property
     def config(self) -> GameConfig:
@@ -72,6 +74,10 @@ class GameSession:
     @property
     def ai_delay(self) -> float:
         return self.settings.ai_delay
+
+    @property
+    def public(self) -> bool:
+        return self.settings.public
 
     @property
     def saved_state(self) -> Any:
@@ -117,6 +123,18 @@ class GameSession:
 
     def humans_connected(self) -> bool:
         return self.next_human_id >= self.num_humans
+
+    def open_human_slots(self) -> int:
+        return max(0, self.num_humans - self.next_human_id)
+
+    def fill_open_human_slots_with_ai(self) -> int:
+        """Convert unclaimed human slots into AI slots before a forced start."""
+        open_slots = self.open_human_slots()
+        if open_slots == 0:
+            return 0
+        self.settings.num_humans = self.next_human_id
+        self.settings.num_ai += open_slots
+        return open_slots
 
 
 class ServerSessionManager:

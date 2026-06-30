@@ -358,6 +358,15 @@ once all human and AI player slots are connected, that session starts
 independently of other sessions. The local launcher still uses the default
 session path for compatibility.
 
+Lobby discovery is also socket-driven. Clients send `list_games` and receive
+`games_list` summaries for public sessions that have not started or finished.
+A host can mark a created session private with `public: false`, in which case
+it can still be joined by exact `game_id` but will not appear in discovery. A
+session host may force-start with `start_game` plus `game_id`; the server
+converts unclaimed human slots into AI slots and then reuses the normal
+AI-spawn/readiness path. The legacy `start_game` message without `game_id`
+remains a no-op for local launcher compatibility.
+
 ### Target Multi-Game Architecture
 
 A single server is capable of running multiple games. On startup, the server simply initializes itself with an empty dictionary of game instances, and waits for a client to send a start game request. Once a start game request is received, the server initializes a Game object with a random (unique) game id, adds it to the map, and returns the game id to the client. It adds the client that requested the game (from now on called the host) to the game and waits for the host to configure the game. Possible configurations are:

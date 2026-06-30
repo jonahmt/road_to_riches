@@ -4,7 +4,13 @@ import asyncio
 import json
 
 from road_to_riches.engine.game_loop import GameConfig
-from road_to_riches.protocol import msg_create_game, msg_join_game
+from road_to_riches.protocol import (
+    encode,
+    msg_create_game,
+    msg_join_game,
+    msg_list_games,
+    msg_start_game,
+)
 from road_to_riches.server.server import GameServer
 
 
@@ -14,6 +20,20 @@ class FakeWebSocket:
 
     async def send(self, raw: str) -> None:
         self.sent.append(raw)
+
+
+class FakeIncomingWebSocket(FakeWebSocket):
+    def __init__(self, messages: list[dict]) -> None:
+        super().__init__()
+        self._messages = [encode(message) for message in messages]
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> str:
+        if not self._messages:
+            raise StopAsyncIteration
+        return self._messages.pop(0)
 
 
 def _messages(ws: FakeWebSocket) -> list[dict]:
@@ -221,5 +241,223 @@ def test_create_game_rejects_non_object_config():
                 "error": "could not create game: create_game config must be an object",
             }
         ]
+
+    asyncio.run(scenario())
+
+
+def test_lobby_discovery_lists_public_unfinished_sessions_only():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        public_ws = FakeWebSocket()
+        private_ws = FakeWebSocket()
+        started_ws = FakeWebSocket()
+
+        await server._handle_create_game(
+            public_ws,
+            msg_create_game(
+                {"board": "boards/test_board.json", "humans": 2, "ai": 0, "public": True}
+            ),
+            host="localhost",
+            port=8765,
+        )
+        await server._handle_create_game(
+            private_ws,
+            msg_create_game(
+                {"board": "boards/large_test_board.json", "humans": 2, "ai": 0, "public": False}
+            ),
+            host="localhost",
+            port=8765,
+        )
+        await server._handle_create_game(
+            started_ws,
+            msg_create_game(
+                {"board": "boards/large_test_board.json", "humans": 2, "ai": 0, "public": True}
+            ),
+            host="localhost",
+            port=8765,
+        )
+        public_game_id = _messages(public_ws)[0]["game_id"]
+        private_game_id = _messages(private_ws)[0]["game_id"]
+        started_game_id = _messages(started_ws)[0]["game_id"]
+        server._sessions.require(private_game_id).finished = True
+        server._sessions.require(started_game_id).started = True
+
+        assert server._discoverable_sessions() == [
+            {
+                "game_id": public_game_id,
+                "board_path": "boards/test_board.json",
+                "num_players": 2,
+                "humans_connected": 1,
+                "humans_total": 2,
+                "open_human_slots": 1,
+                "ai": 0,
+                "started": False,
+                "finished": False,
+                "public": True,
+            }
+        ]
+
+    asyncio.run(scenario())
+
+
+def test_lobby_discovery_message_does_not_need_game_id():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        host_ws = FakeWebSocket()
+        lobby_ws = FakeIncomingWebSocket([msg_list_games()])
+
+        await server._handle_create_game(
+            host_ws,
+            msg_create_game({"board": "boards/test_board.json", "humans": 2, "ai": 0}),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(host_ws)[0]["game_id"]
+
+        await server._handle_client(lobby_ws, host="localhost", port=8765)
+
+        assert _messages(lobby_ws) == [
+            {
+                "msg": "games_list",
+                "games": [
+                    {
+                        "game_id": game_id,
+                        "board_path": "boards/test_board.json",
+                        "num_players": 2,
+                        "humans_connected": 1,
+                        "humans_total": 2,
+                        "open_human_slots": 1,
+                        "ai": 0,
+                        "started": False,
+                        "finished": False,
+                        "public": True,
+                    }
+                ],
+            }
+        ]
+
+    asyncio.run(scenario())
+
+
+def test_host_force_start_fills_empty_human_slots_with_ai():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        host_ws = FakeWebSocket()
+        spawned: list[tuple[str, int, int]] = []
+        started: list[str] = []
+
+        def fake_spawn(session, host, port):
+            spawned.append((session.session_id, session.num_humans, session.num_ai))
+
+        def fake_start(session):
+            session.started = True
+            started.append(session.session_id)
+
+        server._spawn_ai_clients = fake_spawn  # type: ignore[method-assign]
+        server._start_session = fake_start  # type: ignore[method-assign]
+
+        await server._handle_create_game(
+            host_ws,
+            msg_create_game({"board": "boards/test_board.json", "humans": 3, "ai": 1}),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(host_ws)[0]["game_id"]
+
+        await server._handle_start_game(
+            host_ws,
+            server._sessions.require(game_id),
+            msg_start_game({}, game_id=game_id),
+            host="localhost",
+            port=8765,
+        )
+
+        session = server._sessions.require(game_id)
+        assert session.num_humans == 1
+        assert session.num_ai == 3
+        assert spawned == [(game_id, 1, 3)]
+        assert started == []
+        assert _messages(host_ws)[-1] == {
+            "msg": "game_starting",
+            "game_id": game_id,
+            "summary": {
+                "game_id": game_id,
+                "board_path": "boards/test_board.json",
+                "num_players": 4,
+                "humans_connected": 1,
+                "humans_total": 1,
+                "open_human_slots": 0,
+                "ai": 3,
+                "started": False,
+                "finished": False,
+                "public": True,
+            },
+        }
+
+    asyncio.run(scenario())
+
+
+def test_only_host_can_force_start_dynamic_session():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        host_ws = FakeWebSocket()
+        intruder_ws = FakeWebSocket()
+
+        await server._handle_create_game(
+            host_ws,
+            msg_create_game({"board": "boards/test_board.json", "humans": 2, "ai": 0}),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(host_ws)[0]["game_id"]
+
+        await server._handle_start_game(
+            intruder_ws,
+            server._sessions.require(game_id),
+            msg_start_game({}, game_id=game_id),
+            host="localhost",
+            port=8765,
+        )
+
+        assert _messages(intruder_ws) == [
+            {
+                "msg": "error",
+                "error": "only the host can start this game",
+                "game_id": game_id,
+            }
+        ]
+
+    asyncio.run(scenario())
+
+
+def test_legacy_start_game_for_default_session_remains_noop():
+    async def scenario() -> None:
+        server = GameServer(
+            GameConfig(board_path="boards/test_board.json", num_players=2),
+            num_humans=1,
+            num_ai=1,
+            ai_delay=0,
+        )
+        server._loop = asyncio.get_running_loop()
+        session = server._default_session
+        assert session is not None
+        ws = FakeWebSocket()
+
+        await server._handle_start_game(
+            ws,
+            session,
+            msg_start_game({}, game_id="default"),
+            host="localhost",
+            port=8765,
+        )
+
+        assert _messages(ws) == []
+        assert session.num_humans == 1
+        assert session.num_ai == 1
+        assert session.started is False
 
     asyncio.run(scenario())

@@ -115,6 +115,14 @@ def msg_joined_game(game_id: str, player_id: int) -> dict:
     return {"msg": "joined_game", "game_id": game_id, "player_id": player_id}
 
 
+def msg_games_list(games: list[dict]) -> dict:
+    return {"msg": "games_list", "games": games}
+
+
+def msg_game_starting(game_id: str, summary: dict) -> dict:
+    return {"msg": "game_starting", "game_id": game_id, "summary": summary}
+
+
 def msg_error(error: str, game_id: str | None = None) -> dict:
     return _with_game_id({"msg": "error", "error": error}, game_id)
 
@@ -143,6 +151,10 @@ def msg_create_game(config: dict) -> dict:
 
 def msg_join_game(game_id: str) -> dict:
     return {"msg": "join_game", "game_id": game_id}
+
+
+def msg_list_games() -> dict:
+    return {"msg": "list_games"}
 
 
 def msg_identify(player_id: int, game_id: str | None = None) -> dict:

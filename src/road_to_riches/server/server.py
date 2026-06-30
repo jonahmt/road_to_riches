@@ -29,6 +29,8 @@ from road_to_riches.protocol import (
     msg_assign_player,
     msg_error,
     msg_game_created,
+    msg_game_starting,
+    msg_games_list,
     msg_joined_game,
 )
 from road_to_riches.server.server_input import WebSocketPlayerInput
@@ -52,6 +54,22 @@ def _session_config_payload(session: GameSession) -> dict:
         "humans": session.num_humans,
         "ai": session.num_ai,
         "ai_delay": session.ai_delay,
+        "public": session.public,
+    }
+
+
+def _session_summary(session: GameSession) -> dict:
+    return {
+        "game_id": session.session_id,
+        "board_path": session.config.board_path,
+        "num_players": session.config.num_players,
+        "humans_connected": session.next_human_id,
+        "humans_total": session.num_humans,
+        "open_human_slots": session.open_human_slots(),
+        "ai": session.num_ai,
+        "started": session.started,
+        "finished": session.finished,
+        "public": session.public,
     }
 
 
@@ -122,6 +140,9 @@ class GameServer:
             async for raw in ws:
                 msg = decode(raw)
                 msg_type = msg.get("msg")
+                if msg_type == "list_games":
+                    await ws.send(encode(msg_games_list(self._discoverable_sessions())))
+                    continue
                 try:
                     session = self._sessions.resolve_message_session(msg)
                 except SessionError:
@@ -165,8 +186,7 @@ class GameServer:
                     session.player_input.receive_response(value, ws, resp_pid)
 
                 elif msg_type == "start_game":
-                    # Legacy: ignored, game starts when all clients connect
-                    pass
+                    await self._handle_start_game(ws, session, msg, host=host, port=port)
 
                 elif msg_type == "dev_event":
                     self._handle_dev_event(session, msg)
@@ -213,6 +233,7 @@ class GameServer:
                 raise ValueError("create_game config must be an object")
             settings = self._settings_from_client_config(raw_config)
             session = self._sessions.create_session(settings)
+            session.host_ws = ws
             self._prepare_session(session)
             await ws.send(
                 encode(msg_game_created(session.session_id, _session_config_payload(session)))
@@ -264,6 +285,7 @@ class GameServer:
             num_humans=num_humans,
             num_ai=num_ai,
             ai_delay=ai_delay,
+            public=bool(config.get("public", True)),
         )
 
     def _prepare_session(self, session: GameSession) -> None:
@@ -272,6 +294,39 @@ class GameServer:
             session.attach_player_input(
                 WebSocketPlayerInput(self._loop, game_id=session.session_id)
             )
+
+    def _discoverable_sessions(self) -> list[dict]:
+        return [
+            _session_summary(session)
+            for session in self._sessions.sessions.values()
+            if session.public and not session.started and not session.finished
+        ]
+
+    async def _handle_start_game(
+        self,
+        ws: ServerConnection,
+        session: GameSession,
+        msg: dict,
+        *,
+        host: str | None = None,
+        port: int | None = None,
+    ) -> None:
+        """Force-start a hosted session; legacy default starts remain no-ops."""
+        if "game_id" not in msg:
+            return
+        if session.host_ws is None:
+            return
+        if session.host_ws is not ws:
+            await ws.send(
+                encode(msg_error("only the host can start this game", session.session_id))
+            )
+            return
+        if session.started:
+            await ws.send(encode(msg_error("game has already started", session.session_id)))
+            return
+        session.fill_open_human_slots_with_ai()
+        self._check_session_progress(session, host=host, port=port)
+        await ws.send(encode(msg_game_starting(session.session_id, _session_summary(session))))
 
     def _check_session_progress(
         self,

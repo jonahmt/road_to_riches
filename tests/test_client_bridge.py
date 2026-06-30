@@ -96,3 +96,34 @@ def test_submit_response_includes_assigned_game_id(monkeypatch):
         "player_id": 1,
         "game_id": "game-1",
     }
+
+
+def test_send_start_game_includes_assigned_game_id(monkeypatch):
+    scheduled = []
+
+    class FakeLoop:
+        pass
+
+    class FakeWebSocket:
+        def send(self, msg: str) -> str:
+            return msg
+
+    def fake_run_coroutine_threadsafe(payload, loop):
+        scheduled.append(payload)
+
+    bridge = ClientBridge("ws://localhost:8765")
+    bridge._loop = FakeLoop()
+    bridge._ws = FakeWebSocket()
+    bridge._handle_message({"msg": "assign_player", "player_id": 1, "game_id": "game-1"})
+    monkeypatch.setattr(
+        "road_to_riches.client.client_bridge.asyncio.run_coroutine_threadsafe",
+        fake_run_coroutine_threadsafe,
+    )
+
+    bridge.send_start_game()
+
+    assert json.loads(scheduled[0]) == {
+        "msg": "start_game",
+        "config": {},
+        "game_id": "game-1",
+    }
