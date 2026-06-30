@@ -147,6 +147,25 @@ class TestGameLoopInit:
         loop = GameLoop(config, inp, saved_state=state)
         assert loop.state.players[0].ready_cash == 9999
 
+    def test_resume_reenters_pre_roll_for_saved_current_player(self):
+        state, _ = _make_game(3)
+        state.current_player_index = 2
+        inp = _make_mock_input()
+        config = GameConfig(board_path="boards/test_board.json", num_players=3)
+        loop = GameLoop(config, inp, saved_state=state)
+
+        def stop_after_prompt(state, player_id, log):
+            loop.game_over = True
+            return "info"
+
+        inp.choose_pre_roll_action.side_effect = stop_after_prompt
+
+        loop.run()
+
+        inp.choose_pre_roll_action.assert_called_once()
+        assert inp.choose_pre_roll_action.call_args.args[1] == 2
+        assert loop.state.current_player_index == 2
+
 
 class TestDiagnosticLog:
     def test_records_messages_and_events_append_only(self, tmp_path):

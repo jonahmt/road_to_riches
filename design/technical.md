@@ -35,6 +35,13 @@ criteria:
   to review the complete game after the fact, including actions that were later
   undone in the UI.
 
+For P0.5, "between turns" means the pre-roll decision point for the current
+player. The TUI save action is only exposed from that pre-roll prompt; loading
+the save reconstructs the board/state/config and the game loop re-enters the
+same player's pre-roll prompt. Mid-turn saves do not serialize the pending
+event queue and are deliberately out of scope until a broader save semantics
+design is accepted.
+
 The diagnostic log is written as JSON Lines by the backend game loop when
 enabled through runtime configuration. It is not saved inside normal save files
 and should record backend events, player input results, presentation messages,
