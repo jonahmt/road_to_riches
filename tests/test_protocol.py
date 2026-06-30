@@ -6,11 +6,16 @@ from road_to_riches.protocol import (
     decode,
     encode,
     msg_assign_player,
+    msg_create_game,
     msg_dice,
+    msg_error,
+    msg_game_created,
     msg_game_over,
     msg_identify,
     msg_input_request,
     msg_input_response,
+    msg_join_game,
+    msg_joined_game,
     msg_log,
     msg_log_retract,
     msg_start_game,
@@ -63,6 +68,16 @@ def test_round_trip_input_response_with_game_id():
 
 def test_round_trip_start_game():
     original = msg_start_game({"num_players": 4, "board": "default"})
+    assert decode(encode(original)) == original
+
+
+def test_round_trip_create_game():
+    original = msg_create_game({"humans": 2, "ai": 2})
+    assert decode(encode(original)) == original
+
+
+def test_round_trip_join_game():
+    original = msg_join_game("game-1")
     assert decode(encode(original)) == original
 
 
@@ -130,6 +145,14 @@ def test_msg_field_input_response():
 
 def test_msg_field_start_game():
     assert msg_start_game({})["msg"] == "start_game"
+
+
+def test_msg_field_create_and_join_game():
+    assert msg_create_game({})["msg"] == "create_game"
+    assert msg_join_game("game-1")["msg"] == "join_game"
+    assert msg_game_created("game-1", {})["msg"] == "game_created"
+    assert msg_joined_game("game-1", player_id=0)["msg"] == "joined_game"
+    assert msg_error("bad")["msg"] == "error"
 
 
 def test_session_aware_builders_omit_game_id_by_default():

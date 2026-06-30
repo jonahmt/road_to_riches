@@ -16,13 +16,21 @@ import logging
 import subprocess
 import sys
 import threading
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import websockets
 from websockets.asyncio.server import ServerConnection
 
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
-from road_to_riches.protocol import decode, encode, msg_assign_player
+from road_to_riches.protocol import (
+    decode,
+    encode,
+    msg_assign_player,
+    msg_error,
+    msg_game_created,
+    msg_joined_game,
+)
 from road_to_riches.server.server_input import WebSocketPlayerInput
 from road_to_riches.server.session import (
     GameSession,
@@ -37,12 +45,22 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class GameServer:
-    """WebSocket game server that hosts a single game.
+def _session_config_payload(session: GameSession) -> dict:
+    return {
+        "board_path": session.config.board_path,
+        "num_players": session.config.num_players,
+        "humans": session.num_humans,
+        "ai": session.num_ai,
+        "ai_delay": session.ai_delay,
+    }
 
-    Assigns player IDs to connecting clients: humans first (0..num_humans-1),
-    then AI players (num_humans..num_players-1). AI subprocesses are spawned
-    automatically once all human clients have connected.
+
+class GameServer:
+    """WebSocket game server that hosts one or more game sessions.
+
+    In default-launcher mode, early connections are assigned to the default
+    session. In lobby mode, clients create sessions explicitly and join them by
+    game_id. AI subprocesses are spawned once a session's human clients connect.
     """
 
     def __init__(
@@ -52,40 +70,53 @@ class GameServer:
         num_ai: int = 0,
         ai_delay: float = 1.0,
         saved_state: "GameState | None" = None,
+        create_default_session: bool = True,
+        shutdown_when_default_finished: bool = True,
     ) -> None:
-        settings = GameSessionSettings(
-            config=config,
-            num_humans=num_humans,
-            num_ai=num_ai,
-            ai_delay=ai_delay,
-            saved_state=saved_state,
-        )
         self._sessions = ServerSessionManager()
-        self._default_session = self._sessions.create_session(
-            settings,
-            session_id="default",
-            make_default=True,
-        )
+        self._default_session: GameSession | None = None
+        if create_default_session:
+            settings = GameSessionSettings(
+                config=config,
+                num_humans=num_humans,
+                num_ai=num_ai,
+                ai_delay=ai_delay,
+                saved_state=saved_state,
+            )
+            self._default_session = self._sessions.create_session(
+                settings,
+                session_id="default",
+                make_default=True,
+            )
+        self._fallback_config = config
+        self._fallback_ai_delay = ai_delay
+        self._shutdown_when_default_finished = shutdown_when_default_finished
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._all_connected = asyncio.Event()
+        self._default_finished: asyncio.Event | None = None
 
     @property
     def config(self) -> GameConfig:
-        return self._default_session.config
+        return self._default_session.config if self._default_session else self._fallback_config
 
     @property
     def num_humans(self) -> int:
-        return self._default_session.num_humans
+        return self._default_session.num_humans if self._default_session else 0
 
     @property
     def num_ai(self) -> int:
-        return self._default_session.num_ai
+        return self._default_session.num_ai if self._default_session else 0
 
     @property
     def ai_delay(self) -> float:
-        return self._default_session.ai_delay
+        return self._default_session.ai_delay if self._default_session else self._fallback_ai_delay
 
-    async def _handle_client(self, ws: ServerConnection) -> None:
+    async def _handle_client(
+        self,
+        ws: ServerConnection,
+        *,
+        host: str | None = None,
+        port: int | None = None,
+    ) -> None:
         """Handle a single WebSocket client connection."""
         try:
             async for raw in ws:
@@ -94,14 +125,25 @@ class GameServer:
                 try:
                     session = self._sessions.resolve_message_session(msg)
                 except SessionError:
+                    if msg_type == "create_game":
+                        await self._handle_create_game(ws, msg, host=host, port=port)
+                        continue
                     logger.warning("Message references unknown game session: %s", msg)
+                    await ws.send(encode(msg_error("unknown game session", msg.get("game_id"))))
                     continue
 
+                if msg_type == "create_game":
+                    await self._handle_create_game(ws, msg, host=host, port=port)
+                elif msg_type == "join_game":
+                    await self._handle_join_game(ws, msg, host=host, port=port)
                 # AI clients identify themselves with a pre-assigned player_id
-                if msg_type == "identify":
+                elif msg_type == "identify":
                     pid = msg["player_id"]
                     if pid in session.player_to_ws:
                         logger.warning("Player %d already connected, rejecting", pid)
+                        await ws.send(
+                            encode(msg_error(f"player {pid} already connected", session.session_id))
+                        )
                         continue
                     session.register_player(ws, pid)
                     self._sessions.bind_connection(ws, session.session_id)
@@ -112,7 +154,7 @@ class GameServer:
                         len(session.player_to_ws),
                         session.config.num_players,
                     )
-                    self._check_all_connected(session)
+                    self._check_session_progress(session)
 
                 elif msg_type == "input_response":
                     value = msg.get("value")
@@ -157,11 +199,107 @@ class GameServer:
         )
         return player_id
 
-    def _check_all_connected(self, session: GameSession) -> None:
-        """Check if all players (human + AI) are connected."""
+    async def _handle_create_game(
+        self,
+        ws: ServerConnection,
+        msg: dict,
+        host: str | None,
+        port: int | None,
+    ) -> GameSession | None:
+        """Create a new game session and assign the host as player 0."""
+        try:
+            raw_config = msg.get("config", {})
+            if not isinstance(raw_config, Mapping):
+                raise ValueError("create_game config must be an object")
+            settings = self._settings_from_client_config(raw_config)
+            session = self._sessions.create_session(settings)
+            self._prepare_session(session)
+            await ws.send(
+                encode(msg_game_created(session.session_id, _session_config_payload(session)))
+            )
+            await self._assign_human(session, ws)
+            self._check_session_progress(session, host=host, port=port)
+            return session
+        except (KeyError, TypeError, ValueError, SessionError) as exc:
+            logger.warning("Could not create game: %s", exc)
+            await ws.send(encode(msg_error(f"could not create game: {exc}")))
+            return None
+
+    async def _handle_join_game(
+        self,
+        ws: ServerConnection,
+        msg: dict,
+        *,
+        host: str | None = None,
+        port: int | None = None,
+    ) -> None:
+        game_id = msg.get("game_id")
+        if not isinstance(game_id, str):
+            await ws.send(encode(msg_error("join_game requires game_id")))
+            return
+        try:
+            session = self._sessions.require(game_id)
+            player_id = await self._assign_human(session, ws)
+            await ws.send(encode(msg_joined_game(session.session_id, player_id)))
+            self._check_session_progress(session, host=host, port=port)
+        except SessionError as exc:
+            await ws.send(encode(msg_error(str(exc), game_id=game_id)))
+
+    def _settings_from_client_config(self, config: Mapping[str, object]) -> GameSessionSettings:
+        board_path = str(config.get("board") or config.get("board_path") or self.config.board_path)
+        num_humans = int(config.get("humans", config.get("num_humans", 1)))
+        num_ai = int(config.get("ai", config.get("num_ai", 3)))
+        if num_humans < 1:
+            raise ValueError("client-created games require at least one human player")
+        if num_ai < 0:
+            raise ValueError("num_ai cannot be negative")
+        ai_delay = float(config.get("ai_delay", self.ai_delay))
+        game_config = GameConfig(
+            board_path=board_path,
+            num_players=num_humans + num_ai,
+            diagnostic_log_path=config.get("diagnostic_log_path"),
+        )
+        return GameSessionSettings(
+            config=game_config,
+            num_humans=num_humans,
+            num_ai=num_ai,
+            ai_delay=ai_delay,
+        )
+
+    def _prepare_session(self, session: GameSession) -> None:
+        if session.player_input is None:
+            assert self._loop is not None
+            session.attach_player_input(
+                WebSocketPlayerInput(self._loop, game_id=session.session_id)
+            )
+
+    def _check_session_progress(
+        self,
+        session: GameSession,
+        *,
+        host: str | None = None,
+        port: int | None = None,
+    ) -> None:
+        """Spawn AIs and start a session once its players are connected."""
+        if session.started:
+            return
+        if session.humans_connected() and session.num_ai > 0 and not session.ai_spawned:
+            if host is not None and port is not None:
+                self._spawn_ai_clients(session, host, port)
+                session.ai_spawned = True
         if session.is_ready_to_start():
-            if self._loop:
-                self._loop.call_soon_threadsafe(self._all_connected.set)
+            self._start_session(session)
+
+    def _start_session(self, session: GameSession) -> None:
+        if session.started:
+            return
+        session.started = True
+        session.game_thread = threading.Thread(
+            target=self._run_game,
+            args=(session,),
+            daemon=True,
+        )
+        session.game_thread.start()
 
     def _spawn_ai_clients(self, session: GameSession, host: str, port: int) -> None:
         """Spawn AI client subprocesses for each AI player slot."""
@@ -232,44 +370,44 @@ class GameServer:
         # Terminate AI subprocesses
         for proc in session.ai_processes:
             proc.terminate()
+        session.finished = True
+        if (
+            session is self._default_session
+            and self._shutdown_when_default_finished
+            and self._loop is not None
+            and self._default_finished is not None
+        ):
+            self._loop.call_soon_threadsafe(self._default_finished.set)
 
     async def serve(self, host: str = "localhost", port: int = 8765) -> None:
         """Start the WebSocket server and wait for clients."""
         self._loop = asyncio.get_running_loop()
+        self._default_finished = asyncio.Event()
         session = self._default_session
-        session.attach_player_input(WebSocketPlayerInput(self._loop, game_id=session.session_id))
+        if session is not None:
+            self._prepare_session(session)
 
         # Handler that assigns human player_ids on first connect
         async def handler(ws: ServerConnection) -> None:
             # Assign human IDs to early connections, before AI spawning
-            if session.next_human_id < session.num_humans:
+            if session is not None and session.next_human_id < session.num_humans:
                 await self._assign_human(session, ws)
-                if session.next_human_id >= session.num_humans and session.num_ai > 0:
-                    # All humans connected, spawn AI clients
-                    self._spawn_ai_clients(session, host, port)
-                self._check_all_connected(session)
+                self._check_session_progress(session, host=host, port=port)
             # For AI clients (or extra connections), they'll identify via message
-            await self._handle_client(ws)
+            await self._handle_client(ws, host=host, port=port)
 
         async with websockets.serve(handler, host, port):
             logger.info("Server listening on ws://%s:%d", host, port)
             logger.info("Waiting for %d human client(s)...", self.num_humans)
 
-            if session.num_humans == 0 and session.num_ai > 0:
-                self._spawn_ai_clients(session, host, port)
+            if session is not None:
+                self._check_session_progress(session, host=host, port=port)
 
-            # Wait for all players (human + AI) to connect
-            await self._all_connected.wait()
-            logger.info("All %d players connected, starting game", session.config.num_players)
-
-            # Run game in a background thread
-            game_thread = threading.Thread(target=self._run_game, args=(session,), daemon=True)
-            game_thread.start()
-
-            # Keep serving until game thread finishes
-            await asyncio.get_running_loop().run_in_executor(None, game_thread.join)
-
-            logger.info("Server shutting down")
+            if self._shutdown_when_default_finished and session is not None:
+                await self._default_finished.wait()
+                logger.info("Server shutting down")
+            else:
+                await asyncio.Future()
 
 
 def run_server(
@@ -282,6 +420,7 @@ def run_server(
     debug: bool = False,
     resume: str | None = None,
     diagnostic_log_path: str | None = None,
+    lobby: bool = False,
 ) -> None:
     """Entry point: start a game server."""
     logging.basicConfig(
@@ -317,5 +456,7 @@ def run_server(
         num_ai=num_ai,
         ai_delay=ai_delay,
         saved_state=saved_state,
+        create_default_session=not lobby,
+        shutdown_when_default_finished=not lobby,
     )
     asyncio.run(server.serve(host, port))

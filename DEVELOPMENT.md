@@ -128,6 +128,9 @@ python -m road_to_riches local --resume checkpoint
 # Server: WebSocket server with per-player routing
 python -m road_to_riches server --humans 1 --ai 3
 
+# Lobby server: clients create/join game sessions over sockets
+python -m road_to_riches server --lobby
+
 # Client: TUI connecting to remote server
 python -m road_to_riches client --host localhost --port 8765
 

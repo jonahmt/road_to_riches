@@ -52,6 +52,10 @@ class GameSession:
         self.ws_to_players: dict[Any, list[int]] = {}
         self.next_human_id = 0
         self.ai_processes: list[Any] = []
+        self.ai_spawned = False
+        self.started = False
+        self.finished = False
+        self.game_thread: Any = None
 
     @property
     def config(self) -> GameConfig:
@@ -110,6 +114,9 @@ class GameSession:
 
     def is_ready_to_start(self) -> bool:
         return len(self.player_to_ws) >= self.config.num_players
+
+    def humans_connected(self) -> bool:
+        return self.next_human_id >= self.num_humans
 
 
 class ServerSessionManager:

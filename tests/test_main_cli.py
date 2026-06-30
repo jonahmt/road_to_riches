@@ -68,3 +68,20 @@ def test_diagnostic_log_is_runtime_config():
 def test_client_diagnostic_log_is_rejected():
     with pytest.raises(SystemExit):
         parse_run_config(["client", "--diagnostic-log", "game.jsonl"])
+
+
+def test_server_lobby_mode_is_allowed():
+    config = parse_run_config(["server", "--lobby"])
+
+    assert config.mode == "server"
+    assert config.lobby is True
+
+
+def test_lobby_mode_is_rejected_outside_server():
+    with pytest.raises(SystemExit):
+        parse_run_config(["local", "--lobby"])
+
+
+def test_lobby_mode_rejects_resume():
+    with pytest.raises(SystemExit):
+        parse_run_config(["server", "--lobby", "--resume"])

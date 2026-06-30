@@ -349,6 +349,15 @@ the authoritative game session and echo it on input, identify, and debug
 messages. Server-to-client gameplay messages may include `game_id` so one
 connection can eventually distinguish updates from multiple games.
 
+The dynamic session lifecycle is socket-driven: a lobby-mode server starts
+without a default game, accepts `create_game` messages with board/human/AI
+configuration, returns a generated `game_id`, assigns the host to player slot
+0, and lets later clients `join_game` by that `game_id`. Each session owns its
+own `WebSocketPlayerInput`, readiness state, AI process list, and game thread;
+once all human and AI player slots are connected, that session starts
+independently of other sessions. The local launcher still uses the default
+session path for compatibility.
+
 ### Target Multi-Game Architecture
 
 A single server is capable of running multiple games. On startup, the server simply initializes itself with an empty dictionary of game instances, and waits for a client to send a start game request. Once a start game request is received, the server initializes a Game object with a random (unique) game id, adds it to the map, and returns the game id to the client. It adds the client that requested the game (from now on called the host) to the game and waits for the host to configure the game. Possible configurations are:

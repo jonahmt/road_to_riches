@@ -22,6 +22,7 @@ class ParsedRunConfig:
     port: int
     log_lines: int | None
     diagnostic_log: str | None
+    lobby: bool
     debug: bool
     resume: str | None
 
@@ -79,6 +80,14 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument(
+        "--lobby",
+        action="store_true",
+        help=(
+            "Run server without an automatic default game; "
+            "clients create/join games over sockets."
+        ),
+    )
+    parser.add_argument(
         "--diagnostic-log",
         default=None,
         metavar="PATH",
@@ -103,6 +112,10 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
 
     if args.mode in {"client", "text"} and args.resume is not None:
         parser.error("--resume is only supported for local and server modes.")
+    if args.lobby and args.mode != "server":
+        parser.error("--lobby is only supported in server mode.")
+    if args.lobby and args.resume is not None:
+        parser.error("--lobby cannot be combined with --resume.")
 
     if args.resume is not None and (
         args.board_arg is not None
@@ -153,6 +166,7 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         port=args.port,
         log_lines=args.log_lines,
         diagnostic_log=args.diagnostic_log,
+        lobby=args.lobby,
         debug=args.debug,
         resume=args.resume,
     )
@@ -185,6 +199,7 @@ def main() -> None:
             debug=args.debug,
             resume=args.resume,
             diagnostic_log_path=args.diagnostic_log,
+            lobby=args.lobby,
         )
 
     elif args.mode == "client":

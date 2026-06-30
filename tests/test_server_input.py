@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from collections.abc import Iterator
+
+import pytest
 
 from road_to_riches.engine.game_loop import GameLog
 from road_to_riches.server.server_input import WebSocketPlayerInput
@@ -36,8 +39,13 @@ async def _wait_for_sent(ws: SlowRecordingWebSocket, count: int) -> None:
     raise AssertionError(f"timed out waiting for {count} sent messages")
 
 
-def _make_input() -> WebSocketPlayerInput:
-    return WebSocketPlayerInput(asyncio.new_event_loop())
+@pytest.fixture
+def player_input() -> Iterator[WebSocketPlayerInput]:
+    loop = asyncio.new_event_loop()
+    try:
+        yield WebSocketPlayerInput(loop)
+    finally:
+        loop.close()
 
 
 def test_broadcast_sends_to_each_websocket_in_order_without_overlap():
@@ -68,8 +76,9 @@ def test_broadcast_sends_to_each_websocket_in_order_without_overlap():
         loop.close()
 
 
-def test_receive_response_accepts_expected_player_from_assigned_websocket():
-    player_input = _make_input()
+def test_receive_response_accepts_expected_player_from_assigned_websocket(
+    player_input: WebSocketPlayerInput,
+):
     ws = FakeWebSocket()
     player_input.set_client_for_player(1, ws)
     player_input._expecting_player = 1
@@ -81,8 +90,7 @@ def test_receive_response_accepts_expected_player_from_assigned_websocket():
     assert player_input._response_ready.is_set()
 
 
-def test_receive_response_rejects_missing_player_id():
-    player_input = _make_input()
+def test_receive_response_rejects_missing_player_id(player_input: WebSocketPlayerInput):
     ws = FakeWebSocket()
     player_input.set_client_for_player(1, ws)
     player_input._expecting_player = 1
@@ -94,8 +102,9 @@ def test_receive_response_rejects_missing_player_id():
     assert not player_input._response_ready.is_set()
 
 
-def test_receive_response_rejects_wrong_player_id_from_same_websocket():
-    player_input = _make_input()
+def test_receive_response_rejects_wrong_player_id_from_same_websocket(
+    player_input: WebSocketPlayerInput,
+):
     ws = FakeWebSocket()
     player_input.set_client_for_player(1, ws)
     player_input.set_client_for_player(2, ws)
@@ -108,8 +117,9 @@ def test_receive_response_rejects_wrong_player_id_from_same_websocket():
     assert not player_input._response_ready.is_set()
 
 
-def test_receive_response_rejects_assigned_player_from_wrong_websocket():
-    player_input = _make_input()
+def test_receive_response_rejects_assigned_player_from_wrong_websocket(
+    player_input: WebSocketPlayerInput,
+):
     assigned_ws = FakeWebSocket()
     intruder_ws = FakeWebSocket()
     player_input.set_client_for_player(1, assigned_ws)
@@ -122,8 +132,9 @@ def test_receive_response_rejects_assigned_player_from_wrong_websocket():
     assert not player_input._response_ready.is_set()
 
 
-def test_receive_response_rejects_when_no_player_is_expected():
-    player_input = _make_input()
+def test_receive_response_rejects_when_no_player_is_expected(
+    player_input: WebSocketPlayerInput,
+):
     ws = FakeWebSocket()
     player_input.set_client_for_player(1, ws)
     player_input._expecting_player = None
@@ -136,20 +147,24 @@ def test_receive_response_rejects_when_no_player_is_expected():
 
 
 def test_session_player_input_tags_outbound_messages():
-    player_input = WebSocketPlayerInput(asyncio.new_event_loop(), game_id="game-1")
-    messages = []
-    player_input._broadcast = messages.append  # type: ignore[method-assign]
+    loop = asyncio.new_event_loop()
+    try:
+        player_input = WebSocketPlayerInput(loop, game_id="game-1")
+        messages = []
+        player_input._broadcast = messages.append  # type: ignore[method-assign]
 
-    log = GameLog()
-    log.log("hello")
-    player_input._flush_log(log)
-    player_input.notify_dice(3, 2)
-    player_input.retract_log(1)
-    player_input.send_game_over(0)
+        log = GameLog()
+        log.log("hello")
+        player_input._flush_log(log)
+        player_input.notify_dice(3, 2)
+        player_input.retract_log(1)
+        player_input.send_game_over(0)
 
-    assert messages == [
-        {"msg": "log", "text": "hello", "game_id": "game-1"},
-        {"msg": "dice", "value": 3, "remaining": 2, "game_id": "game-1"},
-        {"msg": "log_retract", "count": 1, "game_id": "game-1"},
-        {"msg": "game_over", "winner": 0, "game_id": "game-1"},
-    ]
+        assert messages == [
+            {"msg": "log", "text": "hello", "game_id": "game-1"},
+            {"msg": "dice", "value": 3, "remaining": 2, "game_id": "game-1"},
+            {"msg": "log_retract", "count": 1, "game_id": "game-1"},
+            {"msg": "game_over", "winner": 0, "game_id": "game-1"},
+        ]
+    finally:
+        loop.close()

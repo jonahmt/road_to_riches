@@ -107,6 +107,18 @@ def msg_assign_player(player_id: int, game_id: str | None = None) -> dict:
     return _with_game_id({"msg": "assign_player", "player_id": player_id}, game_id)
 
 
+def msg_game_created(game_id: str, config: dict) -> dict:
+    return {"msg": "game_created", "game_id": game_id, "config": config}
+
+
+def msg_joined_game(game_id: str, player_id: int) -> dict:
+    return {"msg": "joined_game", "game_id": game_id, "player_id": player_id}
+
+
+def msg_error(error: str, game_id: str | None = None) -> dict:
+    return _with_game_id({"msg": "error", "error": error}, game_id)
+
+
 # --- Client-to-server message builders ---
 
 
@@ -123,6 +135,14 @@ def msg_input_response(
 
 def msg_start_game(config: dict, game_id: str | None = None) -> dict:
     return _with_game_id({"msg": "start_game", "config": config}, game_id)
+
+
+def msg_create_game(config: dict) -> dict:
+    return {"msg": "create_game", "config": config}
+
+
+def msg_join_game(game_id: str) -> dict:
+    return {"msg": "join_game", "game_id": game_id}
 
 
 def msg_identify(player_id: int, game_id: str | None = None) -> dict:
