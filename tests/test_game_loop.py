@@ -134,18 +134,61 @@ class TestGameLog:
 class TestGameLoopInit:
     def test_creates_players_from_config(self):
         inp = _make_mock_input()
-        config = GameConfig(board_path="boards/test_board.json", num_players=2)
+        config = GameConfig(
+            board_path="boards/test_board.json",
+            num_players=2,
+            starting_player_index=0,
+        )
         loop = GameLoop(config, inp)
         assert len(loop.state.players) == 2
         assert all(p.ready_cash == 1500 for p in loop.state.players)
+
+    def test_can_fix_starting_player_for_tests(self):
+        inp = _make_mock_input()
+        config = GameConfig(
+            board_path="boards/test_board.json",
+            num_players=3,
+            starting_player_index=2,
+        )
+        loop = GameLoop(config, inp)
+
+        assert loop.state.current_player.player_id == 2
+
+    def test_randomizes_starting_player_for_new_games(self, monkeypatch):
+        monkeypatch.setattr("road_to_riches.engine.game_loop.random.randrange", lambda n: 1)
+        inp = _make_mock_input()
+        config = GameConfig(board_path="boards/test_board.json", num_players=3)
+        loop = GameLoop(config, inp)
+
+        assert loop.state.current_player.player_id == 1
+
+    def test_rejects_invalid_starting_player_index(self):
+        inp = _make_mock_input()
+        config = GameConfig(
+            board_path="boards/test_board.json",
+            num_players=2,
+            starting_player_index=2,
+        )
+
+        try:
+            GameLoop(config, inp)
+        except ValueError as exc:
+            assert str(exc) == "starting_player_index must reference an existing player"
+        else:
+            raise AssertionError("expected invalid starting_player_index to raise")
 
     def test_uses_saved_state(self):
         state, _ = _make_game(2)
         state.players[0].ready_cash = 9999
         inp = _make_mock_input()
-        config = GameConfig(board_path="boards/test_board.json", num_players=2)
+        config = GameConfig(
+            board_path="boards/test_board.json",
+            num_players=2,
+            starting_player_index=1,
+        )
         loop = GameLoop(config, inp, saved_state=state)
         assert loop.state.players[0].ready_cash == 9999
+        assert loop.state.current_player_index == 0
 
     def test_resume_reenters_pre_roll_for_saved_current_player(self):
         state, _ = _make_game(3)

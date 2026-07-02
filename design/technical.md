@@ -42,6 +42,11 @@ same player's pre-roll prompt. Mid-turn saves do not serialize the pending
 event queue and are deliberately out of scope until a broader save semantics
 design is accepted.
 
+New games choose the first player once during backend game initialization,
+before the initial `TurnEvent` is enqueued. After that, turn order advances by
+the normal player-index cycle. Save/resume does not reroll this choice; the
+saved `current_player_index` is authoritative.
+
 In socket/server play, saves are backend-owned. A client may send a `save_game`
 request for its assigned player and session while that player is at the
 pre-roll prompt, but the server writes the save from its authoritative

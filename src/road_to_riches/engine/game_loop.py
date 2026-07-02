@@ -12,6 +12,7 @@ The turn lifecycle is fully event-driven per design/technical.md:
 
 from __future__ import annotations
 
+import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -96,6 +97,7 @@ class GameConfig:
     venture_script: str = "scripts/venture_placeholder.py"
     cards_dir: str = "cards"
     diagnostic_log_path: str | None = None
+    starting_player_index: int | None = None
 
 
 class GameLog:
@@ -348,6 +350,7 @@ class GameLoop:
                 for i in range(config.num_players)
             ]
             self.state = GameState(board=board, stock=stock, players=players)
+            self.state.current_player_index = self._choose_starting_player_index()
 
         # Build venture deck if not already present (e.g., from save)
         if self.state.venture_deck is None:
@@ -372,6 +375,14 @@ class GameLoop:
         self._turn_player_id: int | None = None
         self.game_over = False
         self.winner: int | None = None
+
+    def _choose_starting_player_index(self) -> int:
+        """Choose the first player for a newly initialized game."""
+        if self.config.starting_player_index is not None:
+            if not 0 <= self.config.starting_player_index < self.config.num_players:
+                raise ValueError("starting_player_index must reference an existing player")
+            return self.config.starting_player_index
+        return random.randrange(self.config.num_players)
 
     def _init_venture_deck(self) -> None:
         """Build the venture deck from the cards directory and board config."""
