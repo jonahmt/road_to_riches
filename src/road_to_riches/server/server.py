@@ -418,6 +418,16 @@ class GameServer:
 
     async def _handle_sync_request(self, ws: ServerConnection, session: GameSession) -> None:
         """Send the current authoritative game state to one client."""
+        if session.session_id not in self._sessions.sessions_for_connection(ws):
+            await ws.send(
+                encode(
+                    msg_error(
+                        "connection is not joined to this game",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
         if session.game_loop is None:
             await ws.send(
                 encode(msg_error("game is not running", game_id=session.session_id))
