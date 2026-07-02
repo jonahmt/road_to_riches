@@ -59,6 +59,43 @@ enabled through runtime configuration. It is not saved inside normal save files
 and should record backend events, player input results, presentation messages,
 and log retractions without deleting or rewriting earlier entries.
 
+### P0.5 Readiness Evidence
+
+As of 2026-07-02, backend readiness is tracked by Bead
+`road_to_riches-fruo`. The automated acceptance baseline is:
+
+* Full suite: `venv/bin/python -m pytest` reports 652 passed, 1 skipped.
+* Style gate: `venv/bin/python -m ruff check src tests tools cards scripts`
+  reports no findings.
+* End-to-end automated confidence: `tests/test_headless_soak.py` runs
+  multi-turn AI soak games, completes a converted Trodain game to game over,
+  and completes a socket server plus in-process AI game to game over.
+* Save/resume coverage: `tests/test_save.py`, `tests/test_main_cli.py`,
+  `tests/test_game_loop.py`, `tests/test_client_bridge.py`,
+  `tests/test_server_input.py`, and `tests/test_server.py` cover local resume,
+  pre-roll re-entry, client save requests, matching pre-roll authorization, and
+  backend-owned socket saves from authoritative session config.
+* Event-system coverage: `tests/test_pipeline.py`, `tests/test_game_events.py`,
+  `tests/test_turn_events.py`, `tests/test_game_loop_scripts.py`, and venture
+  deck/serialization tests cover the event pipeline, event serialization,
+  script-driven follow-up events, logging, and replay/debugging foundations.
+* Multi-game server coverage: `tests/test_server_session.py` and
+  `tests/test_server.py` cover session lookup, default-session compatibility,
+  `create_game`, `join_game`, `list_games`, host force-start, private/public
+  discovery, invalid-board rejection, `game_id` routing, and sync access checks.
+* Diagnostic logging coverage: `tests/test_game_loop.py` records append-only
+  JSONL messages, events, inputs, and log retractions.
+
+The remaining P0.5 proof gate is a fresh human TUI full-game validation pass,
+tracked by `road_to_riches-pdl6`. That pass should play one complete game on a
+representative board with one human and AI opponents, include a between-turn
+save/resume, and file any confusing state, log, UI, or timing behavior as Beads
+issues before the readiness audit is closed.
+
+`PASS_PLAYER_ACTION` is not required for P0.5 web-client readiness. It remains
+future event-system surface area for player/NPC/cameo pass interactions and is
+tracked outside the readiness gate by `road_to_riches-72s`.
+
 ## Benefits of this design:
 
 * Easy to switch to add support for (P3) online play  
