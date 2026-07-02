@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 import websockets
 from websockets.asyncio.server import ServerConnection
 
+from road_to_riches.board.loader import load_board
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
 from road_to_riches.protocol import (
     decode,
@@ -267,7 +268,10 @@ class GameServer:
             await ws.send(encode(msg_error(str(exc), game_id=game_id)))
 
     def _settings_from_client_config(self, config: Mapping[str, object]) -> GameSessionSettings:
-        board_path = str(config.get("board") or config.get("board_path") or self.config.board_path)
+        raw_board_path = config.get("board") or config.get("board_path") or self.config.board_path
+        if not isinstance(raw_board_path, str):
+            raise ValueError("board must be a path string")
+        board_path = raw_board_path
         num_humans = int(config.get("humans", config.get("num_humans", 1)))
         num_ai = int(config.get("ai", config.get("num_ai", 3)))
         if num_humans < 1:
@@ -275,11 +279,17 @@ class GameServer:
         if num_ai < 0:
             raise ValueError("num_ai cannot be negative")
         ai_delay = float(config.get("ai_delay", self.ai_delay))
+        if ai_delay < 0:
+            raise ValueError("ai_delay cannot be negative")
         game_config = GameConfig(
             board_path=board_path,
             num_players=num_humans + num_ai,
             diagnostic_log_path=config.get("diagnostic_log_path"),
         )
+        try:
+            load_board(game_config.board_path)
+        except (OSError, ValueError) as exc:
+            raise ValueError(f"board could not be loaded: {exc}") from exc
         return GameSessionSettings(
             config=game_config,
             num_humans=num_humans,

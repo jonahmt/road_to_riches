@@ -245,6 +245,52 @@ def test_create_game_rejects_non_object_config():
     asyncio.run(scenario())
 
 
+def test_create_game_rejects_unloadable_board_without_registering_session():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        ws = FakeWebSocket()
+
+        await server._handle_create_game(
+            ws,
+            msg_create_game({"board": "boards/does_not_exist.json", "humans": 1, "ai": 0}),
+            host="localhost",
+            port=8765,
+        )
+
+        messages = _messages(ws)
+        assert len(messages) == 1
+        assert messages[0]["msg"] == "error"
+        assert messages[0]["error"].startswith("could not create game: board could not be loaded")
+        assert server._sessions.sessions == {}
+
+    asyncio.run(scenario())
+
+
+def test_create_game_rejects_non_string_board():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        ws = FakeWebSocket()
+
+        await server._handle_create_game(
+            ws,
+            msg_create_game({"board": 123, "humans": 1, "ai": 0}),
+            host="localhost",
+            port=8765,
+        )
+
+        assert _messages(ws) == [
+            {
+                "msg": "error",
+                "error": "could not create game: board must be a path string",
+            }
+        ]
+        assert server._sessions.sessions == {}
+
+    asyncio.run(scenario())
+
+
 def test_lobby_discovery_lists_public_unfinished_sessions_only():
     async def scenario() -> None:
         server = _server_without_default()
