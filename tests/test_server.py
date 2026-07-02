@@ -596,3 +596,61 @@ def test_save_game_rejects_non_pre_roll_request():
         }
 
     asyncio.run(scenario())
+
+
+def test_sync_request_returns_authoritative_session_state():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        server._start_session = lambda session: setattr(session, "started", True)  # type: ignore[method-assign]
+        ws = FakeWebSocket()
+        await server._handle_create_game(
+            ws,
+            msg_create_game({"board": "boards/test_board.json", "humans": 1, "ai": 0}),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(ws)[0]["game_id"]
+        session = server._sessions.require(game_id)
+
+        class FakeGameLoop:
+            def __init__(self) -> None:
+                self.state = _make_state(num_players=1)
+
+        session.game_loop = FakeGameLoop()  # type: ignore[assignment]
+
+        request_ws = FakeIncomingWebSocket([{"msg": "sync_request", "game_id": game_id}])
+        await server._handle_client(request_ws, host="localhost", port=8765)
+
+        response = _messages(request_ws)[-1]
+        assert response["msg"] == "state_sync"
+        assert response["game_id"] == game_id
+        assert response["state"]["players"][0]["ready_cash"] == 1000
+
+    asyncio.run(scenario())
+
+
+def test_sync_request_rejects_session_without_running_game():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        server._start_session = lambda session: setattr(session, "started", True)  # type: ignore[method-assign]
+        ws = FakeWebSocket()
+        await server._handle_create_game(
+            ws,
+            msg_create_game({"board": "boards/test_board.json", "humans": 1, "ai": 0}),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(ws)[0]["game_id"]
+        session = server._sessions.require(game_id)
+
+        await server._handle_sync_request(ws, session)
+
+        assert _messages(ws)[-1] == {
+            "msg": "error",
+            "error": "game is not running",
+            "game_id": game_id,
+        }
+
+    asyncio.run(scenario())

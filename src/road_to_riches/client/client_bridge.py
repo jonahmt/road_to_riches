@@ -22,6 +22,7 @@ from road_to_riches.protocol import (
     msg_input_response,
     msg_save_game,
     msg_start_game,
+    msg_sync_request,
 )
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,13 @@ class ClientBridge:
         msg = encode(
             msg_save_game(self._player_id, save_name=save_name, game_id=self._game_id)
         )
+        asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
+
+    def request_state_sync(self) -> None:
+        """Ask the server for the latest authoritative game state."""
+        if self._loop is None or self._ws is None:
+            return
+        msg = encode(msg_sync_request(game_id=self._game_id))
         asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
 
     def _run_loop(self) -> None:

@@ -24,6 +24,7 @@ from websockets.asyncio.server import ServerConnection
 
 from road_to_riches.board.loader import load_board
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
+from road_to_riches.models.serialize import game_state_to_dict
 from road_to_riches.protocol import (
     decode,
     encode,
@@ -34,6 +35,7 @@ from road_to_riches.protocol import (
     msg_games_list,
     msg_joined_game,
     msg_save_result,
+    msg_state_sync,
 )
 from road_to_riches.save import save_game
 from road_to_riches.server.server_input import WebSocketPlayerInput
@@ -193,6 +195,9 @@ class GameServer:
 
                 elif msg_type == "save_game":
                     await self._handle_save_game(ws, session, msg)
+
+                elif msg_type == "sync_request":
+                    await self._handle_sync_request(ws, session)
 
                 elif msg_type == "dev_event":
                     self._handle_dev_event(session, msg)
@@ -410,6 +415,22 @@ class GameServer:
             )
             return
         await ws.send(encode(msg_save_result(True, path=str(path), game_id=session.session_id)))
+
+    async def _handle_sync_request(self, ws: ServerConnection, session: GameSession) -> None:
+        """Send the current authoritative game state to one client."""
+        if session.game_loop is None:
+            await ws.send(
+                encode(msg_error("game is not running", game_id=session.session_id))
+            )
+            return
+        await ws.send(
+            encode(
+                msg_state_sync(
+                    game_state_to_dict(session.game_loop.state),
+                    game_id=session.session_id,
+                )
+            )
+        )
 
     def _check_session_progress(
         self,

@@ -186,6 +186,10 @@ def msg_save_game(
     return _with_game_id(msg, game_id)
 
 
+def msg_sync_request(game_id: str | None = None) -> dict:
+    return _with_game_id({"msg": "sync_request"}, game_id)
+
+
 def msg_identify(player_id: int, game_id: str | None = None) -> dict:
     """AI client identifies itself with its assigned player_id."""
     return _with_game_id({"msg": "identify", "player_id": player_id}, game_id)

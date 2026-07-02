@@ -429,7 +429,7 @@ In contrast, NPC players are controlled directly by the server, through events. 
 ## Error Handling
 
 - The server should ideally log all events it process, and communications with clients. This way we have maximum observability into its operations. 
-- If a client disconnects or loses a message, it will not be able to recover. In that case, the client can send a sync request to the server. The server will respond with the complete game state, and the client can jump to that point and continue from there. This also takes place during the start of the game.  
+- If a client disconnects or loses a message, it will not be able to recover from local event history alone. In that case, the client can send a `sync_request` message to the server for its `game_id`. The server responds with the authoritative `state_sync` snapshot for that game, and the client can jump to that point and continue from there. This also takes place during the start of the game.  
 - If a client somehow sends an invalid response to the server, the server should give the client another try by sending a “please try again” response.   
   - If the client fails again, the server should respond with a state sync for that client  
 - In case of an unrecoverable error from a client, that client should be replaced with an AI that acts on behalf of the player.  
