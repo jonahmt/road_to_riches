@@ -47,6 +47,8 @@ class ClientBridge:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
         self._connected = threading.Event()
+        self._closed = threading.Event()
+        self._connect_error: BaseException | None = None
         self._game_over_callback: Any = None
         self._state_callback: Any = None
         self._retract_callback: Any = None
@@ -68,6 +70,11 @@ class ClientBridge:
         """Game session ID assigned by the server."""
         return self._game_id
 
+    @property
+    def closed(self) -> bool:
+        """Whether the bridge connection has been closed."""
+        return self._closed.is_set()
+
     def set_log_callback(self, callback: Any) -> None:
         self._log_callback = callback
 
@@ -85,8 +92,12 @@ class ClientBridge:
 
     def get_pending_request(self) -> InputRequest | None:
         """Poll for a pending input request (called by TUI thread)."""
+        if self._closed.is_set():
+            return None
         if self._request_ready.wait(timeout=0.05):
             self._request_ready.clear()
+            if self._closed.is_set():
+                return None
             return self._request
         return None
 
@@ -100,11 +111,32 @@ class ClientBridge:
         msg = encode(msg_input_response(response, self._player_id, game_id=self._game_id))
         asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
 
-    def connect(self) -> None:
+    def connect(self, timeout: float = 5.0) -> None:
         """Start the WebSocket connection in a background thread."""
+        self._connect_error = None
+        self._connected.clear()
+        self._closed.clear()
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
-        self._connected.wait()
+        if not self._connected.wait(timeout):
+            raise TimeoutError(f"Timed out connecting to {self._uri}")
+        if self._connect_error is not None:
+            raise ConnectionError(f"Could not connect to {self._uri}") from self._connect_error
+
+    def close(self, timeout: float = 2.0) -> None:
+        """Close the WebSocket connection and wait briefly for the listener."""
+        self._closed.set()
+        self._request_ready.set()
+
+        if self._loop is not None and self._ws is not None and self._loop.is_running():
+            future = asyncio.run_coroutine_threadsafe(self._ws.close(), self._loop)
+            try:
+                future.result(timeout=timeout)
+            except Exception:
+                logger.debug("Timed out closing client bridge connection", exc_info=True)
+
+        if self._thread is not None and self._thread.is_alive():
+            self._thread.join(timeout=timeout)
 
     def send_dev_event(self, event_type: str, event_data: dict) -> None:
         """Send a dev/debug event to the server."""
@@ -140,20 +172,34 @@ class ClientBridge:
         """Run the asyncio event loop for WebSocket communication."""
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
-        self._loop.run_until_complete(self._listen())
+        try:
+            self._loop.run_until_complete(self._listen())
+        except Exception as exc:
+            if not self._connected.is_set():
+                self._connect_error = exc
+                self._connected.set()
+            logger.exception("Client bridge listener stopped with an error")
+        finally:
+            self._closed.set()
+            self._request_ready.set()
 
     async def _listen(self) -> None:
         """Connect to the server and process messages."""
         import websockets
 
-        async with websockets.connect(self._uri) as ws:
-            self._ws = ws
-            self._connected.set()
-            logger.info("Connected to %s", self._uri)
+        try:
+            async with websockets.connect(self._uri) as ws:
+                self._ws = ws
+                self._connected.set()
+                logger.info("Connected to %s", self._uri)
 
-            async for raw in ws:
-                msg = decode(raw)
-                self._handle_message(msg)
+                async for raw in ws:
+                    msg = decode(raw)
+                    self._handle_message(msg)
+        finally:
+            self._ws = None
+            self._closed.set()
+            self._request_ready.set()
 
         logger.info("Disconnected from server")
 

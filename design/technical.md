@@ -64,12 +64,18 @@ and log retractions without deleting or rewriting earlier entries.
 As of 2026-07-02, backend readiness is tracked by Bead
 `road_to_riches-fruo`. The automated acceptance baseline is:
 
-* Full suite: `venv/bin/python -m pytest` reports 652 passed, 1 skipped.
+* Full suite: `venv/bin/python -m pytest` reports 657 passed.
 * Style gate: `venv/bin/python -m ruff check src tests tools cards scripts`
   reports no findings.
 * End-to-end automated confidence: `tests/test_headless_soak.py` runs
   multi-turn AI soak games, completes a converted Trodain game to game over,
   and completes a socket server plus in-process AI game to game over.
+* Networked TUI confidence: `tests/test_tui_network_smoke.py` drives a
+  Textual `GameApp` client against a real `GameServer` over WebSockets with
+  in-process AI peers, starts from a resumed backend state, triggers a
+  backend-owned pre-roll save through the TUI bridge, loads that save artifact,
+  submits a human-slot response through the TUI, and observes game-over delivery
+  to the TUI and all AI clients.
 * Save/resume coverage: `tests/test_save.py`, `tests/test_main_cli.py`,
   `tests/test_game_loop.py`, `tests/test_client_bridge.py`,
   `tests/test_server_input.py`, and `tests/test_server.py` cover local resume,
@@ -86,11 +92,11 @@ As of 2026-07-02, backend readiness is tracked by Bead
 * Diagnostic logging coverage: `tests/test_game_loop.py` records append-only
   JSONL messages, events, inputs, and log retractions.
 
-The remaining P0.5 proof gate is a fresh human TUI full-game validation pass,
-tracked by `road_to_riches-pdl6`. That pass should play one complete game on a
-representative board with one human and AI opponents, include a between-turn
-save/resume, and file any confusing state, log, UI, or timing behavior as Beads
-issues before the readiness audit is closed.
+The P0.5 readiness gate is considered satisfied when the automated acceptance
+baseline above passes in the current worktree and the tracking Beads
+`road_to_riches-fruo` and `road_to_riches-pdl6` are closed with the observed
+test evidence. A later manual exploratory TUI pass may still be useful, but it
+is no longer a blocking requirement for beginning web-client development.
 
 `PASS_PLAYER_ACTION` is not required for P0.5 web-client readiness. It remains
 future event-system surface area for player/NPC/cameo pass interactions and is

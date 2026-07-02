@@ -2492,7 +2492,7 @@ class GameApp(App):
     @work(thread=True)
     def _poll_for_requests_networked(self) -> None:
         """Poll for input requests from the client bridge (networked mode)."""
-        while True:
+        while not getattr(self.player_input, "closed", False):
             req = self.player_input.get_pending_request()
             if req is not None:
                 self.post_message(self.InputReady(req))

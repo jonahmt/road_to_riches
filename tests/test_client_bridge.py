@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from road_to_riches.client.client_bridge import ClientBridge
 from road_to_riches.protocol import InputRequestType
 
@@ -200,3 +202,33 @@ def test_request_state_sync_includes_assigned_game_id(monkeypatch):
         "msg": "sync_request",
         "game_id": "game-1",
     }
+
+
+def test_connect_times_out_when_background_connection_never_starts():
+    bridge = ClientBridge("ws://localhost:8765")
+    bridge._run_loop = lambda: None  # type: ignore[method-assign]
+
+    with pytest.raises(TimeoutError):
+        bridge.connect(timeout=0.01)
+
+
+def test_connect_raises_background_connection_error():
+    bridge = ClientBridge("ws://localhost:8765")
+
+    def fail_connect() -> None:
+        bridge._connect_error = OSError("boom")
+        bridge._connected.set()
+
+    bridge._run_loop = fail_connect  # type: ignore[method-assign]
+
+    with pytest.raises(ConnectionError):
+        bridge.connect(timeout=1)
+
+
+def test_close_marks_bridge_closed_and_unblocks_polling():
+    bridge = ClientBridge("ws://localhost:8765")
+
+    bridge.close()
+
+    assert bridge.closed
+    assert bridge.get_pending_request() is None
