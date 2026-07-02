@@ -75,8 +75,16 @@ def test_validate_board_data_rejects_invalid_square_type():
         validate_board_data(data)
 
 
-def test_validate_board_data_can_require_transport_destinations():
+def test_validate_board_data_rejects_missing_transport_destinations_by_default():
     data = _board_data([_square(0, type="BACKSTREET")])
 
     with pytest.raises(ValueError, match="missing a destination"):
-        validate_board_data(data, require_transport_destinations=True)
+        validate_board_data(data)
+
+
+def test_validate_board_data_can_warn_for_missing_transport_destinations(caplog):
+    data = _board_data([_square(0, type="BACKSTREET")])
+
+    validate_board_data(data, require_transport_destinations=False)
+
+    assert "Square 0 (BACKSTREET) is missing a destination" in caplog.text

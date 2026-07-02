@@ -57,6 +57,11 @@ because the Dolt backend is reached via localhost TCP. Outside the sandbox,
 `bd stats`, `bd ready`, and other normal commands work against the local Dolt
 server.
 
+If `bd ready` reports Dolt unreachable or port `13969` busy, inspect the port
+with `lsof -nP -iTCP:13969 -sTCP:LISTEN`. Prefer `bd dolt stop` or
+`bd dolt killall`; only stop a stale PID manually after confirming it is
+`dolt`, then retry `bd ready` with sandbox escalation if needed.
+
 ## Project Structure
 
 ```

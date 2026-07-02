@@ -18,13 +18,13 @@ from road_to_riches.paths import resolve_resource_path
 logger = logging.getLogger(__name__)
 
 
-def validate_board_data(data: dict, *, require_transport_destinations: bool = False) -> None:
+def validate_board_data(data: dict, *, require_transport_destinations: bool = True) -> None:
     """Validate structural board data before building runtime state.
 
     This catches malformed board files at load time: non-contiguous square IDs,
-    bad waypoint references, and invalid square types. Transport destination
-    checks can be made strict by callers/tests, but remain warnings for now so
-    existing content with unresolved gameplay decisions still loads.
+    bad waypoint references, invalid square types, and transport squares
+    without declared destinations so normal board loads do not degrade into
+    warning-only no-op behavior during play.
     """
     squares = data.get("squares", [])
     ids = [sq.get("id") for sq in squares]
@@ -68,7 +68,7 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
     path = resolve_resource_path(path)
     with open(path) as f:
         data = json.load(f)
-    validate_board_data(data)
+    validate_board_data(data, require_transport_destinations=True)
 
     promo_data = data.get("promotion", {})
     promotion = PromotionInfo(
