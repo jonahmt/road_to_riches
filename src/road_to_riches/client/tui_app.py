@@ -2148,6 +2148,14 @@ class GameApp(App):
 
     def _save_game(self) -> None:
         """Save the current game state to disk."""
+        log_widget = self.query_one("#game-log", RichLog)
+        if self._client_bridge is not None:
+            self._client_bridge.send_save_game()
+            log_widget.write("[yellow]Save requested from server...[/yellow]")
+            if self._current_request is not None:
+                self._show_prompt(self._current_request)
+            return
+
         state = self._get_state()
         if state is None:
             return
@@ -2159,13 +2167,8 @@ class GameApp(App):
         elif self.config is not None:
             config = self.config
         else:
-            # Networked mode without config — build a minimal one from state
-            config = GameConfig(
-                board_path="unknown",
-                num_players=len(state.players),
-            )
+            return
         path = save_game(state, config)
-        log_widget = self.query_one("#game-log", RichLog)
         log_widget.write(f"[green]Game saved to {path}[/green]")
         # Re-present the PRE_ROLL menu
         if self._current_request is not None:

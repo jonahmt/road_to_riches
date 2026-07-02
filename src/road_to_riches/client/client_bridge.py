@@ -20,6 +20,7 @@ from road_to_riches.protocol import (
     encode,
     msg_dev_event,
     msg_input_response,
+    msg_save_game,
     msg_start_game,
 )
 
@@ -118,6 +119,15 @@ class ClientBridge:
         msg = encode(msg_start_game({}, game_id=self._game_id))
         asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
 
+    def send_save_game(self, save_name: str | None = None) -> None:
+        """Ask the server to save the authoritative game state."""
+        if self._loop is None or self._ws is None:
+            return
+        msg = encode(
+            msg_save_game(self._player_id, save_name=save_name, game_id=self._game_id)
+        )
+        asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
+
     def _run_loop(self) -> None:
         """Run the asyncio event loop for WebSocket communication."""
         self._loop = asyncio.new_event_loop()
@@ -189,6 +199,13 @@ class ClientBridge:
         elif msg_type == "game_over":
             if self._game_over_callback:
                 self._game_over_callback(msg.get("winner"))
+
+        elif msg_type == "save_result":
+            if self._log_callback:
+                if msg.get("success"):
+                    self._log_callback(f"Game saved to {msg.get('path')}")
+                else:
+                    self._log_callback(f"Save failed: {msg.get('error')}")
 
         else:
             logger.warning("Unknown message type: %s", msg_type)

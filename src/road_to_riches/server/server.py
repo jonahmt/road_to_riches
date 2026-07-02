@@ -33,7 +33,9 @@ from road_to_riches.protocol import (
     msg_game_starting,
     msg_games_list,
     msg_joined_game,
+    msg_save_result,
 )
+from road_to_riches.save import save_game
 from road_to_riches.server.server_input import WebSocketPlayerInput
 from road_to_riches.server.session import (
     GameSession,
@@ -189,6 +191,9 @@ class GameServer:
                 elif msg_type == "start_game":
                     await self._handle_start_game(ws, session, msg, host=host, port=port)
 
+                elif msg_type == "save_game":
+                    await self._handle_save_game(ws, session, msg)
+
                 elif msg_type == "dev_event":
                     self._handle_dev_event(session, msg)
 
@@ -337,6 +342,74 @@ class GameServer:
         session.fill_open_human_slots_with_ai()
         self._check_session_progress(session, host=host, port=port)
         await ws.send(encode(msg_game_starting(session.session_id, _session_summary(session))))
+
+    async def _handle_save_game(
+        self,
+        ws: ServerConnection,
+        session: GameSession,
+        msg: dict,
+    ) -> None:
+        """Persist the authoritative backend state for a session."""
+        player_id = msg.get("player_id")
+        save_name = msg.get("save_name")
+        if not isinstance(player_id, int):
+            await ws.send(
+                encode(
+                    msg_save_result(
+                        False,
+                        error="save_game requires player_id",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        if save_name is not None and not isinstance(save_name, str):
+            await ws.send(
+                encode(
+                    msg_save_result(
+                        False,
+                        error="save_name must be a string",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        if session.player_input is None or session.game_loop is None:
+            await ws.send(
+                encode(
+                    msg_save_result(
+                        False,
+                        error="game is not running",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        if not session.player_input.can_save_game(ws, player_id):
+            await ws.send(
+                encode(
+                    msg_save_result(
+                        False,
+                        error="save is only available during that player's pre-roll prompt",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        try:
+            path = save_game(session.game_loop.state, session.config, save_name)
+        except OSError as exc:
+            await ws.send(
+                encode(
+                    msg_save_result(
+                        False,
+                        error=f"save failed: {exc}",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        await ws.send(encode(msg_save_result(True, path=str(path), game_id=session.session_id)))
 
     def _check_session_progress(
         self,

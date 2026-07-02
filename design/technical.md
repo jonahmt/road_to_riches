@@ -42,6 +42,13 @@ same player's pre-roll prompt. Mid-turn saves do not serialize the pending
 event queue and are deliberately out of scope until a broader save semantics
 design is accepted.
 
+In socket/server play, saves are backend-owned. A client may send a `save_game`
+request for its assigned player and session while that player is at the
+pre-roll prompt, but the server writes the save from its authoritative
+`GameLoop` state and session `GameConfig`. Clients must not persist socket-game
+saves from local snapshots because they do not own the canonical board path,
+player count, or runtime config.
+
 The diagnostic log is written as JSON Lines by the backend game loop when
 enabled through runtime configuration. It is not saved inside normal save files
 and should record backend events, player input results, presentation messages,

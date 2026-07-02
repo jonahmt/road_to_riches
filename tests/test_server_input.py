@@ -9,6 +9,7 @@ from collections.abc import Iterator
 import pytest
 
 from road_to_riches.engine.game_loop import GameLog
+from road_to_riches.protocol import InputRequestType
 from road_to_riches.server.server_input import WebSocketPlayerInput
 
 
@@ -144,6 +145,25 @@ def test_receive_response_rejects_when_no_player_is_expected(
 
     assert player_input._response is None
     assert not player_input._response_ready.is_set()
+
+
+def test_can_save_game_requires_matching_pre_roll_prompt(
+    player_input: WebSocketPlayerInput,
+):
+    assigned_ws = FakeWebSocket()
+    other_ws = FakeWebSocket()
+    player_input.set_client_for_player(1, assigned_ws)
+    player_input._expecting_player = 1
+    player_input._expecting_request_type = InputRequestType.PRE_ROLL
+
+    assert player_input.can_save_game(assigned_ws, 1) is True
+    assert player_input.can_save_game(other_ws, 1) is False
+    assert player_input.can_save_game(assigned_ws, 2) is False
+    assert player_input.can_save_game(assigned_ws, None) is False
+
+    player_input._expecting_request_type = InputRequestType.CHOOSE_PATH
+
+    assert player_input.can_save_game(assigned_ws, 1) is False
 
 
 def test_session_player_input_tags_outbound_messages():

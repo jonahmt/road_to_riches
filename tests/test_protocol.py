@@ -21,6 +21,8 @@ from road_to_riches.protocol import (
     msg_list_games,
     msg_log,
     msg_log_retract,
+    msg_save_game,
+    msg_save_result,
     msg_start_game,
     msg_state_sync,
 )
@@ -86,6 +88,16 @@ def test_round_trip_join_game():
 
 def test_round_trip_lobby_discovery():
     original = msg_list_games()
+    assert decode(encode(original)) == original
+
+
+def test_round_trip_save_game():
+    original = msg_save_game(player_id=1, save_name="checkpoint", game_id="game-1")
+    assert decode(encode(original)) == original
+
+
+def test_round_trip_save_result():
+    original = msg_save_result(True, path="/tmp/checkpoint.json", game_id="game-1")
     assert decode(encode(original)) == original
 
 
@@ -163,6 +175,8 @@ def test_msg_field_create_and_join_game():
     assert msg_list_games()["msg"] == "list_games"
     assert msg_games_list([])["msg"] == "games_list"
     assert msg_game_starting("game-1", {})["msg"] == "game_starting"
+    assert msg_save_game()["msg"] == "save_game"
+    assert msg_save_result(True)["msg"] == "save_result"
     assert msg_error("bad")["msg"] == "error"
 
 
@@ -181,3 +195,5 @@ def test_session_aware_builders_include_game_id_when_provided():
     assert msg_log("hello", game_id="game-1")["game_id"] == "game-1"
     assert msg_dice(3, 1, game_id="game-1")["game_id"] == "game-1"
     assert msg_game_over(0, game_id="game-1")["game_id"] == "game-1"
+    assert msg_save_game(1, game_id="game-1")["game_id"] == "game-1"
+    assert msg_save_result(False, error="bad", game_id="game-1")["game_id"] == "game-1"

@@ -49,6 +49,7 @@ class WebSocketPlayerInput(PlayerInput):
         self._response: Any = None
         self._response_ready = threading.Event()
         self._expecting_player: int | None = None  # which player_id we're waiting for
+        self._expecting_request_type: InputRequestType | None = None
 
     def set_client_for_player(self, player_id: int, ws: Any) -> None:
         """Register a WebSocket as the client for a specific player.
@@ -109,6 +110,16 @@ class WebSocketPlayerInput(PlayerInput):
             return
         self._response = value
         self._response_ready.set()
+
+    def can_save_game(self, ws: Any, player_id: int | None) -> bool:
+        """Return whether this connection may save at the active prompt."""
+        if player_id is None:
+            return False
+        if self._expecting_request_type is not InputRequestType.PRE_ROLL:
+            return False
+        if player_id != self._expecting_player:
+            return False
+        return self._player_ws.get(player_id) is ws
 
     def _broadcast(self, msg: dict) -> None:
         """Send a message to all connected clients (from game thread)."""
@@ -200,11 +211,13 @@ class WebSocketPlayerInput(PlayerInput):
         self._response_ready.clear()
         self._response = None
         self._expecting_player = req.player_id
+        self._expecting_request_type = req.type
         # Broadcast so all clients can update their display
         self._broadcast(msg_input_request(req, game_id=self._game_id))
         logger.debug("Waiting for response to %s (player %d)", req.type, req.player_id)
         self._response_ready.wait()
         self._expecting_player = None
+        self._expecting_request_type = None
         logger.debug("Got response: %r", self._response)
         return self._response
 

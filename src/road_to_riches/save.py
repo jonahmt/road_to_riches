@@ -33,7 +33,7 @@ def _save_path(save_name: str | Path | None = None) -> Path:
     return SAVE_DIR / candidate
 
 
-def save_game(state: GameState, config: GameConfig) -> Path:
+def save_game(state: GameState, config: GameConfig, save_name: str | Path | None = None) -> Path:
     """Save game state and config to disk. Returns the save file path."""
     _ensure_save_dir()
     data = {
@@ -45,7 +45,7 @@ def save_game(state: GameState, config: GameConfig) -> Path:
         },
         "state": game_state_to_dict(state),
     }
-    path = _save_path()
+    path = _save_path(save_name)
     with open(path, "w") as f:
         json.dump(data, f)
     return path

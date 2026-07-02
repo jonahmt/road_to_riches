@@ -50,6 +50,12 @@ class TestSaveGame:
         assert path == tmp_save_dir / "latest.json"
         assert path.exists()
 
+    def test_save_accepts_named_save(self, tmp_save_dir):
+        path = save_mod.save_game(_make_state(), _make_config(), "checkpoint")
+
+        assert path == tmp_save_dir / "checkpoint.json"
+        assert path.exists()
+
     def test_save_file_is_valid_json_with_config_and_state(self, tmp_save_dir):
         save_mod.save_game(_make_state(), _make_config())
         with open(tmp_save_dir / "latest.json") as f:

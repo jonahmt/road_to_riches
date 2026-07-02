@@ -123,6 +123,21 @@ def msg_game_starting(game_id: str, summary: dict) -> dict:
     return {"msg": "game_starting", "game_id": game_id, "summary": summary}
 
 
+def msg_save_result(
+    success: bool,
+    *,
+    path: str | None = None,
+    error: str | None = None,
+    game_id: str | None = None,
+) -> dict:
+    msg: dict = {"msg": "save_result", "success": success}
+    if path is not None:
+        msg["path"] = path
+    if error is not None:
+        msg["error"] = error
+    return _with_game_id(msg, game_id)
+
+
 def msg_error(error: str, game_id: str | None = None) -> dict:
     return _with_game_id({"msg": "error", "error": error}, game_id)
 
@@ -155,6 +170,20 @@ def msg_join_game(game_id: str) -> dict:
 
 def msg_list_games() -> dict:
     return {"msg": "list_games"}
+
+
+def msg_save_game(
+    player_id: int | None = None,
+    *,
+    save_name: str | None = None,
+    game_id: str | None = None,
+) -> dict:
+    msg: dict = {"msg": "save_game"}
+    if player_id is not None:
+        msg["player_id"] = player_id
+    if save_name is not None:
+        msg["save_name"] = save_name
+    return _with_game_id(msg, game_id)
 
 
 def msg_identify(player_id: int, game_id: str | None = None) -> dict:

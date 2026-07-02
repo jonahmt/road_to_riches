@@ -3,12 +3,18 @@ from __future__ import annotations
 import asyncio
 import json
 
+from road_to_riches import save as save_mod
+from road_to_riches.board import load_board
 from road_to_riches.engine.game_loop import GameConfig
+from road_to_riches.models.game_state import GameState
+from road_to_riches.models.player_state import PlayerState
 from road_to_riches.protocol import (
+    InputRequestType,
     encode,
     msg_create_game,
     msg_join_game,
     msg_list_games,
+    msg_save_game,
     msg_start_game,
 )
 from road_to_riches.server.server import GameServer
@@ -46,6 +52,15 @@ def _server_without_default() -> GameServer:
         create_default_session=False,
         shutdown_when_default_finished=False,
     )
+
+
+def _make_state(num_players: int = 2) -> GameState:
+    board, stock = load_board("boards/test_board.json")
+    players = [
+        PlayerState(player_id=i, position=0, ready_cash=1000 + i * 100)
+        for i in range(num_players)
+    ]
+    return GameState(board=board, stock=stock, players=players)
 
 
 def test_create_game_creates_distinct_sessions_and_assigns_hosts():
@@ -505,5 +520,79 @@ def test_legacy_start_game_for_default_session_remains_noop():
         assert session.num_humans == 1
         assert session.num_ai == 1
         assert session.started is False
+
+    asyncio.run(scenario())
+
+
+def test_save_game_persists_authoritative_session_config(tmp_path, monkeypatch):
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        ws = FakeWebSocket()
+        await server._handle_create_game(
+            ws,
+            msg_create_game({"board": "boards/test_board.json", "humans": 1, "ai": 1}),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(ws)[0]["game_id"]
+        session = server._sessions.require(game_id)
+        assert session.player_input is not None
+
+        class FakeGameLoop:
+            def __init__(self) -> None:
+                self.state = _make_state(num_players=2)
+
+        session.game_loop = FakeGameLoop()  # type: ignore[assignment]
+        session.player_input._expecting_player = 0
+        session.player_input._expecting_request_type = InputRequestType.PRE_ROLL
+        monkeypatch.setattr(save_mod, "SAVE_DIR", tmp_path)
+
+        await server._handle_save_game(
+            ws,
+            session,
+            msg_save_game(player_id=0, game_id=game_id, save_name="checkpoint"),
+        )
+
+        result = _messages(ws)[-1]
+        assert result == {
+            "msg": "save_result",
+            "success": True,
+            "path": str(tmp_path / "checkpoint.json"),
+            "game_id": game_id,
+        }
+        _, config = save_mod.load_save("checkpoint")
+        assert config.board_path == "boards/test_board.json"
+        assert config.num_players == 2
+
+    asyncio.run(scenario())
+
+
+def test_save_game_rejects_non_pre_roll_request():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        ws = FakeWebSocket()
+        await server._handle_create_game(
+            ws,
+            msg_create_game({"board": "boards/test_board.json", "humans": 1, "ai": 0}),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(ws)[0]["game_id"]
+        session = server._sessions.require(game_id)
+        assert session.player_input is not None
+        session.game_loop = object()  # type: ignore[assignment]
+        session.player_input._expecting_player = 0
+        session.player_input._expecting_request_type = InputRequestType.CHOOSE_PATH
+
+        await server._handle_save_game(ws, session, msg_save_game(player_id=0, game_id=game_id))
+
+        assert _messages(ws)[-1] == {
+            "msg": "save_result",
+            "success": False,
+            "error": "save is only available during that player's pre-roll prompt",
+            "game_id": game_id,
+        }
 
     asyncio.run(scenario())

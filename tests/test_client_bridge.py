@@ -127,3 +127,46 @@ def test_send_start_game_includes_assigned_game_id(monkeypatch):
         "config": {},
         "game_id": "game-1",
     }
+
+
+def test_send_save_game_includes_assigned_player_and_game_id(monkeypatch):
+    scheduled = []
+
+    class FakeLoop:
+        pass
+
+    class FakeWebSocket:
+        def send(self, msg: str) -> str:
+            return msg
+
+    def fake_run_coroutine_threadsafe(payload, loop):
+        scheduled.append(payload)
+
+    bridge = ClientBridge("ws://localhost:8765")
+    bridge._loop = FakeLoop()
+    bridge._ws = FakeWebSocket()
+    bridge._handle_message({"msg": "assign_player", "player_id": 1, "game_id": "game-1"})
+    monkeypatch.setattr(
+        "road_to_riches.client.client_bridge.asyncio.run_coroutine_threadsafe",
+        fake_run_coroutine_threadsafe,
+    )
+
+    bridge.send_save_game("checkpoint")
+
+    assert json.loads(scheduled[0]) == {
+        "msg": "save_game",
+        "player_id": 1,
+        "save_name": "checkpoint",
+        "game_id": "game-1",
+    }
+
+
+def test_save_result_messages_are_reported_to_log_callback():
+    bridge = ClientBridge("ws://localhost:8765")
+    messages: list[str] = []
+    bridge.set_log_callback(messages.append)
+
+    bridge._handle_message({"msg": "save_result", "success": True, "path": "/tmp/latest.json"})
+    bridge._handle_message({"msg": "save_result", "success": False, "error": "bad save"})
+
+    assert messages == ["Game saved to /tmp/latest.json", "Save failed: bad save"]
