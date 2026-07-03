@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import threading
+import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from textual import on, work
@@ -264,6 +265,12 @@ class GameApp(App):
             self.value = value
             self.remaining = remaining
 
+    class UiNotification(Message):
+        def __init__(self, notification_type: str, data: dict[str, Any]) -> None:
+            super().__init__()
+            self.notification_type = notification_type
+            self.data = data
+
     def __init__(
         self,
         config: GameConfig | None = None,
@@ -288,6 +295,9 @@ class GameApp(App):
         self._current_request: InputRequest | None = None
         self._info_visible = False
         self._log_messages: list[str] = []
+        self._log_pause_until: float = 0.0
+        self._pending_log_messages: list[str] = []
+        self._log_flush_timer: Timer | None = None
         # Input mode: "text" (normal Input widget), "keypress" (WASD path),
         # "selection" (option bar with highlight)
         self._input_mode = "text"
@@ -345,6 +355,8 @@ class GameApp(App):
         self.player_input.set_dice_callback(self._on_dice_update)
         if hasattr(self.player_input, "set_retract_callback"):
             self.player_input.set_retract_callback(self._on_retract_log)
+        if hasattr(self.player_input, "set_ui_notification_callback"):
+            self.player_input.set_ui_notification_callback(self._on_ui_notification)
         if self._networked:
             self._client_bridge.set_retract_callback(self._on_retract_log)
             self._client_bridge.set_state_callback(self._on_state_changed)
@@ -369,9 +381,45 @@ class GameApp(App):
         """Called from game thread to update dice display."""
         self.post_message(self.DiceUpdate(value, remaining))
 
+    def _on_ui_notification(self, notification_type: str, data: dict[str, Any]) -> None:
+        """Called from game/bridge thread for presentation-only notifications."""
+        self.post_message(self.UiNotification(notification_type, data))
+
     @on(LogMessage)
     def handle_log_message(self, event: LogMessage) -> None:
+        if time.monotonic() < self._log_pause_until:
+            self._pending_log_messages.append(event.text)
+            self._ensure_log_flush_timer()
+            return
         self._render_log_append(event.text)
+
+    @on(UiNotification)
+    def handle_ui_notification(self, event: UiNotification) -> None:
+        if event.notification_type != "pause":
+            return
+        try:
+            seconds = float(event.data.get("seconds", 0))
+        except (TypeError, ValueError):
+            return
+        if seconds <= 0:
+            return
+        self._log_pause_until = max(self._log_pause_until, time.monotonic() + seconds)
+        self._ensure_log_flush_timer()
+
+    def _ensure_log_flush_timer(self) -> None:
+        if self._log_flush_timer is not None:
+            self._log_flush_timer.stop()
+        delay = max(0.0, self._log_pause_until - time.monotonic())
+        self._log_flush_timer = self.set_timer(delay, self._flush_pending_logs)
+
+    def _flush_pending_logs(self) -> None:
+        self._log_flush_timer = None
+        if time.monotonic() < self._log_pause_until:
+            self._ensure_log_flush_timer()
+            return
+        pending, self._pending_log_messages = self._pending_log_messages, []
+        for text in pending:
+            self._render_log_append(text)
 
     def _render_log_append(self, text: str) -> None:
         self._log_messages.append(text)

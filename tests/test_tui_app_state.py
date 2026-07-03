@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from textual.widgets import Input
 
 from road_to_riches.client.tui_app import GameApp, PromptBar
-from road_to_riches.client.tui_input import InputRequest, InputRequestType
+from road_to_riches.client.tui_input import InputRequest, InputRequestType, TuiPlayerInput
 from road_to_riches.models.board_state import BoardState, PromotionInfo, SquareInfo, Waypoint
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
@@ -140,6 +140,18 @@ def test_browse_viewport_pixels_fall_back_when_unmeasured():
     widget = SimpleNamespace(size=SimpleNamespace(width=0, height=0))
 
     assert app._board_viewport_pixels(widget) == (None, None)
+
+
+def test_tui_player_input_forwards_ui_notifications():
+    player_input = TuiPlayerInput()
+    notifications: list[tuple[str, dict]] = []
+    player_input.set_ui_notification_callback(
+        lambda kind, data: notifications.append((kind, data))
+    )
+
+    player_input.notify_ui("pause", {"seconds": 1.5})
+
+    assert notifications == [("pause", {"seconds": 1.5})]
 
 
 def test_default_invest_submission_clears_amount_prompt_immediately():

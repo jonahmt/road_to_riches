@@ -90,6 +90,17 @@ def msg_log(text: str, game_id: str | None = None) -> dict:
     return _with_game_id({"msg": "log", "text": text}, game_id)
 
 
+def msg_ui_notification(
+    notification_type: str,
+    data: dict | None = None,
+    game_id: str | None = None,
+) -> dict:
+    return _with_game_id(
+        {"msg": "ui_notification", "type": notification_type, "data": data or {}},
+        game_id,
+    )
+
+
 def msg_dice(value: int, remaining: int, game_id: str | None = None) -> dict:
     return _with_game_id({"msg": "dice", "value": value, "remaining": remaining}, game_id)
 

@@ -52,6 +52,7 @@ class ClientBridge:
         self._game_over_callback: Any = None
         self._state_callback: Any = None
         self._retract_callback: Any = None
+        self._ui_notification_callback: Any = None
         self._player_id: int | None = None  # assigned by server
         self._game_id: str | None = None  # assigned by server
 
@@ -83,6 +84,9 @@ class ClientBridge:
 
     def set_retract_callback(self, callback: Any) -> None:
         self._retract_callback = callback
+
+    def set_ui_notification_callback(self, callback: Any) -> None:
+        self._ui_notification_callback = callback
 
     def set_state_callback(self, callback: Any) -> None:
         self._state_callback = callback
@@ -244,6 +248,10 @@ class ClientBridge:
         elif msg_type == "log_retract":
             if self._retract_callback:
                 self._retract_callback(msg["count"])
+
+        elif msg_type == "ui_notification":
+            if self._ui_notification_callback:
+                self._ui_notification_callback(msg["type"], msg.get("data", {}))
 
         elif msg_type == "assign_player":
             self._player_id = msg["player_id"]

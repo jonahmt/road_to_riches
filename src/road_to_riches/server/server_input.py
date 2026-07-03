@@ -25,6 +25,7 @@ from road_to_riches.protocol import (
     msg_log,
     msg_log_retract,
     msg_state_sync,
+    msg_ui_notification,
 )
 
 logger = logging.getLogger(__name__)
@@ -624,6 +625,9 @@ class WebSocketPlayerInput(PlayerInput):
 
     def notify_dice(self, value: int, remaining: int) -> None:
         self._broadcast(msg_dice(value, remaining, game_id=self._game_id))
+
+    def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
+        self._broadcast(msg_ui_notification(notification_type, data, game_id=self._game_id))
 
     def retract_log(self, count: int) -> None:
         self._broadcast(msg_log_retract(count, game_id=self._game_id))

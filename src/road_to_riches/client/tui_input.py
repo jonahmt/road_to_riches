@@ -38,6 +38,7 @@ class TuiPlayerInput(PlayerInput):
         self._log_callback: Any = None  # set by the TUI app
         self._dice_callback: Any = None
         self._retract_callback: Any = None
+        self._ui_notification_callback: Any = None
 
     def set_log_callback(self, callback: Any) -> None:
         self._log_callback = callback
@@ -47,6 +48,9 @@ class TuiPlayerInput(PlayerInput):
 
     def set_retract_callback(self, callback: Any) -> None:
         self._retract_callback = callback
+
+    def set_ui_notification_callback(self, callback: Any) -> None:
+        self._ui_notification_callback = callback
 
     def _notify_dice(self, value: int, remaining: int) -> None:
         if self._dice_callback:
@@ -460,6 +464,10 @@ class TuiPlayerInput(PlayerInput):
 
     def notify_dice(self, value: int, remaining: int) -> None:
         self._notify_dice(value, remaining)
+
+    def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
+        if self._ui_notification_callback:
+            self._ui_notification_callback(notification_type, data or {})
 
     def retract_log(self, count: int) -> None:
         if self._retract_callback and count > 0:

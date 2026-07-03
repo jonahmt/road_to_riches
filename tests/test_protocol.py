@@ -26,6 +26,7 @@ from road_to_riches.protocol import (
     msg_start_game,
     msg_state_sync,
     msg_sync_request,
+    msg_ui_notification,
 )
 
 # --- Encode/decode round-trip tests ---
@@ -39,6 +40,11 @@ def test_round_trip_input_request():
 
 def test_round_trip_log():
     original = msg_log("Player 1 rolled a 5")
+    assert decode(encode(original)) == original
+
+
+def test_round_trip_ui_notification():
+    original = msg_ui_notification("pause", {"seconds": 1.5})
     assert decode(encode(original)) == original
 
 
@@ -157,6 +163,10 @@ def test_msg_field_dice():
     assert msg_dice(3, 1)["msg"] == "dice"
 
 
+def test_msg_field_ui_notification():
+    assert msg_ui_notification("pause")["msg"] == "ui_notification"
+
+
 def test_msg_field_game_over():
     assert msg_game_over(0)["msg"] == "game_over"
 
@@ -191,6 +201,7 @@ def test_session_aware_builders_omit_game_id_by_default():
     assert "game_id" not in msg_assign_player(1)
     assert "game_id" not in msg_identify(1)
     assert "game_id" not in msg_log_retract(1)
+    assert "game_id" not in msg_ui_notification("pause")
 
 
 def test_session_aware_builders_include_game_id_when_provided():
@@ -200,6 +211,7 @@ def test_session_aware_builders_include_game_id_when_provided():
     assert msg_log_retract(2, game_id="game-1")["game_id"] == "game-1"
     assert msg_state_sync({}, game_id="game-1")["game_id"] == "game-1"
     assert msg_log("hello", game_id="game-1")["game_id"] == "game-1"
+    assert msg_ui_notification("pause", game_id="game-1")["game_id"] == "game-1"
     assert msg_dice(3, 1, game_id="game-1")["game_id"] == "game-1"
     assert msg_game_over(0, game_id="game-1")["game_id"] == "game-1"
     assert msg_save_game(1, game_id="game-1")["game_id"] == "game-1"

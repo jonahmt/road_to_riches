@@ -145,6 +145,8 @@ export function useGameClient(defaultUri: string) {
                 ...current,
                 logs: current.logs.slice(0, Math.max(0, current.logs.length - message.count)),
               };
+            case "ui_notification":
+              return current;
             case "dice":
               return {
                 ...current,

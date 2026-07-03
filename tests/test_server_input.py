@@ -176,12 +176,19 @@ def test_session_player_input_tags_outbound_messages():
         log = GameLog()
         log.log("hello")
         player_input._flush_log(log)
+        player_input.notify_ui("pause", {"seconds": 1.5})
         player_input.notify_dice(3, 2)
         player_input.retract_log(1)
         player_input.send_game_over(0)
 
         assert messages == [
             {"msg": "log", "text": "hello", "game_id": "game-1"},
+            {
+                "msg": "ui_notification",
+                "type": "pause",
+                "data": {"seconds": 1.5},
+                "game_id": "game-1",
+            },
             {"msg": "dice", "value": 3, "remaining": 2, "game_id": "game-1"},
             {"msg": "log_retract", "count": 1, "game_id": "game-1"},
             {"msg": "game_over", "winner": 0, "game_id": "game-1"},

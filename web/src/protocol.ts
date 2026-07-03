@@ -121,6 +121,7 @@ export type ServerMessage =
   | { msg: "input_request"; type: InputRequestType; player_id: number; data?: Record<string, unknown>; game_id?: string }
   | { msg: "log"; text: string; game_id?: string }
   | { msg: "log_retract"; count: number; game_id?: string }
+  | { msg: "ui_notification"; type: string; data?: Record<string, unknown>; game_id?: string }
   | { msg: "dice"; value: number; remaining: number; game_id?: string }
   | { msg: "game_over"; winner: number | null; game_id?: string }
   | { msg: "save_result"; success: boolean; path?: string; error?: string; game_id?: string }

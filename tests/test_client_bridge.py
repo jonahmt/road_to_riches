@@ -174,6 +174,36 @@ def test_save_result_messages_are_reported_to_log_callback():
     assert messages == ["Game saved to /tmp/latest.json", "Save failed: bad save"]
 
 
+def test_ui_notification_messages_are_reported_to_callback():
+    bridge = ClientBridge("ws://localhost:8765")
+    notifications: list[tuple[str, dict]] = []
+    bridge.set_ui_notification_callback(lambda kind, data: notifications.append((kind, data)))
+
+    bridge._handle_message(
+        {"msg": "ui_notification", "type": "pause", "data": {"seconds": 1.5}}
+    )
+
+    assert notifications == [("pause", {"seconds": 1.5})]
+
+
+def test_ui_notification_is_ignored_for_other_game():
+    bridge = ClientBridge("ws://localhost:8765")
+    notifications: list[tuple[str, dict]] = []
+    bridge.set_ui_notification_callback(lambda kind, data: notifications.append((kind, data)))
+    bridge._handle_message({"msg": "assign_player", "player_id": 1, "game_id": "game-1"})
+
+    bridge._handle_message(
+        {
+            "msg": "ui_notification",
+            "type": "pause",
+            "data": {"seconds": 1.5},
+            "game_id": "game-2",
+        }
+    )
+
+    assert notifications == []
+
+
 def test_request_state_sync_includes_assigned_game_id(monkeypatch):
     scheduled = []
 

@@ -310,6 +310,13 @@ class PlayerInput(ABC):
     def notify_dice(self, value: int, remaining: int) -> None:
         """Notify the UI of dice roll / remaining moves. Override if needed."""
 
+    def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
+        """Notify the UI about non-log presentation metadata.
+
+        This is for client-only presentation hints, such as pacing pauses,
+        that should not appear in the player-facing game log.
+        """
+
     def retract_log(self, count: int) -> None:
         """Remove the last *count* messages from the client's log display.
 
@@ -1259,6 +1266,10 @@ class GameLoop:
         card = deck.draw()
         self.log.log(f"Venture Card: {card.name} — {card.description}")
         self.input.notify(self.state, self.log)
+        self.input.notify_ui(
+            "pause",
+            {"seconds": 1.5, "source": "venture_card"},
+        )
         self.run_script(card.script_path, player_id)
 
     # ------------------------------------------------------------------
