@@ -65,6 +65,19 @@ The initial UI includes:
   option-selection prompts
 * raw response fallback for prompts that still need custom UI
 
+After the first geometry review, the browser UI moved from a review/debug shell
+to a first player-facing shell. Normal play now treats the board as the primary
+surface, with a compact player HUD, a turn summary, a focused action panel, and
+square details for the selected or assigned-player square. Server status, game
+ID, raw prompt JSON, save/sync/disconnect controls, the complete message log,
+and the raw response fallback are hidden in a collapsible Tools panel. This keeps
+local backend operation available during development without making transport
+details part of the ordinary player experience.
+
+The player-facing log is deliberately reduced to a single latest-event ticker.
+The full backend/presentation log remains available in Tools for debugging and
+review, but it should not be treated as the main game UI.
+
 ## Architecture
 
 The web client treats the Python backend as the source of truth.

@@ -79,7 +79,16 @@ function App() {
   const { clientState, connect, disconnect, submitResponse, saveGame, requestSync } =
     useGameClient(DEFAULT_URI);
   const [uri, setUri] = useState(DEFAULT_URI);
+  const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
+
+  const currentPlayer = clientState.gameState
+    ? clientState.gameState.players[clientState.gameState.current_player_index]
+    : null;
+  const assignedPlayer = clientState.gameState
+    ? clientState.gameState.players.find((player) => player.player_id === clientState.playerId) ?? null
+    : null;
+  const latestEvent = getLatestGameLog(clientState.logs);
 
   const selectedSquare = useMemo(() => {
     if (!clientState.gameState || selectedSquareId === null) {
@@ -88,76 +97,151 @@ function App() {
     return clientState.gameState.board.squares.find((square) => square.id === selectedSquareId) ?? null;
   }, [clientState.gameState, selectedSquareId]);
 
+  const focusSquare =
+    selectedSquare ??
+    (clientState.gameState && assignedPlayer
+      ? clientState.gameState.board.squares.find((square) => square.id === assignedPlayer.position) ?? null
+      : null);
+
   function handleConnect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     connect(uri);
   }
 
   return (
-    <main className="app-shell">
-      <section className="top-bar">
-        <div>
+    <main className={`app-shell ${clientState.gameState ? "is-playing" : "is-starting"}`}>
+      <header className="game-header">
+        <div className="brand-lockup">
           <p className="eyebrow">Road to Riches</p>
-          <h1>Web Client Preview</h1>
+          <h1>{clientState.gameState ? "Local Match" : "Join Local Match"}</h1>
         </div>
-        <form className="connect-form" onSubmit={handleConnect}>
-          <label>
-            Server
-            <input value={uri} onChange={(event) => setUri(event.target.value)} />
-          </label>
-          {clientState.status === "connected" ? (
-            <button type="button" className="secondary" onClick={disconnect}>
-              Disconnect
-            </button>
-          ) : (
-            <button type="submit">{clientState.status === "connecting" ? "Connecting" : "Connect"}</button>
-          )}
-        </form>
-      </section>
-
-      <section className="status-strip">
-        <StatusPill label="Status" value={clientState.status} tone={clientState.status} />
-        <StatusPill label="Player" value={clientState.playerId === null ? "-" : `P${clientState.playerId}`} />
-        <StatusPill label="Game" value={clientState.gameId ?? "-"} />
-        <StatusPill
-          label="Target"
-          value={clientState.gameState ? formatGold(clientState.gameState.board.target_networth) : "-"}
-        />
-        <StatusPill
-          label="Dice"
-          value={clientState.dice ? `${clientState.dice.value} rolled, ${clientState.dice.remaining} left` : "-"}
-        />
-      </section>
+        {clientState.gameState && (
+          <div className="match-summary" aria-label="Match summary">
+            <span>Target {formatGold(clientState.gameState.board.target_networth)}</span>
+            <span>{currentPlayer ? `Turn P${currentPlayer.player_id}` : "Turn -"}</span>
+            <span>{clientState.dice ? `Die ${clientState.dice.value} / ${clientState.dice.remaining}` : "Die -"}</span>
+          </div>
+        )}
+        <button
+          type="button"
+          className="secondary dev-toggle"
+          onClick={() => setDevPanelOpen((open) => !open)}
+        >
+          {devPanelOpen ? "Hide Tools" : "Tools"}
+        </button>
+      </header>
 
       {clientState.error && <div className="error-banner">{clientState.error}</div>}
 
-      <section className="play-layout">
-        <BoardPanel
-          state={clientState.gameState}
-          selectedSquare={selectedSquare}
-          onSelectSquare={setSelectedSquareId}
+      {!clientState.gameState ? (
+        <ConnectPanel
+          uri={uri}
+          status={clientState.status}
+          onUriChange={setUri}
+          onConnect={handleConnect}
+          latestEvent={latestEvent}
         />
-        <aside className="side-panel">
-          <PlayerPanel state={clientState.gameState} assignedPlayerId={clientState.playerId} />
-          <SquarePanel square={selectedSquare} state={clientState.gameState} />
-        </aside>
-      </section>
+      ) : (
+        <>
+          <PlayerHud state={clientState.gameState} assignedPlayerId={clientState.playerId} />
+          <section className="game-layout">
+            <BoardPanel
+              state={clientState.gameState}
+              selectedSquare={selectedSquare}
+              onSelectSquare={setSelectedSquareId}
+            />
+            <aside className="game-side">
+              <TurnPanel
+                state={clientState.gameState}
+                assignedPlayer={assignedPlayer}
+                currentPlayer={currentPlayer}
+                request={clientState.pendingRequest}
+                dice={clientState.dice}
+                latestEvent={latestEvent}
+                gameOverWinner={clientState.gameOverWinner}
+              />
+              <PromptPanel
+                request={clientState.pendingRequest}
+                onSubmit={submitResponse}
+                connected={clientState.status === "connected"}
+              />
+              <SquarePanel square={focusSquare} state={clientState.gameState} />
+            </aside>
+          </section>
+        </>
+      )}
 
-      <section className="bottom-panels">
-        <PromptPanel
-          request={clientState.pendingRequest}
-          onSubmit={submitResponse}
-          onSave={() => saveGame()}
-          onSync={requestSync}
-          connected={clientState.status === "connected"}
-        />
-        <LogPanel logs={clientState.logs} />
-      </section>
+      <DevPanel
+        open={devPanelOpen}
+        uri={uri}
+        status={clientState.status}
+        playerId={clientState.playerId}
+        gameId={clientState.gameId}
+        request={clientState.pendingRequest}
+        logs={clientState.logs}
+        onUriChange={setUri}
+        onConnect={handleConnect}
+        onDisconnect={disconnect}
+        onSave={() => saveGame()}
+        onSync={requestSync}
+        onSubmitRaw={submitResponse}
+      />
 
       {clientState.gameOverWinner !== undefined && (
         <div className="game-over-banner">Game over. Winner: Player {clientState.gameOverWinner ?? "none"}</div>
       )}
     </main>
+  );
+}
+
+function getLatestGameLog(logs: string[]): string | null {
+  return (
+    [...logs]
+      .reverse()
+      .find(
+        (line) =>
+          !line.startsWith("Connected to ") &&
+          !line.startsWith("Assigned Player ") &&
+          !line.startsWith("Disconnected from server") &&
+          !line.startsWith("WebSocket connection error"),
+      ) ?? null
+  );
+}
+
+function ConnectPanel({
+  uri,
+  status,
+  latestEvent,
+  onUriChange,
+  onConnect,
+}: {
+  uri: string;
+  status: string;
+  latestEvent: string | null;
+  onUriChange: (value: string) => void;
+  onConnect: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <section className="connect-stage">
+      <div className="connect-card">
+        <div>
+          <p className="eyebrow">Local Play</p>
+          <h2>Start a match on this machine</h2>
+        </div>
+        <form className="connect-form" onSubmit={onConnect}>
+          <label>
+            Local game address
+            <input value={uri} onChange={(event) => onUriChange(event.target.value)} />
+          </label>
+          <button type="submit" disabled={status === "connecting"}>
+            {status === "connecting" ? "Joining" : "Join Game"}
+          </button>
+        </form>
+        <p className="muted">
+          {latestEvent ?? "Waiting for a local Road to Riches server to host the match."}
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -192,8 +276,8 @@ function BoardPanel({
       <section className="board-panel empty-board">
         <div className="location-backdrop" />
         <div className="empty-message">
-          <h2>Connect to a local game server</h2>
-          <p>Start the Python server, then connect here to see the live board.</p>
+          <h2>Waiting for the board</h2>
+          <p>The match will appear here as soon as state sync arrives.</p>
           <code>python -m road_to_riches server --humans 1 --ai 3</code>
         </div>
       </section>
@@ -385,66 +469,119 @@ function labelForSquare(square: SquareInfo): string {
   return readableType(square.type);
 }
 
-function PlayerPanel({
+function PlayerHud({
   state,
   assignedPlayerId,
 }: {
   state: GameState | null;
   assignedPlayerId: number | null;
 }) {
+  if (!state) {
+    return null;
+  }
+
   return (
-    <section className="panel">
-      <header className="panel-header">
-        <h2>Players</h2>
-      </header>
-      {!state ? (
-        <p className="muted">Waiting for state sync.</p>
-      ) : (
-        <div className="player-list">
-          {state.players.map((player) => (
-            <article
-              key={player.player_id}
-              className={`player-card ${assignedPlayerId === player.player_id ? "assigned" : ""}`}
-              style={{ borderColor: getPlayerColor(player.player_id) }}
-            >
-              <div className="player-card-title">
-                <span className="player-token large" style={{ backgroundColor: getPlayerColor(player.player_id) }}>
-                  {player.player_id}
-                </span>
+    <section className="player-hud" aria-label="Players">
+      {state.players.map((player) => {
+        const isCurrent = state.players[state.current_player_index]?.player_id === player.player_id;
+        const isAssigned = assignedPlayerId === player.player_id;
+        return (
+          <article
+            key={player.player_id}
+            className={`hud-player-card ${isCurrent ? "current" : ""} ${isAssigned ? "assigned" : ""}`}
+            style={{ borderColor: getPlayerColor(player.player_id) }}
+          >
+            <div className="hud-player-title">
+              <span className="player-token large" style={{ backgroundColor: getPlayerColor(player.player_id) }}>
+                {player.player_id}
+              </span>
+              <div>
                 <strong>Player {player.player_id}</strong>
+                <span>{isAssigned ? "You" : isCurrent ? "Turn" : `Square #${player.position}`}</span>
               </div>
-              <dl>
-                <div>
-                  <dt>Cash</dt>
-                  <dd>{formatGold(player.ready_cash)}</dd>
-                </div>
-                <div>
-                  <dt>Net worth</dt>
-                  <dd>{formatGold(netWorth(state, player))}</dd>
-                </div>
-                <div>
-                  <dt>Level</dt>
-                  <dd>{player.level}</dd>
-                </div>
-                <div>
-                  <dt>Square</dt>
-                  <dd>#{player.position}</dd>
-                </div>
-              </dl>
-              <p className="suits">{formatSuits(player)}</p>
-            </article>
-          ))}
-        </div>
-      )}
+            </div>
+            <dl>
+              <div>
+                <dt>Cash</dt>
+                <dd>{formatGold(player.ready_cash)}</dd>
+              </div>
+              <div>
+                <dt>Worth</dt>
+                <dd>{formatGold(netWorth(state, player))}</dd>
+              </div>
+              <div>
+                <dt>Level</dt>
+                <dd>{player.level}</dd>
+              </div>
+              <div>
+                <dt>Suits</dt>
+                <dd>{formatSuitCount(player)}</dd>
+              </div>
+            </dl>
+          </article>
+        );
+      })}
     </section>
   );
 }
 
-function formatSuits(player: PlayerState): string {
-  const suits = Object.entries(player.suits)
-    .filter(([, count]) => count > 0)
-    .map(([suit, count]) => `${suit}${count > 1 ? ` x${count}` : ""}`);
-  return suits.length ? suits.join(", ") : "No suits";
+function TurnPanel({
+  state,
+  assignedPlayer,
+  currentPlayer,
+  request,
+  dice,
+  latestEvent,
+  gameOverWinner,
+}: {
+  state: GameState;
+  assignedPlayer: PlayerState | null;
+  currentPlayer: PlayerState | null;
+  request: InputRequest | null;
+  dice: { value: number; remaining: number } | null;
+  latestEvent: string | null;
+  gameOverWinner: number | null | undefined;
+}) {
+  const isYourPrompt = request && assignedPlayer?.player_id === request.player_id;
+  const turnLabel = currentPlayer ? `Player ${currentPlayer.player_id}` : "Player -";
+  return (
+    <section className="panel turn-panel">
+      <header className="panel-header">
+        <div>
+          <p className="eyebrow">Now</p>
+          <h2>{gameOverWinner !== undefined ? "Game Finished" : isYourPrompt ? "Your Decision" : `${turnLabel}'s Turn`}</h2>
+        </div>
+        {dice && <div className="dice-chip">d{dice.value} / {dice.remaining}</div>}
+      </header>
+      <dl className="turn-stats">
+        <div>
+          <dt>Your Cash</dt>
+          <dd>{assignedPlayer ? formatGold(assignedPlayer.ready_cash) : "-"}</dd>
+        </div>
+        <div>
+          <dt>Your Worth</dt>
+          <dd>{assignedPlayer ? formatGold(netWorth(state, assignedPlayer)) : "-"}</dd>
+        </div>
+        <div>
+          <dt>Target</dt>
+          <dd>{formatGold(state.board.target_networth)}</dd>
+        </div>
+        <div>
+          <dt>Prompt</dt>
+          <dd>{request ? readableType(request.type) : "-"}</dd>
+        </div>
+      </dl>
+      <div className="event-ticker">
+        <span>Latest</span>
+        <p>{latestEvent ?? "The match is ready."}</p>
+      </div>
+    </section>
+  );
+}
+
+function formatSuitCount(player: PlayerState): string {
+  const count = Object.values(player.suits).filter((value) => value > 0).length;
+  return `${count}/4`;
 }
 
 function SquarePanel({ square, state }: { square: SquareInfo | null; state: GameState | null }) {
@@ -498,69 +635,82 @@ function SquarePanel({ square, state }: { square: SquareInfo | null; state: Game
 function PromptPanel({
   request,
   onSubmit,
-  onSave,
-  onSync,
   connected,
 }: {
   request: InputRequest | null;
   onSubmit: (value: unknown) => void;
-  onSave: () => void;
-  onSync: () => void;
   connected: boolean;
 }) {
-  const [rawValue, setRawValue] = useState("");
   const [amount, setAmount] = useState("1");
-
-  function submitRaw(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onSubmit(parseResponseInput(rawValue));
-    setRawValue("");
-  }
 
   const amountNumber = Math.max(0, Math.floor(Number(amount) || 0));
 
   return (
-    <section className="panel prompt-panel">
+    <section className="panel action-panel">
       <header className="panel-header prompt-header">
         <div>
-          <h2>Action</h2>
-          <p>{request ? `${readableType(request.type)} for Player ${request.player_id}` : "No pending prompt"}</p>
-        </div>
-        <div className="prompt-tools">
-          <button type="button" className="secondary" disabled={!connected} onClick={onSave}>
-            Save
-          </button>
-          <button type="button" className="secondary" disabled={!connected} onClick={onSync}>
-            Sync
-          </button>
+          <p className="eyebrow">Action</p>
+          <h2>{request ? getPromptTitle(request) : "Watching the Board"}</h2>
+          <p>{request ? getPromptHelp(request) : "No decision is needed from you right now."}</p>
         </div>
       </header>
       {request ? (
-        <>
-          <PromptControls
-            request={request}
-            amount={amount}
-            amountNumber={amountNumber}
-            onAmountChange={setAmount}
-            onSubmit={onSubmit}
-          />
-          <form className="raw-response" onSubmit={submitRaw}>
-            <label>
-              Raw response fallback
-              <input
-                value={rawValue}
-                onChange={(event) => setRawValue(event.target.value)}
-                placeholder={'Example: "roll", true, null, [1, 20]'}
-              />
-            </label>
-            <button type="submit">Send</button>
-          </form>
-        </>
+        <PromptControls
+          request={request}
+          amount={amount}
+          amountNumber={amountNumber}
+          onAmountChange={setAmount}
+          onSubmit={onSubmit}
+        />
       ) : (
-        <p className="muted">When the server asks for your decision, controls will appear here.</p>
+        <div className="idle-action">
+          <span className="pulse-dot" />
+          <p>{connected ? "Follow the board and wait for your next turn." : "Join a local match to begin."}</p>
+        </div>
       )}
     </section>
   );
+}
+
+function getPromptTitle(request: InputRequest): string {
+  if (request.type === "PRE_ROLL") {
+    return "Choose Your Move";
+  }
+  if (request.type === "CHOOSE_PATH") {
+    return "Choose a Path";
+  }
+  if (request.type === "CONFIRM_STOP") {
+    return "Stop or Keep Moving";
+  }
+  if (request.type === "BUY_SHOP") {
+    return "Buy This Shop?";
+  }
+  if (request.type === "BUY_STOCK") {
+    return "Buy Stock";
+  }
+  if (request.type === "SELL_STOCK") {
+    return "Sell Stock";
+  }
+  if (request.type === "INVEST") {
+    return "Invest in a Shop";
+  }
+  return readableType(request.type);
+}
+
+function getPromptHelp(request: InputRequest): string {
+  if (request.type === "PRE_ROLL") {
+    return "Take any pre-roll actions, or roll the die to start moving.";
+  }
+  if (request.type === "CHOOSE_PATH") {
+    return "Pick where your piece should move next.";
+  }
+  if (request.type === "CONFIRM_STOP") {
+    return "Commit to this square, or undo the last step if allowed.";
+  }
+  if (request.type === "BUY_STOCK" || request.type === "SELL_STOCK") {
+    return "Set a quantity, then choose a district.";
+  }
+  return `Decision for Player ${request.player_id}.`;
 }
 
 function PromptControls({
@@ -782,8 +932,7 @@ function PromptControls({
 
   return (
     <div className="request-data">
-      <p className="muted">This prompt is available through the raw response fallback for now.</p>
-      <pre>{JSON.stringify(request.data, null, 2)}</pre>
+      <p className="muted">This decision needs a temporary manual control. Open Tools to respond.</p>
     </div>
   );
 }
@@ -802,6 +951,113 @@ function AmountInput({
       {label}
       <input type="number" min="0" step="1" value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
+  );
+}
+
+function DevPanel({
+  open,
+  uri,
+  status,
+  playerId,
+  gameId,
+  request,
+  logs,
+  onUriChange,
+  onConnect,
+  onDisconnect,
+  onSave,
+  onSync,
+  onSubmitRaw,
+}: {
+  open: boolean;
+  uri: string;
+  status: string;
+  playerId: number | null;
+  gameId: string | null;
+  request: InputRequest | null;
+  logs: string[];
+  onUriChange: (value: string) => void;
+  onConnect: (event: FormEvent<HTMLFormElement>) => void;
+  onDisconnect: () => void;
+  onSave: () => void;
+  onSync: () => void;
+  onSubmitRaw: (value: unknown) => void;
+}) {
+  const [rawValue, setRawValue] = useState("");
+
+  function submitRaw(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSubmitRaw(parseResponseInput(rawValue));
+    setRawValue("");
+  }
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <aside className="dev-panel" aria-label="Developer tools">
+      <header className="dev-panel-header">
+        <div>
+          <p className="eyebrow">Tools</p>
+          <h2>Local Client Controls</h2>
+        </div>
+        <span className={`connection-dot ${status}`} title={`Connection ${status}`} />
+      </header>
+
+      <form className="dev-connect-form" onSubmit={onConnect}>
+        <label>
+          Local game address
+          <input value={uri} onChange={(event) => onUriChange(event.target.value)} />
+        </label>
+        {status === "connected" ? (
+          <button type="button" className="secondary" onClick={onDisconnect}>
+            Disconnect
+          </button>
+        ) : (
+          <button type="submit">{status === "connecting" ? "Joining" : "Join"}</button>
+        )}
+      </form>
+
+      <section className="dev-status-grid">
+        <StatusPill label="Status" value={status} tone={status as "connected" | "connecting" | "disconnected"} />
+        <StatusPill label="Player" value={playerId === null ? "-" : `P${playerId}`} />
+        <StatusPill label="Game" value={gameId ?? "-"} />
+      </section>
+
+      <section className="dev-tool-row">
+        <button type="button" className="secondary" disabled={status !== "connected"} onClick={onSave}>
+          Save
+        </button>
+        <button type="button" className="secondary" disabled={status !== "connected"} onClick={onSync}>
+          Sync
+        </button>
+      </section>
+
+      <form className="raw-response" onSubmit={submitRaw}>
+        <label>
+          Raw response fallback
+          <input
+            value={rawValue}
+            disabled={!request}
+            onChange={(event) => setRawValue(event.target.value)}
+            placeholder={'Example: "roll", true, null, [1, 20]'}
+          />
+        </label>
+        <button type="submit" disabled={!request}>
+          Send
+        </button>
+      </form>
+
+      <section className="request-data">
+        <header className="mini-header">
+          <h3>Pending Request</h3>
+        </header>
+        <pre>{request ? JSON.stringify(request, null, 2) : "No pending request."}</pre>
+      </section>
+
+      <LogPanel logs={logs} />
+    </aside>
   );
 }
 
