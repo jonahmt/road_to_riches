@@ -27,8 +27,33 @@ function appendLog(logs: string[], message: string): string[] {
   return [...logs, message].slice(-MAX_LOGS);
 }
 
+function closeSocket(socket: WebSocket | null): Promise<void> {
+  if (!socket || socket.readyState === WebSocket.CLOSED) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    let timeoutId: number | null = null;
+    const finish = () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      socket.removeEventListener("close", finish);
+      resolve();
+    };
+
+    socket.addEventListener("close", finish, { once: true });
+    timeoutId = window.setTimeout(finish, 750);
+
+    if (socket.readyState !== WebSocket.CLOSING) {
+      socket.close();
+    }
+  });
+}
+
 export function useGameClient(defaultUri: string) {
   const socketRef = useRef<WebSocket | null>(null);
+  const connectionIdRef = useRef(0);
   const playerIdRef = useRef<number | null>(null);
   const gameIdRef = useRef<string | null>(null);
   const [clientState, setClientState] = useState<GameClientState>({
@@ -45,7 +70,8 @@ export function useGameClient(defaultUri: string) {
   });
 
   const disconnect = useCallback(() => {
-    socketRef.current?.close();
+    connectionIdRef.current += 1;
+    void closeSocket(socketRef.current);
     socketRef.current = null;
     playerIdRef.current = null;
     gameIdRef.current = null;
@@ -71,8 +97,13 @@ export function useGameClient(defaultUri: string) {
   }, []);
 
   const connect = useCallback(
-    (uri: string) => {
-      disconnect();
+    async (uri: string) => {
+      const connectionId = connectionIdRef.current + 1;
+      connectionIdRef.current = connectionId;
+      const previousSocket = socketRef.current;
+      socketRef.current = null;
+      playerIdRef.current = null;
+      gameIdRef.current = null;
       setClientState((current) => ({
         ...current,
         uri,
@@ -87,10 +118,19 @@ export function useGameClient(defaultUri: string) {
         error: null,
       }));
 
+      await closeSocket(previousSocket);
+      if (connectionIdRef.current !== connectionId) {
+        return;
+      }
+
       const socket = new WebSocket(uri);
       socketRef.current = socket;
+      const isCurrentSocket = () => socketRef.current === socket && connectionIdRef.current === connectionId;
 
       socket.addEventListener("open", () => {
+        if (!isCurrentSocket()) {
+          return;
+        }
         setClientState((current) => ({
           ...current,
           status: "connected",
@@ -99,6 +139,9 @@ export function useGameClient(defaultUri: string) {
       });
 
       socket.addEventListener("message", (event) => {
+        if (!isCurrentSocket()) {
+          return;
+        }
         const message = decode(String(event.data));
         setClientState((current) => {
           switch (message.msg) {
@@ -207,16 +250,26 @@ export function useGameClient(defaultUri: string) {
       });
 
       socket.addEventListener("close", () => {
+        if (!isCurrentSocket()) {
+          return;
+        }
         socketRef.current = null;
+        playerIdRef.current = null;
+        gameIdRef.current = null;
         setClientState((current) => ({
           ...current,
           status: "disconnected",
+          playerId: null,
+          gameId: null,
           pendingRequest: null,
           logs: appendLog(current.logs, "Disconnected from server"),
         }));
       });
 
       socket.addEventListener("error", () => {
+        if (!isCurrentSocket()) {
+          return;
+        }
         setClientState((current) => ({
           ...current,
           error: "WebSocket connection error.",
@@ -224,7 +277,7 @@ export function useGameClient(defaultUri: string) {
         }));
       });
     },
-    [disconnect],
+    [],
   );
 
   const submitResponse = useCallback(
