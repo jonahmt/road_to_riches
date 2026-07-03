@@ -48,6 +48,23 @@ until the existing type issues are cleaned up:
 venv/bin/python tools/run_pyright.py
 ```
 
+### Web Client
+The browser client lives in `web/` and uses React, TypeScript, and Vite. It is a
+separate frontend package that connects to the existing Python WebSocket server;
+the backend remains authoritative for game state and rules.
+
+On this machine, the Homebrew Node install may be broken by an `icu4c` dynamic
+library mismatch. The Codex bundled runtime has a working `pnpm`; otherwise use
+any healthy local Node/pnpm install.
+
+```bash
+python -m road_to_riches server --board boards/test_board.json --humans 1 --ai 3
+cd web
+pnpm install
+pnpm dev
+pnpm build
+```
+
 ### Issue Tracking
 All task management uses [Beads](https://github.com/steveyegge/beads) (`bd` CLI).
 Do not use markdown TODO lists or other tracking methods.
@@ -94,9 +111,10 @@ src/road_to_riches/
 ├── protocol.py      # Shared WebSocket message protocol (InputRequest, message builders)
 └── main.py          # Entry point: local, server, client, text modes
 
+web/                 # React/TypeScript web client preview
 boards/              # Board definition JSON files
 design/              # Game design and technical specs (source of truth for game rules)
-tests/               # 514 tests covering all game systems
+tests/               # Test suite covering all game systems
 ```
 
 ## Current Stabilization Baseline

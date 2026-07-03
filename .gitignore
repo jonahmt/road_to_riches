@@ -19,6 +19,13 @@ debug.log
 # OS
 .DS_Store
 
+# Web
+node_modules/
+.pnpm-store/
+web/node_modules/
+web/dist/
+web/.vite/
+
 # Dolt database files (added by bd init)
 .dolt/
 *.db

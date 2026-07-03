@@ -15,6 +15,12 @@ pip install -e .
 # Manual client/server mode
 python -m road_to_riches server --board boards/test_board.json --humans 1 --ai 3
 python -m road_to_riches client
+
+# Web client preview
+python -m road_to_riches server --board boards/test_board.json --humans 1 --ai 3
+cd web
+pnpm install
+pnpm dev
 ```
 
 Run the known-good test command from the project virtualenv:
