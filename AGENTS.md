@@ -11,7 +11,7 @@ You must initialize your session by reading the following files in order. They c
 
 Beads stores its data locally in a Dolt database inside `.beads/dolt/`, which is gitignored. There is **no Dolt remote** configured for this project. To persist beads data across clones/machines, we commit exported JSONL files to git:
 
-1. Run `bd export` (writes to `.beads/backup/`)
+1. Run `bd backup --force` (writes to `.beads/backup/`)
 2. Copy the relevant files to the git-tracked location:
    ```bash
    cp -f .beads/backup/issues.jsonl .beads/issues.jsonl
@@ -20,6 +20,22 @@ Beads stores its data locally in a Dolt database inside `.beads/dolt/`, which is
 3. Commit and push these files with your other changes.
 
 Do this whenever you create, update, or close beads issues. Do **not** attempt `bd dolt push` — there is no Dolt remote.
+
+### Beads/Dolt Local Recovery
+
+Beads 0.59 uses a local Dolt SQL server for the issue database. If Beads commands fail with messages like `Dolt server unreachable`, `port ... is in use by a non-dolt process`, `port ... is busy but cannot identify the process`, or `database "dolt" is locked by another dolt process`, do not run `bd dolt set port` as the first fix. In this repo that writes a deprecated `dolt_server_port` field into tracked `.beads/metadata.json`, creates git noise, and can still leave the database locked.
+
+The usual root cause is a stale Dolt SQL server that still has `.beads/dolt/.dolt/noms/LOCK` open. Diagnose it with:
+```bash
+bd dolt show
+lsof -nP -iTCP:<port> -sTCP:LISTEN
+lsof +D .beads/dolt
+tail -n 80 .beads/dolt-server.log
+```
+
+If `lsof +D .beads/dolt` shows a `dolt` PID holding the lock and `bd dolt stop` says the server is not running, terminate that confirmed stale PID (`kill <pid>`), then start Beads again with `bd dolt start`. In Codex's managed sandbox, Dolt server start/connect probes can misreport a free localhost port as busy; run the recovery/start command outside the sandbox or approve escalation for `bd dolt start` and subsequent `bd ...` commands that need the database.
+
+If a local port override is truly needed, use the ignored runtime file `.beads/dolt-server.port`, not `.beads/metadata.json`. Remove any accidental `dolt_server_port` entry from `.beads/metadata.json` before committing.
 
 ---
 

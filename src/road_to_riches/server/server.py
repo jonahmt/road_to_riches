@@ -95,9 +95,11 @@ class GameServer:
         saved_state: "GameState | None" = None,
         create_default_session: bool = True,
         shutdown_when_default_finished: bool = True,
+        debug_mode: bool = False,
     ) -> None:
         self._sessions = ServerSessionManager()
         self._default_session: GameSession | None = None
+        self._debug_mode = debug_mode
         if create_default_session:
             settings = GameSessionSettings(
                 config=config,
@@ -105,6 +107,7 @@ class GameServer:
                 num_ai=num_ai,
                 ai_delay=ai_delay,
                 saved_state=saved_state,
+                debug_mode=debug_mode,
             )
             self._default_session = self._sessions.create_session(
                 settings,
@@ -200,7 +203,7 @@ class GameServer:
                     await self._handle_sync_request(ws, session)
 
                 elif msg_type == "dev_event":
-                    self._handle_dev_event(session, msg)
+                    await self._handle_dev_event(ws, session, msg)
 
                 else:
                     logger.warning("Unknown message type: %s", msg_type)
@@ -306,6 +309,7 @@ class GameServer:
             num_ai=num_ai,
             ai_delay=ai_delay,
             public=bool(config.get("public", True)),
+            debug_mode=self._debug_mode,
         )
 
     def _prepare_session(self, session: GameSession) -> None:
@@ -493,8 +497,27 @@ class GameServer:
             proc = subprocess.Popen(cmd)
             session.ai_processes.append(proc)
 
-    def _handle_dev_event(self, session: GameSession, msg: dict) -> None:
+    async def _handle_dev_event(
+        self,
+        ws: ServerConnection,
+        session: GameSession,
+        msg: dict,
+    ) -> None:
         """Execute a dev/debug event from a client."""
+        if not session.debug_mode:
+            await ws.send(encode(msg_error("dev events are disabled", session.session_id)))
+            logger.warning("Rejected dev event while debug mode is disabled")
+            return
+        if session.session_id not in self._sessions.sessions_for_connection(ws):
+            await ws.send(
+                encode(
+                    msg_error(
+                        "connection is not joined to this game",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
         if session.game_loop is None:
             logger.warning("Dev event received but game not running")
             return
@@ -627,5 +650,6 @@ def run_server(
         saved_state=saved_state,
         create_default_session=not lobby,
         shutdown_when_default_finished=not lobby,
+        debug_mode=debug,
     )
     asyncio.run(server.serve(host, port))

@@ -54,6 +54,12 @@ pre-roll prompt, but the server writes the save from its authoritative
 saves from local snapshots because they do not own the canonical board path,
 player count, or runtime config.
 
+Dev/debug event controls are development tooling, not normal gameplay. The
+launcher `--debug` flag is the explicit switch for exposing TUI dev controls
+and for allowing server-side `dev_event` execution. Client-created lobby games
+inherit the server process debug setting; clients cannot enable dev events from
+their `create_game` payload.
+
 The diagnostic log is written as JSON Lines by the backend game loop when
 enabled through runtime configuration. It is not saved inside normal save files
 and should record backend events, player input results, presentation messages,

@@ -39,6 +39,7 @@ class GameSessionSettings:
     ai_delay: float = 1.0
     saved_state: Any = None
     public: bool = True
+    debug_mode: bool = False
 
 
 class GameSession:
@@ -78,6 +79,10 @@ class GameSession:
     @property
     def public(self) -> bool:
         return self.settings.public
+
+    @property
+    def debug_mode(self) -> bool:
+        return self.settings.debug_mode
 
     @property
     def saved_state(self) -> Any:

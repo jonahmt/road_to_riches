@@ -78,7 +78,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Max log lines kept in the TUI (local/client mode). Default: unlimited (entire game).",
     )
-    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging and dev commands",
+    )
     parser.add_argument(
         "--lobby",
         action="store_true",
@@ -206,7 +210,7 @@ def main() -> None:
         from road_to_riches.client.tui_app import run_tui_client
 
         uri = f"ws://{args.host}:{args.port}"
-        run_tui_client(uri=uri, log_lines=args.log_lines)
+        run_tui_client(uri=uri, log_lines=args.log_lines, debug_mode=args.debug)
 
     elif args.mode == "local":
         from road_to_riches.client.tui_app import run_tui
@@ -217,6 +221,7 @@ def main() -> None:
             log_lines=args.log_lines,
             resume=args.resume,
             diagnostic_log_path=args.diagnostic_log,
+            debug_mode=args.debug,
         )
 
     else:  # text

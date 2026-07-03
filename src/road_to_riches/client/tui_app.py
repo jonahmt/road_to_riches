@@ -263,12 +263,14 @@ class GameApp(App):
         client_bridge: Any = None,
         log_lines: int | None = None,
         saved_state: "GameState | None" = None,
+        debug_mode: bool = False,
     ) -> None:
         super().__init__()
         self.config = config
         self._saved_state = saved_state
         self._client_bridge = client_bridge
         self._networked = client_bridge is not None
+        self._debug_mode = debug_mode
         # None = unlimited (show entire game log).
         self._log_lines_cap = log_lines
         if self._networked:
@@ -719,6 +721,8 @@ class GameApp(App):
             return
 
         if rtype == InputRequestType.PRE_ROLL and value == "dev":
+            if not self._debug_mode:
+                return
             self._open_dev_menu()
             return
 
@@ -934,7 +938,8 @@ class GameApp(App):
             options.append(("Buy Shop", "buy_shop"))
             options.append(("Save", "save"))
             options.append(("Info", "info"))
-            options.append(("Dev", "dev"))
+            if self._debug_mode:
+                options.append(("Dev", "dev"))
             header = f"P{req.player_id} | Cash: {req.data['cash']}G | Lv{req.data['level']}"
             self._enter_selection_mode(header, options)
             return
@@ -2178,6 +2183,8 @@ class GameApp(App):
 
     def _execute_dev_event(self, event: "GameEvent") -> None:
         """Push a debug event into the pipeline and process it."""
+        if not self._debug_mode:
+            return
         if self.game_loop is not None:
             # Local mode: execute directly
             self.game_loop.pipeline.enqueue(event)
@@ -2196,6 +2203,8 @@ class GameApp(App):
 
     def _open_dev_menu(self) -> None:
         """Show the top-level dev command menu."""
+        if not self._debug_mode:
+            return
         self._dev_mode = "menu"
         self._dev_data = {}
         options = [
@@ -2510,6 +2519,7 @@ def run_tui(
     log_lines: int | None = None,
     resume: str | None = None,
     diagnostic_log_path: str | None = None,
+    debug_mode: bool = False,
 ) -> None:
     """Run the TUI in local mode (game loop runs in-process)."""
     saved_state = None
@@ -2529,18 +2539,24 @@ def run_tui(
             num_players=num_players,
             diagnostic_log_path=diagnostic_log_path,
         )
-    app = GameApp(config=config, log_lines=log_lines, saved_state=saved_state)
+    app = GameApp(
+        config=config,
+        log_lines=log_lines,
+        saved_state=saved_state,
+        debug_mode=debug_mode,
+    )
     app.run()
 
 
 def run_tui_client(
     uri: str = "ws://localhost:8765",
     log_lines: int | None = None,
+    debug_mode: bool = False,
 ) -> None:
     """Run the TUI as a client connecting to a remote game server."""
     from road_to_riches.client.client_bridge import ClientBridge
 
     bridge = ClientBridge(uri)
     bridge.connect()
-    app = GameApp(client_bridge=bridge, log_lines=log_lines)
+    app = GameApp(client_bridge=bridge, log_lines=log_lines, debug_mode=debug_mode)
     app.run()

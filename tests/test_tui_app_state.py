@@ -18,8 +18,8 @@ from road_to_riches.models.stock_state import StockPrice, StockState
 class HarnessGameApp(GameApp):
     """GameApp test harness that does not start background game workers."""
 
-    def __init__(self, state: GameState) -> None:
-        super().__init__(config=None)
+    def __init__(self, state: GameState, *, debug_mode: bool = False) -> None:
+        super().__init__(config=None, debug_mode=debug_mode)
         self.state = state
         self.submitted: list[object] = []
 
@@ -294,3 +294,36 @@ async def _selection_submit_keeps_command_input_hidden_while_waiting():
         assert command_input.value == ""
         assert command_input.placeholder == "Enter command..."
         assert command_input.display is False
+
+
+def test_pre_roll_dev_option_requires_debug_mode():
+    asyncio.run(_pre_roll_dev_option_requires_debug_mode())
+
+
+async def _pre_roll_dev_option_requires_debug_mode():
+    req = InputRequest(
+        type=InputRequestType.PRE_ROLL,
+        player_id=0,
+        data={
+            "cash": 500,
+            "level": 1,
+            "has_stock": False,
+            "has_shops": False,
+        },
+    )
+
+    normal_app = HarnessGameApp(_state())
+    normal_app.player_input = RecordingInput(normal_app)
+    async with normal_app.run_test():
+        normal_app._current_request = req
+        normal_app._show_prompt(req)
+
+        assert ("Dev", "dev") not in normal_app._selection_options
+
+    debug_app = HarnessGameApp(_state(), debug_mode=True)
+    debug_app.player_input = RecordingInput(debug_app)
+    async with debug_app.run_test():
+        debug_app._current_request = req
+        debug_app._show_prompt(req)
+
+        assert ("Dev", "dev") in debug_app._selection_options

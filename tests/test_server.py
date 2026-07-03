@@ -12,6 +12,7 @@ from road_to_riches.protocol import (
     InputRequestType,
     encode,
     msg_create_game,
+    msg_dev_event,
     msg_join_game,
     msg_list_games,
     msg_save_game,
@@ -61,6 +62,35 @@ def _make_state(num_players: int = 2) -> GameState:
         for i in range(num_players)
     ]
     return GameState(board=board, stock=stock, players=players)
+
+
+class RecordingPipeline:
+    def __init__(self) -> None:
+        self.enqueued: list[object] = []
+        self.processed = 0
+
+    def enqueue(self, event: object) -> None:
+        self.enqueued.append(event)
+
+    def process_next(self, state: object) -> object | None:
+        self.processed += 1
+        if not self.enqueued:
+            return None
+        return self.enqueued[-1]
+
+
+class FakeGameLoop:
+    def __init__(self, state: GameState, pipeline: RecordingPipeline) -> None:
+        self.state = state
+        self.pipeline = pipeline
+
+
+class RecordingPlayerInput:
+    def __init__(self) -> None:
+        self.states: list[GameState] = []
+
+    def _send_state(self, state: GameState) -> None:
+        self.states.append(state)
 
 
 def test_create_game_creates_distinct_sessions_and_assigns_hosts():
@@ -188,6 +218,97 @@ def test_default_launcher_path_still_assigns_default_and_spawns_ai():
         assert _messages(ws) == [{"msg": "assign_player", "player_id": 0, "game_id": "default"}]
         assert spawned == [("default", "localhost", 8765)]
         assert session.started is False
+
+    asyncio.run(scenario())
+
+
+def test_dev_event_is_rejected_when_debug_mode_is_disabled():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        ws = FakeWebSocket()
+        await server._handle_create_game(
+            ws,
+            msg_create_game({"board": "boards/test_board.json", "humans": 1, "ai": 0}),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(ws)[0]["game_id"]
+        session = server._sessions.require(game_id)
+        pipeline = RecordingPipeline()
+        session.game_loop = FakeGameLoop(  # type: ignore[assignment]
+            _make_state(num_players=1),
+            pipeline,
+        )
+        session.player_input = RecordingPlayerInput()  # type: ignore[assignment]
+
+        await server._handle_dev_event(
+            ws,
+            session,
+            msg_dev_event(
+                "TransferCashEvent",
+                {"from_player_id": None, "to_player_id": 0, "amount": 5},
+                game_id=game_id,
+            ),
+        )
+
+        assert _messages(ws)[-1] == {
+            "msg": "error",
+            "error": "dev events are disabled",
+            "game_id": game_id,
+        }
+        assert pipeline.enqueued == []
+        assert pipeline.processed == 0
+
+    asyncio.run(scenario())
+
+
+def test_server_debug_mode_allows_dev_events_for_created_sessions():
+    async def scenario() -> None:
+        server = GameServer(
+            GameConfig(board_path="boards/test_board.json", num_players=4),
+            create_default_session=False,
+            shutdown_when_default_finished=False,
+            debug_mode=True,
+        )
+        server._loop = asyncio.get_running_loop()
+        ws = FakeWebSocket()
+        await server._handle_create_game(
+            ws,
+            msg_create_game(
+                {
+                    "board": "boards/test_board.json",
+                    "humans": 1,
+                    "ai": 0,
+                    "debug_mode": False,
+                }
+            ),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(ws)[0]["game_id"]
+        session = server._sessions.require(game_id)
+        pipeline = RecordingPipeline()
+        player_input = RecordingPlayerInput()
+        state = _make_state(num_players=1)
+        session.game_loop = FakeGameLoop(state, pipeline)  # type: ignore[assignment]
+        session.player_input = player_input  # type: ignore[assignment]
+
+        await server._handle_dev_event(
+            ws,
+            session,
+            msg_dev_event(
+                "TransferCashEvent",
+                {"from_player_id": None, "to_player_id": 0, "amount": 5},
+                game_id=game_id,
+            ),
+        )
+
+        assert session.debug_mode is True
+        assert len(pipeline.enqueued) == 1
+        assert pipeline.enqueued[0].event_type == "TransferCashEvent"
+        assert pipeline.processed == 1
+        assert player_input.states == [state]
 
     asyncio.run(scenario())
 
