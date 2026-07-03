@@ -200,9 +200,22 @@ h3 {
 .connect-form,
 .dev-connect-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 10px;
+}
+
+.connect-form {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.dev-connect-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.connect-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .player-hud {

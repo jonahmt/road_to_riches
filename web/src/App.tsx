@@ -137,8 +137,11 @@ function App() {
         <ConnectPanel
           uri={uri}
           status={clientState.status}
+          playerId={clientState.playerId}
+          gameId={clientState.gameId}
           onUriChange={setUri}
           onConnect={handleConnect}
+          onDisconnect={disconnect}
           latestEvent={latestEvent}
         />
       ) : (
@@ -211,16 +214,24 @@ function getLatestGameLog(logs: string[]): string | null {
 function ConnectPanel({
   uri,
   status,
+  playerId,
+  gameId,
   latestEvent,
   onUriChange,
   onConnect,
+  onDisconnect,
 }: {
   uri: string;
   status: string;
+  playerId: number | null;
+  gameId: string | null;
   latestEvent: string | null;
   onUriChange: (value: string) => void;
   onConnect: (event: FormEvent<HTMLFormElement>) => void;
+  onDisconnect: () => void;
 }) {
+  const statusMessage = getConnectStatusMessage(status, playerId, gameId, latestEvent);
+
   return (
     <section className="connect-stage">
       <div className="connect-card">
@@ -228,21 +239,51 @@ function ConnectPanel({
           <p className="eyebrow">Local Play</p>
           <h2>Start a match on this machine</h2>
         </div>
+        <div className="connect-status-grid" aria-label="Connection status">
+          <StatusPill
+            label="Status"
+            value={status}
+            tone={status as "connected" | "connecting" | "disconnected"}
+          />
+          <StatusPill label="Player" value={playerId === null ? "-" : `P${playerId}`} />
+          <StatusPill label="Game" value={gameId ?? "-"} />
+        </div>
         <form className="connect-form" onSubmit={onConnect}>
           <label>
             Local game address
             <input value={uri} onChange={(event) => onUriChange(event.target.value)} />
           </label>
           <button type="submit" disabled={status === "connecting"}>
-            {status === "connecting" ? "Joining" : "Join Game"}
+            {status === "connecting" ? "Joining" : status === "connected" ? "Reconnect" : "Join Game"}
           </button>
+          {status === "connected" && (
+            <button type="button" className="secondary" onClick={onDisconnect}>
+              Disconnect
+            </button>
+          )}
         </form>
-        <p className="muted">
-          {latestEvent ?? "Waiting for a local Road to Riches server to host the match."}
-        </p>
+        <p className="muted">{statusMessage}</p>
       </div>
     </section>
   );
+}
+
+function getConnectStatusMessage(
+  status: string,
+  playerId: number | null,
+  gameId: string | null,
+  latestEvent: string | null,
+): string {
+  if (status === "connecting") {
+    return "Connecting to the local Road to Riches server...";
+  }
+  if (status === "connected" && playerId !== null) {
+    return `Joined ${gameId ?? "the local match"} as Player ${playerId}. Waiting for the board state...`;
+  }
+  if (status === "connected") {
+    return "Connected to the server, but no player slot has been assigned yet. The current match may already have its human player.";
+  }
+  return latestEvent ?? "Waiting for a local Road to Riches server to host the match.";
 }
 
 function StatusPill({

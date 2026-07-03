@@ -176,10 +176,32 @@ export function useGameClient(defaultUri: string) {
                 logs: appendLog(current.logs, `Error: ${message.error}`),
               };
             case "game_created":
+              gameIdRef.current = message.game_id;
+              return {
+                ...current,
+                gameId: message.game_id,
+                logs: appendLog(current.logs, `Created game ${message.game_id}`),
+              };
             case "joined_game":
+              playerIdRef.current = message.player_id;
+              gameIdRef.current = message.game_id;
+              return {
+                ...current,
+                playerId: message.player_id,
+                gameId: message.game_id,
+                logs: appendLog(current.logs, `Joined game ${message.game_id} as Player ${message.player_id}`),
+              };
             case "games_list":
+              return {
+                ...current,
+                logs: appendLog(current.logs, `Found ${message.games.length} open game${message.games.length === 1 ? "" : "s"}`),
+              };
             case "game_starting":
-              return current;
+              return {
+                ...current,
+                gameId: message.game_id,
+                logs: appendLog(current.logs, `Game ${message.game_id} is starting`),
+              };
           }
         });
       });
