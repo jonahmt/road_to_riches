@@ -44,7 +44,10 @@ def test_round_trip_log():
 
 
 def test_round_trip_ui_notification():
-    original = msg_ui_notification("pause", {"seconds": 1.5})
+    original = msg_ui_notification(
+        "venture_card_revealed",
+        {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
+    )
     assert decode(encode(original)) == original
 
 
@@ -164,7 +167,7 @@ def test_msg_field_dice():
 
 
 def test_msg_field_ui_notification():
-    assert msg_ui_notification("pause")["msg"] == "ui_notification"
+    assert msg_ui_notification("venture_card_revealed")["msg"] == "ui_notification"
 
 
 def test_msg_field_game_over():
@@ -201,7 +204,7 @@ def test_session_aware_builders_omit_game_id_by_default():
     assert "game_id" not in msg_assign_player(1)
     assert "game_id" not in msg_identify(1)
     assert "game_id" not in msg_log_retract(1)
-    assert "game_id" not in msg_ui_notification("pause")
+    assert "game_id" not in msg_ui_notification("venture_card_revealed")
 
 
 def test_session_aware_builders_include_game_id_when_provided():
@@ -211,7 +214,7 @@ def test_session_aware_builders_include_game_id_when_provided():
     assert msg_log_retract(2, game_id="game-1")["game_id"] == "game-1"
     assert msg_state_sync({}, game_id="game-1")["game_id"] == "game-1"
     assert msg_log("hello", game_id="game-1")["game_id"] == "game-1"
-    assert msg_ui_notification("pause", game_id="game-1")["game_id"] == "game-1"
+    assert msg_ui_notification("venture_card_revealed", game_id="game-1")["game_id"] == "game-1"
     assert msg_dice(3, 1, game_id="game-1")["game_id"] == "game-1"
     assert msg_game_over(0, game_id="game-1")["game_id"] == "game-1"
     assert msg_save_game(1, game_id="game-1")["game_id"] == "game-1"

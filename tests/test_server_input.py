@@ -176,7 +176,10 @@ def test_session_player_input_tags_outbound_messages():
         log = GameLog()
         log.log("hello")
         player_input._flush_log(log)
-        player_input.notify_ui("pause", {"seconds": 1.5})
+        player_input.notify_ui(
+            "venture_card_revealed",
+            {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
+        )
         player_input.notify_dice(3, 2)
         player_input.retract_log(1)
         player_input.send_game_over(0)
@@ -185,8 +188,8 @@ def test_session_player_input_tags_outbound_messages():
             {"msg": "log", "text": "hello", "game_id": "game-1"},
             {
                 "msg": "ui_notification",
-                "type": "pause",
-                "data": {"seconds": 1.5},
+                "type": "venture_card_revealed",
+                "data": {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
                 "game_id": "game-1",
             },
             {"msg": "dice", "value": 3, "remaining": 2, "game_id": "game-1"},

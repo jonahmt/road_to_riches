@@ -180,10 +180,19 @@ def test_ui_notification_messages_are_reported_to_callback():
     bridge.set_ui_notification_callback(lambda kind, data: notifications.append((kind, data)))
 
     bridge._handle_message(
-        {"msg": "ui_notification", "type": "pause", "data": {"seconds": 1.5}}
+        {
+            "msg": "ui_notification",
+            "type": "venture_card_revealed",
+            "data": {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
+        }
     )
 
-    assert notifications == [("pause", {"seconds": 1.5})]
+    assert notifications == [
+        (
+            "venture_card_revealed",
+            {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
+        )
+    ]
 
 
 def test_ui_notification_is_ignored_for_other_game():
@@ -195,8 +204,8 @@ def test_ui_notification_is_ignored_for_other_game():
     bridge._handle_message(
         {
             "msg": "ui_notification",
-            "type": "pause",
-            "data": {"seconds": 1.5},
+            "type": "venture_card_revealed",
+            "data": {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
             "game_id": "game-2",
         }
     )

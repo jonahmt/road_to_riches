@@ -311,10 +311,10 @@ class PlayerInput(ABC):
         """Notify the UI of dice roll / remaining moves. Override if needed."""
 
     def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
-        """Notify the UI about non-log presentation metadata.
+        """Notify the UI about semantic, non-log presentation metadata.
 
-        This is for client-only presentation hints, such as pacing pauses,
-        that should not appear in the player-facing game log.
+        The backend owns the game facts, not client timing. Do not include
+        animation durations, delays, or other client pacing instructions here.
         """
 
     def retract_log(self, count: int) -> None:
@@ -1267,8 +1267,13 @@ class GameLoop:
         self.log.log(f"Venture Card: {card.name} — {card.description}")
         self.input.notify(self.state, self.log)
         self.input.notify_ui(
-            "pause",
-            {"seconds": 1.5, "source": "venture_card"},
+            "venture_card_revealed",
+            {
+                "player_id": player_id,
+                "card_id": card.card_id,
+                "name": card.name,
+                "description": card.description,
+            },
         )
         self.run_script(card.script_path, player_id)
 

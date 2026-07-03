@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from types import SimpleNamespace
 
 from textual.widgets import Input
 
-from road_to_riches.client.tui_app import GameApp, PromptBar
+from road_to_riches.client.tui_app import VENTURE_CARD_REVEAL_PAUSE_SECONDS, GameApp, PromptBar
 from road_to_riches.client.tui_input import InputRequest, InputRequestType, TuiPlayerInput
 from road_to_riches.models.board_state import BoardState, PromotionInfo, SquareInfo, Waypoint
 from road_to_riches.models.game_state import GameState
@@ -149,9 +150,35 @@ def test_tui_player_input_forwards_ui_notifications():
         lambda kind, data: notifications.append((kind, data))
     )
 
-    player_input.notify_ui("pause", {"seconds": 1.5})
+    player_input.notify_ui(
+        "venture_card_revealed",
+        {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
+    )
 
-    assert notifications == [("pause", {"seconds": 1.5})]
+    assert notifications == [
+        (
+            "venture_card_revealed",
+            {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
+        )
+    ]
+
+
+def test_venture_card_reveal_pause_is_client_owned():
+    app = HarnessGameApp(_state())
+
+    async def run() -> None:
+        async with app.run_test():
+            before = time.monotonic()
+            app.handle_ui_notification(
+                app.UiNotification(
+                    "venture_card_revealed",
+                    {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
+                )
+            )
+
+            assert app._log_pause_until >= before + VENTURE_CARD_REVEAL_PAUSE_SECONDS
+
+    asyncio.run(run())
 
 
 def test_default_invest_submission_clears_amount_prompt_immediately():

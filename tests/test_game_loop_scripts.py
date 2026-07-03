@@ -258,9 +258,16 @@ class TestHandleVentureCard:
         assert loop.state.venture_grid.cells[0][0] == 0
         assert not any(message.startswith("<<PAUSE:") for message in loop.log.messages)
         loop.input.notify_ui.assert_called_once_with(
-            "pause",
-            {"seconds": 1.5, "source": "venture_card"},
+            "venture_card_revealed",
+            {
+                "player_id": 0,
+                "card_id": 1,
+                "name": "T",
+                "description": "desc",
+            },
         )
+        notification_data = loop.input.notify_ui.call_args.args[1]
+        assert "seconds" not in notification_data
 
     def test_multiple_claims_in_one_turn_see_prior_pick(self, tmp_path):
         first_script = (

@@ -46,6 +46,7 @@ _PLAYER_RE = re.compile(r"\bPlayer (\d)\b")
 _GOLD_RE = re.compile(r"\b(\d+)G\b")
 
 STOCK_MAX_PER_BUY = 99
+VENTURE_CARD_REVEAL_PAUSE_SECONDS = 1.5
 
 
 def _stock_fluct_delta(current_price: int) -> int:
@@ -395,14 +396,9 @@ class GameApp(App):
 
     @on(UiNotification)
     def handle_ui_notification(self, event: UiNotification) -> None:
-        if event.notification_type != "pause":
+        if event.notification_type != "venture_card_revealed":
             return
-        try:
-            seconds = float(event.data.get("seconds", 0))
-        except (TypeError, ValueError):
-            return
-        if seconds <= 0:
-            return
+        seconds = VENTURE_CARD_REVEAL_PAUSE_SECONDS
         self._log_pause_until = max(self._log_pause_until, time.monotonic() + seconds)
         self._ensure_log_flush_timer()
 
