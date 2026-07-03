@@ -21,7 +21,14 @@ from textual.timer import Timer
 from textual.widgets import Input, RichLog, Static
 
 from road_to_riches.client.direction import compute_direction_keys, format_key_hints
-from road_to_riches.client.display import DISTRICT_COLORS, PLAYER_COLORS, SUIT_COLORS, SUIT_SYMBOLS
+from road_to_riches.client.display import (
+    DISTRICT_COLORS,
+    PLAYER_COLORS,
+    STANDARD_SUITS,
+    SUIT_COLORS,
+    SUIT_MENU_OPTIONS,
+    SUIT_SYMBOLS,
+)
 from road_to_riches.client.tui_input import InputRequest, InputRequestType, TuiPlayerInput
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
 
@@ -1477,11 +1484,10 @@ class GameApp(App):
             line.append(f"${s['cash']:>{widths['cash']}}", style="gold1")
             line.append(f" | P:{s['prop']:>{widths['prop']}}", style=color)
             line.append(f" | S:{s['stock']:>{widths['stock']}} ", style=color)
-            FIXED_ORDER = ["SPADE", "HEART", "DIAMOND", "CLUB"]
             suit_names = {
                 (s.value if hasattr(s, "value") else s): qty for s, qty in p.suits.items()
             }
-            for i, name in enumerate(FIXED_ORDER):
+            for i, name in enumerate(STANDARD_SUITS):
                 if i > 0:
                     line.append(" ")
                 if suit_names.get(name, 0) > 0:
@@ -2116,8 +2122,6 @@ class GameApp(App):
 
         parts = [f"[bright_white]sq{sq.id}[/] {sq.type.value}"]
         if sq.property_district is not None:
-            from road_to_riches.client.board_renderer import DISTRICT_COLORS
-
             dc = DISTRICT_COLORS[sq.property_district % len(DISTRICT_COLORS)]
             parts.append(f"[{dc}]d{sq.property_district}[/{dc}]")
         if sq.property_owner is not None:
@@ -2274,14 +2278,10 @@ class GameApp(App):
         if self._dev_mode == "suit":
             if "player_id" not in self._dev_data:
                 self._dev_data["player_id"] = value
-                suits = [
-                    ("Spade", "SPADE"),
-                    ("Heart", "HEART"),
-                    ("Diamond", "DIAMOND"),
-                    ("Club", "CLUB"),
-                    ("Wild", "WILD"),
-                ]
-                self._enter_selection_mode(f"[grey50]DEV[/grey50] Suit for P{value}:", suits)
+                self._enter_selection_mode(
+                    f"[grey50]DEV[/grey50] Suit for P{value}:",
+                    list(SUIT_MENU_OPTIONS),
+                )
                 return
             if "suit" not in self._dev_data:
                 self._dev_data["suit"] = value

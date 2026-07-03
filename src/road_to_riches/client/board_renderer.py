@@ -10,8 +10,13 @@ Based on the design spec in design/p0_client.md.
 
 from __future__ import annotations
 
-from road_to_riches.client.display import DISTRICT_COLORS, PLAYER_COLORS, SUIT_ABBR, SUIT_COLORS
-from road_to_riches.client.display import SUIT_SYMBOLS as DISPLAY_SUIT_SYMBOLS
+from road_to_riches.client.display import (
+    BOARD_SUIT_SYMBOLS,
+    DISTRICT_COLORS,
+    PLAYER_COLORS,
+    SUIT_ABBR,
+    SUIT_COLORS,
+)
 from road_to_riches.models.board_state import BoardState, SquareInfo
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.square_type import SquareType
@@ -20,9 +25,6 @@ from road_to_riches.models.square_type import SquareType
 # Each square is 4x4 pixels.
 SQUARE_PX = 4  # square size in pixels (both axes)
 PX_CHARS = 2  # chars per pixel horizontally
-
-# Renderer only supports board suit squares; WILD is a player/card symbol.
-SUIT_SYMBOLS = {name: DISPLAY_SUIT_SYMBOLS[name] for name in ("SPADE", "HEART", "DIAMOND", "CLUB")}
 
 # Square type display config: (line1_text, line2_text, main_color, highlight_color)
 _SPECIAL_DISPLAY: dict[SquareType, tuple[str, str, str, str]] = {
@@ -106,7 +108,7 @@ def _render_cell(
     elif sq.type == SquareType.SUIT:
         suit_name = sq.suit.value if isinstance(sq.suit, Suit) else str(sq.suit)
         line1_text = SUIT_ABBR.get(suit_name, suit_name[:5]).center(INNER_W)
-        symbol = SUIT_SYMBOLS.get(suit_name, "?")
+        symbol = BOARD_SUIT_SYMBOLS.get(suit_name, "?")
         line2_text = f"  {symbol}{symbol}  "
         main_color = SUIT_COLORS.get(suit_name, "white")
         highlight_color = "white"
@@ -114,7 +116,7 @@ def _render_cell(
     elif sq.type == SquareType.CHANGE_OF_SUIT:
         line1_text = "C.o.S."
         suit_name = sq.suit.value if isinstance(sq.suit, Suit) else "SPADE"
-        symbol = SUIT_SYMBOLS.get(suit_name, "?")
+        symbol = BOARD_SUIT_SYMBOLS.get(suit_name, "?")
         abbr = SUIT_ABBR.get(suit_name, suit_name[:4])
         line2_text = f" {abbr} " if len(abbr) <= 4 else abbr[:INNER_W]
         main_color = SUIT_COLORS.get(suit_name, "white")

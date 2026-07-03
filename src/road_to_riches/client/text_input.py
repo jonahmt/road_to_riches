@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from road_to_riches.client.display import ALL_SUITS, SUIT_TEXT_SYMBOLS
 from road_to_riches.engine.affordability import stock_liquidation_value
 from road_to_riches.engine.game_loop import GameLog, PlayerInput
 from road_to_riches.engine.property import current_rent, max_capital
@@ -584,18 +585,13 @@ class TextPlayerInput(PlayerInput):
 
 
 def _fmt_suits(player) -> str:
-    from road_to_riches.models.suit import Suit
-
-    symbols = {
-        Suit.SPADE: "S",
-        Suit.HEART: "H",
-        Suit.DIAMOND: "D",
-        Suit.CLUB: "C",
-        Suit.WILD: "W",
+    suit_names = {
+        (s.value if hasattr(s, "value") else str(s)): qty for s, qty in player.suits.items()
     }
     parts = []
-    for suit, sym in symbols.items():
-        count = player.suits.get(suit, 0)
+    for name in ALL_SUITS:
+        count = suit_names.get(name, 0)
         if count > 0:
+            sym = SUIT_TEXT_SYMBOLS[name]
             parts.append(sym if count == 1 else f"{sym}x{count}")
     return " ".join(parts) if parts else "none"
