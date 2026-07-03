@@ -13,6 +13,14 @@ const DEFAULT_URI = "ws://localhost:8765";
 
 const PLAYER_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
 const DISTRICT_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
+const BOARD_TILE_SIZE = 4;
+const BOARD_TILE_RADIUS = BOARD_TILE_SIZE / 2;
+const BOARD_TILE_STROKE_WIDTH = 0.14;
+const BOARD_TILE_STROKE_INSET = BOARD_TILE_STROKE_WIDTH / 2;
+const BOARD_TILE_DRAW_SIZE = BOARD_TILE_SIZE - BOARD_TILE_STROKE_WIDTH;
+const BOARD_TILE_SELECTION_INSET = 0.34;
+const BOARD_TILE_SELECTION_STROKE_WIDTH = 0.12;
+const BOARD_TILE_SELECTION_SIZE = BOARD_TILE_SIZE - BOARD_TILE_SELECTION_INSET * 2;
 
 function getPlayerColor(playerId: number): string {
   return PLAYER_COLORS[playerId % PLAYER_COLORS.length];
@@ -242,12 +250,13 @@ function BoardPanel({
                 <rect
                   className="board-square-tile"
                   data-square-id={square.id}
-                  x={square.position[0] - 2}
-                  y={square.position[1] - 2}
-                  width="4"
-                  height="4"
+                  x={square.position[0] - BOARD_TILE_RADIUS + BOARD_TILE_STROKE_INSET}
+                  y={square.position[1] - BOARD_TILE_RADIUS + BOARD_TILE_STROKE_INSET}
+                  width={BOARD_TILE_DRAW_SIZE}
+                  height={BOARD_TILE_DRAW_SIZE}
                   rx="0.32"
                   ry="0.32"
+                  strokeWidth={BOARD_TILE_STROKE_WIDTH}
                   style={{
                     stroke: getDistrictColor(square.property_district),
                     fill: "rgba(8, 10, 14, 0.92)",
@@ -256,12 +265,13 @@ function BoardPanel({
                 {isSelected && (
                   <rect
                     className="board-square-selection"
-                    x={square.position[0] - 2.16}
-                    y={square.position[1] - 2.16}
-                    width="4.32"
-                    height="4.32"
-                    rx="0.42"
-                    ry="0.42"
+                    x={square.position[0] - BOARD_TILE_RADIUS + BOARD_TILE_SELECTION_INSET}
+                    y={square.position[1] - BOARD_TILE_RADIUS + BOARD_TILE_SELECTION_INSET}
+                    width={BOARD_TILE_SELECTION_SIZE}
+                    height={BOARD_TILE_SELECTION_SIZE}
+                    rx="0.24"
+                    ry="0.24"
+                    strokeWidth={BOARD_TILE_SELECTION_STROKE_WIDTH}
                   />
                 )}
                 <text
@@ -305,12 +315,11 @@ function BoardPanel({
 function getBoardBounds(state: GameState) {
   const xs = state.board.squares.map((square) => square.position[0]);
   const ys = state.board.squares.map((square) => square.position[1]);
-  const tileRadius = 2;
   const outerPadding = 1;
-  const minX = Math.min(...xs) - tileRadius - outerPadding;
-  const maxX = Math.max(...xs) + tileRadius + outerPadding;
-  const minY = Math.min(...ys) - tileRadius - outerPadding;
-  const maxY = Math.max(...ys) + tileRadius + outerPadding;
+  const minX = Math.min(...xs) - BOARD_TILE_RADIUS - outerPadding;
+  const maxX = Math.max(...xs) + BOARD_TILE_RADIUS + outerPadding;
+  const minY = Math.min(...ys) - BOARD_TILE_RADIUS - outerPadding;
+  const maxY = Math.max(...ys) + BOARD_TILE_RADIUS + outerPadding;
   return {
     minX,
     minY,

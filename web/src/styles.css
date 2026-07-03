@@ -246,19 +246,18 @@ h2 {
 }
 
 .board-square-tile {
-  stroke-width: 0.14;
   filter: drop-shadow(0 0.34px 0.5px rgba(0, 0, 0, 0.45));
+  transition: filter 120ms ease;
 }
 
 .board-square-group:hover .board-square-tile,
 .board-square-group:focus-visible .board-square-tile {
-  stroke-width: 0.2;
+  filter: brightness(1.12) drop-shadow(0 0.34px 0.5px rgba(0, 0, 0, 0.45));
 }
 
 .board-square-selection {
   fill: none;
   stroke: #f7f7f2;
-  stroke-width: 0.12;
 }
 
 .square-type,
