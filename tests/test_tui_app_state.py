@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 from textual.widgets import Input
 
@@ -125,6 +126,20 @@ async def _exiting_browse_preserves_stock_purchase_overlay_state():
         assert app._stock_overlay_selected_district == 0
         assert app._phase_data["district_id"] == 0
         assert app._input_phase == 1
+
+
+def test_browse_viewport_pixels_use_board_widget_size():
+    app = HarnessGameApp(_state())
+    widget = SimpleNamespace(size=SimpleNamespace(width=81, height=17))
+
+    assert app._board_viewport_pixels(widget) == (40, 17)
+
+
+def test_browse_viewport_pixels_fall_back_when_unmeasured():
+    app = HarnessGameApp(_state())
+    widget = SimpleNamespace(size=SimpleNamespace(width=0, height=0))
+
+    assert app._board_viewport_pixels(widget) == (None, None)
 
 
 def test_default_invest_submission_clears_amount_prompt_immediately():

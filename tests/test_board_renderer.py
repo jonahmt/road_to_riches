@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import road_to_riches.client.board_renderer as board_renderer
 from road_to_riches.board import load_board
 from road_to_riches.client.board_renderer import (
     CELL_H,
@@ -9,10 +10,11 @@ from road_to_riches.client.board_renderer import (
     render_board,
     render_square_cell,
 )
-from road_to_riches.models.board_state import SquareInfo
+from road_to_riches.models.board_state import BoardState, PromotionInfo, SquareInfo
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
 from road_to_riches.models.square_type import SquareType
+from road_to_riches.models.stock_state import StockState
 from road_to_riches.models.suit import Suit
 
 
@@ -191,3 +193,40 @@ class TestRenderBoard:
         output = render_board(state)
         assert "[gold1]" in output  # BANK main color
         assert "[white]" in output  # square ids
+
+    def test_viewport_skips_offscreen_cell_rendering(self, monkeypatch):
+        board = BoardState(
+            max_dice_roll=6,
+            promotion_info=PromotionInfo(),
+            target_networth=1000,
+            max_bankruptcies=3,
+            squares=[
+                SquareInfo(id=0, position=(0, 0), type=SquareType.BANK),
+                SquareInfo(id=1, position=(4, 0), type=SquareType.SHOP),
+                SquareInfo(id=2, position=(40, 0), type=SquareType.VENTURE),
+            ],
+            num_districts=1,
+        )
+        state = GameState(
+            board=board,
+            stock=StockState(stocks=[]),
+            players=[PlayerState(player_id=0, position=0, ready_cash=1500)],
+        )
+        rendered_ids: list[int] = []
+        original_render_cell = board_renderer._render_cell
+
+        def record_rendered_square(sq, *args, **kwargs):
+            rendered_ids.append(sq.id)
+            return original_render_cell(sq, *args, **kwargs)
+
+        monkeypatch.setattr(board_renderer, "_render_cell", record_rendered_square)
+
+        output = render_board(
+            state,
+            camera_center=(2, 2),
+            viewport_w=4,
+            viewport_h=4,
+        )
+
+        assert "BANK" in output
+        assert rendered_ids == [0]

@@ -304,6 +304,11 @@ def render_board(
 
     for sq in board.squares:
         sx, sy = sq.position[0], sq.position[1]
+        buf_x = sx - cam_x
+        buf_y = sy - cam_y
+        if buf_y + SQUARE_PX <= 0 or buf_y >= vh or buf_x + SQUARE_PX <= 0 or buf_x >= vw:
+            continue
+
         pids = player_positions.get(sq.id, [])
         is_browsed = browsed_square_id is not None and sq.id == browsed_square_id
         do_flash = (
@@ -313,10 +318,9 @@ def render_board(
 
         for row_offset in range(SQUARE_PX):
             py = sy + row_offset
-            buf_y = py - cam_y
-            buf_x = sx - cam_x
-            if 0 <= buf_y < vh and buf_x + SQUARE_PX > 0 and buf_x < vw:
-                cell_at[(buf_x, buf_y)] = cell_lines[row_offset]
+            row_y = py - cam_y
+            if 0 <= row_y < vh:
+                cell_at[(buf_x, row_y)] = cell_lines[row_offset]
 
     # Assemble output: scan each row, place cells or empty pixels
     empty_px = " " * PX_CHARS

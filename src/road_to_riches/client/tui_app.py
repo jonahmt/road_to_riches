@@ -316,6 +316,7 @@ class GameApp(App):
         self._browse_grid: list[list[int | None]] = []
         self._browse_positions: dict[int, tuple[int, int]] = {}
         self._browse_neighbors: dict[int, set[int]] = {}
+        self._browse_square_by_id: dict[int, Any] = {}
         self._browse_restore_prompt_text = ""
         # Stock overlay state
         self._stock_overlay_active = False
@@ -1943,6 +1944,8 @@ class GameApp(App):
         if not self._browse_grid:
             return
 
+        self._browse_square_by_id = {sq.id: sq for sq in state.board.squares}
+
         # Build sq_id -> (row, col) lookup from the rendered grid.
         self._browse_positions = {}
         for r, row in enumerate(self._browse_grid):
@@ -1990,6 +1993,7 @@ class GameApp(App):
         self._browse_grid = []
         self._browse_positions = {}
         self._browse_neighbors = {}
+        self._browse_square_by_id = {}
         self._chord.reset()
         self._refresh_board()
         if restore_prompt:
@@ -2099,22 +2103,46 @@ class GameApp(App):
         sq_id = self._browse_grid[self._browse_row][self._browse_col]
         if sq_id is None:
             return
+        sq = self._browse_square_by_id.get(sq_id)
+        if sq is None:
+            return
 
-        from road_to_riches.client.board_renderer import render_board
+        from road_to_riches.client.board_renderer import SQUARE_PX, render_board
+
+        board_widget = self.query_one("#board-view", RichLog)
+        viewport_w, viewport_h = self._board_viewport_pixels(board_widget)
+        camera_center = None
+        if viewport_w is not None and viewport_h is not None:
+            camera_center = (
+                sq.position[0] + SQUARE_PX // 2,
+                sq.position[1] + SQUARE_PX // 2,
+            )
 
         board_text = render_board(
             state,
             active_player_id=self._active_player_id(),
             browsed_square_id=sq_id,
+            camera_center=camera_center,
+            viewport_w=viewport_w,
+            viewport_h=viewport_h,
         )
-        board_widget = self.query_one("#board-view", RichLog)
         board_widget.clear()
         for line in board_text.split("\n"):
             board_widget.write(line)
 
         # Show square info in the prompt bar
-        sq = state.board.squares[sq_id]
         self._show_browse_info(sq, state)
+
+    def _board_viewport_pixels(self, board_widget: Any) -> tuple[int | None, int | None]:
+        """Return the visible board viewport in renderer pixels, if measurable."""
+        from road_to_riches.client.board_renderer import PX_CHARS, SQUARE_PX
+
+        size = getattr(board_widget, "size", None)
+        width_chars = getattr(size, "width", 0)
+        height_rows = getattr(size, "height", 0)
+        if width_chars <= 0 or height_rows <= 0:
+            return None, None
+        return max(SQUARE_PX, width_chars // PX_CHARS), max(SQUARE_PX, height_rows)
 
     def _show_browse_info(self, sq: "SquareInfo", state: Any) -> None:
         """Display info about the browsed square in the prompt bar."""
