@@ -81,6 +81,13 @@ tokens are layered by current square. Future location backgrounds, tile art,
 movement animation, and sprite/3D character layers should sit behind or above
 this board scene rather than replacing the protocol model.
 
+Board tiles use the same coordinate contract as board JSON. A square centered at
+`[x, y]` renders as a 4 by 4 board-unit tile, from `x - 2` to `x + 2` and
+`y - 2` to `y + 2`. The browser renderer preserves a uniform scale for both axes
+so adjacent square centers 4 units apart produce touching tile borders instead
+of stretched rectangular cards. This keeps the board geometry stable for later
+background art, movement paths, and token animation.
+
 ## Non-Goals for This Pass
 
 * No online hosting or auth.

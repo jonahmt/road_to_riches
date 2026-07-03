@@ -199,58 +199,104 @@ function BoardPanel({
   return (
     <section className="board-panel">
       <div className="location-backdrop" />
-      <div className="board-canvas" aria-label="Game board">
-        <svg className="board-lines" viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}>
-          {lines.map((line) => (
-            <line
-              key={line.key}
-              x1={line.from.position[0]}
-              y1={line.from.position[1]}
-              x2={line.to.position[0]}
-              y2={line.to.position[1]}
-            />
-          ))}
-        </svg>
-        {state.board.squares.map((square) => {
-          const x = ((square.position[0] - bounds.minX) / bounds.width) * 100;
-          const y = ((square.position[1] - bounds.minY) / bounds.height) * 100;
-          const players = playerGroups.get(square.id) ?? [];
-          const isSelected = selectedSquare?.id === square.id;
-          const ownerColor =
-            square.property_owner === null ? "rgba(255,255,255,0.78)" : getPlayerColor(square.property_owner);
-          return (
-            <button
-              key={square.id}
-              type="button"
-              className={`board-square ${isSelected ? "selected" : ""}`}
-              style={{
-                left: `${x}%`,
-                top: `${y}%`,
-                borderColor: getDistrictColor(square.property_district),
-                color: ownerColor,
-              }}
-              onClick={() => onSelectSquare(square.id)}
-            >
-              <span className="square-type">{labelForSquare(square)}</span>
-              {square.shop_current_value !== null && (
-                <span className="square-value">{formatGold(square.shop_current_value)}</span>
-              )}
-              <span className="square-id">#{square.id}</span>
-              <span className="player-stack">
-                {players.map((player) => (
-                  <span
-                    key={player.player_id}
-                    className="player-token"
-                    style={{ backgroundColor: getPlayerColor(player.player_id) }}
-                    title={`Player ${player.player_id}`}
-                  >
-                    {player.player_id}
-                  </span>
+      <div className="board-canvas">
+        <svg
+          className="board-svg"
+          viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+          preserveAspectRatio="xMidYMid meet"
+          aria-label="Game board"
+          role="img"
+        >
+          <g className="board-lines">
+            {lines.map((line) => (
+              <line
+                key={line.key}
+                x1={line.from.position[0]}
+                y1={line.from.position[1]}
+                x2={line.to.position[0]}
+                y2={line.to.position[1]}
+              />
+            ))}
+          </g>
+          {state.board.squares.map((square) => {
+            const players = playerGroups.get(square.id) ?? [];
+            const isSelected = selectedSquare?.id === square.id;
+            const ownerColor =
+              square.property_owner === null ? "rgba(255,255,255,0.78)" : getPlayerColor(square.property_owner);
+            const label = labelForSquare(square);
+            return (
+              <g
+                key={square.id}
+                className={`board-square-group ${isSelected ? "selected" : ""}`}
+                role="button"
+                tabIndex={0}
+                aria-label={`Square ${square.id}: ${readableType(square.type)}`}
+                onClick={() => onSelectSquare(square.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectSquare(square.id);
+                  }
+                }}
+              >
+                <rect
+                  className="board-square-tile"
+                  data-square-id={square.id}
+                  x={square.position[0] - 2}
+                  y={square.position[1] - 2}
+                  width="4"
+                  height="4"
+                  rx="0.32"
+                  ry="0.32"
+                  style={{
+                    stroke: getDistrictColor(square.property_district),
+                    fill: "rgba(8, 10, 14, 0.92)",
+                  }}
+                />
+                {isSelected && (
+                  <rect
+                    className="board-square-selection"
+                    x={square.position[0] - 2.16}
+                    y={square.position[1] - 2.16}
+                    width="4.32"
+                    height="4.32"
+                    rx="0.42"
+                    ry="0.42"
+                  />
+                )}
+                <text
+                  className="square-type"
+                  x={square.position[0]}
+                  y={square.position[1] - 0.55}
+                  fill={ownerColor}
+                >
+                  {fitLabel(label, 8)}
+                </text>
+                {square.shop_current_value !== null && (
+                  <text className="square-value" x={square.position[0]} y={square.position[1] + 0.38}>
+                    {shortGold(square.shop_current_value)}
+                  </text>
+                )}
+                <text className="square-id" x={square.position[0] + 1.55} y={square.position[1] + 1.48}>
+                  #{square.id}
+                </text>
+                {players.map((player, index) => (
+                  <g key={player.player_id} className="player-token-svg">
+                    <circle
+                      cx={square.position[0] - 1.45 + index * 0.58}
+                      cy={square.position[1] + 1.35}
+                      r="0.34"
+                      fill={getPlayerColor(player.player_id)}
+                    />
+                    <text x={square.position[0] - 1.45 + index * 0.58} y={square.position[1] + 1.47}>
+                      {player.player_id}
+                    </text>
+                  </g>
                 ))}
-              </span>
-            </button>
-          );
-        })}
+              </g>
+            );
+          })}
+        </svg>
       </div>
     </section>
   );
@@ -259,16 +305,29 @@ function BoardPanel({
 function getBoardBounds(state: GameState) {
   const xs = state.board.squares.map((square) => square.position[0]);
   const ys = state.board.squares.map((square) => square.position[1]);
-  const minX = Math.min(...xs) - 4;
-  const maxX = Math.max(...xs) + 4;
-  const minY = Math.min(...ys) - 4;
-  const maxY = Math.max(...ys) + 4;
+  const tileRadius = 2;
+  const outerPadding = 1;
+  const minX = Math.min(...xs) - tileRadius - outerPadding;
+  const maxX = Math.max(...xs) + tileRadius + outerPadding;
+  const minY = Math.min(...ys) - tileRadius - outerPadding;
+  const maxY = Math.max(...ys) + tileRadius + outerPadding;
   return {
     minX,
     minY,
     width: Math.max(1, maxX - minX),
     height: Math.max(1, maxY - minY),
   };
+}
+
+function fitLabel(label: string, maxLength: number): string {
+  if (label.length <= maxLength) {
+    return label;
+  }
+  return `${label.slice(0, Math.max(1, maxLength - 1))}...`;
+}
+
+function shortGold(value: number): string {
+  return `${Math.round(value)}G`;
 }
 
 function getBoardLines(state: GameState) {
