@@ -58,8 +58,7 @@ def _server_without_default() -> GameServer:
 def _make_state(num_players: int = 2) -> GameState:
     board, stock = load_board("boards/test_board.json")
     players = [
-        PlayerState(player_id=i, position=0, ready_cash=1000 + i * 100)
-        for i in range(num_players)
+        PlayerState(player_id=i, position=0, ready_cash=1000 + i * 100) for i in range(num_players)
     ]
     return GameState(board=board, stock=stock, players=players)
 
@@ -218,6 +217,42 @@ def test_default_launcher_path_still_assigns_default_and_spawns_ai():
         assert _messages(ws) == [{"msg": "assign_player", "player_id": 0, "game_id": "default"}]
         assert spawned == [("default", "localhost", 8765)]
         assert session.started is False
+
+    asyncio.run(scenario())
+
+
+def test_default_session_reassigns_disconnected_human_and_sends_state():
+    async def scenario() -> None:
+        server = GameServer(
+            GameConfig(board_path="boards/test_board.json", num_players=1),
+            num_humans=1,
+            num_ai=0,
+            ai_delay=0,
+        )
+        server._loop = asyncio.get_running_loop()
+        session = server._default_session
+        assert session is not None
+        server._prepare_session(session)
+        first_ws = FakeWebSocket()
+        second_ws = FakeWebSocket()
+
+        await server._assign_human(session, first_ws)
+        assert session.remove_connection(first_ws) == [0]
+
+        session.started = True
+        session.game_loop = FakeGameLoop(_make_state(num_players=1), RecordingPipeline())  # type: ignore[assignment]
+
+        await server._assign_human(session, second_ws)
+        await asyncio.sleep(0.05)
+
+        messages = _messages(second_ws)
+        assert messages[0] == {"msg": "assign_player", "player_id": 0, "game_id": "default"}
+        assert messages[1]["msg"] == "state_sync"
+        assert messages[1]["game_id"] == "default"
+        assert messages[1]["state"]["players"][0]["player_id"] == 0
+        assert session.player_to_ws == {0: second_ws}
+        session.remove_connection(second_ws)
+        await asyncio.sleep(0.05)
 
     asyncio.run(scenario())
 

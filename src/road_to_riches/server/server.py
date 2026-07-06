@@ -68,7 +68,7 @@ def _session_summary(session: GameSession) -> dict:
         "game_id": session.session_id,
         "board_path": session.config.board_path,
         "num_players": session.config.num_players,
-        "humans_connected": session.next_human_id,
+        "humans_connected": session.connected_human_count(),
         "humans_total": session.num_humans,
         "open_human_slots": session.open_human_slots(),
         "ai": session.num_ai,
@@ -228,9 +228,11 @@ class GameServer:
             "Human player %d connected to %s (%d/%d humans)",
             player_id,
             session.session_id,
-            session.next_human_id,
+            session.connected_human_count(),
             session.num_humans,
         )
+        if session.game_loop is not None and session.player_input is not None:
+            session.player_input.send_snapshot_to_client(ws, session.game_loop.state)
         return player_id
 
     async def _handle_create_game(
@@ -433,9 +435,7 @@ class GameServer:
             )
             return
         if session.game_loop is None:
-            await ws.send(
-                encode(msg_error("game is not running", game_id=session.session_id))
-            )
+            await ws.send(encode(msg_error("game is not running", game_id=session.session_id)))
             return
         await ws.send(
             encode(
@@ -581,8 +581,10 @@ class GameServer:
 
         # Handler that assigns human player_ids on first connect
         async def handler(ws: ServerConnection) -> None:
-            # Assign human IDs to early connections, before AI spawning
-            if session is not None and session.next_human_id < session.num_humans:
+            # Assign or reclaim default human slots before treating the socket as
+            # an AI/lobby connection. This keeps local web development usable
+            # after a browser reload or disconnect from a running default game.
+            if session is not None and session.open_human_slots() > 0:
                 await self._assign_human(session, ws)
                 self._check_session_progress(session, host=host, port=port)
             # For AI clients (or extra connections), they'll identify via message

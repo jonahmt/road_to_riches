@@ -106,10 +106,11 @@ class GameSession:
 
     def assign_next_human(self, ws: Any) -> int:
         """Assign the next available human player slot."""
-        if self.next_human_id >= self.num_humans:
+        open_slots = self.open_human_player_ids()
+        if not open_slots:
             raise SessionFullError(f"session {self.session_id} has no open human slots")
-        player_id = self.next_human_id
-        self.next_human_id += 1
+        player_id = open_slots[0]
+        self.next_human_id = max(self.next_human_id, player_id + 1)
         self.register_player(ws, player_id)
         return player_id
 
@@ -127,17 +128,28 @@ class GameSession:
         return len(self.player_to_ws) >= self.config.num_players
 
     def humans_connected(self) -> bool:
-        return self.next_human_id >= self.num_humans
+        return self.connected_human_count() >= self.num_humans
 
     def open_human_slots(self) -> int:
-        return max(0, self.num_humans - self.next_human_id)
+        return len(self.open_human_player_ids())
+
+    def connected_human_count(self) -> int:
+        """Return the number of human player slots with active clients."""
+        return sum(1 for player_id in range(self.num_humans) if player_id in self.player_to_ws)
+
+    def open_human_player_ids(self) -> list[int]:
+        """Return human player IDs that do not currently have an active client."""
+        return [
+            player_id for player_id in range(self.num_humans) if player_id not in self.player_to_ws
+        ]
 
     def fill_open_human_slots_with_ai(self) -> int:
         """Convert unclaimed human slots into AI slots before a forced start."""
         open_slots = self.open_human_slots()
         if open_slots == 0:
             return 0
-        self.settings.num_humans = self.next_human_id
+        self.settings.num_humans = self.connected_human_count()
+        self.next_human_id = self.settings.num_humans
         self.settings.num_ai += open_slots
         return open_slots
 

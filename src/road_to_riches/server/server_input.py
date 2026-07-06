@@ -51,6 +51,7 @@ class WebSocketPlayerInput(PlayerInput):
         self._response_ready = threading.Event()
         self._expecting_player: int | None = None  # which player_id we're waiting for
         self._expecting_request_type: InputRequestType | None = None
+        self._pending_request: InputRequest | None = None
 
     def set_client_for_player(self, player_id: int, ws: Any) -> None:
         """Register a WebSocket as the client for a specific player.
@@ -206,6 +207,18 @@ class WebSocketPlayerInput(PlayerInput):
         """Send full game state to all clients."""
         self._broadcast(msg_state_sync(game_state_to_dict(state), game_id=self._game_id))
 
+    def send_snapshot_to_client(self, ws: Any, state: GameState) -> None:
+        """Send current state, and any active prompt, to one connected client."""
+        self._send_raw(
+            ws,
+            encode(msg_state_sync(game_state_to_dict(state), game_id=self._game_id)),
+        )
+        if self._pending_request is not None:
+            self._send_raw(
+                ws,
+                encode(msg_input_request(self._pending_request, game_id=self._game_id)),
+            )
+
     def _request_input(self, req: InputRequest, state: GameState) -> Any:
         """Broadcast input request to all clients, accept response only from target player."""
         self._send_state(state)
@@ -213,12 +226,14 @@ class WebSocketPlayerInput(PlayerInput):
         self._response = None
         self._expecting_player = req.player_id
         self._expecting_request_type = req.type
+        self._pending_request = req
         # Broadcast so all clients can update their display
         self._broadcast(msg_input_request(req, game_id=self._game_id))
         logger.debug("Waiting for response to %s (player %d)", req.type, req.player_id)
         self._response_ready.wait()
         self._expecting_player = None
         self._expecting_request_type = None
+        self._pending_request = None
         logger.debug("Got response: %r", self._response)
         return self._response
 

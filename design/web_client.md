@@ -104,6 +104,13 @@ should touch at their outer painted edges without overlapping. This keeps the
 board geometry stable for later background art, movement paths, and token
 animation.
 
+For local default-server play, a browser disconnect or reload should not require
+restarting the Python server. The backend treats human slots as occupied by
+active sockets rather than by historical assignment, so a later browser
+connection can reclaim an unoccupied human player slot in the running default
+game. When that happens, the server immediately resends the authoritative game
+state and any active input prompt for that player.
+
 ## Non-Goals for This Pass
 
 * No online hosting or auth.

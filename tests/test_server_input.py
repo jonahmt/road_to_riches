@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
 from collections.abc import Iterator
 
 import pytest
 
+from road_to_riches.board import load_board
 from road_to_riches.engine.game_loop import GameLog
-from road_to_riches.protocol import InputRequestType
+from road_to_riches.models.game_state import GameState
+from road_to_riches.models.player_state import PlayerState
+from road_to_riches.protocol import InputRequest, InputRequestType
 from road_to_riches.server.server_input import WebSocketPlayerInput
 
 
@@ -38,6 +42,12 @@ async def _wait_for_sent(ws: SlowRecordingWebSocket, count: int) -> None:
             return
         await asyncio.sleep(0.01)
     raise AssertionError(f"timed out waiting for {count} sent messages")
+
+
+def _make_state() -> GameState:
+    board, stock = load_board("boards/test_board.json")
+    players = [PlayerState(player_id=0, position=0, ready_cash=1500)]
+    return GameState(board=board, stock=stock, players=players)
 
 
 @pytest.fixture
@@ -69,6 +79,41 @@ def test_broadcast_sends_to_each_websocket_in_order_without_overlap():
             '{"msg": "log", "text": "Next turn"}',
         ]
         assert ws.max_active_sends == 1
+        player_input.remove_client_for_player(0)
+        asyncio.run_coroutine_threadsafe(asyncio.sleep(0.05), loop).result(timeout=2)
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join()
+        loop.close()
+
+
+def test_snapshot_to_client_replays_pending_prompt():
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever)
+    thread.start()
+    try:
+        player_input = WebSocketPlayerInput(loop, game_id="default")
+        ws = SlowRecordingWebSocket()
+        player_input.set_client_for_player(0, ws)
+        player_input._pending_request = InputRequest(
+            type=InputRequestType.PRE_ROLL,
+            player_id=0,
+            data={"cash": 1500},
+        )
+
+        player_input.send_snapshot_to_client(ws, _make_state())
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(ws, 2), loop).result(timeout=2)
+
+        messages = [json.loads(raw) for raw in ws.sent]
+        assert messages[0]["msg"] == "state_sync"
+        assert messages[0]["game_id"] == "default"
+        assert messages[1] == {
+            "msg": "input_request",
+            "type": "PRE_ROLL",
+            "player_id": 0,
+            "data": {"cash": 1500},
+            "game_id": "default",
+        }
         player_input.remove_client_for_player(0)
         asyncio.run_coroutine_threadsafe(asyncio.sleep(0.05), loop).result(timeout=2)
     finally:

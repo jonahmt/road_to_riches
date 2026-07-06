@@ -96,3 +96,23 @@ def test_session_removes_all_players_for_connection():
     assert session.remove_connection(ws) == [0, 1]
     assert session.player_to_ws == {}
     assert player_input.removed == [0, 1]
+
+
+def test_session_reclaims_removed_human_slot():
+    manager = ServerSessionManager()
+    session = manager.create_session(_settings(players=2, humans=1), session_id="game")
+    player_input = FakePlayerInput()
+    first_ws = object()
+    second_ws = object()
+
+    session.attach_player_input(player_input)  # type: ignore[arg-type]
+    assert session.assign_next_human(first_ws) == 0
+    assert session.humans_connected() is True
+
+    assert session.remove_connection(first_ws) == [0]
+    assert session.humans_connected() is False
+    assert session.open_human_slots() == 1
+
+    assert session.assign_next_human(second_ws) == 0
+    assert session.player_to_ws == {0: second_ws}
+    assert player_input.assigned[0] is second_ws
