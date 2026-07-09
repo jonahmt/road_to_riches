@@ -275,12 +275,15 @@ h3 {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: start;
   gap: 12px;
 }
 
 .board-panel {
   position: relative;
-  min-height: 620px;
+  align-self: start;
+  height: clamp(560px, calc(100vh - 190px), 780px);
+  min-height: 0;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
@@ -425,6 +428,7 @@ h3 {
 }
 
 .game-side {
+  align-self: start;
   min-height: 0;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -765,7 +769,7 @@ dd {
   }
 
   .board-panel {
-    min-height: 560px;
+    height: clamp(520px, 58vh, 680px);
   }
 
   .game-side {
@@ -792,6 +796,6 @@ dd {
   }
 
   .board-panel {
-    min-height: 460px;
+    height: clamp(420px, 58vh, 560px);
   }
 }

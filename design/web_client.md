@@ -114,6 +114,11 @@ should touch at their outer painted edges without overlapping. This keeps the
 board geometry stable for later background art, movement paths, and token
 animation.
 
+The board viewport must not resize in response to prompt/sidebar content during
+normal play. The board panel owns a stable responsive height and does not stretch
+to match the side column, so WASD input, prompt transitions, square details, and
+future movement animation do not create apparent board zoom or layout jitter.
+
 For local default-server play, a browser disconnect or reload should not require
 restarting the Python server. The backend treats human slots as active socket
 bindings rather than historical assignments, and the local web client explicitly
