@@ -6,6 +6,7 @@ from road_to_riches.protocol import (
     decode,
     encode,
     msg_assign_player,
+    msg_claim_player,
     msg_create_game,
     msg_dice,
     msg_error,
@@ -93,6 +94,11 @@ def test_round_trip_create_game():
 
 def test_round_trip_join_game():
     original = msg_join_game("game-1")
+    assert decode(encode(original)) == original
+
+
+def test_round_trip_claim_player():
+    original = msg_claim_player(0, game_id="default", force=True)
     assert decode(encode(original)) == original
 
 

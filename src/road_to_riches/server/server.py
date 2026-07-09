@@ -165,6 +165,8 @@ class GameServer:
                     await self._handle_create_game(ws, msg, host=host, port=port)
                 elif msg_type == "join_game":
                     await self._handle_join_game(ws, msg, host=host, port=port)
+                elif msg_type == "claim_player":
+                    await self._handle_claim_player(ws, session, msg, host=host, port=port)
                 # AI clients identify themselves with a pre-assigned player_id
                 elif msg_type == "identify":
                     pid = msg["player_id"]
@@ -281,6 +283,59 @@ class GameServer:
             self._check_session_progress(session, host=host, port=port)
         except SessionError as exc:
             await ws.send(encode(msg_error(str(exc), game_id=game_id)))
+
+    async def _handle_claim_player(
+        self,
+        ws: ServerConnection,
+        session: GameSession,
+        msg: dict,
+        *,
+        host: str | None = None,
+        port: int | None = None,
+    ) -> None:
+        """Claim a human slot in the local default game.
+
+        This is intentionally limited to the default local-play session. It lets
+        the browser recover during development when another active-but-stale
+        socket still holds the only human player slot.
+        """
+        if session is not self._default_session:
+            await ws.send(
+                encode(
+                    msg_error(
+                        "claim_player is only available for the default local game",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        player_id = msg.get("player_id")
+        if not isinstance(player_id, int):
+            await ws.send(
+                encode(msg_error("claim_player requires player_id", game_id=session.session_id))
+            )
+            return
+
+        try:
+            replaced_ws = session.claim_human(ws, player_id, force=bool(msg.get("force")))
+        except SessionError as exc:
+            await ws.send(encode(msg_error(str(exc), game_id=session.session_id)))
+            return
+
+        self._sessions.bind_connection(ws, session.session_id)
+        if replaced_ws is not None and not session.ws_to_players.get(replaced_ws):
+            self._sessions.unbind_connection(replaced_ws, session.session_id)
+        await ws.send(encode(msg_assign_player(player_id, game_id=session.session_id)))
+        logger.info(
+            "Human player %d claimed in %s (%d/%d humans)",
+            player_id,
+            session.session_id,
+            session.connected_human_count(),
+            session.num_humans,
+        )
+        if session.game_loop is not None and session.player_input is not None:
+            session.player_input.send_snapshot_to_client(ws, session.game_loop.state)
+        self._check_session_progress(session, host=host, port=port)
 
     def _settings_from_client_config(self, config: Mapping[str, object]) -> GameSessionSettings:
         raw_board_path = config.get("board") or config.get("board_path") or self.config.board_path

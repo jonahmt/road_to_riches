@@ -39,6 +39,7 @@
 {"created_at":"2026-03-12T23:19:43Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-828","issue_id":"road_to_riches-7cj","type":"blocks"}
 {"created_at":"2026-03-12T23:19:42Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-e0f","issue_id":"road_to_riches-7cj","type":"blocks"}
 {"created_at":"2026-03-12T23:19:43Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-vw7","issue_id":"road_to_riches-7cj","type":"blocks"}
+{"created_at":"2026-07-08T23:08:55Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-eitj","issue_id":"road_to_riches-7hfl","type":"discovered-from"}
 {"created_at":"2026-03-12T23:21:08Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-6pa","issue_id":"road_to_riches-7tv","type":"blocks"}
 {"created_at":"2026-03-12T23:21:20Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-vuz","issue_id":"road_to_riches-7z5","type":"blocks"}
 {"created_at":"2026-03-12T23:19:42Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-203","issue_id":"road_to_riches-828","type":"blocks"}
@@ -83,6 +84,7 @@
 {"created_at":"2026-03-12T23:21:11Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-9lk","issue_id":"road_to_riches-dzx","type":"blocks"}
 {"created_at":"2026-03-12T23:17:33Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-38u","issue_id":"road_to_riches-e0f","type":"blocks"}
 {"created_at":"2026-03-12T23:20:57Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-wl8","issue_id":"road_to_riches-eeg","type":"blocks"}
+{"created_at":"2026-07-05T23:10:56Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-ecsn","issue_id":"road_to_riches-eitj","type":"discovered-from"}
 {"created_at":"2026-04-21T20:35:32Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-4v8","issue_id":"road_to_riches-ewn","type":"blocks"}
 {"created_at":"2026-03-12T23:17:48Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-vw7","issue_id":"road_to_riches-g5h","type":"blocks"}
 {"created_at":"2026-03-12T23:17:49Z","created_by":"jonah-cal","depends_on_id":"road_to_riches-wl8","issue_id":"road_to_riches-g5h","type":"blocks"}

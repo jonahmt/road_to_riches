@@ -11,6 +11,7 @@ from road_to_riches.models.player_state import PlayerState
 from road_to_riches.protocol import (
     InputRequestType,
     encode,
+    msg_claim_player,
     msg_create_game,
     msg_dev_event,
     msg_join_game,
@@ -251,6 +252,47 @@ def test_default_session_reassigns_disconnected_human_and_sends_state():
         assert messages[1]["game_id"] == "default"
         assert messages[1]["state"]["players"][0]["player_id"] == 0
         assert session.player_to_ws == {0: second_ws}
+        session.remove_connection(second_ws)
+        await asyncio.sleep(0.05)
+
+    asyncio.run(scenario())
+
+
+def test_default_session_force_claim_replaces_active_human_and_sends_state():
+    async def scenario() -> None:
+        server = GameServer(
+            GameConfig(board_path="boards/test_board.json", num_players=1),
+            num_humans=1,
+            num_ai=0,
+            ai_delay=0,
+        )
+        server._loop = asyncio.get_running_loop()
+        session = server._default_session
+        assert session is not None
+        server._prepare_session(session)
+        first_ws = FakeWebSocket()
+        second_ws = FakeWebSocket()
+
+        await server._assign_human(session, first_ws)
+        session.started = True
+        session.game_loop = FakeGameLoop(_make_state(num_players=1), RecordingPipeline())  # type: ignore[assignment]
+
+        await server._handle_claim_player(
+            second_ws,
+            session,
+            msg_claim_player(0, game_id="default", force=True),
+            host="localhost",
+            port=8765,
+        )
+        await asyncio.sleep(0.05)
+
+        messages = _messages(second_ws)
+        assert messages[0] == {"msg": "assign_player", "player_id": 0, "game_id": "default"}
+        assert messages[1]["msg"] == "state_sync"
+        assert messages[1]["game_id"] == "default"
+        assert session.player_to_ws == {0: second_ws}
+        assert server._sessions.sessions_for_connection(first_ws) == set()
+        assert server._sessions.sessions_for_connection(second_ws) == {"default"}
         session.remove_connection(second_ws)
         await asyncio.sleep(0.05)
 

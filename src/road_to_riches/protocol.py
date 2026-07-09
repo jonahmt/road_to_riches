@@ -179,6 +179,15 @@ def msg_join_game(game_id: str) -> dict:
     return {"msg": "join_game", "game_id": game_id}
 
 
+def msg_claim_player(
+    player_id: int,
+    *,
+    game_id: str | None = None,
+    force: bool = False,
+) -> dict:
+    return _with_game_id({"msg": "claim_player", "player_id": player_id, "force": force}, game_id)
+
+
 def msg_list_games() -> dict:
     return {"msg": "list_games"}
 

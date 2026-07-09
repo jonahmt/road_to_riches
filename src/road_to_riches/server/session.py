@@ -114,15 +114,45 @@ class GameSession:
         self.register_player(ws, player_id)
         return player_id
 
+    def claim_human(self, ws: Any, player_id: int, *, force: bool = False) -> Any | None:
+        """Assign a specific human slot, optionally replacing its current socket."""
+        if player_id < 0 or player_id >= self.num_humans:
+            raise SessionError(
+                f"player {player_id} is not a human slot in session {self.session_id}"
+            )
+        existing_ws = self.player_to_ws.get(player_id)
+        if existing_ws is ws:
+            return None
+        if existing_ws is not None:
+            if not force:
+                raise PlayerAlreadyConnectedError(
+                    f"player {player_id} is already connected to session {self.session_id}"
+                )
+            self._remove_player_assignment(existing_ws, player_id)
+
+        self.next_human_id = max(self.next_human_id, player_id + 1)
+        self.register_player(ws, player_id)
+        return existing_ws
+
     def remove_connection(self, ws: Any) -> list[int]:
         """Remove all player assignments for a connection."""
         removed = list(self.ws_to_players.get(ws, []))
         for player_id in removed:
-            if self.player_input is not None:
-                self.player_input.remove_client_for_player(player_id)
-            self.player_to_ws.pop(player_id, None)
+            self._remove_player_assignment(ws, player_id)
         self.ws_to_players.pop(ws, None)
         return removed
+
+    def _remove_player_assignment(self, ws: Any, player_id: int) -> None:
+        if self.player_input is not None:
+            self.player_input.remove_client_for_player(player_id)
+        self.player_to_ws.pop(player_id, None)
+        players = self.ws_to_players.get(ws)
+        if players is None:
+            return
+        if player_id in players:
+            players.remove(player_id)
+        if not players:
+            self.ws_to_players.pop(ws, None)
 
     def is_ready_to_start(self) -> bool:
         return len(self.player_to_ws) >= self.config.num_players

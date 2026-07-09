@@ -22,9 +22,20 @@ export interface GameClientState {
 }
 
 const MAX_LOGS = 240;
+const LOCAL_DEFAULT_GAME_ID = "default";
+const LOCAL_DEFAULT_PLAYER_ID = 0;
 
 function appendLog(logs: string[], message: string): string[] {
   return [...logs, message].slice(-MAX_LOGS);
+}
+
+function shouldClaimLocalDefaultPlayer(uri: string): boolean {
+  try {
+    const parsed = new URL(uri);
+    return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname);
+  } catch {
+    return uri.includes("localhost") || uri.includes("127.0.0.1");
+  }
 }
 
 function closeSocket(socket: WebSocket | null): Promise<void> {
@@ -136,6 +147,16 @@ export function useGameClient(defaultUri: string) {
           status: "connected",
           logs: appendLog(current.logs, `Connected to ${uri}`),
         }));
+        if (shouldClaimLocalDefaultPlayer(uri)) {
+          socket.send(
+            encode({
+              msg: "claim_player",
+              player_id: LOCAL_DEFAULT_PLAYER_ID,
+              game_id: LOCAL_DEFAULT_GAME_ID,
+              force: true,
+            }),
+          );
+        }
       });
 
       socket.addEventListener("message", (event) => {

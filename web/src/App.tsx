@@ -1,4 +1,5 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { getPathKeyActions, getWasdResponseMap, type WasdResponseMap } from "./controls";
 import { formatGold, netWorth, readableType } from "./format";
 import {
   type GameState,
@@ -21,6 +22,8 @@ const BOARD_TILE_DRAW_SIZE = BOARD_TILE_SIZE - BOARD_TILE_STROKE_WIDTH;
 const BOARD_TILE_SELECTION_INSET = 0.34;
 const BOARD_TILE_SELECTION_STROKE_WIDTH = 0.12;
 const BOARD_TILE_SELECTION_SIZE = BOARD_TILE_SIZE - BOARD_TILE_SELECTION_INSET * 2;
+const WASD_KEYS = new Set(["w", "a", "s", "d"]);
+const CHORD_TIMEOUT_MS = 180;
 
 function getPlayerColor(playerId: number): string {
   return PLAYER_COLORS[playerId % PLAYER_COLORS.length];
@@ -61,10 +64,6 @@ function asNumber(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function asString(value: unknown, fallback = ""): string {
-  return typeof value === "string" ? value : fallback;
-}
-
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
@@ -75,12 +74,116 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function useWasdPromptControls(request: InputRequest | null, onSubmit: (value: unknown) => void) {
+  const bufferedKey = useRef("");
+  const timeoutId = useRef<number | null>(null);
+
+  useEffect(() => {
+    bufferedKey.current = "";
+    if (timeoutId.current !== null) {
+      window.clearTimeout(timeoutId.current);
+      timeoutId.current = null;
+    }
+  }, [request]);
+
+  useEffect(() => {
+    function clearBuffer() {
+      bufferedKey.current = "";
+      if (timeoutId.current !== null) {
+        window.clearTimeout(timeoutId.current);
+        timeoutId.current = null;
+      }
+    }
+
+    function hasKey(mapping: WasdResponseMap, key: string): boolean {
+      return Object.prototype.hasOwnProperty.call(mapping, key);
+    }
+
+    function submitKey(mapping: WasdResponseMap, key: string): boolean {
+      if (!hasKey(mapping, key)) {
+        return false;
+      }
+      clearBuffer();
+      onSubmit(mapping[key]);
+      return true;
+    }
+
+    function mayCombo(mapping: WasdResponseMap, key: string): boolean {
+      return Object.keys(mapping).some((mappedKey) => mappedKey.length > 1 && mappedKey.includes(key));
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!request || event.repeat || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      if (!WASD_KEYS.has(key)) {
+        return;
+      }
+
+      const mapping = getWasdResponseMap(request);
+      if (Object.keys(mapping).length === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      if (timeoutId.current !== null) {
+        window.clearTimeout(timeoutId.current);
+        timeoutId.current = null;
+      }
+
+      if (bufferedKey.current) {
+        const first = bufferedKey.current;
+        bufferedKey.current = "";
+        if (submitKey(mapping, `${first}${key}`) || submitKey(mapping, `${key}${first}`)) {
+          return;
+        }
+        submitKey(mapping, key);
+        return;
+      }
+
+      if (mayCombo(mapping, key)) {
+        bufferedKey.current = key;
+        timeoutId.current = window.setTimeout(() => {
+          const pending = bufferedKey.current;
+          bufferedKey.current = "";
+          timeoutId.current = null;
+          if (pending) {
+            submitKey(mapping, pending);
+          }
+        }, CHORD_TIMEOUT_MS);
+        return;
+      }
+
+      submitKey(mapping, key);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      clearBuffer();
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [request, onSubmit]);
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+  );
+}
+
 function App() {
   const { clientState, connect, disconnect, submitResponse, saveGame, requestSync } =
     useGameClient(DEFAULT_URI);
   const [uri, setUri] = useState(DEFAULT_URI);
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
+  useWasdPromptControls(clientState.pendingRequest, submitResponse);
 
   const currentPlayer = clientState.gameState
     ? clientState.gameState.players[clientState.gameState.current_player_index]
@@ -464,6 +567,54 @@ function shortGold(value: number): string {
   return `${Math.round(value)}G`;
 }
 
+function formatWasdKey(key: string): string {
+  return key
+    .split("")
+    .map((part) => part.toUpperCase())
+    .join(" + ");
+}
+
+function keyedActionLabel(request: InputRequest, value: unknown): string {
+  if (request.type === "CONFIRM_STOP" && value === true) {
+    return "Stop Here";
+  }
+  if (request.type === "CONFIRM_STOP" && (value === false || value === "undo")) {
+    return "Undo Step";
+  }
+  if (value === true) {
+    return "Confirm";
+  }
+  if (value === false) {
+    return "Decline";
+  }
+  if (value === "accept") {
+    return "Accept";
+  }
+  if (value === "reject") {
+    return "Reject";
+  }
+  if (value === "counter") {
+    return "Counter";
+  }
+  return "Choose";
+}
+
+function getSimpleKeyActions(request: InputRequest) {
+  return Object.entries(getWasdResponseMap(request))
+    .sort(([leftKey], [rightKey]) => keyedActionSort(leftKey, rightKey))
+    .map(([key, value]) => ({ key, value, label: keyedActionLabel(request, value) }));
+}
+
+function keyedActionSort(leftKey: string, rightKey: string): number {
+  const keyOrder = ["w", "a", "s", "d"];
+  const leftIndex = keyOrder.indexOf(leftKey);
+  const rightIndex = keyOrder.indexOf(rightKey);
+  if (leftIndex === -1 || rightIndex === -1) {
+    return leftKey.localeCompare(rightKey);
+  }
+  return leftIndex - rightIndex;
+}
+
 function getBoardLines(state: GameState) {
   const squares = new Map(state.board.squares.map((square) => [square.id, square]));
   const seen = new Set<string>();
@@ -795,52 +946,15 @@ function PromptControls({
   }
 
   if (request.type === "CHOOSE_PATH") {
-    const choices = asArray(data.choices).map(asRecord);
-    return (
-      <div className="action-list">
-        {choices.map((choice) => {
-          const squareId = asNumber(choice.square_id);
-          return (
-            <button key={squareId} type="button" onClick={() => onSubmit(squareId)}>
-              Move to #{squareId} {choice.type ? `(${readableType(asString(choice.type))})` : ""}
-            </button>
-          );
-        })}
-        {data.can_undo === true && (
-          <button type="button" className="secondary" onClick={() => onSubmit("undo")}>
-            Undo Step
-          </button>
-        )}
-      </div>
-    );
+    return <KeyActionList actions={getPathKeyActions(request)} onSubmit={onSubmit} />;
   }
 
   if (request.type === "CONFIRM_STOP") {
-    return (
-      <div className="action-grid">
-        <button type="button" onClick={() => onSubmit(true)}>
-          Stop Here
-        </button>
-        {data.can_undo === true && (
-          <button type="button" className="secondary" onClick={() => onSubmit(false)}>
-            Undo Step
-          </button>
-        )}
-      </div>
-    );
+    return <KeyActionList actions={getSimpleKeyActions(request)} onSubmit={onSubmit} />;
   }
 
   if (["BUY_SHOP", "FORCED_BUYOUT"].includes(request.type)) {
-    return (
-      <div className="action-grid">
-        <button type="button" onClick={() => onSubmit(true)}>
-          Confirm
-        </button>
-        <button type="button" className="secondary" onClick={() => onSubmit(false)}>
-          Decline
-        </button>
-      </div>
-    );
+    return <KeyActionList actions={getSimpleKeyActions(request)} onSubmit={onSubmit} />;
   }
 
   if (request.type === "BUY_STOCK") {
@@ -956,24 +1070,39 @@ function PromptControls({
   }
 
   if (request.type === "ACCEPT_OFFER") {
-    return (
-      <div className="action-grid">
-        <button type="button" onClick={() => onSubmit("accept")}>
-          Accept
-        </button>
-        <button type="button" className="secondary" onClick={() => onSubmit("reject")}>
-          Reject
-        </button>
-        <button type="button" className="secondary" onClick={() => onSubmit("counter")}>
-          Counter
-        </button>
-      </div>
-    );
+    return <KeyActionList actions={getSimpleKeyActions(request)} onSubmit={onSubmit} />;
   }
 
   return (
     <div className="request-data">
       <p className="muted">This decision needs a temporary manual control. Open Tools to respond.</p>
+    </div>
+  );
+}
+
+function KeyActionList({
+  actions,
+  onSubmit,
+}: {
+  actions: Array<{ key: string; value: unknown; label: string; squareType?: string }>;
+  onSubmit: (value: unknown) => void;
+}) {
+  return (
+    <div className="key-action-list">
+      {actions.map((action) => (
+        <button
+          key={`${action.key}:${String(action.value)}`}
+          type="button"
+          className="key-action-card"
+          onClick={() => onSubmit(action.value)}
+        >
+          <span className="keycap">{formatWasdKey(action.key)}</span>
+          <span>
+            {action.label}
+            {action.squareType ? <small>{readableType(action.squareType)}</small> : null}
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

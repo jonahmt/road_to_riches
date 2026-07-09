@@ -78,6 +78,16 @@ The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
 review, but it should not be treated as the main game UI.
 
+Normal board movement in the browser is controlled with WASD rather than by
+selecting path buttons in the side panel. The backend still owns all movement
+validation and sends the same `CHOOSE_PATH` / `CONFIRM_STOP` prompts; the web
+client maps WASD directions onto the prompt's current square, destination
+positions, and undo position, then submits the ordinary `input_response`.
+Diagonal choices may use two-key chords such as W+A. Clickable prompt controls
+remain as accessibility and fallback affordances, but they are not the primary
+movement interaction. Simple follow-up prompts use the same key-target surface
+where it is unambiguous, such as S to stop, A to undo/decline, and D to confirm.
+
 ## Architecture
 
 The web client treats the Python backend as the source of truth.
@@ -105,11 +115,12 @@ board geometry stable for later background art, movement paths, and token
 animation.
 
 For local default-server play, a browser disconnect or reload should not require
-restarting the Python server. The backend treats human slots as occupied by
-active sockets rather than by historical assignment, so a later browser
-connection can reclaim an unoccupied human player slot in the running default
-game. When that happens, the server immediately resends the authoritative game
-state and any active input prompt for that player.
+restarting the Python server. The backend treats human slots as active socket
+bindings rather than historical assignments, and the local web client explicitly
+force-claims Player 0 in the default game when it connects. This lets the
+visible browser take over from a stale-but-still-open local socket during
+development. After a claim, the server immediately resends the authoritative
+game state and any active input prompt for that player.
 
 ## Non-Goals for This Pass
 

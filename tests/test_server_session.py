@@ -116,3 +116,25 @@ def test_session_reclaims_removed_human_slot():
     assert session.assign_next_human(second_ws) == 0
     assert session.player_to_ws == {0: second_ws}
     assert player_input.assigned[0] is second_ws
+
+
+def test_session_force_claim_replaces_active_human_socket():
+    manager = ServerSessionManager()
+    session = manager.create_session(_settings(players=2, humans=1), session_id="game")
+    player_input = FakePlayerInput()
+    first_ws = object()
+    second_ws = object()
+
+    session.attach_player_input(player_input)  # type: ignore[arg-type]
+    assert session.assign_next_human(first_ws) == 0
+
+    with pytest.raises(PlayerAlreadyConnectedError):
+        session.claim_human(second_ws, 0)
+
+    replaced = session.claim_human(second_ws, 0, force=True)
+
+    assert replaced is first_ws
+    assert session.player_to_ws == {0: second_ws}
+    assert session.ws_to_players == {second_ws: [0]}
+    assert player_input.removed == [0]
+    assert player_input.assigned[0] is second_ws

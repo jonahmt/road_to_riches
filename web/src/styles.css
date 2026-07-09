@@ -540,7 +540,8 @@ dd {
 
 .action-grid,
 .action-list,
-.choice-table {
+.choice-table,
+.key-action-list {
   display: grid;
   gap: 8px;
 }
@@ -552,6 +553,47 @@ dd {
 .action-list,
 .choice-table {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.key-action-list {
+  grid-template-columns: 1fr;
+}
+
+.key-action-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  text-align: left;
+}
+
+.key-action-card span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.key-action-card small {
+  color: rgba(247, 247, 242, 0.58);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.keycap {
+  display: inline-grid;
+  place-items: center;
+  min-width: 38px;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 7px;
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f7f7f2;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .idle-action {

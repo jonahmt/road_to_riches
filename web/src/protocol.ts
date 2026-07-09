@@ -138,6 +138,7 @@ export type ClientMessage =
   | { msg: "start_game"; config: Record<string, unknown>; game_id?: string }
   | { msg: "list_games" }
   | { msg: "join_game"; game_id: string }
+  | { msg: "claim_player"; player_id: number; game_id?: string; force?: boolean }
   | { msg: "create_game"; config: Record<string, unknown> };
 
 export function stockPrice(stock: StockPrice): number {
