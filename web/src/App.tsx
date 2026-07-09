@@ -183,7 +183,7 @@ function App() {
   const [uri, setUri] = useState(DEFAULT_URI);
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
-  useWasdPromptControls(clientState.pendingRequest, submitResponse);
+  useWasdPromptControls(clientState.responsePending ? null : clientState.pendingRequest, submitResponse);
 
   const currentPlayer = clientState.gameState
     ? clientState.gameState.players[clientState.gameState.current_player_index]
@@ -270,6 +270,7 @@ function App() {
                 request={clientState.pendingRequest}
                 onSubmit={submitResponse}
                 connected={clientState.status === "connected"}
+                responsePending={clientState.responsePending}
               />
               <SquarePanel square={focusSquare} state={clientState.gameState} />
             </aside>
@@ -828,17 +829,19 @@ function PromptPanel({
   request,
   onSubmit,
   connected,
+  responsePending,
 }: {
   request: InputRequest | null;
   onSubmit: (value: unknown) => void;
   connected: boolean;
+  responsePending: boolean;
 }) {
   const [amount, setAmount] = useState("1");
 
   const amountNumber = Math.max(0, Math.floor(Number(amount) || 0));
 
   return (
-    <section className="panel action-panel">
+    <section className={`panel action-panel ${responsePending ? "is-resolving" : ""}`} aria-busy={responsePending}>
       <header className="panel-header prompt-header">
         <div>
           <p className="eyebrow">Action</p>

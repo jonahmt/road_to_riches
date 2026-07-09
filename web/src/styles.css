@@ -8,6 +8,10 @@
   -webkit-font-smoothing: antialiased;
 }
 
+html {
+  overflow-anchor: none;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -100,6 +104,7 @@ h3 {
     linear-gradient(rgba(16, 17, 20, 0.56), rgba(16, 17, 20, 0.9)),
     url("data:image/svg+xml,%3Csvg width='160' height='160' viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.08'%3E%3Cpath d='M0 90 C30 55 58 118 92 78 S135 42 160 74'/%3E%3Cpath d='M0 125 C42 88 62 155 103 110 S135 90 160 114'/%3E%3Cpath d='M8 26 h36 v22 H8zM94 20 h44 v28H94zM62 66 h28v20H62z'/%3E%3C/g%3E%3C/svg%3E"),
     #101114;
+  overflow-anchor: none;
 }
 
 .game-header,
@@ -277,6 +282,7 @@ h3 {
   grid-template-columns: minmax(0, 1fr) 360px;
   align-items: start;
   gap: 12px;
+  overflow-anchor: none;
 }
 
 .board-panel {
@@ -290,6 +296,7 @@ h3 {
   background: rgba(5, 7, 10, 0.78);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
   backdrop-filter: blur(18px);
+  overflow-anchor: none;
 }
 
 .location-backdrop {
@@ -433,6 +440,7 @@ h3 {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
+  overflow-anchor: none;
 }
 
 .panel,
@@ -536,6 +544,10 @@ dd {
 .action-panel {
   display: grid;
   gap: 12px;
+}
+
+.action-panel.is-resolving button {
+  pointer-events: none;
 }
 
 .prompt-header {

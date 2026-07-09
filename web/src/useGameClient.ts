@@ -18,6 +18,7 @@ export interface GameClientState {
   logs: string[];
   dice: DiceState | null;
   gameOverWinner: number | null | undefined;
+  responsePending: boolean;
   error: string | null;
 }
 
@@ -67,6 +68,7 @@ export function useGameClient(defaultUri: string) {
   const connectionIdRef = useRef(0);
   const playerIdRef = useRef<number | null>(null);
   const gameIdRef = useRef<string | null>(null);
+  const responsePendingRef = useRef(false);
   const [clientState, setClientState] = useState<GameClientState>({
     status: "disconnected",
     uri: defaultUri,
@@ -77,6 +79,7 @@ export function useGameClient(defaultUri: string) {
     logs: [],
     dice: null,
     gameOverWinner: undefined,
+    responsePending: false,
     error: null,
   });
 
@@ -86,12 +89,14 @@ export function useGameClient(defaultUri: string) {
     socketRef.current = null;
     playerIdRef.current = null;
     gameIdRef.current = null;
+    responsePendingRef.current = false;
     setClientState((current) => ({
       ...current,
       status: "disconnected",
       playerId: null,
       gameId: null,
       pendingRequest: null,
+      responsePending: false,
     }));
   }, []);
 
@@ -102,9 +107,10 @@ export function useGameClient(defaultUri: string) {
         ...current,
         error: "WebSocket is not connected.",
       }));
-      return;
+      return false;
     }
     socket.send(encode(message));
+    return true;
   }, []);
 
   const connect = useCallback(
@@ -115,6 +121,7 @@ export function useGameClient(defaultUri: string) {
       socketRef.current = null;
       playerIdRef.current = null;
       gameIdRef.current = null;
+      responsePendingRef.current = false;
       setClientState((current) => ({
         ...current,
         uri,
@@ -126,6 +133,7 @@ export function useGameClient(defaultUri: string) {
         logs: [],
         dice: null,
         gameOverWinner: undefined,
+        responsePending: false,
         error: null,
       }));
 
@@ -186,17 +194,17 @@ export function useGameClient(defaultUri: string) {
                 gameState: message.state,
               };
             case "input_request": {
+              responsePendingRef.current = false;
               const request: InputRequest = {
                 type: message.type,
                 player_id: message.player_id,
                 data: message.data ?? {},
               };
+              const isAssignedPrompt = playerIdRef.current === null || playerIdRef.current === message.player_id;
               return {
                 ...current,
-                pendingRequest:
-                  playerIdRef.current === null || playerIdRef.current === message.player_id
-                    ? request
-                    : current.pendingRequest,
+                pendingRequest: isAssignedPrompt ? request : null,
+                responsePending: false,
               };
             }
             case "log":
@@ -217,10 +225,12 @@ export function useGameClient(defaultUri: string) {
                 dice: { value: message.value, remaining: message.remaining },
               };
             case "game_over":
+              responsePendingRef.current = false;
               return {
                 ...current,
                 gameOverWinner: message.winner,
                 pendingRequest: null,
+                responsePending: false,
                 logs: appendLog(current.logs, `Game over. Winner: Player ${message.winner ?? "none"}`),
               };
             case "save_result":
@@ -234,9 +244,11 @@ export function useGameClient(defaultUri: string) {
                 ),
               };
             case "error":
+              responsePendingRef.current = false;
               return {
                 ...current,
                 error: message.error,
+                responsePending: false,
                 logs: appendLog(current.logs, `Error: ${message.error}`),
               };
             case "game_created":
@@ -277,12 +289,14 @@ export function useGameClient(defaultUri: string) {
         socketRef.current = null;
         playerIdRef.current = null;
         gameIdRef.current = null;
+        responsePendingRef.current = false;
         setClientState((current) => ({
           ...current,
           status: "disconnected",
           playerId: null,
           gameId: null,
           pendingRequest: null,
+          responsePending: false,
           logs: appendLog(current.logs, "Disconnected from server"),
         }));
       });
@@ -303,15 +317,22 @@ export function useGameClient(defaultUri: string) {
 
   const submitResponse = useCallback(
     (value: unknown) => {
-      send({
+      if (responsePendingRef.current) {
+        return;
+      }
+      const sent = send({
         msg: "input_response",
         value,
         player_id: playerIdRef.current ?? undefined,
         game_id: gameIdRef.current ?? undefined,
       });
+      if (!sent) {
+        return;
+      }
+      responsePendingRef.current = true;
       setClientState((current) => ({
         ...current,
-        pendingRequest: null,
+        responsePending: true,
       }));
     },
     [send],

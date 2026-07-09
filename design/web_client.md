@@ -118,6 +118,10 @@ The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
 to match the side column, so WASD input, prompt transitions, square details, and
 future movement animation do not create apparent board zoom or layout jitter.
+After a prompt response is submitted, the client keeps the current prompt mounted
+in a short resolving state until the backend sends the next prompt or error.
+This avoids transient idle-panel swaps and browser scroll anchoring adjustments
+that would make the board appear to flicker vertically during keyboard input.
 
 For local default-server play, a browser disconnect or reload should not require
 restarting the Python server. The backend treats human slots as active socket
