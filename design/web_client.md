@@ -123,6 +123,12 @@ in a short resolving state until the backend sends the next prompt or error.
 This avoids transient idle-panel swaps and browser scroll anchoring adjustments
 that would make the board appear to flicker vertically during keyboard input.
 
+Until the browser venture-grid UI is built, `CHOOSE_VENTURE_CELL` is handled by
+a temporary web-client fallback that randomly selects one unclaimed grid cell
+from the backend prompt data and submits that normal response. This keeps local
+browser play from blocking without moving venture-grid decision logic into the
+backend.
+
 For local default-server play, a browser disconnect or reload should not require
 restarting the Python server. The backend treats human slots as active socket
 bindings rather than historical assignments, and the local web client explicitly

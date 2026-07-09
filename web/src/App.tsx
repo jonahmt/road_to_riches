@@ -74,6 +74,24 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function chooseAutomaticVentureCell(request: InputRequest): [number, number] {
+  const cells = asArray(request.data.cells);
+  const unclaimed: Array<[number, number]> = [];
+
+  cells.forEach((row, rowIndex) => {
+    asArray(row).forEach((cell, colIndex) => {
+      if (cell === null) {
+        unclaimed.push([rowIndex, colIndex]);
+      }
+    });
+  });
+
+  if (unclaimed.length === 0) {
+    return [0, 0];
+  }
+  return unclaimed[Math.floor(Math.random() * unclaimed.length)];
+}
+
 function useWasdPromptControls(request: InputRequest | null, onSubmit: (value: unknown) => void) {
   const bufferedKey = useRef("");
   const timeoutId = useRef<number | null>(null);
@@ -184,6 +202,14 @@ function App() {
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
   useWasdPromptControls(clientState.responsePending ? null : clientState.pendingRequest, submitResponse);
+
+  useEffect(() => {
+    const request = clientState.pendingRequest;
+    if (!request || clientState.responsePending || request.type !== "CHOOSE_VENTURE_CELL") {
+      return;
+    }
+    submitResponse(chooseAutomaticVentureCell(request));
+  }, [clientState.pendingRequest, clientState.responsePending, submitResponse]);
 
   const currentPlayer = clientState.gameState
     ? clientState.gameState.players[clientState.gameState.current_player_index]
@@ -889,6 +915,9 @@ function getPromptTitle(request: InputRequest): string {
   if (request.type === "INVEST") {
     return "Invest in a Shop";
   }
+  if (request.type === "CHOOSE_VENTURE_CELL") {
+    return "Choosing Venture Cell";
+  }
   return readableType(request.type);
 }
 
@@ -904,6 +933,9 @@ function getPromptHelp(request: InputRequest): string {
   }
   if (request.type === "BUY_STOCK" || request.type === "SELL_STOCK") {
     return "Set a quantity, then choose a district.";
+  }
+  if (request.type === "CHOOSE_VENTURE_CELL") {
+    return "The web client is choosing a random unclaimed venture grid cell.";
   }
   return `Decision for Player ${request.player_id}.`;
 }
@@ -1074,6 +1106,15 @@ function PromptControls({
 
   if (request.type === "ACCEPT_OFFER") {
     return <KeyActionList actions={getSimpleKeyActions(request)} onSubmit={onSubmit} />;
+  }
+
+  if (request.type === "CHOOSE_VENTURE_CELL") {
+    return (
+      <div className="idle-action">
+        <span className="pulse-dot" />
+        <p>Choosing a venture grid cell...</p>
+      </div>
+    );
   }
 
   return (
