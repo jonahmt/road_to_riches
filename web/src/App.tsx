@@ -472,7 +472,6 @@ function BoardPanel({
 
   const bounds = getBoardBounds(state);
   const playerGroups = groupPlayersBySquare(state.players);
-  const lines = getBoardLines(state);
 
   return (
     <section className="board-panel">
@@ -485,17 +484,6 @@ function BoardPanel({
           aria-label="Game board"
           role="img"
         >
-          <g className="board-lines">
-            {lines.map((line) => (
-              <line
-                key={line.key}
-                x1={line.from.position[0]}
-                y1={line.from.position[1]}
-                x2={line.to.position[0]}
-                y2={line.to.position[1]}
-              />
-            ))}
-          </g>
           {state.board.squares.map((square) => {
             const players = playerGroups.get(square.id) ?? [];
             const isSelected = selectedSquare?.id === square.id;
@@ -655,29 +643,6 @@ function keyedActionSort(leftKey: string, rightKey: string): number {
     return leftKey.localeCompare(rightKey);
   }
   return leftIndex - rightIndex;
-}
-
-function getBoardLines(state: GameState) {
-  const squares = new Map(state.board.squares.map((square) => [square.id, square]));
-  const seen = new Set<string>();
-  const lines: Array<{ key: string; from: SquareInfo; to: SquareInfo }> = [];
-  for (const square of state.board.squares) {
-    for (const waypoint of square.waypoints) {
-      for (const toId of waypoint.to_ids) {
-        const to = squares.get(toId);
-        if (!to) {
-          continue;
-        }
-        const key = [Math.min(square.id, to.id), Math.max(square.id, to.id)].join(":");
-        if (seen.has(key)) {
-          continue;
-        }
-        seen.add(key);
-        lines.push({ key, from: square, to });
-      }
-    }
-  }
-  return lines;
 }
 
 function groupPlayersBySquare(players: PlayerState[]) {
