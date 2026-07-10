@@ -114,6 +114,10 @@ should touch at their outer painted edges without overlapping. This keeps the
 board geometry stable for later background art, movement paths, and token
 animation.
 
+Owned shop squares use a translucent tint of the owner's player color as their
+tile background, while their border remains the district color. Unowned and
+non-shop squares keep the neutral dark tile background.
+
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
 to match the side column, so WASD input, prompt transitions, square details, and

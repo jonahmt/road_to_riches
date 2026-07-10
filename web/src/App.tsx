@@ -36,6 +36,21 @@ function getDistrictColor(districtId: number | null): string {
   return DISTRICT_COLORS[districtId % DISTRICT_COLORS.length];
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  const value = hex.replace("#", "");
+  const red = parseInt(value.slice(0, 2), 16);
+  const green = parseInt(value.slice(2, 4), 16);
+  const blue = parseInt(value.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function getSquareFill(square: SquareInfo): string {
+  if (square.type === "SHOP" && square.property_owner !== null) {
+    return hexToRgba(getPlayerColor(square.property_owner), 0.34);
+  }
+  return "rgba(8, 10, 14, 0.92)";
+}
+
 function parseResponseInput(value: string): unknown {
   const trimmed = value.trim();
   if (trimmed === "") {
@@ -514,7 +529,7 @@ function BoardPanel({
                   strokeWidth={BOARD_TILE_STROKE_WIDTH}
                   style={{
                     stroke: getDistrictColor(square.property_district),
-                    fill: "rgba(8, 10, 14, 0.92)",
+                    fill: getSquareFill(square),
                   }}
                 />
                 {isSelected && (
