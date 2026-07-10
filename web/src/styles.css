@@ -369,6 +369,16 @@ h3 {
   font-weight: 750;
 }
 
+.suit-icon {
+  pointer-events: none;
+}
+
+.suit-icon-shape {
+  stroke: rgba(8, 10, 14, 0.88);
+  stroke-linejoin: round;
+  stroke-width: 0.12;
+}
+
 .square-id {
   color: rgba(247, 247, 242, 0.78);
   fill: rgba(247, 247, 242, 0.72);

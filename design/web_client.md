@@ -123,6 +123,8 @@ background. Built checkpoint tiles show `Toll` plus the current toll amount;
 built tax office tiles show `Tax` plus the current 4% tax amount calculated from
 the active turn player's net worth, so the displayed amount changes as turn
 ownership advances.
+Suit and change-of-suit tiles render clean inline SVG suit icons for spade,
+heart, diamond, and club instead of text labels.
 
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch

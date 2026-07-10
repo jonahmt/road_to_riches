@@ -14,6 +14,12 @@ const DEFAULT_URI = "ws://localhost:8765";
 
 const PLAYER_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
 const DISTRICT_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
+const SUIT_COLORS: Record<string, string> = {
+  SPADE: "#f7f7f2",
+  HEART: "#ff7ab6",
+  DIAMOND: "#ffd166",
+  CLUB: "#77dd77",
+};
 const BOARD_TILE_SIZE = 4;
 const BOARD_TILE_RADIUS = BOARD_TILE_SIZE / 2;
 const BOARD_TILE_STROKE_WIDTH = 0.14;
@@ -496,13 +502,14 @@ function BoardPanel({
               square.property_owner === null ? "rgba(255,255,255,0.78)" : getPlayerColor(square.property_owner);
             const label = labelForSquare(square);
             const valueLabel = valueLabelForSquare(square, state);
+            const shouldRenderSuitIcon = isSuitIconSquare(square);
             return (
               <g
                 key={square.id}
                 className={`board-square-group ${isSelected ? "selected" : ""}`}
                 role="button"
                 tabIndex={0}
-                aria-label={`Square ${square.id}: ${readableType(square.type)}`}
+                aria-label={`Square ${square.id}: ${displayTypeForSquare(square)}`}
                 onClick={() => onSelectSquare(square.id)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -538,15 +545,19 @@ function BoardPanel({
                     strokeWidth={BOARD_TILE_SELECTION_STROKE_WIDTH}
                   />
                 )}
-                <text
-                  className="square-type"
-                  x={square.position[0]}
-                  y={square.position[1] - 0.55}
-                  fill={ownerColor}
-                >
-                  {fitLabel(label, 8)}
-                </text>
-                {valueLabel !== null && (
+                {shouldRenderSuitIcon ? (
+                  <SuitIcon suit={square.suit} x={square.position[0]} y={square.position[1] - 0.06} />
+                ) : (
+                  <text
+                    className="square-type"
+                    x={square.position[0]}
+                    y={square.position[1] - 0.55}
+                    fill={ownerColor}
+                  >
+                    {fitLabel(label, 8)}
+                  </text>
+                )}
+                {!shouldRenderSuitIcon && valueLabel !== null && (
                   <text className="square-value" x={square.position[0]} y={square.position[1] + 0.38}>
                     {valueLabel}
                   </text>
@@ -661,6 +672,56 @@ function groupPlayersBySquare(players: PlayerState[]) {
   return groups;
 }
 
+function isSuitIconSquare(square: SquareInfo): boolean {
+  return Boolean(square.suit && ["SUIT", "CHANGE_OF_SUIT"].includes(square.type));
+}
+
+function getSuitColor(suit: string | null): string {
+  if (!suit) {
+    return "#f7f7f2";
+  }
+  return SUIT_COLORS[suit] ?? "#f7f7f2";
+}
+
+function SuitIcon({ suit, x, y }: { suit: string | null; x: number; y: number }) {
+  const fill = getSuitColor(suit);
+  const normalized = suit ?? "SPADE";
+
+  return (
+    <g className="suit-icon" transform={`translate(${x} ${y})`} aria-hidden="true">
+      {normalized === "HEART" && (
+        <path
+          className="suit-icon-shape"
+          d="M0 1.12 C-0.22 0.8 -1.3 0.22 -1.3 -0.48 C-1.3 -0.94 -0.96 -1.18 -0.58 -1.18 C-0.32 -1.18 -0.12 -1.02 0 -0.82 C0.12 -1.02 0.32 -1.18 0.58 -1.18 C0.96 -1.18 1.3 -0.94 1.3 -0.48 C1.3 0.22 0.22 0.8 0 1.12 Z"
+          fill={fill}
+        />
+      )}
+      {normalized === "DIAMOND" && (
+        <path className="suit-icon-shape" d="M0 -1.22 L1.02 0 L0 1.22 L-1.02 0 Z" fill={fill} />
+      )}
+      {normalized === "CLUB" && (
+        <>
+          <circle className="suit-icon-shape" cx="0" cy="-0.58" r="0.48" fill={fill} />
+          <circle className="suit-icon-shape" cx="-0.48" cy="0.1" r="0.48" fill={fill} />
+          <circle className="suit-icon-shape" cx="0.48" cy="0.1" r="0.48" fill={fill} />
+          <path
+            className="suit-icon-shape"
+            d="M-0.24 0.58 C-0.28 0.88 -0.5 1.06 -0.78 1.12 H0.78 C0.5 1.06 0.28 0.88 0.24 0.58 Z"
+            fill={fill}
+          />
+        </>
+      )}
+      {normalized !== "HEART" && normalized !== "DIAMOND" && normalized !== "CLUB" && (
+        <path
+          className="suit-icon-shape"
+          d="M0 -1.22 C-0.82 -0.54 -1.16 -0.08 -1.02 0.38 C-0.9 0.78 -0.48 0.94 -0.14 0.62 C-0.18 0.88 -0.42 1.06 -0.72 1.12 H0.72 C0.42 1.06 0.18 0.88 0.14 0.62 C0.48 0.94 0.9 0.78 1.02 0.38 C1.16 -0.08 0.82 -0.54 0 -1.22 Z"
+          fill={fill}
+        />
+      )}
+    </g>
+  );
+}
+
 function labelForSquare(square: SquareInfo): string {
   if (square.type === "BANK") {
     return "Bank";
@@ -698,6 +759,12 @@ function valueLabelForSquare(square: SquareInfo, state: GameState): string | nul
 }
 
 function displayTypeForSquare(square: SquareInfo): string {
+  if (square.type === "SUIT" && square.suit) {
+    return `${readableType(square.suit)} Suit`;
+  }
+  if (square.type === "CHANGE_OF_SUIT" && square.suit) {
+    return `Change of Suit (${readableType(square.suit)})`;
+  }
   if (square.type === "VP_CHECKPOINT") {
     return "Checkpoint";
   }
