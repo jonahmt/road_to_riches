@@ -120,7 +120,9 @@ Owned shop squares and owned vacant-plot developments use a translucent tint of
 the owner's player color as their tile background, while their border remains
 the district color. Unowned and non-property squares keep the neutral dark tile
 background. Built checkpoint tiles show `Toll` plus the current toll amount;
-built tax office tiles show `Tax` plus `4%`.
+built tax office tiles show `Tax` plus the current 4% tax amount calculated from
+the active turn player's net worth, so the displayed amount changes as turn
+ownership advances.
 
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch

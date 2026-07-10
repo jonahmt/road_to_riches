@@ -495,7 +495,7 @@ function BoardPanel({
             const ownerColor =
               square.property_owner === null ? "rgba(255,255,255,0.78)" : getPlayerColor(square.property_owner);
             const label = labelForSquare(square);
-            const valueLabel = valueLabelForSquare(square);
+            const valueLabel = valueLabelForSquare(square, state);
             return (
               <g
                 key={square.id}
@@ -680,12 +680,16 @@ function labelForSquare(square: SquareInfo): string {
   return readableType(square.type);
 }
 
-function valueLabelForSquare(square: SquareInfo): string | null {
+function valueLabelForSquare(square: SquareInfo, state: GameState): string | null {
   if (square.type === "VP_CHECKPOINT") {
     return shortGold(square.checkpoint_toll);
   }
   if (square.type === "VP_TAX_OFFICE") {
-    return "4%";
+    const currentPlayer = state.players[state.current_player_index];
+    if (!currentPlayer) {
+      return null;
+    }
+    return shortGold(Math.floor(netWorth(state, currentPlayer) * 0.04));
   }
   if (square.shop_current_value !== null) {
     return shortGold(square.shop_current_value);
@@ -856,8 +860,8 @@ function SquarePanel({ square, state }: { square: SquareInfo | null; state: Game
           )}
           {square.type === "VP_TAX_OFFICE" && (
             <div>
-              <dt>Tax rate</dt>
-              <dd>4% of net worth</dd>
+              <dt>Current tax</dt>
+              <dd>{state ? valueLabelForSquare(square, state) : "-"}</dd>
             </div>
           )}
           <div>
