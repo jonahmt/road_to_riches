@@ -99,10 +99,12 @@ The web client treats the Python backend as the source of truth.
 * `web/src/styles.css` owns the first visual system.
 
 The board renderer is deliberately data-driven. Squares are placed from backend
-`SquareInfo.position`, connections are drawn from waypoint data, and player
-tokens are layered by current square. Future location backgrounds, tile art,
-movement animation, and sprite/3D character layers should sit behind or above
-this board scene rather than replacing the protocol model.
+`SquareInfo.position`, and player tokens are layered by current square. The
+player-facing board does not render waypoint/path guide lines during normal play;
+movement choices are handled through the current input prompt and keyboard
+mapping. Future location backgrounds, tile art, movement animation, and
+sprite/3D character layers should sit behind or above this board scene rather
+than replacing the protocol model.
 
 Board tiles use the same coordinate contract as board JSON. A square centered at
 `[x, y]` renders as a 4 by 4 board-unit tile, from `x - 2` to `x + 2` and
@@ -114,9 +116,11 @@ should touch at their outer painted edges without overlapping. This keeps the
 board geometry stable for later background art, movement paths, and token
 animation.
 
-Owned shop squares use a translucent tint of the owner's player color as their
-tile background, while their border remains the district color. Unowned and
-non-shop squares keep the neutral dark tile background.
+Owned shop squares and owned vacant-plot developments use a translucent tint of
+the owner's player color as their tile background, while their border remains
+the district color. Unowned and non-property squares keep the neutral dark tile
+background. Built checkpoint tiles show `Toll` plus the current toll amount;
+built tax office tiles show `Tax` plus `4%`.
 
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch

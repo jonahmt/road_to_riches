@@ -44,9 +44,14 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
+function isTintablePropertyTile(square: SquareInfo): boolean {
+  return ["SHOP", "VP_CHECKPOINT", "VP_TAX_OFFICE"].includes(square.type);
+}
+
 function getSquareFill(square: SquareInfo): string {
-  if (square.type === "SHOP" && square.property_owner !== null) {
-    return hexToRgba(getPlayerColor(square.property_owner), 0.34);
+  const ownerId = square.property_owner;
+  if (ownerId !== null && isTintablePropertyTile(square)) {
+    return hexToRgba(getPlayerColor(ownerId), 0.34);
   }
   return "rgba(8, 10, 14, 0.92)";
 }
@@ -490,6 +495,7 @@ function BoardPanel({
             const ownerColor =
               square.property_owner === null ? "rgba(255,255,255,0.78)" : getPlayerColor(square.property_owner);
             const label = labelForSquare(square);
+            const valueLabel = valueLabelForSquare(square);
             return (
               <g
                 key={square.id}
@@ -540,9 +546,9 @@ function BoardPanel({
                 >
                   {fitLabel(label, 8)}
                 </text>
-                {square.shop_current_value !== null && (
+                {valueLabel !== null && (
                   <text className="square-value" x={square.position[0]} y={square.position[1] + 0.38}>
-                    {shortGold(square.shop_current_value)}
+                    {valueLabel}
                   </text>
                 )}
                 <text className="square-id" x={square.position[0] + 1.55} y={square.position[1] + 1.48}>
@@ -662,8 +668,37 @@ function labelForSquare(square: SquareInfo): string {
   if (square.type === "SHOP") {
     return square.property_owner === null ? "Shop" : `P${square.property_owner}`;
   }
+  if (square.type === "VP_CHECKPOINT") {
+    return "Toll";
+  }
+  if (square.type === "VP_TAX_OFFICE") {
+    return "Tax";
+  }
   if (square.suit) {
     return square.suit;
+  }
+  return readableType(square.type);
+}
+
+function valueLabelForSquare(square: SquareInfo): string | null {
+  if (square.type === "VP_CHECKPOINT") {
+    return shortGold(square.checkpoint_toll);
+  }
+  if (square.type === "VP_TAX_OFFICE") {
+    return "4%";
+  }
+  if (square.shop_current_value !== null) {
+    return shortGold(square.shop_current_value);
+  }
+  return null;
+}
+
+function displayTypeForSquare(square: SquareInfo): string {
+  if (square.type === "VP_CHECKPOINT") {
+    return "Checkpoint";
+  }
+  if (square.type === "VP_TAX_OFFICE") {
+    return "Tax Office";
   }
   return readableType(square.type);
 }
@@ -799,7 +834,7 @@ function SquarePanel({ square, state }: { square: SquareInfo | null; state: Game
           </div>
           <div>
             <dt>Type</dt>
-            <dd>{readableType(square.type)}</dd>
+            <dd>{displayTypeForSquare(square)}</dd>
           </div>
           <div>
             <dt>Owner</dt>
@@ -813,6 +848,18 @@ function SquarePanel({ square, state }: { square: SquareInfo | null; state: Game
             <dt>Value</dt>
             <dd>{formatGold(square.shop_current_value)}</dd>
           </div>
+          {square.type === "VP_CHECKPOINT" && (
+            <div>
+              <dt>Toll</dt>
+              <dd>{formatGold(square.checkpoint_toll)}</dd>
+            </div>
+          )}
+          {square.type === "VP_TAX_OFFICE" && (
+            <div>
+              <dt>Tax rate</dt>
+              <dd>4% of net worth</dd>
+            </div>
+          )}
           <div>
             <dt>Base rent</dt>
             <dd>{formatGold(square.shop_base_rent)}</dd>
