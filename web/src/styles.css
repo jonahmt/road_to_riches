@@ -571,11 +571,25 @@ h3 {
   stroke-width: 0.08;
 }
 
+.player-token-layer,
+.player-token-svg {
+  pointer-events: none;
+}
+
 .player-token-svg text {
   fill: #101114;
   font-size: 0.34px;
   font-weight: 900;
   stroke: none;
+}
+
+.player-token-svg.active circle {
+  stroke-width: 0.12;
+  filter: drop-shadow(0 0.16px 0.18px rgba(0, 0, 0, 0.72));
+}
+
+.player-token-svg.active text {
+  font-size: 0.54px;
 }
 
 .player-token {

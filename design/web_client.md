@@ -160,6 +160,13 @@ If another follow target arrives during an animation, the camera retargets from
 its current interpolated position; entering Free Cam cancels the animation and
 leaves the camera at that position for manual control.
 
+Player tokens render in a stable SVG overlay above the square layer so movement
+does not recreate the token at each destination. The active turn player's token
+is centered on its square at a larger radius for easier visual tracking, while
+inactive tokens retain the compact lower-corner arrangement. Position and size
+changes interpolate over 360 milliseconds with the same cubic ease-in-out curve
+as the Follow camera, including clean retargeting from an in-progress frame.
+
 Wheel events update the SVG viewBox directly instead of rerendering the React
 square tree or applying a CSS transform; this keeps trackpad response immediate
 and preserves vector-sharp tiles and text at high zoom. Camera movement applies

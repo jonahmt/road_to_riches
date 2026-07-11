@@ -81,6 +81,9 @@ const MIN_BOARD_ZOOM = 0.5;
 const MAX_BOARD_ZOOM = 3;
 const FOLLOW_BOARD_ZOOM = 1.5;
 const FOLLOW_CAMERA_ANIMATION_MS = 360;
+const PLAYER_TOKEN_ANIMATION_MS = 360;
+const PLAYER_TOKEN_RADIUS = 0.34;
+const ACTIVE_PLAYER_TOKEN_RADIUS = 0.72;
 const BOARD_ZOOM_STEP = 0.25;
 const BOARD_WHEEL_ZOOM_SPEED = 0.0015;
 const BOARD_DRAG_THRESHOLD = 4;
@@ -104,6 +107,17 @@ interface BoardCamera {
 }
 
 type BoardCameraMode = "follow" | "free";
+
+type BoardTokenVisual = {
+  x: number;
+  y: number;
+  radius: number;
+};
+
+type BoardPlayerToken = BoardTokenVisual & {
+  player: PlayerState;
+  isActive: boolean;
+};
 
 interface BoardBounds {
   minX: number;
@@ -172,6 +186,52 @@ function interpolateBoardCamera(from: BoardCamera, to: BoardCamera, progress: nu
     minX: from.minX + (to.minX - from.minX) * progress,
     minY: from.minY + (to.minY - from.minY) * progress,
   };
+}
+
+function interpolateBoardToken(
+  from: BoardTokenVisual,
+  to: BoardTokenVisual,
+  progress: number,
+): BoardTokenVisual {
+  return {
+    x: from.x + (to.x - from.x) * progress,
+    y: from.y + (to.y - from.y) * progress,
+    radius: from.radius + (to.radius - from.radius) * progress,
+  };
+}
+
+function applyBoardTokenVisual(element: SVGGElement, visual: BoardTokenVisual) {
+  element.setAttribute("transform", `translate(${visual.x} ${visual.y})`);
+  element.querySelector("circle")?.setAttribute("r", String(visual.radius));
+}
+
+function getBoardPlayerTokens(state: GameState | null): BoardPlayerToken[] {
+  if (!state) {
+    return [];
+  }
+  const squares = new Map(state.board.squares.map((square) => [square.id, square]));
+  const groups = groupPlayersBySquare(state.players);
+  const activePlayer = state.players[state.current_player_index] ?? null;
+
+  return state.players.flatMap((player) => {
+    const square = squares.get(player.position);
+    if (!square) {
+      return [];
+    }
+    const isActive = player.player_id === activePlayer?.player_id;
+    const index = (groups.get(square.id) ?? []).findIndex(
+      (groupedPlayer) => groupedPlayer.player_id === player.player_id,
+    );
+    return [
+      {
+        player,
+        isActive,
+        x: isActive ? square.position[0] : square.position[0] - 1.45 + index * 0.58,
+        y: isActive ? square.position[1] : square.position[1] + 1.35,
+        radius: isActive ? ACTIVE_PLAYER_TOKEN_RADIUS : PLAYER_TOKEN_RADIUS,
+      },
+    ];
+  });
 }
 
 function applyBoardCamera(svg: SVGSVGElement, camera: BoardCamera, bounds: BoardBounds) {
@@ -641,6 +701,9 @@ function BoardPanel({
   const cameraBoundsKeyRef = useRef("");
   const cameraAnimationFrameRef = useRef<number | null>(null);
   const cameraReadyRef = useRef(false);
+  const tokenElementsRef = useRef(new Map<number, SVGGElement>());
+  const tokenVisualsRef = useRef(new Map<number, BoardTokenVisual>());
+  const tokenAnimationFrameRef = useRef<number | null>(null);
   const [cameraMode, setCameraMode] = useState<BoardCameraMode>("follow");
   const [isDragging, setIsDragging] = useState(false);
   const boardBounds = state ? getBoardBounds(state) : null;
@@ -650,6 +713,10 @@ function BoardPanel({
       ? state.board.squares.find((square) => square.id === activePlayer.position) ?? null
       : null;
   const activePositionKey = activeSquare ? `${activeSquare.position[0]}:${activeSquare.position[1]}` : "";
+  const playerTokens = useMemo(() => getBoardPlayerTokens(state), [state]);
+  const playerTokenKey = playerTokens
+    .map((token) => `${token.player.player_id}:${token.x}:${token.y}:${token.radius}`)
+    .join("|");
   const boundsKey = boardBounds
     ? `${boardBounds.minX}:${boardBounds.minY}:${boardBounds.width}:${boardBounds.height}`
     : "";
@@ -747,6 +814,66 @@ function BoardPanel({
     return () => canvas.removeEventListener("wheel", handleWheel);
   }, [boundsKey, cameraMode]);
 
+  useLayoutEffect(() => {
+    if (tokenAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(tokenAnimationFrameRef.current);
+      tokenAnimationFrameRef.current = null;
+    }
+
+    const transitions = playerTokens.flatMap((target) => {
+      const element = tokenElementsRef.current.get(target.player.player_id);
+      if (!element) {
+        return [];
+      }
+      const from = tokenVisualsRef.current.get(target.player.player_id) ?? target;
+      applyBoardTokenVisual(element, from);
+      const moved =
+        Math.abs(from.x - target.x) > 0.0001 ||
+        Math.abs(from.y - target.y) > 0.0001 ||
+        Math.abs(from.radius - target.radius) > 0.0001;
+      if (!moved) {
+        tokenVisualsRef.current.set(target.player.player_id, target);
+        element.dataset.tokenAnimating = "false";
+        return [];
+      }
+      element.dataset.tokenAnimating = "true";
+      return [{ element, from, target }];
+    });
+
+    if (transitions.length === 0) {
+      return;
+    }
+
+    const startedAt = window.performance.now();
+    const animate = (timestamp: number) => {
+      const progress = Math.min(1, (timestamp - startedAt) / PLAYER_TOKEN_ANIMATION_MS);
+      const easedProgress = easeInOutCubic(progress);
+      for (const transition of transitions) {
+        const visual = interpolateBoardToken(transition.from, transition.target, easedProgress);
+        tokenVisualsRef.current.set(transition.target.player.player_id, visual);
+        applyBoardTokenVisual(transition.element, visual);
+      }
+      if (progress < 1) {
+        tokenAnimationFrameRef.current = window.requestAnimationFrame(animate);
+      } else {
+        for (const transition of transitions) {
+          tokenVisualsRef.current.set(transition.target.player.player_id, transition.target);
+          applyBoardTokenVisual(transition.element, transition.target);
+          transition.element.dataset.tokenAnimating = "false";
+        }
+        tokenAnimationFrameRef.current = null;
+      }
+    };
+    tokenAnimationFrameRef.current = window.requestAnimationFrame(animate);
+
+    return () => {
+      if (tokenAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(tokenAnimationFrameRef.current);
+        tokenAnimationFrameRef.current = null;
+      }
+    };
+  }, [playerTokenKey]);
+
   if (!state || !boardBounds) {
     return (
       <section className="board-panel empty-board">
@@ -761,7 +888,6 @@ function BoardPanel({
   }
 
   const bounds = boardBounds;
-  const playerGroups = groupPlayersBySquare(state.players);
 
   function zoomFromCenter(delta: number) {
     const svg = boardSvgRef.current;
@@ -893,7 +1019,6 @@ function BoardPanel({
           role="img"
         >
           {state.board.squares.map((square) => {
-            const players = playerGroups.get(square.id) ?? [];
             const isSelected = selectedSquare?.id === square.id;
             const ownerColor =
               square.property_owner === null ? "rgba(255,255,255,0.78)" : getPlayerColor(square.property_owner);
@@ -966,22 +1091,35 @@ function BoardPanel({
                 <text className="square-id" x={square.position[0] + 1.55} y={square.position[1] + 1.48}>
                   #{square.id}
                 </text>
-                {players.map((player, index) => (
-                  <g key={player.player_id} className="player-token-svg">
-                    <circle
-                      cx={square.position[0] - 1.45 + index * 0.58}
-                      cy={square.position[1] + 1.35}
-                      r="0.34"
-                      fill={getPlayerColor(player.player_id)}
-                    />
-                    <text x={square.position[0] - 1.45 + index * 0.58} y={square.position[1] + 1.47}>
-                      {player.player_id}
-                    </text>
-                  </g>
-                ))}
               </g>
             );
           })}
+          <g className="player-token-layer" aria-label="Player positions">
+            {playerTokens.map((token) => {
+              const renderedVisual = tokenVisualsRef.current.get(token.player.player_id) ?? token;
+              return (
+                <g
+                  key={token.player.player_id}
+                  ref={(element) => {
+                    if (element) {
+                      tokenElementsRef.current.set(token.player.player_id, element);
+                    } else {
+                      tokenElementsRef.current.delete(token.player.player_id);
+                    }
+                  }}
+                  className={`player-token-svg ${token.isActive ? "active" : ""}`}
+                  data-player-id={token.player.player_id}
+                  data-token-animating="false"
+                  transform={`translate(${renderedVisual.x} ${renderedVisual.y})`}
+                >
+                  <circle r={renderedVisual.radius} fill={getPlayerColor(token.player.player_id)} />
+                  <text x="0" y="0.08">
+                    {token.player.player_id}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
         </svg>
       </div>
       <BoardDice dice={dice} />
