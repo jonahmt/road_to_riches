@@ -21,6 +21,44 @@ const SUIT_COLORS: Record<string, string> = {
   CLUB: "#74df67",
 };
 const SUIT_ORDER = ["SPADE", "HEART", "DIAMOND", "CLUB"];
+const RENT_MULTIPLIERS: Record<string, number> = {
+  "1:1": 1,
+  "1:2": 1,
+  "2:2": 2,
+  "1:3": 1,
+  "2:3": 1.5,
+  "3:3": 3.75,
+  "1:4": 1,
+  "2:4": 1.25,
+  "3:4": 2.5,
+  "4:4": 5,
+  "1:5": 1,
+  "2:5": 1.25,
+  "3:5": 2,
+  "4:5": 3.25,
+  "5:5": 6,
+  "1:6": 1,
+  "2:6": 1.25,
+  "3:6": 2,
+  "4:6": 2.75,
+  "5:6": 4.25,
+  "6:6": 6.75,
+  "1:7": 1,
+  "2:7": 1.25,
+  "3:7": 1.75,
+  "4:7": 2.75,
+  "5:7": 3.75,
+  "6:7": 5.25,
+  "7:7": 7.5,
+  "1:8": 1,
+  "2:8": 1.25,
+  "3:8": 1.75,
+  "4:8": 2.5,
+  "5:8": 3.5,
+  "6:8": 4.5,
+  "7:8": 6,
+  "8:8": 8,
+};
 const BOARD_TILE_SIZE = 4;
 const BOARD_TILE_RADIUS = BOARD_TILE_SIZE / 2;
 const BOARD_TILE_STROKE_WIDTH = 0.14;
@@ -504,6 +542,8 @@ function BoardPanel({
             const label = labelForSquare(square);
             const valueLabel = valueLabelForSquare(square, state);
             const shouldRenderSuitIcon = isSuitIconSquare(square);
+            const shouldRenderShopTile = isShopSquare(square);
+            const shouldRenderDefaultText = !shouldRenderSuitIcon && !shouldRenderShopTile;
             return (
               <g
                 key={square.id}
@@ -548,6 +588,8 @@ function BoardPanel({
                 )}
                 {shouldRenderSuitIcon ? (
                   <SuitIcon suit={square.suit} squareType={square.type} x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderShopTile ? (
+                  <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
                 ) : (
                   <text
                     className="square-type"
@@ -558,7 +600,7 @@ function BoardPanel({
                     {fitLabel(label, 8)}
                   </text>
                 )}
-                {!shouldRenderSuitIcon && valueLabel !== null && (
+                {shouldRenderDefaultText && valueLabel !== null && (
                   <text className="square-value" x={square.position[0]} y={square.position[1] + 0.38}>
                     {valueLabel}
                   </text>
@@ -673,8 +715,105 @@ function groupPlayersBySquare(players: PlayerState[]) {
   return groups;
 }
 
+function isShopSquare(square: SquareInfo): boolean {
+  return square.type === "SHOP";
+}
+
 function isSuitIconSquare(square: SquareInfo): boolean {
   return Boolean(square.suit && ["SUIT", "CHANGE_OF_SUIT"].includes(square.type));
+}
+
+function rentMultiplier(numOwned: number, numTotal: number): number {
+  if (numOwned <= 0) {
+    return 0;
+  }
+  return RENT_MULTIPLIERS[`${numOwned}:${numTotal}`] ?? 1;
+}
+
+function countDistrictShops(state: GameState, districtId: number): number {
+  return state.board.squares.filter(
+    (square) => square.type === "SHOP" && square.property_district === districtId,
+  ).length;
+}
+
+function countOwnedDistrictShops(state: GameState, districtId: number, ownerId: number): number {
+  return state.board.squares.filter(
+    (square) =>
+      square.type === "SHOP" &&
+      square.property_district === districtId &&
+      square.property_owner === ownerId,
+  ).length;
+}
+
+function currentShopRent(state: GameState, square: SquareInfo): number {
+  if (square.property_owner === null) {
+    return square.shop_base_rent ?? 0;
+  }
+  if (
+    square.shop_base_rent === null ||
+    square.shop_base_value === null ||
+    square.shop_current_value === null ||
+    square.property_district === null
+  ) {
+    return 0;
+  }
+
+  const numTotal = countDistrictShops(state, square.property_district);
+  const numOwned = countOwnedDistrictShops(state, square.property_district, square.property_owner);
+  const multiplier = rentMultiplier(numOwned, numTotal);
+  return Math.floor(
+    (multiplier * square.shop_base_rent * (2 * square.shop_current_value - square.shop_base_value)) /
+      square.shop_base_value,
+  );
+}
+
+function rawGold(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+  return String(Math.round(value));
+}
+
+function ShopTile({
+  square,
+  state,
+  x,
+  y,
+}: {
+  square: SquareInfo;
+  state: GameState;
+  x: number;
+  y: number;
+}) {
+  const value = square.shop_current_value ?? square.shop_base_value;
+  const rent = currentShopRent(state, square);
+
+  if (square.property_owner === null) {
+    return (
+      <g className="shop-tile shop-tile-unowned" aria-hidden="true">
+        <text className="shop-tile-action" x={x} y={y - 0.42}>
+          BUY
+        </text>
+        <text className="shop-tile-value" x={x} y={y + 0.46}>
+          {rawGold(value)}G
+        </text>
+      </g>
+    );
+  }
+
+  return (
+    <g className="shop-tile shop-tile-owned" aria-hidden="true">
+      <text className="shop-tile-action" x={x} y={y - 0.74}>
+        P{square.property_owner}
+      </text>
+      <text className="shop-tile-pay" x={x} y={y + 0.02}>
+        PAY {rawGold(rent)}
+      </text>
+      <text className="shop-tile-detail" x={x} y={y + 0.88}>
+        VALUE {rawGold(value)}
+      </text>
+    </g>
+  );
 }
 
 function getSuitColor(suit: string | null): string {

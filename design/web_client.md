@@ -116,13 +116,16 @@ should touch at their outer painted edges without overlapping. This keeps the
 board geometry stable for later background art, movement paths, and token
 animation.
 
-Owned shop squares and owned vacant-plot developments use a translucent tint of
-the owner's player color as their tile background, while their border remains
-the district color. Unowned and non-property squares keep the neutral dark tile
-background. Built checkpoint tiles show `Toll` plus the current toll amount;
-built tax office tiles show `Tax` plus the current 4% tax amount calculated from
-the active turn player's net worth, so the displayed amount changes as turn
-ownership advances.
+Shop squares use the selected "06 Arcade Tile" visual direction with bold white
+action text. Unowned shops show `BUY` and the current value/purchase price only;
+they do not show rent. Owned shops show the owner, current payable rent, and
+current value. Owned shop squares and owned vacant-plot developments use a
+translucent tint of the owner's player color as their tile background, while
+their border remains the district color. Unowned and non-property squares keep
+the neutral dark tile background. Built checkpoint tiles show `Toll` plus the
+current toll amount; built tax office tiles show `Tax` plus the current 4% tax
+amount calculated from the active turn player's net worth, so the displayed
+amount changes as turn ownership advances.
 Suit and change-of-suit tiles render clean inline SVG suit icons for spade,
 heart, diamond, and club instead of text labels. The selected web visual
 direction uses a white tile border for these suit tiles, white suit-name text at
