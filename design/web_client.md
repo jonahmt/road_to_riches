@@ -144,6 +144,15 @@ in a short resolving state until the backend sends the next prompt or error.
 This avoids transient idle-panel swaps and browser scroll anchoring adjustments
 that would make the board appear to flicker vertically during keyboard input.
 
+Players can inspect the board with a screen-space camera. The mouse wheel zooms
+from 50% to 300% around the cursor, primary-button dragging pans the transformed
+board without changing zoom, and compact minus, reset, and plus controls in the
+lower-right provide button equivalents. Reset returns to the original fitted
+board. Camera movement applies only to the SVG board layer: the die in the
+upper-left and camera controls in the lower-right keep fixed screen positions and
+sizes at every pan and zoom level. A short drag threshold distinguishes panning
+from selecting a square.
+
 The game board has a persistent die overlay in its upper-left corner. It consumes
 the same backend `dice` message as the TUI: the face displays the remaining move
 count, counts down as movement is resolved, and becomes blank at zero, while a

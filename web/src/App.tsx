@@ -1,4 +1,11 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { getPathKeyActions, getWasdResponseMap, type WasdResponseMap } from "./controls";
 import { formatGold, netWorth, readableType } from "./format";
 import {
@@ -69,6 +76,12 @@ const BOARD_TILE_SELECTION_STROKE_WIDTH = 0.12;
 const BOARD_TILE_SELECTION_SIZE = BOARD_TILE_SIZE - BOARD_TILE_SELECTION_INSET * 2;
 const WASD_KEYS = new Set(["w", "a", "s", "d"]);
 const CHORD_TIMEOUT_MS = 180;
+const MIN_BOARD_ZOOM = 0.5;
+const MAX_BOARD_ZOOM = 3;
+const BOARD_ZOOM_STEP = 0.25;
+const BOARD_WHEEL_ZOOM_SPEED = 0.0015;
+const BOARD_DRAG_THRESHOLD = 4;
+const DEFAULT_BOARD_CAMERA = { zoom: 1, x: 0, y: 0 };
 const DIE_PIPS: Record<number, readonly number[]> = {
   0: [],
   1: [5],
@@ -81,6 +94,41 @@ const DIE_PIPS: Record<number, readonly number[]> = {
   8: [1, 2, 3, 4, 6, 7, 8, 9],
   9: [1, 2, 3, 4, 5, 6, 7, 8, 9],
 };
+
+interface BoardCamera {
+  zoom: number;
+  x: number;
+  y: number;
+}
+
+interface BoardDrag {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  lastX: number;
+  lastY: number;
+}
+
+function clampBoardZoom(zoom: number): number {
+  return Math.min(MAX_BOARD_ZOOM, Math.max(MIN_BOARD_ZOOM, zoom));
+}
+
+function zoomBoardCameraAt(
+  camera: BoardCamera,
+  requestedZoom: number,
+  point: { x: number; y: number },
+): BoardCamera {
+  const zoom = clampBoardZoom(requestedZoom);
+  if (zoom === camera.zoom) {
+    return camera;
+  }
+  const ratio = zoom / camera.zoom;
+  return {
+    zoom,
+    x: point.x - (point.x - camera.x) * ratio,
+    y: point.y - (point.y - camera.y) * ratio,
+  };
+}
 
 function getPlayerColor(playerId: number): string {
   return PLAYER_COLORS[playerId % PLAYER_COLORS.length];
@@ -522,6 +570,32 @@ function BoardPanel({
   selectedSquare: SquareInfo | null;
   onSelectSquare: (squareId: number) => void;
 }) {
+  const boardCanvasRef = useRef<HTMLDivElement>(null);
+  const boardDragRef = useRef<BoardDrag | null>(null);
+  const didDragRef = useRef(false);
+  const [camera, setCamera] = useState<BoardCamera>(DEFAULT_BOARD_CAMERA);
+  const [isDragging, setIsDragging] = useState(false);
+  const hasState = state !== null;
+
+  useEffect(() => {
+    const canvas = boardCanvasRef.current;
+    if (!canvas || !hasState) {
+      return;
+    }
+
+    function handleWheel(event: WheelEvent) {
+      event.preventDefault();
+      const currentCanvas = event.currentTarget as HTMLDivElement;
+      const rect = currentCanvas.getBoundingClientRect();
+      const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      const factor = Math.exp(-event.deltaY * BOARD_WHEEL_ZOOM_SPEED);
+      setCamera((current) => zoomBoardCameraAt(current, current.zoom * factor, point));
+    }
+
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, [hasState]);
+
   if (!state) {
     return (
       <section className="board-panel empty-board">
@@ -537,19 +611,99 @@ function BoardPanel({
 
   const bounds = getBoardBounds(state);
   const playerGroups = groupPlayersBySquare(state.players);
+  const cameraIsReset =
+    camera.zoom === DEFAULT_BOARD_CAMERA.zoom &&
+    camera.x === DEFAULT_BOARD_CAMERA.x &&
+    camera.y === DEFAULT_BOARD_CAMERA.y;
+
+  function zoomFromCenter(delta: number) {
+    const canvas = boardCanvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const point = { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2 };
+    setCamera((current) => zoomBoardCameraAt(current, current.zoom + delta, point));
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    didDragRef.current = false;
+    boardDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+    };
+    setIsDragging(true);
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const drag = boardDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    const deltaX = event.clientX - drag.lastX;
+    const deltaY = event.clientY - drag.lastY;
+    drag.lastX = event.clientX;
+    drag.lastY = event.clientY;
+
+    if (
+      !didDragRef.current &&
+      Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < BOARD_DRAG_THRESHOLD
+    ) {
+      return;
+    }
+    didDragRef.current = true;
+    setCamera((current) => ({ ...current, x: current.x + deltaX, y: current.y + deltaY }));
+  }
+
+  function finishPointerDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (boardDragRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    boardDragRef.current = null;
+    setIsDragging(false);
+  }
 
   return (
     <section className="board-panel">
       <div className="location-backdrop" />
-      <div className="board-canvas">
-        <svg
-          className="board-svg"
-          viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
-          preserveAspectRatio="xMidYMid meet"
-          aria-label="Game board"
-          role="img"
+      <div
+        ref={boardCanvasRef}
+        className={`board-canvas ${isDragging ? "is-dragging" : ""}`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPointerDrag}
+        onPointerCancel={finishPointerDrag}
+        onClickCapture={(event) => {
+          if (didDragRef.current) {
+            event.preventDefault();
+            event.stopPropagation();
+            didDragRef.current = false;
+          }
+        }}
+      >
+        <div
+          className="board-viewport"
+          data-zoom={camera.zoom.toFixed(2)}
+          style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})` }}
         >
-          {state.board.squares.map((square) => {
+          <svg
+            className="board-svg"
+            viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+            preserveAspectRatio="xMidYMid meet"
+            aria-label="Game board"
+            role="img"
+          >
+            {state.board.squares.map((square) => {
             const players = playerGroups.get(square.id) ?? [];
             const isSelected = selectedSquare?.id === square.id;
             const ownerColor =
@@ -638,10 +792,41 @@ function BoardPanel({
                 ))}
               </g>
             );
-          })}
-        </svg>
+            })}
+          </svg>
+        </div>
       </div>
       <BoardDice dice={dice} />
+      <div className="board-camera-controls" aria-label="Board zoom controls">
+        <button
+          type="button"
+          aria-label="Zoom out"
+          title="Zoom out"
+          disabled={camera.zoom <= MIN_BOARD_ZOOM}
+          onClick={() => zoomFromCenter(-BOARD_ZOOM_STEP)}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          className="board-camera-reset"
+          aria-label="Reset board view"
+          title={`Reset board view (${Math.round(camera.zoom * 100)}%)`}
+          disabled={cameraIsReset}
+          onClick={() => setCamera(DEFAULT_BOARD_CAMERA)}
+        >
+          Reset
+        </button>
+        <button
+          type="button"
+          aria-label="Zoom in"
+          title="Zoom in"
+          disabled={camera.zoom >= MAX_BOARD_ZOOM}
+          onClick={() => zoomFromCenter(BOARD_ZOOM_STEP)}
+        >
+          +
+        </button>
+      </div>
     </section>
   );
 }

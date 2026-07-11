@@ -315,6 +315,20 @@ h3 {
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.34);
   overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.board-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.board-viewport {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 .board-svg {
@@ -382,6 +396,57 @@ h3 {
 
 .board-die-roll.is-empty {
   visibility: hidden;
+}
+
+.board-camera-controls {
+  position: absolute;
+  right: 34px;
+  bottom: 34px;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9px;
+  background: rgba(8, 10, 14, 0.88);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+}
+
+.board-camera-controls button {
+  min-width: 38px;
+  min-height: 36px;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  padding: 6px 11px;
+  background: transparent;
+  color: #f7f7f2;
+  box-shadow: none;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.board-camera-controls button:last-child {
+  border-right: 0;
+}
+
+.board-camera-controls button:hover:not(:disabled),
+.board-camera-controls button:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  transform: none;
+}
+
+.board-camera-controls button:disabled {
+  color: rgba(247, 247, 242, 0.32);
+  cursor: default;
+}
+
+.board-camera-controls .board-camera-reset {
+  min-width: 58px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .board-square-group {
@@ -941,5 +1006,10 @@ dd {
   .board-die-pip {
     width: 7px;
     height: 7px;
+  }
+
+  .board-camera-controls {
+    right: 30px;
+    bottom: 30px;
   }
 }
