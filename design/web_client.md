@@ -78,6 +78,12 @@ The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
 review, but it should not be treated as the main game UI.
 
+Each player HUD displays suits as four dedicated vector-icon slots in a stable
+Spade, Heart, Diamond, Club order instead of an `x/4` count. An owned suit uses
+its established suit color; a missing suit keeps its position as a faint neutral
+placeholder. Suit ownership changes therefore never cause the other icons to
+shift, and the full owned/missing state is exposed as an accessible label.
+
 Normal board movement in the browser is controlled with WASD rather than by
 selecting path buttons in the side panel. The backend still owns all movement
 validation and sends the same `CHOOSE_PATH` / `CONFIRM_STOP` prompts; the web

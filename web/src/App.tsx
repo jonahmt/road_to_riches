@@ -1455,8 +1455,16 @@ function suitLabel(suit: string | null): string {
   return readableType(suit).toUpperCase();
 }
 
-function SuitShape({ suit, scale = 1 }: { suit: string | null; scale?: number }) {
-  const fill = getSuitColor(suit);
+function SuitShape({
+  suit,
+  scale = 1,
+  fill,
+}: {
+  suit: string | null;
+  scale?: number;
+  fill?: string;
+}) {
+  const shapeFill = fill ?? getSuitColor(suit);
   const normalized = suit ?? "SPADE";
 
   return (
@@ -1465,24 +1473,24 @@ function SuitShape({ suit, scale = 1 }: { suit: string | null; scale?: number })
         <path
           className="suit-icon-shape"
           d="M0 1.12 C-0.22 0.8 -1.3 0.22 -1.3 -0.48 C-1.3 -0.94 -0.96 -1.18 -0.58 -1.18 C-0.32 -1.18 -0.12 -1.02 0 -0.82 C0.12 -1.02 0.32 -1.18 0.58 -1.18 C0.96 -1.18 1.3 -0.94 1.3 -0.48 C1.3 0.22 0.22 0.8 0 1.12 Z"
-          fill={fill}
+          fill={shapeFill}
         />
       )}
       {normalized === "DIAMOND" && (
-        <path className="suit-icon-shape" d="M0 -1.22 L1.02 0 L0 1.22 L-1.02 0 Z" fill={fill} />
+        <path className="suit-icon-shape" d="M0 -1.22 L1.02 0 L0 1.22 L-1.02 0 Z" fill={shapeFill} />
       )}
       {normalized === "CLUB" && (
         <path
           className="suit-icon-shape"
           d="M0 -1.16 C0.34 -1.16 0.57 -0.88 0.53 -0.54 C0.51 -0.4 0.45 -0.28 0.35 -0.18 C0.48 -0.28 0.62 -0.33 0.76 -0.29 C1.04 -0.21 1.2 0.09 1.1 0.39 C1 0.69 0.7 0.83 0.46 0.68 C0.38 0.62 0.32 0.55 0.28 0.46 C0.28 0.81 0.46 1.04 0.74 1.13 H-0.74 C-0.46 1.04 -0.28 0.81 -0.28 0.46 C-0.32 0.55 -0.38 0.62 -0.46 0.68 C-0.7 0.83 -1 0.69 -1.1 0.39 C-1.2 0.09 -1.04 -0.21 -0.76 -0.29 C-0.62 -0.33 -0.48 -0.28 -0.35 -0.18 C-0.45 -0.28 -0.51 -0.4 -0.53 -0.54 C-0.57 -0.88 -0.34 -1.16 0 -1.16 Z"
-          fill={fill}
+          fill={shapeFill}
         />
       )}
       {normalized !== "HEART" && normalized !== "DIAMOND" && normalized !== "CLUB" && (
         <path
           className="suit-icon-shape"
           d="M0 -1.22 C-0.82 -0.54 -1.16 -0.08 -1.02 0.38 C-0.9 0.78 -0.48 0.94 -0.14 0.62 C-0.18 0.88 -0.42 1.06 -0.72 1.12 H0.72 C0.42 1.06 0.18 0.88 0.14 0.62 C0.48 0.94 0.9 0.78 1.02 0.38 C1.16 -0.08 0.82 -0.54 0 -1.22 Z"
-          fill={fill}
+          fill={shapeFill}
         />
       )}
     </g>
@@ -1520,6 +1528,33 @@ function SuitIcon({
         </g>
       )}
     </g>
+  );
+}
+
+function HudSuitSlots({ player }: { player: PlayerState }) {
+  const ownedSuits = SUIT_ORDER.filter((suit) => (player.suits[suit] ?? 0) > 0);
+  const accessibleLabel = SUIT_ORDER.map(
+    (suit) => `${readableType(suit)} ${ownedSuits.includes(suit) ? "owned" : "missing"}`,
+  ).join(", ");
+
+  return (
+    <span className="hud-suit-slots" role="img" aria-label={accessibleLabel}>
+      {SUIT_ORDER.map((suit) => {
+        const isOwned = ownedSuits.includes(suit);
+        return (
+          <span
+            key={suit}
+            className={`hud-suit-slot ${isOwned ? "owned" : "missing"}`}
+            title={`${readableType(suit)}: ${isOwned ? "owned" : "missing"}`}
+            aria-hidden="true"
+          >
+            <svg viewBox="-1.5 -1.5 3 3" focusable="false">
+              <SuitShape suit={suit} scale={0.92} fill={isOwned ? undefined : "#f7f7f2"} />
+            </svg>
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
@@ -1621,7 +1656,9 @@ function PlayerHud({
               </div>
               <div>
                 <dt>Suits</dt>
-                <dd>{formatSuitCount(player)}</dd>
+                <dd className="hud-suit-value">
+                  <HudSuitSlots player={player} />
+                </dd>
               </div>
             </dl>
           </article>
@@ -1683,11 +1720,6 @@ function TurnPanel({
       </div>
     </section>
   );
-}
-
-function formatSuitCount(player: PlayerState): string {
-  const count = Object.values(player.suits).filter((value) => value > 0).length;
-  return `${count}/4`;
 }
 
 function SquarePanel({ square, state }: { square: SquareInfo | null; state: GameState | null }) {
