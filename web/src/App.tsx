@@ -1903,11 +1903,13 @@ function VentureGridOverlay({
 }) {
   const cells = useMemo(() => getVentureCells(request), [request]);
   const [cursor, setCursor] = useState<VentureCursor>(() => findFirstUnclaimedVentureCell(cells));
+  const [usingKeyboardNavigation, setUsingKeyboardNavigation] = useState(false);
   const submittedRef = useRef(false);
   const overlayRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setCursor(findFirstUnclaimedVentureCell(cells));
+    setUsingKeyboardNavigation(false);
     submittedRef.current = false;
     window.requestAnimationFrame(() => overlayRef.current?.focus());
   }, [cells]);
@@ -1930,6 +1932,7 @@ function VentureGridOverlay({
   const columnCount = Math.max(1, ...cells.map((row) => row.length));
 
   function selectCell(row: number, col: number) {
+    setUsingKeyboardNavigation(false);
     setCursor([row, col]);
   }
 
@@ -1963,6 +1966,13 @@ function VentureGridOverlay({
       if (movement[key]) {
         event.preventDefault();
         event.stopPropagation();
+        setUsingKeyboardNavigation(true);
+        if (
+          document.activeElement instanceof HTMLElement &&
+          document.activeElement.closest(".venture-grid-board")
+        ) {
+          document.activeElement.blur();
+        }
         const [rowDelta, colDelta] = movement[key];
         setCursor(([row, col]) => {
           const nextRow = Math.max(0, Math.min(cells.length - 1, row + rowDelta));
@@ -1987,7 +1997,7 @@ function VentureGridOverlay({
   return (
     <section
       ref={overlayRef}
-      className={`venture-grid-overlay ${responsePending ? "is-resolving" : ""}`}
+      className={`venture-grid-overlay ${usingKeyboardNavigation ? "is-keyboard-navigation" : ""} ${responsePending ? "is-resolving" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="venture-grid-title"
@@ -2009,6 +2019,7 @@ function VentureGridOverlay({
               style={{ "--venture-grid-size": columnCount } as CSSProperties}
               role="grid"
               aria-label="Shared venture grid"
+              onPointerMove={() => setUsingKeyboardNavigation(false)}
             >
               {cells.flatMap((row, rowIndex) =>
                 row.map((owner, colIndex) => {

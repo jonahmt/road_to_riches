@@ -879,10 +879,19 @@ dd {
   background: rgba(255, 255, 255, 0.045);
 }
 
-.venture-grid-cell.is-open:hover {
+.venture-grid-overlay:not(.is-keyboard-navigation) .venture-grid-cell.is-open:hover {
   border-color: rgba(255, 255, 255, 0.34);
   background: rgba(255, 255, 255, 0.09);
   filter: none;
+}
+
+.venture-grid-cell:focus {
+  outline: none;
+}
+
+.venture-grid-cell:focus-visible {
+  outline: 2px solid #54d6ff;
+  outline-offset: 2px;
 }
 
 .venture-grid-cell.is-claimed {

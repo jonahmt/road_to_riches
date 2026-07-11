@@ -238,6 +238,12 @@ ordinary action panel is hidden behind the modal overlay, and the browser submit
 only the selected `[row, column]`; claim validation and rewards remain backend
 owned.
 
+Double-click claiming uses the browser's native time-bounded double-click event;
+the client does not remember two same-cell clicks across an arbitrary delay.
+After WASD/arrow navigation begins, stale focus and stationary pointer hover are
+cleared so only the current keyboard cursor remains highlighted. Pointer hover
+feedback returns only after the mouse physically moves again.
+
 After a successful claim, the browser consumes the existing
 `venture_card_revealed` UI notification and briefly presents the drawn card's
 name and description in a centered modal. The reveal uses the TUI's 1.5-second
