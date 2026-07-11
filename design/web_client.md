@@ -92,15 +92,17 @@ default when no preference exists, and `?layout=classic` or
 
 In Immersive mode, the action panel occupies the upper-right before a roll and
 for landing/management prompts, while the die is absent. From roll submission
-through `CHOOSE_PATH` and `CONFIRM_STOP`, the action panel becomes hidden and a
-large die appears in the upper-left with its original roll and remaining-move
-count. Its linear dimensions are twice the earlier Immersive die, giving it four
-times the area. The match identity and summary temporarily hide during this
-phase so the die owns that corner without overlap, while the compact Classic UI
-and Tools controls remain available beside it. WASD movement remains active
-while its visual path buttons are hidden. Once the roll resolves, the die leaves,
-the full header returns, and the next contextual action returns without moving
-the board.
+through `CHOOSE_PATH`, the action panel becomes hidden and a large die appears
+in the upper-left with its original roll and remaining-move count. Its linear
+dimensions are twice the earlier Immersive die, giving it four times the area.
+The match identity and summary temporarily hide during this phase so the die
+owns that corner without overlap, while the compact Classic UI and Tools
+controls remain available beside it. WASD movement remains active while its
+visual path buttons are hidden. When the backend sends `CONFIRM_STOP` at the
+final square, the die remains visible and a dedicated upper-right panel appears
+with explicit `Stop Here` and, when available, `Undo Step` controls. Once the
+roll resolves, the die leaves, the full header returns, and the next contextual
+action returns without moving the board.
 
 The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
@@ -121,6 +123,8 @@ Diagonal choices may use two-key chords such as W+A. Clickable prompt controls
 remain as accessibility and fallback affordances, but they are not the primary
 movement interaction. Simple follow-up prompts use the same key-target surface
 where it is unambiguous, such as S to stop, A to undo/decline, and D to confirm.
+The final `CONFIRM_STOP` prompt is always also visible as explicit pointer
+controls; it is never treated as an automatic movement decision.
 
 ## Architecture
 

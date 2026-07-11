@@ -1180,6 +1180,42 @@ dd {
   grid-template-columns: 1fr;
 }
 
+.stop-action-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stop-action-card {
+  min-width: 0;
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.stop-action-card > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.stop-action-card strong {
+  font-size: 14px;
+}
+
+.stop-action-card small {
+  color: rgba(16, 17, 20, 0.62);
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.stop-action-card.secondary small {
+  color: rgba(247, 247, 242, 0.54);
+}
+
 .key-action-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1401,6 +1437,7 @@ dd {
   .action-grid,
   .action-list,
   .choice-table,
+  .stop-action-list,
   .connect-form,
   .dev-connect-form,
   .raw-response {
@@ -1736,6 +1773,17 @@ dd {
   opacity: 0;
   transform: translateY(-8px);
   pointer-events: none;
+}
+
+.layout-immersive.is-playing.is-roll-active.is-stop-confirmation .action-panel {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.layout-immersive.is-playing .stop-confirmation-panel {
+  width: min(430px, calc(100vw - 32px));
 }
 
 .layout-immersive.is-playing.has-venture-grid .action-panel {

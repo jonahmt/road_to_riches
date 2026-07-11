@@ -560,6 +560,7 @@ function App() {
   const movementRequest = ["CHOOSE_PATH", "CONFIRM_STOP"].includes(
     clientState.pendingRequest?.type ?? "",
   );
+  const stopConfirmationActive = clientState.pendingRequest?.type === "CONFIRM_STOP";
   const isRollingOrMoving = Boolean(
     (clientState.dice?.remaining ?? 0) > 0 ||
       movementRequest ||
@@ -586,7 +587,7 @@ function App() {
 
   return (
     <main
-      className={`app-shell layout-${layoutMode} ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
+      className={`app-shell layout-${layoutMode} ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
       data-layout={layoutMode}
     >
       <header className="game-header">
@@ -2164,7 +2165,10 @@ function PromptPanel({
   const amountNumber = Math.max(0, Math.floor(Number(amount) || 0));
 
   return (
-    <section className={`panel action-panel ${responsePending ? "is-resolving" : ""}`} aria-busy={responsePending}>
+    <section
+      className={`panel action-panel ${request?.type === "CONFIRM_STOP" ? "stop-confirmation-panel" : ""} ${responsePending ? "is-resolving" : ""}`}
+      aria-busy={responsePending}
+    >
       <header className="panel-header prompt-header">
         <div>
           <p className="eyebrow">Action</p>
@@ -2198,7 +2202,7 @@ function getPromptTitle(request: InputRequest): string {
     return "Choose a Path";
   }
   if (request.type === "CONFIRM_STOP") {
-    return "Stop or Keep Moving";
+    return "Stop on This Square?";
   }
   if (request.type === "BUY_SHOP") {
     return "Buy This Shop?";
@@ -2226,7 +2230,9 @@ function getPromptHelp(request: InputRequest): string {
     return "Pick where your piece should move next.";
   }
   if (request.type === "CONFIRM_STOP") {
-    return "Commit to this square, or undo the last step if allowed.";
+    return request.data.can_undo === true
+      ? "Choose Stop Here to end your move, or undo the last step."
+      : "Choose Stop Here to end your move on this square.";
   }
   if (request.type === "BUY_STOCK" || request.type === "SELL_STOCK") {
     return "Set a quantity, then choose a district.";
@@ -2282,7 +2288,7 @@ function PromptControls({
   }
 
   if (request.type === "CONFIRM_STOP") {
-    return <KeyActionList actions={getSimpleKeyActions(request)} onSubmit={onSubmit} />;
+    return <StopConfirmationControls request={request} onSubmit={onSubmit} />;
   }
 
   if (["BUY_SHOP", "FORCED_BUYOUT"].includes(request.type)) {
@@ -2444,6 +2450,41 @@ function KeyActionList({
           </span>
         </button>
       ))}
+    </div>
+  );
+}
+
+function StopConfirmationControls({
+  request,
+  onSubmit,
+}: {
+  request: InputRequest;
+  onSubmit: (value: unknown) => void;
+}) {
+  const squareId = asNumber(request.data.square_id);
+  const actions = getSimpleKeyActions(request).sort((left, right) =>
+    left.value === true ? -1 : right.value === true ? 1 : 0,
+  );
+
+  return (
+    <div className="stop-action-list">
+      {actions.map((action) => {
+        const isStop = action.value === true;
+        return (
+          <button
+            key={`${action.key}:${String(action.value)}`}
+            type="button"
+            className={`stop-action-card ${isStop ? "is-stop" : "secondary is-undo"}`}
+            onClick={() => onSubmit(action.value)}
+          >
+            <span className="keycap">{formatWasdKey(action.key)}</span>
+            <span>
+              <strong>{action.label}</strong>
+              <small>{isStop ? `End your move on Square #${squareId}` : "Return to your previous square"}</small>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
