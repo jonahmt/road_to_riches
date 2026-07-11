@@ -90,13 +90,17 @@ header switch persists the chosen shell in local storage. Immersive is the
 default when no preference exists, and `?layout=classic` or
 `?layout=immersive` provides a direct URL override for review and rollback.
 
-In Immersive mode, the action panel and die share the upper-right role. Before a
-roll and for landing/management prompts, the action panel is visible and the die
-is absent. From roll submission through `CHOOSE_PATH` and `CONFIRM_STOP`, the
-action panel becomes hidden and the die appears in the upper-right with its
-original roll and remaining-move count. WASD movement remains active while its
-visual path buttons are hidden. Once the roll resolves, the die leaves and the
-next contextual action returns without moving the board.
+In Immersive mode, the action panel occupies the upper-right before a roll and
+for landing/management prompts, while the die is absent. From roll submission
+through `CHOOSE_PATH` and `CONFIRM_STOP`, the action panel becomes hidden and a
+large die appears in the upper-left with its original roll and remaining-move
+count. Its linear dimensions are twice the earlier Immersive die, giving it four
+times the area. The match identity and summary temporarily hide during this
+phase so the die owns that corner without overlap, while the compact Classic UI
+and Tools controls remain available beside it. WASD movement remains active
+while its visual path buttons are hidden. Once the roll resolves, the die leaves,
+the full header returns, and the next contextual action returns without moving
+the board.
 
 The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and

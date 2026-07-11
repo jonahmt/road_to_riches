@@ -1101,6 +1101,35 @@ dd {
   background: rgba(7, 9, 13, 0.82);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.34);
   backdrop-filter: blur(18px);
+  transition:
+    opacity 100ms linear,
+    transform 100ms linear,
+    visibility 100ms linear;
+}
+
+.layout-immersive.is-playing.is-roll-active > .game-header {
+  top: 16px;
+  left: 196px;
+  width: auto;
+  min-height: 0;
+  display: block;
+  visibility: visible;
+  border-color: transparent;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+  transform: none;
+  backdrop-filter: none;
+}
+
+.layout-immersive.is-playing.is-roll-active .game-header .brand-lockup,
+.layout-immersive.is-playing.is-roll-active .game-header .match-summary {
+  display: none;
+}
+
+.layout-immersive.is-playing.is-roll-active .game-header-actions {
+  display: flex;
 }
 
 .layout-immersive.is-playing .brand-lockup {
@@ -1345,16 +1374,30 @@ dd {
 
 .layout-immersive.is-playing .board-dice {
   top: 16px;
-  right: 16px;
-  left: auto;
+  right: auto;
+  left: 16px;
   z-index: 11;
-  width: 82px;
-  padding: 10px 10px 8px;
+  width: 164px;
+  gap: 12px;
+  border-width: 2px;
+  border-radius: 20px;
+  padding: 20px 20px 16px;
   background: rgba(7, 9, 13, 0.92);
 }
 
 .layout-immersive.is-playing .board-die-face {
-  width: 58px;
+  width: 116px;
+  border-width: 4px;
+  border-radius: 18px;
+}
+
+.layout-immersive.is-playing .board-die-pip {
+  width: 16px;
+  height: 16px;
+}
+
+.layout-immersive.is-playing .board-die-roll {
+  font-size: 20px;
 }
 
 .layout-immersive.is-playing .square-panel {
@@ -1397,6 +1440,13 @@ dd {
     width: 350px;
   }
 
+  .layout-immersive.is-playing.is-roll-active > .game-header {
+    top: 16px;
+    right: auto;
+    left: 196px;
+    width: auto;
+  }
+
   .layout-immersive.is-playing .turn-panel {
     top: 130px;
     left: 16px;
@@ -1422,6 +1472,13 @@ dd {
     width: auto;
   }
 
+  .layout-immersive.is-playing.is-roll-active > .game-header {
+    top: 8px;
+    right: auto;
+    left: 144px;
+    width: auto;
+  }
+
   .layout-immersive.is-playing .brand-lockup h1 {
     font-size: 16px;
   }
@@ -1443,9 +1500,28 @@ dd {
   }
 
   .layout-immersive.is-playing .board-dice {
-    top: 106px;
-    right: 8px;
-    left: auto;
+    top: 8px;
+    right: auto;
+    left: 8px;
+    width: 124px;
+    gap: 8px;
+    border-radius: 16px;
+    padding: 14px 14px 12px;
+  }
+
+  .layout-immersive.is-playing .board-die-face {
+    width: 88px;
+    border-width: 3px;
+    border-radius: 14px;
+  }
+
+  .layout-immersive.is-playing .board-die-pip {
+    width: 12px;
+    height: 12px;
+  }
+
+  .layout-immersive.is-playing .board-die-roll {
+    font-size: 15px;
   }
 
   .layout-immersive.is-playing > .player-hud {
