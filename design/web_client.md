@@ -124,7 +124,13 @@ built tax office tiles show `Tax` plus the current 4% tax amount calculated from
 the active turn player's net worth, so the displayed amount changes as turn
 ownership advances.
 Suit and change-of-suit tiles render clean inline SVG suit icons for spade,
-heart, diamond, and club instead of text labels.
+heart, diamond, and club instead of text labels. The selected web visual
+direction uses a white tile border for these suit tiles, white suit-name text at
+the top, and suit-colored icon fills only: heart is pink, diamond is yellow,
+club is green, and spade is blue. The normal suit tile shows one large suit
+icon. The change-of-suit tile shows the same large current suit icon plus a
+small unhighlighted row of all four suits below it. The club icon uses the
+selected smooth custom silhouette based on the "29D Slimmer Width" mockup.
 
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch

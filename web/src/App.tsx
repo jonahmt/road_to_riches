@@ -15,11 +15,12 @@ const DEFAULT_URI = "ws://localhost:8765";
 const PLAYER_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
 const DISTRICT_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
 const SUIT_COLORS: Record<string, string> = {
-  SPADE: "#f7f7f2",
-  HEART: "#ff7ab6",
-  DIAMOND: "#ffd166",
-  CLUB: "#77dd77",
+  SPADE: "#56cfff",
+  HEART: "#ff6aae",
+  DIAMOND: "#ffd84d",
+  CLUB: "#74df67",
 };
+const SUIT_ORDER = ["SPADE", "HEART", "DIAMOND", "CLUB"];
 const BOARD_TILE_SIZE = 4;
 const BOARD_TILE_RADIUS = BOARD_TILE_SIZE / 2;
 const BOARD_TILE_STROKE_WIDTH = 0.14;
@@ -529,7 +530,7 @@ function BoardPanel({
                   ry="0.32"
                   strokeWidth={BOARD_TILE_STROKE_WIDTH}
                   style={{
-                    stroke: getDistrictColor(square.property_district),
+                    stroke: shouldRenderSuitIcon ? "#f7f7f2" : getDistrictColor(square.property_district),
                     fill: getSquareFill(square),
                   }}
                 />
@@ -546,7 +547,7 @@ function BoardPanel({
                   />
                 )}
                 {shouldRenderSuitIcon ? (
-                  <SuitIcon suit={square.suit} x={square.position[0]} y={square.position[1] - 0.06} />
+                  <SuitIcon suit={square.suit} squareType={square.type} x={square.position[0]} y={square.position[1]} />
                 ) : (
                   <text
                     className="square-type"
@@ -683,12 +684,19 @@ function getSuitColor(suit: string | null): string {
   return SUIT_COLORS[suit] ?? "#f7f7f2";
 }
 
-function SuitIcon({ suit, x, y }: { suit: string | null; x: number; y: number }) {
+function suitLabel(suit: string | null): string {
+  if (!suit) {
+    return "SPADE";
+  }
+  return readableType(suit).toUpperCase();
+}
+
+function SuitShape({ suit, scale = 1 }: { suit: string | null; scale?: number }) {
   const fill = getSuitColor(suit);
   const normalized = suit ?? "SPADE";
 
   return (
-    <g className="suit-icon" transform={`translate(${x} ${y})`} aria-hidden="true">
+    <g transform={`scale(${scale})`}>
       {normalized === "HEART" && (
         <path
           className="suit-icon-shape"
@@ -700,16 +708,11 @@ function SuitIcon({ suit, x, y }: { suit: string | null; x: number; y: number })
         <path className="suit-icon-shape" d="M0 -1.22 L1.02 0 L0 1.22 L-1.02 0 Z" fill={fill} />
       )}
       {normalized === "CLUB" && (
-        <>
-          <circle className="suit-icon-shape" cx="0" cy="-0.58" r="0.48" fill={fill} />
-          <circle className="suit-icon-shape" cx="-0.48" cy="0.1" r="0.48" fill={fill} />
-          <circle className="suit-icon-shape" cx="0.48" cy="0.1" r="0.48" fill={fill} />
-          <path
-            className="suit-icon-shape"
-            d="M-0.24 0.58 C-0.28 0.88 -0.5 1.06 -0.78 1.12 H0.78 C0.5 1.06 0.28 0.88 0.24 0.58 Z"
-            fill={fill}
-          />
-        </>
+        <path
+          className="suit-icon-shape"
+          d="M0 -1.16 C0.34 -1.16 0.57 -0.88 0.53 -0.54 C0.51 -0.4 0.45 -0.28 0.35 -0.18 C0.48 -0.28 0.62 -0.33 0.76 -0.29 C1.04 -0.21 1.2 0.09 1.1 0.39 C1 0.69 0.7 0.83 0.46 0.68 C0.38 0.62 0.32 0.55 0.28 0.46 C0.28 0.81 0.46 1.04 0.74 1.13 H-0.74 C-0.46 1.04 -0.28 0.81 -0.28 0.46 C-0.32 0.55 -0.38 0.62 -0.46 0.68 C-0.7 0.83 -1 0.69 -1.1 0.39 C-1.2 0.09 -1.04 -0.21 -0.76 -0.29 C-0.62 -0.33 -0.48 -0.28 -0.35 -0.18 C-0.45 -0.28 -0.51 -0.4 -0.53 -0.54 C-0.57 -0.88 -0.34 -1.16 0 -1.16 Z"
+          fill={fill}
+        />
       )}
       {normalized !== "HEART" && normalized !== "DIAMOND" && normalized !== "CLUB" && (
         <path
@@ -717,6 +720,40 @@ function SuitIcon({ suit, x, y }: { suit: string | null; x: number; y: number })
           d="M0 -1.22 C-0.82 -0.54 -1.16 -0.08 -1.02 0.38 C-0.9 0.78 -0.48 0.94 -0.14 0.62 C-0.18 0.88 -0.42 1.06 -0.72 1.12 H0.72 C0.42 1.06 0.18 0.88 0.14 0.62 C0.48 0.94 0.9 0.78 1.02 0.38 C1.16 -0.08 0.82 -0.54 0 -1.22 Z"
           fill={fill}
         />
+      )}
+    </g>
+  );
+}
+
+function SuitIcon({
+  suit,
+  squareType,
+  x,
+  y,
+}: {
+  suit: string | null;
+  squareType: string;
+  x: number;
+  y: number;
+}) {
+  const isChangeOfSuit = squareType === "CHANGE_OF_SUIT";
+
+  return (
+    <g className={`suit-icon ${isChangeOfSuit ? "change-of-suit" : "standard-suit"}`} aria-hidden="true">
+      <text className="suit-icon-label" x={x} y={y - 1.22}>
+        {suitLabel(suit)}
+      </text>
+      <g transform={`translate(${x} ${y + (isChangeOfSuit ? -0.08 : 0.28)})`}>
+        <SuitShape suit={suit} scale={isChangeOfSuit ? 0.62 : 0.72} />
+      </g>
+      {isChangeOfSuit && (
+        <g className="suit-mini-row" transform={`translate(${x} ${y + 1.15})`}>
+          {SUIT_ORDER.map((miniSuit, index) => (
+            <g key={miniSuit} transform={`translate(${(index - 1.5) * 0.5} 0)`}>
+              <SuitShape suit={miniSuit} scale={0.15} />
+            </g>
+          ))}
+        </g>
       )}
     </g>
   );
