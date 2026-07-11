@@ -19,6 +19,7 @@ import {
 import { type DiceState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
+const LAYOUT_STORAGE_KEY = "road-to-riches-layout";
 
 const PLAYER_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
 const DISTRICT_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
@@ -108,6 +109,7 @@ interface BoardCamera {
 
 type BoardCameraMode = "follow" | "free";
 type BoardAnimationCurve = "cubic" | "linear";
+type GameLayoutMode = "immersive" | "classic";
 
 type ActivePlayerFrame = {
   playerId: number;
@@ -462,13 +464,35 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
+function getInitialLayoutMode(): GameLayoutMode {
+  const requested = new URLSearchParams(window.location.search).get("layout");
+  if (requested === "classic" || requested === "immersive") {
+    return requested;
+  }
+  try {
+    const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+    return stored === "classic" || stored === "immersive" ? stored : "immersive";
+  } catch {
+    return "immersive";
+  }
+}
+
 function App() {
   const { clientState, connect, disconnect, submitResponse, saveGame, requestSync } =
     useGameClient(DEFAULT_URI);
   const [uri, setUri] = useState(DEFAULT_URI);
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
+  const [layoutMode, setLayoutMode] = useState<GameLayoutMode>(getInitialLayoutMode);
   useWasdPromptControls(clientState.responsePending ? null : clientState.pendingRequest, submitResponse);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LAYOUT_STORAGE_KEY, layoutMode);
+    } catch {
+      // The layout still works when storage is unavailable.
+    }
+  }, [layoutMode]);
 
   useEffect(() => {
     const request = clientState.pendingRequest;
@@ -485,6 +509,14 @@ function App() {
     ? clientState.gameState.players.find((player) => player.player_id === clientState.playerId) ?? null
     : null;
   const latestEvent = getLatestGameLog(clientState.logs);
+  const movementRequest = ["CHOOSE_PATH", "CONFIRM_STOP"].includes(
+    clientState.pendingRequest?.type ?? "",
+  );
+  const isRollingOrMoving = Boolean(
+    (clientState.dice?.remaining ?? 0) > 0 ||
+      movementRequest ||
+      (clientState.responsePending && clientState.pendingRequest?.type === "PRE_ROLL"),
+  );
 
   const selectedSquare = useMemo(() => {
     if (!clientState.gameState || selectedSquareId === null) {
@@ -505,7 +537,10 @@ function App() {
   }
 
   return (
-    <main className={`app-shell ${clientState.gameState ? "is-playing" : "is-starting"}`}>
+    <main
+      className={`app-shell layout-${layoutMode} ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""}`}
+      data-layout={layoutMode}
+    >
       <header className="game-header">
         <div className="brand-lockup">
           <p className="eyebrow">Road to Riches</p>
@@ -518,13 +553,22 @@ function App() {
             <span>{clientState.dice ? `Die ${clientState.dice.value} / ${clientState.dice.remaining}` : "Die -"}</span>
           </div>
         )}
-        <button
-          type="button"
-          className="secondary dev-toggle"
-          onClick={() => setDevPanelOpen((open) => !open)}
-        >
-          {devPanelOpen ? "Hide Tools" : "Tools"}
-        </button>
+        <div className="game-header-actions">
+          <button
+            type="button"
+            className="secondary layout-toggle"
+            onClick={() => setLayoutMode((mode) => (mode === "immersive" ? "classic" : "immersive"))}
+          >
+            {layoutMode === "immersive" ? "Classic UI" : "Immersive UI"}
+          </button>
+          <button
+            type="button"
+            className="secondary dev-toggle"
+            onClick={() => setDevPanelOpen((open) => !open)}
+          >
+            {devPanelOpen ? "Hide Tools" : "Tools"}
+          </button>
+        </div>
       </header>
 
       {clientState.error && <div className="error-banner">{clientState.error}</div>}
@@ -547,6 +591,7 @@ function App() {
             <BoardPanel
               state={clientState.gameState}
               dice={clientState.dice}
+              showDice={layoutMode === "classic" || isRollingOrMoving}
               selectedSquare={selectedSquare}
               onSelectSquare={setSelectedSquareId}
             />
@@ -704,11 +749,13 @@ function StatusPill({
 function BoardPanel({
   state,
   dice,
+  showDice,
   selectedSquare,
   onSelectSquare,
 }: {
   state: GameState | null;
   dice: DiceState | null;
+  showDice: boolean;
   selectedSquare: SquareInfo | null;
   onSelectSquare: (squareId: number) => void;
 }) {
@@ -1175,7 +1222,7 @@ function BoardPanel({
           </g>
         </svg>
       </div>
-      <BoardDice dice={dice} />
+      {showDice && <BoardDice dice={dice} />}
       <div className="board-camera-controls" aria-label="Board zoom controls">
         {cameraMode === "follow" ? (
           <button
@@ -1724,7 +1771,7 @@ function TurnPanel({
 
 function SquarePanel({ square, state }: { square: SquareInfo | null; state: GameState | null }) {
   return (
-    <section className="panel">
+    <section className="panel square-panel">
       <header className="panel-header">
         <h2>Square</h2>
       </header>

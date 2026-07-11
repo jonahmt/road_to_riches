@@ -74,6 +74,30 @@ and the raw response fallback are hidden in a collapsible Tools panel. This keep
 local backend operation available during development without making transport
 details part of the ordinary player experience.
 
+The default player-facing shell is now an experimental Immersive layout. Its
+board fills the entire viewport and all HUD surfaces overlay the board: the
+players form a compact four-row stack in the lower-right, contextual actions
+occupy the upper-right, the latest turn/event status is a compact upper-center
+toast, match identity and tools sit upper-left, square details sit lower-left,
+and camera controls remain lower-left beneath the details. Overlay panels use
+translucent dark surfaces so board state stays visible around them.
+
+The prior layout remains available as Classic UI and retains its static header,
+four-column player HUD, board/sidebar grid, persistent upper-left die, and side
+panels. Both shells render the same React game components and protocol state;
+Immersive is a CSS/layout layer rather than a fork of gameplay behavior. A
+header switch persists the chosen shell in local storage. Immersive is the
+default when no preference exists, and `?layout=classic` or
+`?layout=immersive` provides a direct URL override for review and rollback.
+
+In Immersive mode, the action panel and die share the upper-right role. Before a
+roll and for landing/management prompts, the action panel is visible and the die
+is absent. From roll submission through `CHOOSE_PATH` and `CONFIRM_STOP`, the
+action panel becomes hidden and the die appears in the upper-right with its
+original roll and remaining-move count. WASD movement remains active while its
+visual path buttons are hidden. Once the roll resolves, the die leaves and the
+next contextual action returns without moving the board.
+
 The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
 review, but it should not be treated as the main game UI.
