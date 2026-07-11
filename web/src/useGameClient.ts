@@ -8,6 +8,12 @@ export interface DiceState {
   remaining: number;
 }
 
+export interface UiNotificationState {
+  id: number;
+  type: string;
+  data: Record<string, unknown>;
+}
+
 export interface GameClientState {
   status: ConnectionStatus;
   uri: string;
@@ -17,6 +23,7 @@ export interface GameClientState {
   pendingRequest: InputRequest | null;
   logs: string[];
   dice: DiceState | null;
+  uiNotification: UiNotificationState | null;
   gameOverWinner: number | null | undefined;
   responsePending: boolean;
   error: string | null;
@@ -69,6 +76,7 @@ export function useGameClient(defaultUri: string) {
   const playerIdRef = useRef<number | null>(null);
   const gameIdRef = useRef<string | null>(null);
   const responsePendingRef = useRef(false);
+  const notificationIdRef = useRef(0);
   const [clientState, setClientState] = useState<GameClientState>({
     status: "disconnected",
     uri: defaultUri,
@@ -78,6 +86,7 @@ export function useGameClient(defaultUri: string) {
     pendingRequest: null,
     logs: [],
     dice: null,
+    uiNotification: null,
     gameOverWinner: undefined,
     responsePending: false,
     error: null,
@@ -96,6 +105,7 @@ export function useGameClient(defaultUri: string) {
       playerId: null,
       gameId: null,
       pendingRequest: null,
+      uiNotification: null,
       responsePending: false,
     }));
   }, []);
@@ -132,6 +142,7 @@ export function useGameClient(defaultUri: string) {
         pendingRequest: null,
         logs: [],
         dice: null,
+        uiNotification: null,
         gameOverWinner: undefined,
         responsePending: false,
         error: null,
@@ -217,8 +228,17 @@ export function useGameClient(defaultUri: string) {
                 ...current,
                 logs: current.logs.slice(0, Math.max(0, current.logs.length - message.count)),
               };
-            case "ui_notification":
-              return current;
+            case "ui_notification": {
+              notificationIdRef.current += 1;
+              return {
+                ...current,
+                uiNotification: {
+                  id: notificationIdRef.current,
+                  type: message.type,
+                  data: message.data ?? {},
+                },
+              };
+            }
             case "dice":
               return {
                 ...current,
@@ -296,6 +316,7 @@ export function useGameClient(defaultUri: string) {
           playerId: null,
           gameId: null,
           pendingRequest: null,
+          uiNotification: null,
           responsePending: false,
           logs: appendLog(current.logs, "Disconnected from server"),
         }));
@@ -357,6 +378,15 @@ export function useGameClient(defaultUri: string) {
     });
   }, [send]);
 
+  const clearUiNotification = useCallback((id?: number) => {
+    setClientState((current) => {
+      if (id !== undefined && current.uiNotification?.id !== id) {
+        return current;
+      }
+      return current.uiNotification ? { ...current, uiNotification: null } : current;
+    });
+  }, []);
+
   useEffect(() => disconnect, [disconnect]);
 
   return {
@@ -366,5 +396,6 @@ export function useGameClient(defaultUri: string) {
     submitResponse,
     saveGame,
     requestSync,
+    clearUiNotification,
   };
 }

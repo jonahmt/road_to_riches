@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   FormEvent,
   type PointerEvent as ReactPointerEvent,
   useEffect,
@@ -16,7 +17,7 @@ import {
   type SquareInfo,
   stockPrice,
 } from "./protocol";
-import { type DiceState, useGameClient } from "./useGameClient";
+import { type DiceState, type UiNotificationState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
 const LAYOUT_STORAGE_KEY = "road-to-riches-layout";
@@ -88,6 +89,14 @@ const ACTIVE_PLAYER_TOKEN_RADIUS = 0.95;
 const BOARD_ZOOM_STEP = 0.25;
 const BOARD_WHEEL_ZOOM_SPEED = 0.0015;
 const BOARD_DRAG_THRESHOLD = 4;
+const VENTURE_CARD_REVEAL_MS = 1500;
+const VENTURE_LINE_BONUSES: Record<number, number> = { 4: 40, 5: 50, 6: 60, 7: 70, 8: 200 };
+const VENTURE_AXES: ReadonlyArray<readonly [number, number]> = [
+  [0, 1],
+  [1, 0],
+  [1, 1],
+  [1, -1],
+];
 const DIE_PIPS: Record<number, readonly number[]> = {
   0: [],
   1: [5],
@@ -110,6 +119,8 @@ interface BoardCamera {
 type BoardCameraMode = "follow" | "free";
 type BoardAnimationCurve = "cubic" | "linear";
 type GameLayoutMode = "immersive" | "classic";
+type VentureCellOwner = number | null;
+type VentureCursor = readonly [number, number];
 
 type ActivePlayerFrame = {
   playerId: number;
@@ -343,22 +354,63 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function chooseAutomaticVentureCell(request: InputRequest): [number, number] {
-  const cells = asArray(request.data.cells);
-  const unclaimed: Array<[number, number]> = [];
+function getVentureCells(request: InputRequest): VentureCellOwner[][] {
+  return asArray(request.data.cells).map((row) =>
+    asArray(row).map((cell) => (typeof cell === "number" && Number.isInteger(cell) ? cell : null)),
+  );
+}
 
-  cells.forEach((row, rowIndex) => {
-    asArray(row).forEach((cell, colIndex) => {
-      if (cell === null) {
-        unclaimed.push([rowIndex, colIndex]);
+function findFirstUnclaimedVentureCell(cells: VentureCellOwner[][]): VentureCursor {
+  for (let row = 0; row < cells.length; row += 1) {
+    for (let col = 0; col < cells[row].length; col += 1) {
+      if (cells[row][col] === null) {
+        return [row, col];
       }
-    });
-  });
-
-  if (unclaimed.length === 0) {
-    return [0, 0];
+    }
   }
-  return unclaimed[Math.floor(Math.random() * unclaimed.length)];
+  return [0, 0];
+}
+
+function ventureCoordinateLabel(row: number, col: number): string {
+  return `${String.fromCharCode(65 + row)}${col + 1}`;
+}
+
+function getVentureLinePreview(
+  cells: VentureCellOwner[][],
+  row: number,
+  col: number,
+  playerId: number,
+): { bonus: number; cells: Set<string> } {
+  if (cells[row]?.[col] !== null) {
+    return { bonus: 0, cells: new Set() };
+  }
+
+  let bonus = 0;
+  const previewCells = new Set<string>();
+
+  for (const [dr, dc] of VENTURE_AXES) {
+    const line: Array<readonly [number, number]> = [[row, col]];
+    for (const direction of [-1, 1]) {
+      let nextRow = row + dr * direction;
+      let nextCol = col + dc * direction;
+      while (cells[nextRow]?.[nextCol] === playerId) {
+        line.push([nextRow, nextCol]);
+        nextRow += dr * direction;
+        nextCol += dc * direction;
+      }
+    }
+
+    for (const [threshold, reward] of Object.entries(VENTURE_LINE_BONUSES)) {
+      if (line.length >= Number(threshold)) {
+        bonus += reward;
+      }
+    }
+    if (line.length >= 4) {
+      line.forEach(([lineRow, lineCol]) => previewCells.add(`${lineRow}:${lineCol}`));
+    }
+  }
+
+  return { bonus, cells: previewCells };
 }
 
 function useWasdPromptControls(request: InputRequest | null, onSubmit: (value: unknown) => void) {
@@ -478,13 +530,17 @@ function getInitialLayoutMode(): GameLayoutMode {
 }
 
 function App() {
-  const { clientState, connect, disconnect, submitResponse, saveGame, requestSync } =
+  const { clientState, connect, disconnect, submitResponse, saveGame, requestSync, clearUiNotification } =
     useGameClient(DEFAULT_URI);
   const [uri, setUri] = useState(DEFAULT_URI);
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
   const [layoutMode, setLayoutMode] = useState<GameLayoutMode>(getInitialLayoutMode);
-  useWasdPromptControls(clientState.responsePending ? null : clientState.pendingRequest, submitResponse);
+  const ventureRequest =
+    clientState.pendingRequest?.type === "CHOOSE_VENTURE_CELL" ? clientState.pendingRequest : null;
+  const ventureCardRevealActive = clientState.uiNotification?.type === "venture_card_revealed";
+  const standardKeyboardRequest = ventureRequest || ventureCardRevealActive ? null : clientState.pendingRequest;
+  useWasdPromptControls(clientState.responsePending ? null : standardKeyboardRequest, submitResponse);
 
   useEffect(() => {
     try {
@@ -493,14 +549,6 @@ function App() {
       // The layout still works when storage is unavailable.
     }
   }, [layoutMode]);
-
-  useEffect(() => {
-    const request = clientState.pendingRequest;
-    if (!request || clientState.responsePending || request.type !== "CHOOSE_VENTURE_CELL") {
-      return;
-    }
-    submitResponse(chooseAutomaticVentureCell(request));
-  }, [clientState.pendingRequest, clientState.responsePending, submitResponse]);
 
   const currentPlayer = clientState.gameState
     ? clientState.gameState.players[clientState.gameState.current_player_index]
@@ -538,7 +586,7 @@ function App() {
 
   return (
     <main
-      className={`app-shell layout-${layoutMode} ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""}`}
+      className={`app-shell layout-${layoutMode} ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
       data-layout={layoutMode}
     >
       <header className="game-header">
@@ -614,7 +662,21 @@ function App() {
               <SquarePanel square={focusSquare} state={clientState.gameState} />
             </aside>
           </section>
+          {ventureRequest && (
+            <VentureGridOverlay
+              request={ventureRequest}
+              responsePending={clientState.responsePending}
+              onSubmit={submitResponse}
+            />
+          )}
         </>
+      )}
+
+      {clientState.uiNotification?.type === "venture_card_revealed" && (
+        <VentureCardReveal
+          notification={clientState.uiNotification}
+          onDismiss={clearUiNotification}
+        />
       )}
 
       <DevPanel
@@ -1826,6 +1888,263 @@ function SquarePanel({ square, state }: { square: SquareInfo | null; state: Game
         </dl>
       )}
     </section>
+  );
+}
+
+function VentureGridOverlay({
+  request,
+  responsePending,
+  onSubmit,
+}: {
+  request: InputRequest;
+  responsePending: boolean;
+  onSubmit: (value: unknown) => void;
+}) {
+  const cells = useMemo(() => getVentureCells(request), [request]);
+  const [cursor, setCursor] = useState<VentureCursor>(() => findFirstUnclaimedVentureCell(cells));
+  const submittedRef = useRef(false);
+  const overlayRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setCursor(findFirstUnclaimedVentureCell(cells));
+    submittedRef.current = false;
+    window.requestAnimationFrame(() => overlayRef.current?.focus());
+  }, [cells]);
+
+  const selectedOwner = cells[cursor[0]]?.[cursor[1]];
+  const canClaim = selectedOwner === null && !responsePending && !submittedRef.current;
+  const linePreview = useMemo(
+    () => getVentureLinePreview(cells, cursor[0], cursor[1], request.player_id),
+    [cells, cursor, request.player_id],
+  );
+  const availableCount = cells.reduce(
+    (count, row) => count + row.filter((owner) => owner === null).length,
+    0,
+  );
+  const playerIds = useMemo(() => {
+    const ids = new Set<number>([request.player_id]);
+    cells.forEach((row) => row.forEach((owner) => owner !== null && ids.add(owner)));
+    return [...ids].sort((left, right) => left - right);
+  }, [cells, request.player_id]);
+  const columnCount = Math.max(1, ...cells.map((row) => row.length));
+
+  function selectCell(row: number, col: number) {
+    setCursor([row, col]);
+  }
+
+  function claimCell(row: number, col: number) {
+    if (cells[row]?.[col] !== null || responsePending || submittedRef.current) {
+      return;
+    }
+    submittedRef.current = true;
+    setCursor([row, col]);
+    onSubmit([row, col]);
+  }
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.altKey || event.ctrlKey || event.metaKey || isTypingTarget(event.target)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const movement: Record<string, readonly [number, number]> = {
+        w: [-1, 0],
+        arrowup: [-1, 0],
+        s: [1, 0],
+        arrowdown: [1, 0],
+        a: [0, -1],
+        arrowleft: [0, -1],
+        d: [0, 1],
+        arrowright: [0, 1],
+      };
+
+      if (movement[key]) {
+        event.preventDefault();
+        event.stopPropagation();
+        const [rowDelta, colDelta] = movement[key];
+        setCursor(([row, col]) => {
+          const nextRow = Math.max(0, Math.min(cells.length - 1, row + rowDelta));
+          const nextRowWidth = cells[nextRow]?.length ?? 0;
+          const nextCol = Math.max(0, Math.min(nextRowWidth - 1, col + colDelta));
+          return nextRowWidth > 0 ? [nextRow, nextCol] : [row, col];
+        });
+        return;
+      }
+
+      if ((key === " " || key === "enter") && !event.repeat) {
+        event.preventDefault();
+        event.stopPropagation();
+        claimCell(cursor[0], cursor[1]);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [cells, cursor, responsePending, onSubmit]);
+
+  return (
+    <section
+      ref={overlayRef}
+      className={`venture-grid-overlay ${responsePending ? "is-resolving" : ""}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="venture-grid-title"
+      tabIndex={-1}
+    >
+      <div className="venture-grid-shell">
+        <div className="venture-grid-panel">
+          <header className="venture-grid-header">
+            <div>
+              <p className="eyebrow">Venture Card</p>
+              <h2 id="venture-grid-title">Claim a Venture Square</h2>
+            </div>
+            <span className="venture-grid-available">{availableCount} open</span>
+          </header>
+
+          {cells.length > 0 ? (
+            <div
+              className="venture-grid-board"
+              style={{ "--venture-grid-size": columnCount } as CSSProperties}
+              role="grid"
+              aria-label="Shared venture grid"
+            >
+              {cells.flatMap((row, rowIndex) =>
+                row.map((owner, colIndex) => {
+                  const selected = cursor[0] === rowIndex && cursor[1] === colIndex;
+                  const coordinate = ventureCoordinateLabel(rowIndex, colIndex);
+                  const classes = [
+                    "venture-grid-cell",
+                    owner === null ? "is-open" : "is-claimed",
+                    selected ? "is-selected" : "",
+                    linePreview.cells.has(`${rowIndex}:${colIndex}`) ? "is-line-preview" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+                  const style =
+                    owner === null
+                      ? undefined
+                      : ({ "--venture-owner-color": getPlayerColor(owner) } as CSSProperties);
+
+                  return (
+                    <button
+                      key={`${rowIndex}:${colIndex}`}
+                      type="button"
+                      className={classes}
+                      style={style}
+                      role="gridcell"
+                      aria-selected={selected}
+                      aria-label={`${coordinate}, ${owner === null ? "unclaimed" : `claimed by Player ${owner}`}`}
+                      onClick={() => selectCell(rowIndex, colIndex)}
+                      onDoubleClick={(event) => {
+                        event.preventDefault();
+                        claimCell(rowIndex, colIndex);
+                      }}
+                    >
+                      <span className="venture-cell-coordinate">{coordinate}</span>
+                      <span className="venture-cell-owner">{owner === null ? "·" : `P${owner}`}</span>
+                    </button>
+                  );
+                }),
+              )}
+            </div>
+          ) : (
+            <p className="venture-grid-empty">No Venture Grid data was provided.</p>
+          )}
+        </div>
+
+        <aside className="venture-grid-sidebar" aria-label="Venture selection details">
+          <div className="venture-selection-card">
+            <span>Selected</span>
+            <strong>{ventureCoordinateLabel(cursor[0], cursor[1])}</strong>
+            <p>
+              {selectedOwner === null
+                ? linePreview.bonus > 0
+                  ? `Completes lines worth ${formatGold(linePreview.bonus)}`
+                  : "Unclaimed square"
+                : selectedOwner === undefined
+                  ? "Unavailable"
+                  : `Claimed by Player ${selectedOwner}`}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="venture-claim-button"
+            disabled={!canClaim}
+            onClick={() => claimCell(cursor[0], cursor[1])}
+          >
+            {responsePending || submittedRef.current ? "Claiming..." : "Claim Square"}
+          </button>
+
+          <div className="venture-grid-instructions">
+            <p><strong>Click</strong> to move the cursor</p>
+            <p><strong>Double-click</strong> to claim immediately</p>
+            <p><strong>WASD / Arrows</strong> to move</p>
+            <p><strong>Space / Enter</strong> to claim</p>
+          </div>
+
+          <div className="venture-grid-legend" aria-label="Player colors">
+            {playerIds.map((playerId) => (
+              <span key={playerId}>
+                <i style={{ background: getPlayerColor(playerId) }} />
+                Player {playerId}{playerId === request.player_id ? " (you)" : ""}
+              </span>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function VentureCardReveal({
+  notification,
+  onDismiss,
+}: {
+  notification: UiNotificationState;
+  onDismiss: (id?: number) => void;
+}) {
+  const name = String(notification.data.name ?? "Venture Card");
+  const description = String(notification.data.description ?? "");
+
+  useEffect(() => {
+    const dismiss = () => onDismiss(notification.id);
+    const timeoutId = window.setTimeout(dismiss, VENTURE_CARD_REVEAL_MS);
+    function handleKeyDown(event: KeyboardEvent) {
+      if (["Escape", "Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+        dismiss();
+        return;
+      }
+      if (WASD_KEYS.has(event.key.toLowerCase()) || event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [notification.id, onDismiss]);
+
+  return (
+    <div className="venture-card-reveal" role="dialog" aria-modal="true" aria-labelledby="venture-card-title">
+      <button
+        type="button"
+        className="venture-card"
+        autoFocus
+        onClick={() => onDismiss(notification.id)}
+        aria-label="Dismiss Venture Card"
+      >
+        <span className="venture-card-kicker">Venture Card</span>
+        <strong id="venture-card-title">{name}</strong>
+        {description && <span className="venture-card-description">{description}</span>}
+        <small>Click or press Enter to continue</small>
+      </button>
+    </div>
   );
 }
 

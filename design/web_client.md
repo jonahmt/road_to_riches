@@ -222,11 +222,24 @@ The server retains the latest dice update for the active game and includes it
 when replaying a state snapshot and pending prompt to a reconnecting browser,
 so a reload during movement restores both the original roll and remaining count.
 
-Until the browser venture-grid UI is built, `CHOOSE_VENTURE_CELL` is handled by
-a temporary web-client fallback that randomly selects one unclaimed grid cell
-from the backend prompt data and submits that normal response. This keeps local
-browser play from blocking without moving venture-grid decision logic into the
-backend.
+`CHOOSE_VENTURE_CELL` opens a shared 8x8 Venture Grid overlay in both Immersive
+and Classic layouts. It initializes on the first unclaimed square and supports
+bounded WASD/arrow navigation with Space/Enter confirmation, matching the TUI.
+Clicking any square moves the cursor there without claiming it; double-clicking
+an unclaimed square claims it immediately. A dedicated claim button provides the
+same explicit confirmation path for pointer and touch users. Claimed squares
+retain dedicated player colors, and selecting an open square previews any exact
+cumulative line bonus that the backend's four-axis line rules would award. The
+ordinary action panel is hidden behind the modal overlay, and the browser submits
+only the selected `[row, column]`; claim validation and rewards remain backend
+owned.
+
+After a successful claim, the browser consumes the existing
+`venture_card_revealed` UI notification and briefly presents the drawn card's
+name and description in a centered modal. The reveal uses the TUI's 1.5-second
+presentation pause, can be dismissed early by click, Enter, Space, or Escape,
+and does not delay or alter backend script execution. Any decision produced by
+the card script returns to the standard contextual action panel after the reveal.
 
 For local default-server play, a browser disconnect or reload should not require
 restarting the Python server. The backend treats human slots as active socket
