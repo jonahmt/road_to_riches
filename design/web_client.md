@@ -171,8 +171,9 @@ animation and leaves the camera at that position for manual control.
 
 Player tokens render in a stable SVG overlay above the square layer so movement
 does not recreate the token at each destination. The active turn player's token
-is centered on its square at a larger radius for easier visual tracking, while
-inactive tokens retain the compact lower-corner arrangement. Position and size
+is centered on its square at a prominent 0.95 board-unit radius for easier
+visual tracking, while inactive tokens retain the compact lower-corner
+arrangement. Position and size
 changes use the same context-sensitive timing and curve as the Follow camera,
 including clean retargeting from an in-progress frame.
 
