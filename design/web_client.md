@@ -153,6 +153,13 @@ to 300%, primary-button drag panning, and compact minus, reset, plus, and follow
 controls. Reset returns free mode to the original fitted board; Follow returns to
 the 150% active-player view and locks manual camera input again.
 
+Automatic Follow-camera changes animate over 360 milliseconds with a cubic
+ease-in-out curve. This includes movement to a new active-player square, turn
+changes, and returning from Free Cam. The initial board framing is immediate.
+If another follow target arrives during an animation, the camera retargets from
+its current interpolated position; entering Free Cam cancels the animation and
+leaves the camera at that position for manual control.
+
 Wheel events update the SVG viewBox directly instead of rerendering the React
 square tree or applying a CSS transform; this keeps trackpad response immediate
 and preserves vector-sharp tiles and text at high zoom. Camera movement applies

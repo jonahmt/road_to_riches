@@ -80,6 +80,7 @@ const CHORD_TIMEOUT_MS = 180;
 const MIN_BOARD_ZOOM = 0.5;
 const MAX_BOARD_ZOOM = 3;
 const FOLLOW_BOARD_ZOOM = 1.5;
+const FOLLOW_CAMERA_ANIMATION_MS = 360;
 const BOARD_ZOOM_STEP = 0.25;
 const BOARD_WHEEL_ZOOM_SPEED = 0.0015;
 const BOARD_DRAG_THRESHOLD = 4;
@@ -156,6 +157,20 @@ function centeredBoardCamera(
     zoom,
     minX: center.x - bounds.width / zoom / 2,
     minY: center.y - bounds.height / zoom / 2,
+  };
+}
+
+function easeInOutCubic(progress: number): number {
+  return progress < 0.5
+    ? 4 * progress * progress * progress
+    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+}
+
+function interpolateBoardCamera(from: BoardCamera, to: BoardCamera, progress: number): BoardCamera {
+  return {
+    zoom: from.zoom + (to.zoom - from.zoom) * progress,
+    minX: from.minX + (to.minX - from.minX) * progress,
+    minY: from.minY + (to.minY - from.minY) * progress,
   };
 }
 
@@ -624,6 +639,8 @@ function BoardPanel({
   const didDragRef = useRef(false);
   const cameraRef = useRef<BoardCamera>({ zoom: 1, minX: 0, minY: 0 });
   const cameraBoundsKeyRef = useRef("");
+  const cameraAnimationFrameRef = useRef<number | null>(null);
+  const cameraReadyRef = useRef(false);
   const [cameraMode, setCameraMode] = useState<BoardCameraMode>("follow");
   const [isDragging, setIsDragging] = useState(false);
   const boardBounds = state ? getBoardBounds(state) : null;
@@ -642,19 +659,63 @@ function BoardPanel({
     if (!svg || !boardBounds) {
       return;
     }
+    if (cameraAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+      cameraAnimationFrameRef.current = null;
+    }
     const boundsChanged = cameraBoundsKeyRef.current !== boundsKey;
     if (boundsChanged) {
       cameraRef.current = resetBoardCamera(boardBounds);
       cameraBoundsKeyRef.current = boundsKey;
     }
+    svg.dataset.cameraMode = cameraMode;
     if (cameraMode === "follow") {
       const center = activeSquare
         ? { x: activeSquare.position[0], y: activeSquare.position[1] }
         : { x: boardBounds.minX + boardBounds.width / 2, y: boardBounds.minY + boardBounds.height / 2 };
-      cameraRef.current = centeredBoardCamera(boardBounds, FOLLOW_BOARD_ZOOM, center);
+      const target = centeredBoardCamera(boardBounds, FOLLOW_BOARD_ZOOM, center);
+      const from = { ...cameraRef.current };
+      const shouldAnimate =
+        cameraReadyRef.current &&
+        !boundsChanged &&
+        (Math.abs(from.zoom - target.zoom) > 0.0001 ||
+          Math.abs(from.minX - target.minX) > 0.0001 ||
+          Math.abs(from.minY - target.minY) > 0.0001);
+
+      if (shouldAnimate) {
+        svg.dataset.cameraAnimating = "true";
+        const startedAt = window.performance.now();
+        const animate = (timestamp: number) => {
+          const progress = Math.min(1, (timestamp - startedAt) / FOLLOW_CAMERA_ANIMATION_MS);
+          cameraRef.current = interpolateBoardCamera(from, target, easeInOutCubic(progress));
+          applyBoardCamera(svg, cameraRef.current, boardBounds);
+          if (progress < 1) {
+            cameraAnimationFrameRef.current = window.requestAnimationFrame(animate);
+          } else {
+            cameraRef.current = target;
+            cameraAnimationFrameRef.current = null;
+            svg.dataset.cameraAnimating = "false";
+          }
+        };
+        cameraAnimationFrameRef.current = window.requestAnimationFrame(animate);
+      } else {
+        cameraRef.current = target;
+        svg.dataset.cameraAnimating = "false";
+        applyBoardCamera(svg, cameraRef.current, boardBounds);
+      }
+    } else {
+      svg.dataset.cameraAnimating = "false";
+      applyBoardCamera(svg, cameraRef.current, boardBounds);
     }
-    svg.dataset.cameraMode = cameraMode;
-    applyBoardCamera(svg, cameraRef.current, boardBounds);
+
+    cameraReadyRef.current = true;
+    return () => {
+      if (cameraAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+        cameraAnimationFrameRef.current = null;
+      }
+      svg.dataset.cameraAnimating = "false";
+    };
   }, [activePositionKey, boundsKey, cameraMode]);
 
   useEffect(() => {
@@ -726,6 +787,13 @@ function BoardPanel({
   }
 
   function enableFreeCamera() {
+    if (cameraAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+      cameraAnimationFrameRef.current = null;
+    }
+    if (boardSvgRef.current) {
+      boardSvgRef.current.dataset.cameraAnimating = "false";
+    }
     setCameraMode("free");
   }
 
