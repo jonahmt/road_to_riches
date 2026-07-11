@@ -104,6 +104,17 @@ with explicit `Stop Here` and, when available, `Undo Step` controls. Once the
 roll resolves, the die leaves, the full header returns, and the next contextual
 action returns without moving the board.
 
+Passing the bank with all four suits opens a full-screen promotion ceremony.
+The backend emits a structured `promotion_completed` UI notification containing
+the promoted player, previous and next levels, base salary, level bonus, shop
+value bonus, comeback bonus, total salary, and resulting ready cash. The browser
+renders all four colored suit icons, an animated level transition, and the full
+salary breakdown. The ceremony remains until the player explicitly continues;
+it does not add a gameplay acknowledgment to the backend. If the bank's stock
+opportunity is already waiting behind the ceremony while movement still has
+remaining steps, that action panel becomes visible immediately after dismissal
+instead of remaining hidden by the roll-phase layout.
+
 The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
 review, but it should not be treated as the main game UI.

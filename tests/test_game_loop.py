@@ -960,9 +960,7 @@ class TestInitCannon:
         loop.state.players[1].position = 0  # BANK
         loop.input.choose_cannon_target.return_value = 1
 
-        loop._handle_init_cannon(
-            InitCannonEvent(player_id=0, targets=[{"player_id": 1}])
-        )
+        loop._handle_init_cannon(InitCannonEvent(player_id=0, targets=[{"player_id": 1}]))
 
         warp = loop.pipeline.process_next(loop.state)
         assert isinstance(warp, WarpEvent)
@@ -992,9 +990,7 @@ class TestInitCannon:
         loop.state.players[1].position = 0  # BANK
         loop.input.choose_cannon_target.return_value = 1
 
-        loop._handle_init_cannon(
-            InitCannonEvent(player_id=0, targets=[{"player_id": 1}])
-        )
+        loop._handle_init_cannon(InitCannonEvent(player_id=0, targets=[{"player_id": 1}]))
         warp = loop.pipeline.process_next(loop.state)
         assert isinstance(warp, WarpEvent)
         loop._dispatch(warp)
@@ -1335,6 +1331,20 @@ class TestWarpEventVoluntary:
         loop._execute_event(PromotionEvent(player_id=0))
 
         assert any("promoted" in m for m in loop.log.messages)
+        loop.input.notify_ui.assert_called_once_with(
+            "promotion_completed",
+            {
+                "player_id": 0,
+                "previous_level": 1,
+                "next_level": 2,
+                "base_bonus": 250,
+                "level_bonus": 150,
+                "shop_bonus": 0,
+                "comeback_bonus": 0,
+                "total_bonus": 400,
+                "ready_cash_after": 1900,
+            },
+        )
 
     def test_voluntary_warp_to_suit_collects_suit_via_pass_handler(self):
         """Voluntary warp to a SUIT square: PassActionEvent enqueues CollectSuitEvent."""

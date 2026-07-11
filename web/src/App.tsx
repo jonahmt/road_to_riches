@@ -538,8 +538,10 @@ function App() {
   const [layoutMode, setLayoutMode] = useState<GameLayoutMode>(getInitialLayoutMode);
   const ventureRequest =
     clientState.pendingRequest?.type === "CHOOSE_VENTURE_CELL" ? clientState.pendingRequest : null;
-  const ventureCardRevealActive = clientState.uiNotification?.type === "venture_card_revealed";
-  const standardKeyboardRequest = ventureRequest || ventureCardRevealActive ? null : clientState.pendingRequest;
+  const blockingPresentationActive = ["venture_card_revealed", "promotion_completed"].includes(
+    clientState.uiNotification?.type ?? "",
+  );
+  const standardKeyboardRequest = ventureRequest || blockingPresentationActive ? null : clientState.pendingRequest;
   useWasdPromptControls(clientState.responsePending ? null : standardKeyboardRequest, submitResponse);
 
   useEffect(() => {
@@ -561,6 +563,12 @@ function App() {
     clientState.pendingRequest?.type ?? "",
   );
   const stopConfirmationActive = clientState.pendingRequest?.type === "CONFIRM_STOP";
+  const rollActionPromptActive = Boolean(
+    clientState.pendingRequest &&
+      !["PRE_ROLL", "CHOOSE_PATH", "CONFIRM_STOP", "CHOOSE_VENTURE_CELL"].includes(
+        clientState.pendingRequest.type,
+      ),
+  );
   const isRollingOrMoving = Boolean(
     (clientState.dice?.remaining ?? 0) > 0 ||
       movementRequest ||
@@ -587,7 +595,7 @@ function App() {
 
   return (
     <main
-      className={`app-shell layout-${layoutMode} ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
+      className={`app-shell layout-${layoutMode} ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
       data-layout={layoutMode}
     >
       <header className="game-header">
@@ -676,6 +684,14 @@ function App() {
       {clientState.uiNotification?.type === "venture_card_revealed" && (
         <VentureCardReveal
           notification={clientState.uiNotification}
+          onDismiss={clearUiNotification}
+        />
+      )}
+
+      {clientState.uiNotification?.type === "promotion_completed" && (
+        <PromotionCeremony
+          notification={clientState.uiNotification}
+          assignedPlayerId={clientState.playerId}
           onDismiss={clearUiNotification}
         />
       )}
@@ -2156,6 +2172,130 @@ function VentureCardReveal({
         {description && <span className="venture-card-description">{description}</span>}
         <small>Click or press Enter to continue</small>
       </button>
+    </div>
+  );
+}
+
+function PromotionCeremony({
+  notification,
+  assignedPlayerId,
+  onDismiss,
+}: {
+  notification: UiNotificationState;
+  assignedPlayerId: number | null;
+  onDismiss: (id?: number) => void;
+}) {
+  const playerId = asNumber(notification.data.player_id);
+  const previousLevel = asNumber(notification.data.previous_level, 1);
+  const nextLevel = asNumber(notification.data.next_level, previousLevel + 1);
+  const totalBonus = asNumber(notification.data.total_bonus);
+  const readyCashAfter = asNumber(notification.data.ready_cash_after);
+  const isAssignedPlayer = playerId === assignedPlayerId;
+  const salaryRows = [
+    ["Base salary", asNumber(notification.data.base_bonus)],
+    ["Level bonus", asNumber(notification.data.level_bonus)],
+    ["Shop value bonus", asNumber(notification.data.shop_bonus)],
+    ["Comeback bonus", asNumber(notification.data.comeback_bonus)],
+  ] as const;
+
+  useEffect(() => {
+    const dismiss = () => onDismiss(notification.id);
+    function handleKeyDown(event: KeyboardEvent) {
+      if (["Escape", "Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+        dismiss();
+        return;
+      }
+      if (WASD_KEYS.has(event.key.toLowerCase()) || event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [notification.id, onDismiss]);
+
+  return (
+    <div
+      className="promotion-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="promotion-title"
+      style={{ "--promotion-player-color": getPlayerColor(playerId) } as CSSProperties}
+    >
+      <div className="promotion-radiance" aria-hidden="true" />
+      <section className="promotion-ceremony">
+        <header className="promotion-header">
+          <span className="promotion-eyebrow">Bank Promotion</span>
+          <h2 id="promotion-title">{isAssignedPlayer ? "You Promoted!" : `Player ${playerId} Promoted!`}</h2>
+          <p>Four suits complete. A new level—and a serious payday—has been unlocked.</p>
+        </header>
+
+        <div className="promotion-suits" role="img" aria-label="Spade, Heart, Diamond, and Club complete">
+          {SUIT_ORDER.map((suit, index) => (
+            <span
+              key={suit}
+              className="promotion-suit"
+              style={
+                {
+                  "--promotion-suit-color": getSuitColor(suit),
+                  "--promotion-suit-delay": `${index * 90}ms`,
+                } as CSSProperties
+              }
+              aria-hidden="true"
+            >
+              <svg viewBox="-1.5 -1.5 3 3" focusable="false">
+                <SuitShape suit={suit} scale={0.92} />
+              </svg>
+              <small>{readableType(suit)}</small>
+            </span>
+          ))}
+        </div>
+
+        <div className="promotion-details">
+          <section className="promotion-level-card" aria-label={`Level ${previousLevel} to Level ${nextLevel}`}>
+            <span className="promotion-detail-label">Level Up</span>
+            <div className="promotion-level-transition">
+              <span className="promotion-level previous">
+                <small>Level</small>
+                <strong>{previousLevel}</strong>
+              </span>
+              <span className="promotion-level-arrow" aria-hidden="true">→</span>
+              <span className="promotion-level next">
+                <small>Level</small>
+                <strong>{nextLevel}</strong>
+              </span>
+            </div>
+          </section>
+
+          <section className="promotion-salary-card" aria-label="Promotion salary breakdown">
+            <span className="promotion-detail-label">Salary Breakdown</span>
+            <dl>
+              {salaryRows.map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>+{formatGold(value)}</dd>
+                </div>
+              ))}
+              <div className="promotion-salary-total">
+                <dt>Total promotion salary</dt>
+                <dd>+{formatGold(totalBonus)}</dd>
+              </div>
+            </dl>
+            <p>Ready cash after promotion: <strong>{formatGold(readyCashAfter)}</strong></p>
+          </section>
+        </div>
+
+        <button
+          type="button"
+          className="promotion-continue"
+          autoFocus
+          onClick={() => onDismiss(notification.id)}
+        >
+          Continue
+        </button>
+      </section>
     </div>
   );
 }

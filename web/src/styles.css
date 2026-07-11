@@ -1085,6 +1085,257 @@ dd {
   text-transform: uppercase;
 }
 
+.promotion-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(255, 209, 102, 0.22), transparent 34%),
+    rgba(2, 4, 8, 0.88);
+  backdrop-filter: blur(8px);
+  animation: promotion-backdrop-in 240ms ease-out both;
+}
+
+.promotion-radiance {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  width: max(110vw, 110vh);
+  height: max(110vw, 110vh);
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 209, 102, 0.12) 0deg 5deg,
+    transparent 5deg 15deg
+  );
+  opacity: 0.65;
+  transform: translate(-50%, -50%);
+  animation: promotion-radiance-spin 24s linear infinite;
+}
+
+.promotion-ceremony {
+  position: relative;
+  width: min(920px, 100%);
+  max-height: calc(100dvh - 36px);
+  display: grid;
+  gap: 18px;
+  overflow: auto;
+  border: 2px solid rgba(255, 209, 102, 0.82);
+  border-radius: 20px;
+  padding: 28px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--promotion-player-color) 15%, transparent), transparent 42%),
+    radial-gradient(circle at 50% 0%, rgba(255, 209, 102, 0.18), transparent 48%),
+    rgba(8, 10, 15, 0.97);
+  color: #f7f7f2;
+  box-shadow:
+    0 0 0 7px rgba(255, 209, 102, 0.1),
+    0 0 80px rgba(255, 209, 102, 0.24),
+    0 36px 120px rgba(0, 0, 0, 0.68);
+  animation: promotion-ceremony-in 420ms cubic-bezier(0.2, 0.9, 0.22, 1.16) both;
+}
+
+.promotion-header {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.promotion-eyebrow,
+.promotion-detail-label {
+  color: #ffd166;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.promotion-header h2 {
+  font-size: clamp(40px, 7vw, 72px);
+  line-height: 0.98;
+  text-shadow:
+    0 0 24px rgba(255, 209, 102, 0.44),
+    0 4px 0 rgba(0, 0, 0, 0.28);
+}
+
+.promotion-header p {
+  color: rgba(247, 247, 242, 0.72);
+  font-size: 14px;
+}
+
+.promotion-suits {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.promotion-suit {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  border: 1px solid color-mix(in srgb, var(--promotion-suit-color) 68%, white 14%);
+  border-radius: 14px;
+  padding: 12px 8px 9px;
+  background: color-mix(in srgb, var(--promotion-suit-color) 15%, rgba(255, 255, 255, 0.03));
+  box-shadow:
+    inset 0 0 24px color-mix(in srgb, var(--promotion-suit-color) 12%, transparent),
+    0 0 28px color-mix(in srgb, var(--promotion-suit-color) 14%, transparent);
+  opacity: 0;
+  transform: translateY(18px) scale(0.88);
+  animation: promotion-suit-pop 380ms cubic-bezier(0.2, 0.9, 0.25, 1.2) forwards;
+  animation-delay: var(--promotion-suit-delay);
+}
+
+.promotion-suit svg {
+  width: 54px;
+  height: 54px;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--promotion-suit-color) 52%, transparent));
+}
+
+.promotion-suit small {
+  color: rgba(247, 247, 242, 0.74);
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.promotion-details {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.82fr) minmax(320px, 1.18fr);
+  gap: 14px;
+}
+
+.promotion-level-card,
+.promotion-salary-card {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 14px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.promotion-level-card {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+}
+
+.promotion-level-transition {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.promotion-level {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.promotion-level small {
+  color: rgba(247, 247, 242, 0.52);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.promotion-level strong {
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 0.95;
+}
+
+.promotion-level.next {
+  border-color: #ffd166;
+  background: rgba(255, 209, 102, 0.14);
+  box-shadow: 0 0 28px rgba(255, 209, 102, 0.24);
+  animation: promotion-level-pulse 900ms ease-in-out 520ms both;
+}
+
+.promotion-level-arrow {
+  color: #ffd166;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.promotion-salary-card {
+  display: grid;
+  gap: 10px;
+}
+
+.promotion-salary-card dl {
+  display: grid;
+  gap: 6px;
+}
+
+.promotion-salary-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 5px 0;
+}
+
+.promotion-salary-card dt,
+.promotion-salary-card dd {
+  margin: 0;
+  font-size: 12px;
+}
+
+.promotion-salary-card dd {
+  color: #ffd166;
+  font-weight: 900;
+}
+
+.promotion-salary-card .promotion-salary-total {
+  margin-top: 2px;
+  border-bottom: 0;
+  border-radius: 9px;
+  padding: 10px;
+  background: rgba(255, 209, 102, 0.12);
+}
+
+.promotion-salary-total dt,
+.promotion-salary-total dd {
+  color: #f7f7f2;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.promotion-salary-card > p {
+  color: rgba(247, 247, 242, 0.58);
+  font-size: 11px;
+  text-align: right;
+}
+
+.promotion-salary-card > p strong {
+  color: #f7f7f2;
+}
+
+.promotion-continue {
+  justify-self: center;
+  min-width: 220px;
+  min-height: 48px;
+  border-color: #ffd166;
+  background: #ffd166;
+  box-shadow: 0 0 30px rgba(255, 209, 102, 0.22);
+  font-size: 15px;
+}
+
 @keyframes venture-reveal-backdrop {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -1095,7 +1346,90 @@ dd {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes promotion-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes promotion-radiance-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes promotion-ceremony-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes promotion-suit-pop {
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes promotion-level-pulse {
+  0% { transform: scale(0.88); }
+  55% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promotion-overlay,
+  .promotion-ceremony,
+  .promotion-suit,
+  .promotion-level.next,
+  .promotion-radiance {
+    animation: none;
+  }
+
+  .promotion-suit {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (max-width: 760px) {
+  .promotion-overlay {
+    align-items: start;
+    padding: 8px;
+  }
+
+  .promotion-ceremony {
+    max-height: none;
+    gap: 12px;
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .promotion-header h2 {
+    font-size: 40px;
+  }
+
+  .promotion-header p {
+    font-size: 12px;
+  }
+
+  .promotion-suits {
+    gap: 6px;
+  }
+
+  .promotion-suit {
+    border-radius: 9px;
+    padding: 8px 4px 6px;
+  }
+
+  .promotion-suit svg {
+    width: 38px;
+    height: 38px;
+  }
+
+  .promotion-details {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .promotion-level-transition {
+    width: min(290px, 100%);
+  }
+
   .venture-grid-overlay {
     align-items: start;
     padding: 8px;
@@ -1785,6 +2119,13 @@ dd {
 }
 
 .layout-immersive.is-playing.is-roll-active.is-stop-confirmation .action-panel {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.layout-immersive.is-playing.is-roll-active.is-roll-action-prompt .action-panel {
   visibility: visible;
   opacity: 1;
   transform: none;

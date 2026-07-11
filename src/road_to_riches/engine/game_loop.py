@@ -40,6 +40,7 @@ from road_to_riches.events.game_events import (
     CollectSuitEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
+    PromotionEvent,
     RenovatePropertyEvent,
     SellStockEvent,
     TransferCashEvent,
@@ -510,6 +511,8 @@ class GameLoop:
         elif isinstance(event, RollAgainEvent):
             self._handle_roll_again(event)
         # --- Leaf mutation events: handled by log_message() ---
+        elif isinstance(event, PromotionEvent):
+            self.input.notify_ui("promotion_completed", event.presentation_data())
         elif isinstance(event, VictoryEvent):
             # Control flow: must set game_over on the loop instance
             self.game_over = True
@@ -1100,9 +1103,7 @@ class GameLoop:
         # deliberate exception: its pass action handles conditional promotion
         # followed by the unconditional stock opportunity.
         if target_sq.type == SquareType.BANK:
-            self.pipeline.enqueue_front(
-                PassActionEvent(player_id=pid, square_id=target.position)
-            )
+            self.pipeline.enqueue_front(PassActionEvent(player_id=pid, square_id=target.position))
 
         # Suit-granting destinations retain their existing cannon exception.
         suit_to_collect: str | None = None

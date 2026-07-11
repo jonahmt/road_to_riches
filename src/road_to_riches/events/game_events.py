@@ -269,21 +269,29 @@ class PromotionEvent(GameEvent):
     player_id: int
     _bonus: int = 0
     _level: int = 0
+    _previous_level: int = 0
+    _base_bonus: int = 0
+    _level_bonus: int = 0
+    _shop_bonus: int = 0
+    _comeback_bonus: int = 0
+    _ready_cash_after: int = 0
 
     def execute(self, state: GameState) -> None:
         player = state.get_player(self.player_id)
         promo = state.board.promotion_info
+        self._previous_level = player.level
         next_level = player.level + 1
 
         # Base salary
-        bonus = promo.base_salary
+        self._base_bonus = promo.base_salary
         # Level bonus
-        bonus += promo.salary_increment * (next_level - 1)
+        self._level_bonus = promo.salary_increment * (next_level - 1)
         # Shop value bonus
         total_shop_value = sum(
             state.board.squares[sq_id].shop_current_value or 0 for sq_id in player.owned_properties
         )
-        bonus += int(promo.shop_value_multiplier * total_shop_value)
+        self._shop_bonus = int(promo.shop_value_multiplier * total_shop_value)
+        bonus = self._base_bonus + self._level_bonus + self._shop_bonus
 
         # Apply the base bonuses first
         player.ready_cash += bonus
@@ -293,13 +301,14 @@ class PromotionEvent(GameEvent):
             player_nw = state.net_worth(player)
             best_nw = max(state.net_worth(p) for p in state.active_players)
             if player_nw < best_nw:
-                comeback = int(promo.comeback_multiplier * (best_nw - player_nw))
-                bonus += comeback
-                player.ready_cash += comeback
+                self._comeback_bonus = int(promo.comeback_multiplier * (best_nw - player_nw))
+                bonus += self._comeback_bonus
+                player.ready_cash += self._comeback_bonus
 
         self._bonus = bonus
         player.level = next_level
         self._level = next_level
+        self._ready_cash_after = player.ready_cash
 
         # Consume exactly 4 suits: prioritize real suits, then wilds
         standard = [Suit.SPADE, Suit.HEART, Suit.DIAMOND, Suit.CLUB]
@@ -319,13 +328,22 @@ class PromotionEvent(GameEvent):
     def get_result(self) -> int:
         return self._bonus
 
+    def presentation_data(self) -> dict[str, int]:
+        """Return protocol-neutral facts for a client promotion ceremony."""
+        return {
+            "player_id": self.player_id,
+            "previous_level": self._previous_level,
+            "next_level": self._level,
+            "base_bonus": self._base_bonus,
+            "level_bonus": self._level_bonus,
+            "shop_bonus": self._shop_bonus,
+            "comeback_bonus": self._comeback_bonus,
+            "total_bonus": self._bonus,
+            "ready_cash_after": self._ready_cash_after,
+        }
+
     def log_message(self) -> str | None:
-        suits = (
-            "[dodger_blue1]♠[/dodger_blue1]"
-            "[bright_red]♥[/bright_red]"
-            "[yellow]♦[/yellow]"
-            "[green]♣[/green]"
-        )
+        suits = "♠♥♦♣"
         # _bonus and player.level are set during execute()
         return (
             f"{suits} Player {self.player_id} promoted to "

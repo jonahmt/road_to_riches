@@ -190,12 +190,24 @@ class TestPromotion:
             CollectSuitEvent(player_id=0, suit=suit.value).execute(game)
         assert game.players[0].has_all_suits
 
-        PromotionEvent(player_id=0).execute(game)
+        promotion = PromotionEvent(player_id=0)
+        promotion.execute(game)
 
         assert game.players[0].level == 2
         assert len(game.players[0].suits) == 0  # suits cleared
         # Base salary (250) + level bonus (150 * 1) = 400
         assert game.players[0].ready_cash == 1500 + 400
+        assert promotion.presentation_data() == {
+            "player_id": 0,
+            "previous_level": 1,
+            "next_level": 2,
+            "base_bonus": 250,
+            "level_bonus": 150,
+            "shop_bonus": 0,
+            "comeback_bonus": 0,
+            "total_bonus": 400,
+            "ready_cash_after": 1900,
+        }
 
     def test_promotion_keeps_excess_wilds(self):
         game, _ = _make_game()
