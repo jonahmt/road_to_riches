@@ -315,9 +315,13 @@ h3 {
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.34);
   overflow: hidden;
-  cursor: grab;
+  cursor: default;
   touch-action: none;
   user-select: none;
+}
+
+.board-canvas.is-free-camera {
+  cursor: grab;
 }
 
 .board-canvas.is-dragging {
@@ -435,11 +439,16 @@ h3 {
   cursor: default;
 }
 
-.board-camera-controls .board-camera-reset {
+.board-camera-controls .board-camera-reset,
+.board-camera-controls .board-camera-mode {
   min-width: 58px;
   font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.board-camera-controls .board-camera-mode {
+  min-width: 72px;
 }
 
 .board-square-group {

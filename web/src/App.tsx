@@ -2,6 +2,7 @@ import {
   FormEvent,
   type PointerEvent as ReactPointerEvent,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -78,6 +79,7 @@ const WASD_KEYS = new Set(["w", "a", "s", "d"]);
 const CHORD_TIMEOUT_MS = 180;
 const MIN_BOARD_ZOOM = 0.5;
 const MAX_BOARD_ZOOM = 3;
+const FOLLOW_BOARD_ZOOM = 1.5;
 const BOARD_ZOOM_STEP = 0.25;
 const BOARD_WHEEL_ZOOM_SPEED = 0.0015;
 const BOARD_DRAG_THRESHOLD = 4;
@@ -99,6 +101,8 @@ interface BoardCamera {
   minX: number;
   minY: number;
 }
+
+type BoardCameraMode = "follow" | "free";
 
 interface BoardBounds {
   minX: number;
@@ -141,6 +145,18 @@ function zoomBoardCameraAt(
 
 function resetBoardCamera(bounds: BoardBounds): BoardCamera {
   return { zoom: 1, minX: bounds.minX, minY: bounds.minY };
+}
+
+function centeredBoardCamera(
+  bounds: BoardBounds,
+  zoom: number,
+  center: { x: number; y: number },
+): BoardCamera {
+  return {
+    zoom,
+    minX: center.x - bounds.width / zoom / 2,
+    minY: center.y - bounds.height / zoom / 2,
+  };
 }
 
 function applyBoardCamera(svg: SVGSVGElement, camera: BoardCamera, bounds: BoardBounds) {
@@ -608,25 +624,47 @@ function BoardPanel({
   const didDragRef = useRef(false);
   const cameraRef = useRef<BoardCamera>({ zoom: 1, minX: 0, minY: 0 });
   const cameraBoundsKeyRef = useRef("");
+  const [cameraMode, setCameraMode] = useState<BoardCameraMode>("follow");
   const [isDragging, setIsDragging] = useState(false);
   const boardBounds = state ? getBoardBounds(state) : null;
+  const activePlayer = state?.players[state.current_player_index] ?? null;
+  const activeSquare =
+    state && activePlayer
+      ? state.board.squares.find((square) => square.id === activePlayer.position) ?? null
+      : null;
+  const activePositionKey = activeSquare ? `${activeSquare.position[0]}:${activeSquare.position[1]}` : "";
   const boundsKey = boardBounds
     ? `${boardBounds.minX}:${boardBounds.minY}:${boardBounds.width}:${boardBounds.height}`
     : "";
 
+  useLayoutEffect(() => {
+    const svg = boardSvgRef.current;
+    if (!svg || !boardBounds) {
+      return;
+    }
+    const boundsChanged = cameraBoundsKeyRef.current !== boundsKey;
+    if (boundsChanged) {
+      cameraRef.current = resetBoardCamera(boardBounds);
+      cameraBoundsKeyRef.current = boundsKey;
+    }
+    if (cameraMode === "follow") {
+      const center = activeSquare
+        ? { x: activeSquare.position[0], y: activeSquare.position[1] }
+        : { x: boardBounds.minX + boardBounds.width / 2, y: boardBounds.minY + boardBounds.height / 2 };
+      cameraRef.current = centeredBoardCamera(boardBounds, FOLLOW_BOARD_ZOOM, center);
+    }
+    svg.dataset.cameraMode = cameraMode;
+    applyBoardCamera(svg, cameraRef.current, boardBounds);
+  }, [activePositionKey, boundsKey, cameraMode]);
+
   useEffect(() => {
     const canvas = boardCanvasRef.current;
     const svg = boardSvgRef.current;
-    if (!canvas || !svg || !boardBounds) {
+    if (!canvas || !svg || !boardBounds || cameraMode !== "free") {
       return;
     }
     const activeSvg = svg;
     const activeBounds = boardBounds;
-    if (cameraBoundsKeyRef.current !== boundsKey) {
-      cameraRef.current = resetBoardCamera(activeBounds);
-      cameraBoundsKeyRef.current = boundsKey;
-    }
-    applyBoardCamera(activeSvg, cameraRef.current, activeBounds);
 
     function handleWheel(event: WheelEvent) {
       event.preventDefault();
@@ -646,7 +684,7 @@ function BoardPanel({
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
-  }, [boundsKey]);
+  }, [boundsKey, cameraMode]);
 
   if (!state || !boardBounds) {
     return (
@@ -687,8 +725,18 @@ function BoardPanel({
     applyBoardCamera(svg, cameraRef.current, bounds);
   }
 
+  function enableFreeCamera() {
+    setCameraMode("free");
+  }
+
+  function enableFollowCamera() {
+    boardDragRef.current = null;
+    setIsDragging(false);
+    setCameraMode("follow");
+  }
+
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.button !== 0) {
+    if (cameraMode !== "free" || event.button !== 0) {
       return;
     }
     event.preventDefault();
@@ -755,7 +803,7 @@ function BoardPanel({
       <div className="location-backdrop" />
       <div
         ref={boardCanvasRef}
-        className={`board-canvas ${isDragging ? "is-dragging" : ""}`}
+        className={`board-canvas ${cameraMode === "free" ? "is-free-camera" : "is-follow-camera"} ${isDragging ? "is-dragging" : ""}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={finishPointerDrag}
@@ -870,31 +918,54 @@ function BoardPanel({
       </div>
       <BoardDice dice={dice} />
       <div className="board-camera-controls" aria-label="Board zoom controls">
-        <button
-          type="button"
-          aria-label="Zoom out"
-          title="Zoom out"
-          onClick={() => zoomFromCenter(-BOARD_ZOOM_STEP)}
-        >
-          −
-        </button>
-        <button
-          type="button"
-          className="board-camera-reset"
-          aria-label="Reset board view"
-          title="Reset board view"
-          onClick={resetCamera}
-        >
-          Reset
-        </button>
-        <button
-          type="button"
-          aria-label="Zoom in"
-          title="Zoom in"
-          onClick={() => zoomFromCenter(BOARD_ZOOM_STEP)}
-        >
-          +
-        </button>
+        {cameraMode === "follow" ? (
+          <button
+            type="button"
+            className="board-camera-mode"
+            aria-label="Use free camera"
+            title="Use free camera"
+            onClick={enableFreeCamera}
+          >
+            Free Cam
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              aria-label="Zoom out"
+              title="Zoom out"
+              onClick={() => zoomFromCenter(-BOARD_ZOOM_STEP)}
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className="board-camera-reset"
+              aria-label="Reset board view"
+              title="Reset board view"
+              onClick={resetCamera}
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              aria-label="Zoom in"
+              title="Zoom in"
+              onClick={() => zoomFromCenter(BOARD_ZOOM_STEP)}
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="board-camera-mode"
+              aria-label="Follow active player"
+              title="Follow active player"
+              onClick={enableFollowCamera}
+            >
+              Follow
+            </button>
+          </>
+        )}
       </div>
     </section>
   );
