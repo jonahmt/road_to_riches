@@ -194,7 +194,7 @@ This section summarizes each basic square type. There may be other more complex 
 | Roll On (P0) |  | Player rolls the dice again and continues moving |  |
 | Backstreet |  | The player is forced to warp to the destination square. They do not do the land or pass effect of the destination (usually another backstreet) |  |
 | Doorway |  |  | Player teleports to the other doorway and continues the rest of their roll. Note that doorway spaces do NOT take away from the remaining moves. |
-| Cannon |  | Player selects another player and jumps to their location |  |
+| Cannon |  | Player selects another player and jumps to their location. Destination pass/land effects are normally skipped, except that suit-granting destinations still grant their suit. If the target player is standing on the bank, the bank pass action runs: promote when eligible, then always offer the stock opportunity. |  |
 | Switch |  | Changes the board layout |  |
 | Stockbroker |  | The player may buy stock |  |
 | Additional custom events |  |  |  |
@@ -245,4 +245,3 @@ Players, shops, and districts can all gain temporary status effects. This is a c
 
 * (P3) Electrified X  
   * All shops in this district have prices increased by X%, until rent is paid to any shop in the district. Then that single transaction is increased by X%, and after this status effect is lost.
-

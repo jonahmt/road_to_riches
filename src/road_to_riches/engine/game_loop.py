@@ -1096,8 +1096,15 @@ class GameLoop:
             return
         target = self.state.get_player(target_pid)
         target_sq = self.state.board.squares[target.position]
-        # Cannon: warp without firing pass/land actions, but still collect a
-        # suit if the destination is a suit-granting square.
+        # Cannon normally skips destination pass/land actions. The bank is a
+        # deliberate exception: its pass action handles conditional promotion
+        # followed by the unconditional stock opportunity.
+        if target_sq.type == SquareType.BANK:
+            self.pipeline.enqueue_front(
+                PassActionEvent(player_id=pid, square_id=target.position)
+            )
+
+        # Suit-granting destinations retain their existing cannon exception.
         suit_to_collect: str | None = None
         if (
             target_sq.type in (SquareType.SUIT, SquareType.CHANGE_OF_SUIT)

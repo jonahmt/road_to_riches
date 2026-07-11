@@ -954,6 +954,59 @@ class TestInitCannon:
         assert isinstance(queued[1], CollectSuitEvent)
         assert queued[1].suit == "SPADE"
 
+    def test_target_on_bank_runs_stock_pass_action_without_promotion(self):
+        loop = _make_loop()
+        loop.state.players[0].position = 5
+        loop.state.players[1].position = 0  # BANK
+        loop.input.choose_cannon_target.return_value = 1
+
+        loop._handle_init_cannon(
+            InitCannonEvent(player_id=0, targets=[{"player_id": 1}])
+        )
+
+        warp = loop.pipeline.process_next(loop.state)
+        assert isinstance(warp, WarpEvent)
+        loop._dispatch(warp)
+        assert loop.state.players[0].position == 0
+
+        bank_pass = loop.pipeline.process_next(loop.state)
+        assert isinstance(bank_pass, PassActionEvent)
+        loop._dispatch(bank_pass)
+
+        queued = list(loop.pipeline._queue)
+        assert len(queued) == 1
+        assert isinstance(queued[0], InitBuyStockEvent)
+
+    def test_target_on_bank_promotes_before_stock_when_eligible(self):
+        from road_to_riches.events.game_events import PromotionEvent
+        from road_to_riches.models.suit import Suit
+
+        loop = _make_loop()
+        loop.state.players[0].position = 5
+        loop.state.players[0].suits = {
+            Suit.SPADE: 1,
+            Suit.HEART: 1,
+            Suit.DIAMOND: 1,
+            Suit.CLUB: 1,
+        }
+        loop.state.players[1].position = 0  # BANK
+        loop.input.choose_cannon_target.return_value = 1
+
+        loop._handle_init_cannon(
+            InitCannonEvent(player_id=0, targets=[{"player_id": 1}])
+        )
+        warp = loop.pipeline.process_next(loop.state)
+        assert isinstance(warp, WarpEvent)
+        loop._dispatch(warp)
+        bank_pass = loop.pipeline.process_next(loop.state)
+        assert isinstance(bank_pass, PassActionEvent)
+        loop._dispatch(bank_pass)
+
+        queued = list(loop.pipeline._queue)
+        assert len(queued) == 2
+        assert isinstance(queued[0], PromotionEvent)
+        assert isinstance(queued[1], InitBuyStockEvent)
+
     def test_no_targets_does_nothing(self):
         loop = _make_loop()
         init = InitCannonEvent(player_id=0, targets=[])
