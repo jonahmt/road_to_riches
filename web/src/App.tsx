@@ -81,7 +81,6 @@ const MAX_BOARD_ZOOM = 3;
 const BOARD_ZOOM_STEP = 0.25;
 const BOARD_WHEEL_ZOOM_SPEED = 0.0015;
 const BOARD_DRAG_THRESHOLD = 4;
-const DEFAULT_BOARD_CAMERA = { zoom: 1, x: 0, y: 0 };
 const DIE_PIPS: Record<number, readonly number[]> = {
   0: [],
   1: [5],
@@ -97,8 +96,15 @@ const DIE_PIPS: Record<number, readonly number[]> = {
 
 interface BoardCamera {
   zoom: number;
-  x: number;
-  y: number;
+  minX: number;
+  minY: number;
+}
+
+interface BoardBounds {
+  minX: number;
+  minY: number;
+  width: number;
+  height: number;
 }
 
 interface BoardDrag {
@@ -117,17 +123,43 @@ function zoomBoardCameraAt(
   camera: BoardCamera,
   requestedZoom: number,
   point: { x: number; y: number },
+  bounds: BoardBounds,
 ): BoardCamera {
   const zoom = clampBoardZoom(requestedZoom);
   if (zoom === camera.zoom) {
     return camera;
   }
-  const ratio = zoom / camera.zoom;
+  const currentWidth = bounds.width / camera.zoom;
+  const nextWidth = bounds.width / zoom;
+  const ratio = nextWidth / currentWidth;
   return {
     zoom,
-    x: point.x - (point.x - camera.x) * ratio,
-    y: point.y - (point.y - camera.y) * ratio,
+    minX: point.x - (point.x - camera.minX) * ratio,
+    minY: point.y - (point.y - camera.minY) * ratio,
   };
+}
+
+function resetBoardCamera(bounds: BoardBounds): BoardCamera {
+  return { zoom: 1, minX: bounds.minX, minY: bounds.minY };
+}
+
+function applyBoardCamera(svg: SVGSVGElement, camera: BoardCamera, bounds: BoardBounds) {
+  const width = bounds.width / camera.zoom;
+  const height = bounds.height / camera.zoom;
+  svg.setAttribute("viewBox", `${camera.minX} ${camera.minY} ${width} ${height}`);
+  svg.dataset.zoom = camera.zoom.toFixed(2);
+}
+
+function svgPointAt(svg: SVGSVGElement, clientX: number, clientY: number): { x: number; y: number } | null {
+  const matrix = svg.getScreenCTM();
+  if (!matrix) {
+    return null;
+  }
+  const point = svg.createSVGPoint();
+  point.x = clientX;
+  point.y = clientY;
+  const transformed = point.matrixTransform(matrix.inverse());
+  return { x: transformed.x, y: transformed.y };
 }
 
 function getPlayerColor(playerId: number): string {
@@ -571,32 +603,52 @@ function BoardPanel({
   onSelectSquare: (squareId: number) => void;
 }) {
   const boardCanvasRef = useRef<HTMLDivElement>(null);
+  const boardSvgRef = useRef<SVGSVGElement>(null);
   const boardDragRef = useRef<BoardDrag | null>(null);
   const didDragRef = useRef(false);
-  const [camera, setCamera] = useState<BoardCamera>(DEFAULT_BOARD_CAMERA);
+  const cameraRef = useRef<BoardCamera>({ zoom: 1, minX: 0, minY: 0 });
+  const cameraBoundsKeyRef = useRef("");
   const [isDragging, setIsDragging] = useState(false);
-  const hasState = state !== null;
+  const boardBounds = state ? getBoardBounds(state) : null;
+  const boundsKey = boardBounds
+    ? `${boardBounds.minX}:${boardBounds.minY}:${boardBounds.width}:${boardBounds.height}`
+    : "";
 
   useEffect(() => {
     const canvas = boardCanvasRef.current;
-    if (!canvas || !hasState) {
+    const svg = boardSvgRef.current;
+    if (!canvas || !svg || !boardBounds) {
       return;
     }
+    const activeSvg = svg;
+    const activeBounds = boardBounds;
+    if (cameraBoundsKeyRef.current !== boundsKey) {
+      cameraRef.current = resetBoardCamera(activeBounds);
+      cameraBoundsKeyRef.current = boundsKey;
+    }
+    applyBoardCamera(activeSvg, cameraRef.current, activeBounds);
 
     function handleWheel(event: WheelEvent) {
       event.preventDefault();
-      const currentCanvas = event.currentTarget as HTMLDivElement;
-      const rect = currentCanvas.getBoundingClientRect();
-      const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      const point = svgPointAt(activeSvg, event.clientX, event.clientY);
+      if (!point) {
+        return;
+      }
       const factor = Math.exp(-event.deltaY * BOARD_WHEEL_ZOOM_SPEED);
-      setCamera((current) => zoomBoardCameraAt(current, current.zoom * factor, point));
+      cameraRef.current = zoomBoardCameraAt(
+        cameraRef.current,
+        cameraRef.current.zoom * factor,
+        point,
+        activeBounds,
+      );
+      applyBoardCamera(activeSvg, cameraRef.current, activeBounds);
     }
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
-  }, [hasState]);
+  }, [boundsKey]);
 
-  if (!state) {
+  if (!state || !boardBounds) {
     return (
       <section className="board-panel empty-board">
         <div className="location-backdrop" />
@@ -609,20 +661,30 @@ function BoardPanel({
     );
   }
 
-  const bounds = getBoardBounds(state);
+  const bounds = boardBounds;
   const playerGroups = groupPlayersBySquare(state.players);
-  const cameraIsReset =
-    camera.zoom === DEFAULT_BOARD_CAMERA.zoom &&
-    camera.x === DEFAULT_BOARD_CAMERA.x &&
-    camera.y === DEFAULT_BOARD_CAMERA.y;
 
   function zoomFromCenter(delta: number) {
-    const canvas = boardCanvasRef.current;
-    if (!canvas) {
+    const svg = boardSvgRef.current;
+    if (!svg) {
       return;
     }
-    const point = { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2 };
-    setCamera((current) => zoomBoardCameraAt(current, current.zoom + delta, point));
+    const camera = cameraRef.current;
+    const point = {
+      x: camera.minX + bounds.width / camera.zoom / 2,
+      y: camera.minY + bounds.height / camera.zoom / 2,
+    };
+    cameraRef.current = zoomBoardCameraAt(camera, camera.zoom + delta, point, bounds);
+    applyBoardCamera(svg, cameraRef.current, bounds);
+  }
+
+  function resetCamera() {
+    const svg = boardSvgRef.current;
+    if (!svg) {
+      return;
+    }
+    cameraRef.current = resetBoardCamera(bounds);
+    applyBoardCamera(svg, cameraRef.current, bounds);
   }
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -659,7 +721,22 @@ function BoardPanel({
       return;
     }
     didDragRef.current = true;
-    setCamera((current) => ({ ...current, x: current.x + deltaX, y: current.y + deltaY }));
+    const svg = boardSvgRef.current;
+    const matrix = svg?.getScreenCTM();
+    if (!svg || !matrix) {
+      return;
+    }
+    const scaleX = Math.hypot(matrix.a, matrix.b);
+    const scaleY = Math.hypot(matrix.c, matrix.d);
+    if (scaleX <= 0 || scaleY <= 0) {
+      return;
+    }
+    cameraRef.current = {
+      ...cameraRef.current,
+      minX: cameraRef.current.minX - deltaX / scaleX,
+      minY: cameraRef.current.minY - deltaY / scaleY,
+    };
+    applyBoardCamera(svg, cameraRef.current, bounds);
   }
 
   function finishPointerDrag(event: ReactPointerEvent<HTMLDivElement>) {
@@ -691,19 +768,15 @@ function BoardPanel({
           }
         }}
       >
-        <div
-          className="board-viewport"
-          data-zoom={camera.zoom.toFixed(2)}
-          style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})` }}
+        <svg
+          ref={boardSvgRef}
+          className="board-svg"
+          viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+          preserveAspectRatio="xMidYMid meet"
+          aria-label="Game board"
+          role="img"
         >
-          <svg
-            className="board-svg"
-            viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
-            preserveAspectRatio="xMidYMid meet"
-            aria-label="Game board"
-            role="img"
-          >
-            {state.board.squares.map((square) => {
+          {state.board.squares.map((square) => {
             const players = playerGroups.get(square.id) ?? [];
             const isSelected = selectedSquare?.id === square.id;
             const ownerColor =
@@ -792,9 +865,8 @@ function BoardPanel({
                 ))}
               </g>
             );
-            })}
-          </svg>
-        </div>
+          })}
+        </svg>
       </div>
       <BoardDice dice={dice} />
       <div className="board-camera-controls" aria-label="Board zoom controls">
@@ -802,7 +874,6 @@ function BoardPanel({
           type="button"
           aria-label="Zoom out"
           title="Zoom out"
-          disabled={camera.zoom <= MIN_BOARD_ZOOM}
           onClick={() => zoomFromCenter(-BOARD_ZOOM_STEP)}
         >
           −
@@ -811,9 +882,8 @@ function BoardPanel({
           type="button"
           className="board-camera-reset"
           aria-label="Reset board view"
-          title={`Reset board view (${Math.round(camera.zoom * 100)}%)`}
-          disabled={cameraIsReset}
-          onClick={() => setCamera(DEFAULT_BOARD_CAMERA)}
+          title="Reset board view"
+          onClick={resetCamera}
         >
           Reset
         </button>
@@ -821,7 +891,6 @@ function BoardPanel({
           type="button"
           aria-label="Zoom in"
           title="Zoom in"
-          disabled={camera.zoom >= MAX_BOARD_ZOOM}
           onClick={() => zoomFromCenter(BOARD_ZOOM_STEP)}
         >
           +
