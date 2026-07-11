@@ -433,6 +433,12 @@ once all human and AI player slots are connected, that session starts
 independently of other sessions. The local launcher still uses the default
 session path for compatibility.
 
+Hosted games expose AI response pacing through `--ai-delay`. The default is
+0.25 seconds per AI response, including each path-selection step, so automated
+movement remains readable without pausing for a full second between squares.
+Launchers and server/session fallbacks share this default, while an explicit
+flag or lobby session value can still override it.
+
 Lobby discovery is also socket-driven. Clients send `list_games` and receive
 `games_list` summaries for public sessions that have not started or finished.
 A host can mark a created session private with `public: false`, in which case

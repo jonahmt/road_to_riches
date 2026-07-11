@@ -40,6 +40,7 @@ from road_to_riches.protocol import (
 from road_to_riches.save import save_game
 from road_to_riches.server.server_input import WebSocketPlayerInput
 from road_to_riches.server.session import (
+    DEFAULT_AI_DELAY,
     GameSession,
     GameSessionSettings,
     ServerSessionManager,
@@ -91,7 +92,7 @@ class GameServer:
         config: GameConfig,
         num_humans: int = 1,
         num_ai: int = 0,
-        ai_delay: float = 1.0,
+        ai_delay: float = DEFAULT_AI_DELAY,
         saved_state: "GameState | None" = None,
         create_default_session: bool = True,
         shutdown_when_default_finished: bool = True,
@@ -663,7 +664,7 @@ def run_server(
     board_path: str = "boards/test_board.json",
     num_humans: int = 1,
     num_ai: int = 3,
-    ai_delay: float = 1.0,
+    ai_delay: float = DEFAULT_AI_DELAY,
     host: str = "localhost",
     port: int = 8765,
     debug: bool = False,

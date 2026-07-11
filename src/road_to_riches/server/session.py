@@ -31,12 +31,15 @@ class PlayerAlreadyConnectedError(SessionError):
     """Raised when a player slot already has a connected client."""
 
 
+DEFAULT_AI_DELAY = 0.25
+
+
 @dataclass
 class GameSessionSettings:
     config: GameConfig
     num_humans: int = 1
     num_ai: int = 0
-    ai_delay: float = 1.0
+    ai_delay: float = DEFAULT_AI_DELAY
     saved_state: Any = None
     public: bool = True
     debug_mode: bool = False

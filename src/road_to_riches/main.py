@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 DEFAULT_BOARD = "boards/test_board.json"
 DEFAULT_PLAYERS = 4
+DEFAULT_AI_DELAY = 0.25
 
 
 @dataclass(frozen=True)
@@ -67,8 +68,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--ai-delay",
         type=float,
-        default=1.0,
-        help="AI response delay in seconds (server mode, default 1.0)",
+        default=DEFAULT_AI_DELAY,
+        help=f"AI response delay in seconds (server mode, default {DEFAULT_AI_DELAY})",
     )
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=8765)

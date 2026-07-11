@@ -26,6 +26,8 @@ import sys
 import time
 from typing import IO
 
+DEFAULT_AI_DELAY = 0.25
+
 
 def _wait_for_port(host: str, port: int, timeout: float = 5.0) -> bool:
     """Poll until the server accepts TCP connections, or timeout."""
@@ -93,8 +95,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="Number of human players (0 = AI-only watch mode)")
     parser.add_argument("--ai_players", "--ai", dest="ai_players", type=int, default=3,
                         help="Number of AI players")
-    parser.add_argument("--ai_delay", "--ai-delay", dest="ai_delay", type=float, default=1.0,
-                        help="AI response delay in seconds (default 1.0)")
+    parser.add_argument("--ai_delay", "--ai-delay", dest="ai_delay", type=float,
+                        default=DEFAULT_AI_DELAY,
+                        help=f"AI response delay in seconds (default {DEFAULT_AI_DELAY})")
     parser.add_argument("--host", default="localhost",
                         help="Server host")
     parser.add_argument("--port", type=int, default=8765,
