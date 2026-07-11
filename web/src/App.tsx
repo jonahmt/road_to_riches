@@ -81,7 +81,7 @@ const MIN_BOARD_ZOOM = 0.5;
 const MAX_BOARD_ZOOM = 3;
 const FOLLOW_BOARD_ZOOM = 1.5;
 const FOLLOW_CAMERA_ANIMATION_MS = 360;
-const PLAYER_TOKEN_ANIMATION_MS = 360;
+const ADJACENT_STEP_ANIMATION_MS = 160;
 const PLAYER_TOKEN_RADIUS = 0.34;
 const ACTIVE_PLAYER_TOKEN_RADIUS = 0.72;
 const BOARD_ZOOM_STEP = 0.25;
@@ -107,6 +107,12 @@ interface BoardCamera {
 }
 
 type BoardCameraMode = "follow" | "free";
+type BoardAnimationCurve = "cubic" | "linear";
+
+type ActivePlayerFrame = {
+  playerId: number;
+  squareId: number;
+};
 
 type BoardTokenVisual = {
   x: number;
@@ -178,6 +184,19 @@ function easeInOutCubic(progress: number): number {
   return progress < 0.5
     ? 4 * progress * progress * progress
     : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+}
+
+function animationProgress(progress: number, curve: BoardAnimationCurve): number {
+  return curve === "linear" ? progress : easeInOutCubic(progress);
+}
+
+function areBoardSquaresAdjacent(state: GameState, fromId: number, toId: number): boolean {
+  const from = state.board.squares.find((square) => square.id === fromId);
+  const to = state.board.squares.find((square) => square.id === toId);
+  return Boolean(
+    from?.waypoints.some((waypoint) => waypoint.to_ids.includes(toId)) ||
+      to?.waypoints.some((waypoint) => waypoint.to_ids.includes(fromId)),
+  );
 }
 
 function interpolateBoardCamera(from: BoardCamera, to: BoardCamera, progress: number): BoardCamera {
@@ -701,6 +720,7 @@ function BoardPanel({
   const cameraBoundsKeyRef = useRef("");
   const cameraAnimationFrameRef = useRef<number | null>(null);
   const cameraReadyRef = useRef(false);
+  const activePlayerFrameRef = useRef<ActivePlayerFrame | null>(null);
   const tokenElementsRef = useRef(new Map<number, SVGGElement>());
   const tokenVisualsRef = useRef(new Map<number, BoardTokenVisual>());
   const tokenAnimationFrameRef = useRef<number | null>(null);
@@ -713,6 +733,24 @@ function BoardPanel({
       ? state.board.squares.find((square) => square.id === activePlayer.position) ?? null
       : null;
   const activePositionKey = activeSquare ? `${activeSquare.position[0]}:${activeSquare.position[1]}` : "";
+  const automaticAnimation = useMemo(() => {
+    const previous = activePlayerFrameRef.current;
+    const isAdjacentActiveMove = Boolean(
+      state &&
+        activePlayer &&
+        activeSquare &&
+        previous &&
+        previous.playerId === activePlayer.player_id &&
+        previous.squareId !== activeSquare.id &&
+        areBoardSquaresAdjacent(state, previous.squareId, activeSquare.id),
+    );
+    return {
+      curve: (isAdjacentActiveMove ? "linear" : "cubic") as BoardAnimationCurve,
+      duration: isAdjacentActiveMove ? ADJACENT_STEP_ANIMATION_MS : FOLLOW_CAMERA_ANIMATION_MS,
+    };
+  }, [activePlayer?.player_id, activeSquare?.id]);
+  const automaticAnimationCurve = automaticAnimation.curve;
+  const automaticAnimationDuration = automaticAnimation.duration;
   const playerTokens = useMemo(() => getBoardPlayerTokens(state), [state]);
   const playerTokenKey = playerTokens
     .map((token) => `${token.player.player_id}:${token.x}:${token.y}:${token.radius}`)
@@ -751,10 +789,16 @@ function BoardPanel({
 
       if (shouldAnimate) {
         svg.dataset.cameraAnimating = "true";
+        svg.dataset.cameraAnimationCurve = automaticAnimationCurve;
+        svg.dataset.cameraAnimationDuration = String(automaticAnimationDuration);
         const startedAt = window.performance.now();
         const animate = (timestamp: number) => {
-          const progress = Math.min(1, (timestamp - startedAt) / FOLLOW_CAMERA_ANIMATION_MS);
-          cameraRef.current = interpolateBoardCamera(from, target, easeInOutCubic(progress));
+          const progress = Math.min(1, (timestamp - startedAt) / automaticAnimationDuration);
+          cameraRef.current = interpolateBoardCamera(
+            from,
+            target,
+            animationProgress(progress, automaticAnimationCurve),
+          );
           applyBoardCamera(svg, cameraRef.current, boardBounds);
           if (progress < 1) {
             cameraAnimationFrameRef.current = window.requestAnimationFrame(animate);
@@ -783,7 +827,7 @@ function BoardPanel({
       }
       svg.dataset.cameraAnimating = "false";
     };
-  }, [activePositionKey, boundsKey, cameraMode]);
+  }, [activePositionKey, boundsKey, cameraMode, automaticAnimationCurve, automaticAnimationDuration]);
 
   useEffect(() => {
     const canvas = boardCanvasRef.current;
@@ -837,6 +881,8 @@ function BoardPanel({
         return [];
       }
       element.dataset.tokenAnimating = "true";
+      element.dataset.tokenAnimationCurve = automaticAnimationCurve;
+      element.dataset.tokenAnimationDuration = String(automaticAnimationDuration);
       return [{ element, from, target }];
     });
 
@@ -846,8 +892,8 @@ function BoardPanel({
 
     const startedAt = window.performance.now();
     const animate = (timestamp: number) => {
-      const progress = Math.min(1, (timestamp - startedAt) / PLAYER_TOKEN_ANIMATION_MS);
-      const easedProgress = easeInOutCubic(progress);
+      const progress = Math.min(1, (timestamp - startedAt) / automaticAnimationDuration);
+      const easedProgress = animationProgress(progress, automaticAnimationCurve);
       for (const transition of transitions) {
         const visual = interpolateBoardToken(transition.from, transition.target, easedProgress);
         tokenVisualsRef.current.set(transition.target.player.player_id, visual);
@@ -872,7 +918,14 @@ function BoardPanel({
         tokenAnimationFrameRef.current = null;
       }
     };
-  }, [playerTokenKey]);
+  }, [automaticAnimationCurve, automaticAnimationDuration, playerTokenKey]);
+
+  useLayoutEffect(() => {
+    activePlayerFrameRef.current =
+      activePlayer && activeSquare
+        ? { playerId: activePlayer.player_id, squareId: activeSquare.id }
+        : null;
+  }, [activePlayer?.player_id, activeSquare?.id]);
 
   if (!state || !boardBounds) {
     return (

@@ -153,19 +153,22 @@ to 300%, primary-button drag panning, and compact minus, reset, plus, and follow
 controls. Reset returns free mode to the original fitted board; Follow returns to
 the 150% active-player view and locks manual camera input again.
 
-Automatic Follow-camera changes animate over 360 milliseconds with a cubic
-ease-in-out curve. This includes movement to a new active-player square, turn
-changes, and returning from Free Cam. The initial board framing is immediate.
-If another follow target arrives during an animation, the camera retargets from
-its current interpolated position; entering Free Cam cancels the animation and
-leaves the camera at that position for manual control.
+Automatic Follow-camera changes default to a 360-millisecond cubic ease-in-out
+curve. Turn changes, returning from Free Cam, and other automatic reframing use
+that default. A same-player move between two squares connected by a board
+waypoint overrides it with a fast 160-millisecond linear transition for both the
+camera and player token. This keeps ordinary step-by-step movement direct while
+reserving eased motion for broader framing changes. The initial board framing is
+immediate. If another follow target arrives during an animation, the camera
+retargets from its current interpolated position; entering Free Cam cancels the
+animation and leaves the camera at that position for manual control.
 
 Player tokens render in a stable SVG overlay above the square layer so movement
 does not recreate the token at each destination. The active turn player's token
 is centered on its square at a larger radius for easier visual tracking, while
 inactive tokens retain the compact lower-corner arrangement. Position and size
-changes interpolate over 360 milliseconds with the same cubic ease-in-out curve
-as the Follow camera, including clean retargeting from an in-progress frame.
+changes use the same context-sensitive timing and curve as the Follow camera,
+including clean retargeting from an in-progress frame.
 
 Wheel events update the SVG viewBox directly instead of rerendering the React
 square tree or applying a CSS transform; this keeps trackpad response immediate
