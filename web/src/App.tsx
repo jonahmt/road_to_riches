@@ -2229,7 +2229,6 @@ function PromotionCeremony({
         <header className="promotion-header">
           <span className="promotion-eyebrow">Bank Promotion</span>
           <h2 id="promotion-title">{isAssignedPlayer ? "You Promoted!" : `Player ${playerId} Promoted!`}</h2>
-          <p>Four suits complete. A new level—and a serious payday—has been unlocked.</p>
         </header>
 
         <div className="promotion-suits" role="img" aria-label="Spade, Heart, Diamond, and Club complete">

@@ -1165,11 +1165,6 @@ dd {
     0 4px 0 rgba(0, 0, 0, 0.28);
 }
 
-.promotion-header p {
-  color: rgba(247, 247, 242, 0.72);
-  font-size: 14px;
-}
-
 .promotion-suits {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1401,10 +1396,6 @@ dd {
 
   .promotion-header h2 {
     font-size: 40px;
-  }
-
-  .promotion-header p {
-    font-size: 12px;
   }
 
   .promotion-suits {
