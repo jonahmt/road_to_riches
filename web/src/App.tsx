@@ -8,7 +8,7 @@ import {
   type SquareInfo,
   stockPrice,
 } from "./protocol";
-import { useGameClient } from "./useGameClient";
+import { type DiceState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
 
@@ -69,6 +69,18 @@ const BOARD_TILE_SELECTION_STROKE_WIDTH = 0.12;
 const BOARD_TILE_SELECTION_SIZE = BOARD_TILE_SIZE - BOARD_TILE_SELECTION_INSET * 2;
 const WASD_KEYS = new Set(["w", "a", "s", "d"]);
 const CHORD_TIMEOUT_MS = 180;
+const DIE_PIPS: Record<number, readonly number[]> = {
+  0: [],
+  1: [5],
+  2: [3, 7],
+  3: [3, 5, 7],
+  4: [1, 3, 7, 9],
+  5: [1, 3, 5, 7, 9],
+  6: [1, 3, 4, 6, 7, 9],
+  7: [1, 3, 4, 5, 6, 7, 9],
+  8: [1, 2, 3, 4, 6, 7, 8, 9],
+  9: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+};
 
 function getPlayerColor(playerId: number): string {
   return PLAYER_COLORS[playerId % PLAYER_COLORS.length];
@@ -344,6 +356,7 @@ function App() {
           <section className="game-layout">
             <BoardPanel
               state={clientState.gameState}
+              dice={clientState.dice}
               selectedSquare={selectedSquare}
               onSelectSquare={setSelectedSquareId}
             />
@@ -500,10 +513,12 @@ function StatusPill({
 
 function BoardPanel({
   state,
+  dice,
   selectedSquare,
   onSelectSquare,
 }: {
   state: GameState | null;
+  dice: DiceState | null;
   selectedSquare: SquareInfo | null;
   onSelectSquare: (squareId: number) => void;
 }) {
@@ -626,7 +641,33 @@ function BoardPanel({
           })}
         </svg>
       </div>
+      <BoardDice dice={dice} />
     </section>
+  );
+}
+
+function BoardDice({ dice }: { dice: DiceState | null }) {
+  const roll = dice?.value ?? 0;
+  const remaining = dice?.remaining ?? 0;
+  const faceValue = remaining > 0 ? remaining : 0;
+  const activePips = new Set(DIE_PIPS[faceValue] ?? DIE_PIPS[0]);
+  const description = roll > 0 ? `Rolled ${roll}; ${remaining} moves remaining` : "No active roll";
+
+  return (
+    <div className="board-dice" role="img" aria-label={description}>
+      <div className="board-die-face" aria-hidden="true">
+        {Array.from({ length: 9 }, (_, index) => {
+          const position = index + 1;
+          return (
+            <span
+              key={position}
+              className={`board-die-pip ${activePips.has(position) ? "is-visible" : ""}`}
+            />
+          );
+        })}
+      </div>
+      <span className={`board-die-roll ${roll > 0 ? "" : "is-empty"}`}>Roll {roll || "-"}</span>
+    </div>
   );
 }
 

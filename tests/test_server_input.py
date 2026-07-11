@@ -87,7 +87,7 @@ def test_broadcast_sends_to_each_websocket_in_order_without_overlap():
         loop.close()
 
 
-def test_snapshot_to_client_replays_pending_prompt():
+def test_snapshot_to_client_replays_dice_and_pending_prompt():
     loop = asyncio.new_event_loop()
     thread = threading.Thread(target=loop.run_forever)
     thread.start()
@@ -100,14 +100,23 @@ def test_snapshot_to_client_replays_pending_prompt():
             player_id=0,
             data={"cash": 1500},
         )
+        player_input.notify_dice(5, 3)
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(ws, 1), loop).result(timeout=2)
+        ws.sent.clear()
 
         player_input.send_snapshot_to_client(ws, _make_state())
-        asyncio.run_coroutine_threadsafe(_wait_for_sent(ws, 2), loop).result(timeout=2)
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(ws, 3), loop).result(timeout=2)
 
         messages = [json.loads(raw) for raw in ws.sent]
         assert messages[0]["msg"] == "state_sync"
         assert messages[0]["game_id"] == "default"
         assert messages[1] == {
+            "msg": "dice",
+            "value": 5,
+            "remaining": 3,
+            "game_id": "default",
+        }
+        assert messages[2] == {
             "msg": "input_request",
             "type": "PRE_ROLL",
             "player_id": 0,

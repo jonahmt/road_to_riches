@@ -144,6 +144,16 @@ in a short resolving state until the backend sends the next prompt or error.
 This avoids transient idle-panel swaps and browser scroll anchoring adjustments
 that would make the board appear to flicker vertically during keyboard input.
 
+The game board has a persistent die overlay in its upper-left corner. It consumes
+the same backend `dice` message as the TUI: the face displays the remaining move
+count, counts down as movement is resolved, and becomes blank at zero, while a
+label beneath the face preserves the original roll for the duration of the turn.
+The overlay remains mounted before the first roll with an empty face so dice
+updates do not shift the board layout.
+The server retains the latest dice update for the active game and includes it
+when replaying a state snapshot and pending prompt to a reconnecting browser,
+so a reload during movement restores both the original roll and remaining count.
+
 Until the browser venture-grid UI is built, `CHOOSE_VENTURE_CELL` is handled by
 a temporary web-client fallback that randomly selects one unclaimed grid cell
 from the backend prompt data and submits that normal response. This keeps local

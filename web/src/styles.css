@@ -324,6 +324,66 @@ h3 {
   height: 100%;
 }
 
+.board-dice {
+  position: absolute;
+  top: 34px;
+  left: 34px;
+  z-index: 2;
+  width: 74px;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 9px 9px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 10px;
+  background: rgba(8, 10, 14, 0.88);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.board-die-face {
+  width: 54px;
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  border: 2px solid #f7f7f2;
+  border-radius: 9px;
+  background: rgba(247, 247, 242, 0.06);
+}
+
+.board-die-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #f7f7f2;
+  opacity: 0;
+  transform: scale(0.45);
+  transition:
+    opacity 100ms ease,
+    transform 100ms ease;
+}
+
+.board-die-pip.is-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.board-die-roll {
+  color: #f7f7f2;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.board-die-roll.is-empty {
+  visibility: hidden;
+}
+
 .board-square-group {
   cursor: pointer;
   outline: none;
@@ -865,5 +925,21 @@ dd {
 
   .board-panel {
     height: clamp(420px, 58vh, 560px);
+  }
+
+  .board-dice {
+    top: 30px;
+    left: 30px;
+    width: 62px;
+    padding: 7px 7px 6px;
+  }
+
+  .board-die-face {
+    width: 44px;
+  }
+
+  .board-die-pip {
+    width: 7px;
+    height: 7px;
   }
 }

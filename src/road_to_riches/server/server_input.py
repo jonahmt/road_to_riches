@@ -52,6 +52,7 @@ class WebSocketPlayerInput(PlayerInput):
         self._expecting_player: int | None = None  # which player_id we're waiting for
         self._expecting_request_type: InputRequestType | None = None
         self._pending_request: InputRequest | None = None
+        self._last_dice: tuple[int, int] | None = None
 
     def set_client_for_player(self, player_id: int, ws: Any) -> None:
         """Register a WebSocket as the client for a specific player.
@@ -208,11 +209,17 @@ class WebSocketPlayerInput(PlayerInput):
         self._broadcast(msg_state_sync(game_state_to_dict(state), game_id=self._game_id))
 
     def send_snapshot_to_client(self, ws: Any, state: GameState) -> None:
-        """Send current state, and any active prompt, to one connected client."""
+        """Send current state, dice, and any active prompt to one client."""
         self._send_raw(
             ws,
             encode(msg_state_sync(game_state_to_dict(state), game_id=self._game_id)),
         )
+        if self._last_dice is not None:
+            value, remaining = self._last_dice
+            self._send_raw(
+                ws,
+                encode(msg_dice(value, remaining, game_id=self._game_id)),
+            )
         if self._pending_request is not None:
             self._send_raw(
                 ws,
@@ -639,6 +646,7 @@ class WebSocketPlayerInput(PlayerInput):
         self._send_state(state)
 
     def notify_dice(self, value: int, remaining: int) -> None:
+        self._last_dice = (value, remaining)
         self._broadcast(msg_dice(value, remaining, game_id=self._game_id))
 
     def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
