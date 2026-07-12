@@ -90,6 +90,10 @@ clients see the same facts with a read-only `Waiting for Player …` prompt. The
 TUI must not use a fixed timer or release a presentation locally before the
 server confirms that the barrier resolved.
 
+Opponent-shop rent uses the same barrier contract. The detail panel names the
+payer and owner, shows the final rent, and lists any district dividend payouts;
+the payer acknowledges before the turn continues.
+
 ## (P0) Info
 
 Any time a player is inputting a decision, they should also be able to type I/info/Info to get info about the game. They can request info player to see a player’s full stats, info square type to see the definition of that square (same as would appear in viewing board), etc. info game would return the victory condition for example. This is how the game can be remotely playable before the following UI components are implemented. This is also how agents should interact with the program while testing.

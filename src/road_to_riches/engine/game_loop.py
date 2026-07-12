@@ -40,6 +40,7 @@ from road_to_riches.events.game_events import (
     CollectSuitEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
+    PayRentEvent,
     PresentationBarrierEvent,
     PromotionEvent,
     RenovatePropertyEvent,
@@ -539,11 +540,19 @@ class GameLoop:
                     data=event.presentation_data(),
                 )
             )
+        elif isinstance(event, PayRentEvent) and event.get_result() > 0:
+            self._execute_event(
+                PresentationBarrierEvent(
+                    player_id=event.payer_id,
+                    presentation_type="rent_payment",
+                    data=event.presentation_data(),
+                )
+            )
         elif isinstance(event, VictoryEvent):
             # Control flow: must set game_over on the loop instance
             self.game_over = True
             self.winner = event.player_id
-        # All other leaf events (BuyShopEvent, PayRentEvent, etc.) are
+        # All other leaf events (BuyShopEvent, InvestInShopEvent, etc.) are
         # handled by the generic log_message() call in the main loop.
         # Silent leaf events (CollectSuitEvent, RotateSuitEvent,
         # TransferPropertyEvent, TransferCashEvent, ScriptEvent,

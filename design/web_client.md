@@ -108,6 +108,17 @@ continue the ceremony; other clients see a read-only waiting state. The server
 does not process the bank's stock opportunity, continued movement, or any later
 gameplay until the owning client acknowledges the presentation.
 
+Paying rent to another player's shop opens a centered blocking payment overlay
+above the still-visible board. Its primary card shows payer → shop owner, the
+final rent amount, and the shop square. When the backend reports one or more
+stock dividend payouts, a second card appears beneath it with the district and
+one dedicated payout slot per player; players without a payout keep their slot
+and display `0G`. With no dividends, the second card is omitted so routine
+payments stay compact. Payment surfaces use flat translucent fills without
+gradients. Only the payer may continue with click, Enter, or Space; observers
+wait for that player, and gameplay remains paused until the server resolves the
+presentation.
+
 The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
 review, but it should not be treated as the main game UI.

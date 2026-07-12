@@ -468,6 +468,22 @@ class GameApp(App):
                 )
             )
             info.write(f"[bold]Total +{data.get('total_bonus', 0)}G[/bold]")
+        elif request.presentation_type == "rent_payment":
+            payer_id = data.get("payer_id", request.player_id)
+            owner_id = data.get("owner_id", "?")
+            info.write("[bold gold1]SHOP PAYMENT[/bold gold1]")
+            info.write(
+                f"Player {payer_id} → Player {owner_id}: "
+                f"[bold]{data.get('rent_amount', 0)}G[/bold]"
+            )
+            dividends = data.get("dividends", [])
+            if dividends:
+                info.write(f"District {data.get('district_id', '?')} dividends")
+                for payout in dividends:
+                    info.write(
+                        f"  Player {payout.get('player_id', '?')}: "
+                        f"+{payout.get('amount', 0)}G"
+                    )
         else:
             info.write(f"[bold]{escape(request.presentation_type)}[/bold]")
             info.write(escape(str(data)))

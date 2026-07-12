@@ -82,6 +82,15 @@ renders the checkpoint. Routine movement, logs, and minor feedback remain
 non-blocking, while fire-and-forget `ui_notification` messages remain available
 only for presentation metadata that is explicitly not a gameplay barrier.
 
+Successful opponent-shop rent payments create a `rent_payment` presentation
+barrier immediately after `PayRentEvent` mutates the authoritative state and
+before forced-buyout decisions or later queued gameplay can proceed. The payer
+owns the acknowledgment. Its semantic payload contains payer, shop owner,
+square, district, final rent, dividend payouts, and commission payouts; clients
+must not recalculate those values. Closed shops and other zero-rent outcomes do
+not open the barrier. AI payers release it using the configured presentation
+delay, while human payers explicitly continue it.
+
 ### P0.5 Readiness Evidence
 
 As of 2026-07-02, backend readiness is tracked by Bead

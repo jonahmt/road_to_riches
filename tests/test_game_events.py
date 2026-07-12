@@ -99,6 +99,15 @@ class TestPayRentEvent:
         assert evt.get_result() > 0
         msg = evt.log_message()
         assert "pays" in msg and "rent" in msg
+        assert evt.presentation_data() == {
+            "payer_id": 0,
+            "owner_id": 1,
+            "square_id": 1,
+            "district_id": 0,
+            "rent_amount": evt.get_result(),
+            "dividends": [],
+            "commissions": [],
+        }
 
     def test_dividend_appears_in_log(self):
         game = _make_game(num_players=3)
@@ -108,6 +117,9 @@ class TestPayRentEvent:
         evt.execute(game)
         msg = evt.log_message()
         assert "Dividend" in msg
+        assert evt.presentation_data()["dividends"] == [
+            {"player_id": 2, "amount": int(evt.get_result() * 0.2)}
+        ]
 
     def test_commission_paid_to_third_player(self):
         game = _make_game(num_players=3)

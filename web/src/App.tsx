@@ -18,6 +18,7 @@ import {
   stockPrice,
 } from "./protocol";
 import { adjacentStepAnimationDuration } from "./cameraTiming";
+import { rentPaymentFacts } from "./paymentPresentation";
 import {
   clampStockQuantity,
   defaultStockQuantity,
@@ -745,8 +746,23 @@ function App() {
         />
       )}
 
+      {activePresentation?.type === "rent_payment" && (
+        <RentPaymentOverlay
+          presentation={activePresentation}
+          state={clientState.gameState}
+          assignedPlayerId={clientState.playerId}
+          onContinue={() =>
+            activePresentation.requiresAcknowledgment
+              ? acknowledgePresentation(activePresentation.requestId)
+              : dismissPresentation(activePresentation.requestId)
+          }
+        />
+      )}
+
       {activePresentation &&
-        !["venture_card_revealed", "promotion_completed"].includes(activePresentation.type) && (
+        !["venture_card_revealed", "promotion_completed", "rent_payment"].includes(
+          activePresentation.type,
+        ) && (
           <GenericPresentation
             presentation={activePresentation}
             assignedPlayerId={clientState.playerId}
@@ -2761,6 +2777,113 @@ function GenericPresentation({
               : `Waiting for Player ${presentation.playerId}...`}
         </small>
       </button>
+    </div>
+  );
+}
+
+function RentPaymentOverlay({
+  presentation,
+  state,
+  assignedPlayerId,
+  onContinue,
+}: {
+  presentation: PresentationState;
+  state: GameState | null;
+  assignedPlayerId: number | null;
+  onContinue: () => void;
+}) {
+  const payment = rentPaymentFacts(presentation.data, presentation.playerId);
+  const dividendByPlayer = new Map(
+    payment.dividends.map((payout) => [payout.playerId, payout.amount]),
+  );
+  const hasDividends = payment.dividends.length > 0;
+  const players = state?.players ?? [];
+  const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
+  const canContinue = isOwner && !presentation.acknowledgmentPending;
+  const districtName =
+    payment.districtId === null ? "District" : districtLabel(payment.districtId);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        ["Escape", "Enter", " "].includes(event.key) ||
+        WASD_KEYS.has(event.key.toLowerCase()) ||
+        event.key.startsWith("Arrow")
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (canContinue && ["Enter", " "].includes(event.key)) {
+          onContinue();
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [canContinue, onContinue]);
+
+  return (
+    <div
+      className="payment-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="payment-title"
+    >
+      <section className="payment-stack">
+        <div className="payment-card">
+          <div className="payment-route" id="payment-title">
+            <span className="payment-player" style={{ "--payment-player-color": getPlayerColor(payment.payerId) } as CSSProperties}>
+              <span className="payment-player-token">{payment.payerId}</span>
+              <strong>Player {payment.payerId}</strong>
+            </span>
+            <span className="payment-arrow" aria-label="pays">→</span>
+            <span className="payment-player" style={{ "--payment-player-color": getPlayerColor(payment.ownerId) } as CSSProperties}>
+              <span className="payment-player-token">{payment.ownerId}</span>
+              <strong>Player {payment.ownerId}</strong>
+            </span>
+          </div>
+          <strong className="payment-amount">{formatGold(payment.rentAmount)}</strong>
+          <span className="payment-context">Shop payment · Square #{payment.squareId}</span>
+        </div>
+
+        {hasDividends && (
+          <section className="payment-dividends" aria-labelledby="payment-dividend-title">
+            <header>
+              <span>Stock dividends</span>
+              <h3 id="payment-dividend-title">{districtName}</h3>
+            </header>
+            <div className="payment-dividend-grid">
+              {players.map((player) => {
+                const amount = dividendByPlayer.get(player.player_id) ?? 0;
+                return (
+                  <article
+                    key={player.player_id}
+                    className={amount > 0 ? "has-payout" : ""}
+                    style={{ "--payment-player-color": getPlayerColor(player.player_id) } as CSSProperties}
+                  >
+                    <span className="payment-player-token">{player.player_id}</span>
+                    <span>Player {player.player_id}</span>
+                    <strong>{amount > 0 ? "+" : ""}{formatGold(amount)}</strong>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        <button
+          type="button"
+          className="payment-continue"
+          autoFocus={isOwner}
+          disabled={!canContinue}
+          onClick={onContinue}
+        >
+          {presentation.acknowledgmentPending
+            ? "Continuing..."
+            : isOwner
+              ? "Continue"
+              : `Waiting for Player ${presentation.playerId}...`}
+        </button>
+      </section>
     </div>
   );
 }

@@ -20,6 +20,7 @@ from road_to_riches.events.game_events import (
     BuyVacantPlotEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
+    PayRentEvent,
     PresentationBarrierEvent,
     RenovatePropertyEvent,
     SellStockEvent,
@@ -1420,6 +1421,35 @@ class TestWarpEventVoluntary:
 
         assert not worker.is_alive()
         assert loop.state.players[0].ready_cash == 1901
+
+    def test_rent_payment_opens_payer_owned_presentation(self):
+        loop = _make_loop(num_players=3)
+        shop = loop.state.board.squares[1]
+        shop.property_owner = 1
+        loop.state.players[1].owned_properties.append(1)
+        loop.state.players[2].owned_stock = {0: 10}
+
+        rent_event = loop._execute_event(PayRentEvent(payer_id=0, owner_id=1, square_id=1))
+
+        request = loop.input.present.call_args.args[1]
+        assert request.presentation_type == "rent_payment"
+        assert request.player_id == 0
+        assert request.data == {
+            "payer_id": 0,
+            "owner_id": 1,
+            "square_id": 1,
+            "district_id": 0,
+            "rent_amount": rent_event.get_result(),
+            "dividends": [
+                {"player_id": 2, "amount": int(rent_event.get_result() * 0.2)}
+            ],
+            "commissions": [],
+        }
+        assert any(
+            isinstance(entry.event, PresentationBarrierEvent)
+            and entry.event.presentation_type == "rent_payment"
+            for entry in loop.pipeline.history
+        )
 
     def test_voluntary_warp_to_suit_collects_suit_via_pass_handler(self):
         """Voluntary warp to a SUIT square: PassActionEvent enqueues CollectSuitEvent."""

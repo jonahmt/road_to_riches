@@ -81,6 +81,7 @@ class PayRentEvent(GameEvent):
     _rent_amount: int = 0
     _dividends: list = None  # type: ignore[assignment]  # populated after execute
     _commissions: list = None  # type: ignore[assignment]  # populated after execute
+    _district_id: int | None = None
 
     def execute(self, state: GameState) -> None:
         self._dividends = []
@@ -88,6 +89,7 @@ class PayRentEvent(GameEvent):
         payer = state.get_player(self.payer_id)
         owner = state.get_player(self.owner_id)
         square = state.board.squares[self.square_id]
+        self._district_id = square.property_district
 
         if is_shop_closed(square.statuses):
             self._rent_amount = 0
@@ -117,6 +119,24 @@ class PayRentEvent(GameEvent):
 
     def get_result(self) -> int:
         return self._rent_amount
+
+    def presentation_data(self) -> dict:
+        """Return protocol-neutral facts for the rent payment overlay."""
+        return {
+            "payer_id": self.payer_id,
+            "owner_id": self.owner_id,
+            "square_id": self.square_id,
+            "district_id": self._district_id,
+            "rent_amount": self._rent_amount,
+            "dividends": [
+                {"player_id": player_id, "amount": amount}
+                for player_id, amount in (self._dividends or [])
+            ],
+            "commissions": [
+                {"player_id": player_id, "amount": amount, "percent": percent}
+                for player_id, amount, percent in (self._commissions or [])
+            ],
+        }
 
     def log_message(self) -> str | None:
         if self._rent_amount <= 0:
