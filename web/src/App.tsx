@@ -1314,9 +1314,11 @@ function BoardPanel({
                     {valueLabel}
                   </text>
                 )}
-                <text className="square-id" x={square.position[0] + 1.55} y={square.position[1] + 1.48}>
-                  #{square.id}
-                </text>
+                {!shouldRenderShopTile && (
+                  <text className="square-id" x={square.position[0] + 1.55} y={square.position[1] + 1.48}>
+                    #{square.id}
+                  </text>
+                )}
               </g>
             );
           })}
@@ -1589,10 +1591,7 @@ function ShopTile({
   if (square.property_owner === null) {
     return (
       <g className="shop-tile shop-tile-unowned" aria-hidden="true">
-        <text className="shop-tile-action" x={x} y={y - 0.42}>
-          BUY
-        </text>
-        <text className="shop-tile-value" x={x} y={y + 0.46}>
+        <text className="shop-tile-price" x={x} y={y}>
           {rawGold(value)}G
         </text>
       </g>
@@ -1601,14 +1600,8 @@ function ShopTile({
 
   return (
     <g className="shop-tile shop-tile-owned" aria-hidden="true">
-      <text className="shop-tile-action" x={x} y={y - 0.74}>
-        P{square.property_owner}
-      </text>
-      <text className="shop-tile-pay" x={x} y={y + 0.02}>
-        PAY {rawGold(rent)}
-      </text>
-      <text className="shop-tile-detail" x={x} y={y + 0.88}>
-        VALUE {rawGold(value)}
+      <text className="shop-tile-price" x={x} y={y}>
+        {rawGold(rent)}G
       </text>
     </g>
   );

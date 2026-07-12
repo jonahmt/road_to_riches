@@ -552,23 +552,8 @@ h3 {
   stroke-width: 0.1;
 }
 
-.shop-tile-action {
-  font-size: 0.62px;
-  font-weight: 950;
-}
-
-.shop-tile-value {
-  font-size: 0.96px;
-  font-weight: 950;
-}
-
-.shop-tile-pay {
-  font-size: 0.78px;
-  font-weight: 950;
-}
-
-.shop-tile-detail {
-  font-size: 0.44px;
+.shop-tile-price {
+  font-size: 1.08px;
   font-weight: 950;
 }
 
