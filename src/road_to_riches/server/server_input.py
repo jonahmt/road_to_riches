@@ -87,7 +87,7 @@ class WebSocketPlayerInput(PlayerInput):
                         self._all_ws.remove(ws)
                     self._stop_sender(ws)
 
-    def receive_response(self, value: Any, ws: Any, player_id: int | None = None) -> None:
+    def receive_response(self, value: Any, ws: Any, player_id: int | None = None) -> bool:
         """Called by the server when a client sends an input_response.
 
         Accept only explicit responses from the WebSocket assigned to the
@@ -95,29 +95,39 @@ class WebSocketPlayerInput(PlayerInput):
         """
         if self._expecting_player is None:
             logger.warning("Ignoring input response when no player is expected")
-            return
+            return False
         if player_id is None:
             logger.warning(
                 "Ignoring response without player_id (expecting player %d)",
                 self._expecting_player,
             )
-            return
+            return False
         if player_id != self._expecting_player:
             logger.warning(
                 "Ignoring response from player %d (expecting player %d)",
                 player_id,
                 self._expecting_player,
             )
-            return
+            return False
         expected_ws = self._player_ws.get(self._expecting_player)
         if expected_ws is not ws:
             logger.warning(
                 "Ignoring response for player %d from unassigned WebSocket",
                 self._expecting_player,
             )
-            return
+            return False
         self._response = value
         self._response_ready.set()
+        return True
+
+    async def send_message_to_client(self, ws: Any, msg: dict) -> None:
+        """Send one message without overlapping a registered client's sender."""
+        raw = encode(msg)
+        if ws not in self._all_ws:
+            await ws.send(raw)
+            return
+        self._send_raw(ws, raw)
+        await self.wait_for_client_messages(ws)
 
     def receive_presentation_ack(
         self,

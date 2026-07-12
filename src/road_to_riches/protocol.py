@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+PLAYER_CONTROL_REPLACED_CLOSE_CODE = 4001
+
 
 class InputRequestType(str, Enum):
     PRE_ROLL = "PRE_ROLL"
@@ -184,6 +186,23 @@ def msg_save_result(
 
 def msg_error(error: str, game_id: str | None = None) -> dict:
     return _with_game_id({"msg": "error", "error": error}, game_id)
+
+
+def msg_input_rejected(
+    error: str,
+    *,
+    ownership_lost: bool = False,
+    game_id: str | None = None,
+) -> dict:
+    """Tell a client that its input envelope was not accepted."""
+    return _with_game_id(
+        {
+            "msg": "input_rejected",
+            "error": error,
+            "ownership_lost": ownership_lost,
+        },
+        game_id,
+    )
 
 
 # --- Client-to-server message builders ---

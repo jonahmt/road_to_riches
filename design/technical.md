@@ -443,6 +443,16 @@ once all human and AI player slots are connected, that session starts
 independently of other sessions. The local launcher still uses the default
 session path for compatibility.
 
+Player-slot ownership is exclusive even when an older browser socket remains
+open. A forced claim transfers the slot authoritatively, unbinds the previous
+socket, and closes that socket with application close code `4001` plus a
+human-readable replacement reason. If an unbound or wrong-owner socket races
+an `input_response` after that transfer, the server returns `input_rejected`
+instead of silently dropping the response; ownership loss also closes the
+socket with code `4001`. Other rejected responses keep the connection open and
+are followed by the current authoritative snapshot so a legitimate client can
+recover its active prompt.
+
 Hosted games expose ordinary AI response pacing through `--ai-delay`. The
 default is 0.3375 seconds per AI response, including each path-selection step.
 This is 35% longer than the earlier 0.25-second pacing. Presentation barriers

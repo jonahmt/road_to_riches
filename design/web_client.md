@@ -309,6 +309,15 @@ visible browser take over from a stale-but-still-open local socket during
 development. After a claim, the server immediately resends the authoritative
 game state, any active input prompt, and any active presentation barrier.
 
+The displaced browser must not keep presenting a board it can no longer
+control. On replacement close code `4001`, it clears the current game state,
+prompt, pending-response lock, dice, and presentation queue; returns to the
+join screen; and displays the server's replacement reason. An
+`input_rejected` message always releases the pending-response lock. If that
+message reports ownership loss, the client performs the same disconnected-state
+cleanup; otherwise it remains connected while the server replays the current
+snapshot and prompt.
+
 ## Non-Goals for This Pass
 
 * No online hosting or auth.

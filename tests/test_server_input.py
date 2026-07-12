@@ -229,8 +229,9 @@ def test_receive_response_accepts_expected_player_from_assigned_websocket(
     player_input._expecting_player = 1
     player_input._response_ready.clear()
 
-    player_input.receive_response("roll", ws, player_id=1)
+    accepted = player_input.receive_response("roll", ws, player_id=1)
 
+    assert accepted is True
     assert player_input._response == "roll"
     assert player_input._response_ready.is_set()
 
@@ -241,8 +242,9 @@ def test_receive_response_rejects_missing_player_id(player_input: WebSocketPlaye
     player_input._expecting_player = 1
     player_input._response_ready.clear()
 
-    player_input.receive_response("roll", ws)
+    accepted = player_input.receive_response("roll", ws)
 
+    assert accepted is False
     assert player_input._response is None
     assert not player_input._response_ready.is_set()
 
@@ -256,8 +258,9 @@ def test_receive_response_rejects_wrong_player_id_from_same_websocket(
     player_input._expecting_player = 1
     player_input._response_ready.clear()
 
-    player_input.receive_response("roll", ws, player_id=2)
+    accepted = player_input.receive_response("roll", ws, player_id=2)
 
+    assert accepted is False
     assert player_input._response is None
     assert not player_input._response_ready.is_set()
 
@@ -271,8 +274,9 @@ def test_receive_response_rejects_assigned_player_from_wrong_websocket(
     player_input._expecting_player = 1
     player_input._response_ready.clear()
 
-    player_input.receive_response("roll", intruder_ws, player_id=1)
+    accepted = player_input.receive_response("roll", intruder_ws, player_id=1)
 
+    assert accepted is False
     assert player_input._response is None
     assert not player_input._response_ready.is_set()
 
@@ -285,8 +289,9 @@ def test_receive_response_rejects_when_no_player_is_expected(
     player_input._expecting_player = None
     player_input._response_ready.clear()
 
-    player_input.receive_response("roll", ws, player_id=1)
+    accepted = player_input.receive_response("roll", ws, player_id=1)
 
+    assert accepted is False
     assert player_input._response is None
     assert not player_input._response_ready.is_set()
 

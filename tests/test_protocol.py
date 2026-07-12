@@ -16,6 +16,7 @@ from road_to_riches.protocol import (
     msg_game_starting,
     msg_games_list,
     msg_identify,
+    msg_input_rejected,
     msg_input_request,
     msg_input_response,
     msg_join_game,
@@ -114,6 +115,19 @@ def test_round_trip_state_sync():
 def test_round_trip_input_response():
     original = msg_input_response("yes")
     assert decode(encode(original)) == original
+
+
+def test_input_rejected_identifies_lost_player_control():
+    assert msg_input_rejected(
+        "This browser no longer controls Player 0.",
+        ownership_lost=True,
+        game_id="default",
+    ) == {
+        "msg": "input_rejected",
+        "error": "This browser no longer controls Player 0.",
+        "ownership_lost": True,
+        "game_id": "default",
+    }
 
 
 def test_round_trip_input_response_with_game_id():

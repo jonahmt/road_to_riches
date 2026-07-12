@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  PLAYER_CONTROL_REPLACED_CLOSE_CODE,
+  playerControlReplacementReason,
+} from "./connectionClose";
 import { type GameState, type InputRequest, decode, encode } from "./protocol";
 import {
   dismissNonblockingPresentation,
@@ -109,8 +113,11 @@ export function useGameClient(defaultUri: string) {
       status: "disconnected",
       playerId: null,
       gameId: null,
+      gameState: null,
       pendingRequest: null,
+      dice: null,
       presentations: [],
+      gameOverWinner: undefined,
       responsePending: false,
     }));
   }, []);
@@ -189,6 +196,31 @@ export function useGameClient(defaultUri: string) {
           return;
         }
         const message = decode(String(event.data));
+        if (message.msg === "input_rejected" && message.ownership_lost) {
+          const reason = message.error || "This browser no longer controls the active player.";
+          playerIdRef.current = null;
+          gameIdRef.current = null;
+          responsePendingRef.current = false;
+          presentationAckPendingRef.current.clear();
+          setClientState((current) => ({
+            ...current,
+            status: "disconnected",
+            playerId: null,
+            gameId: null,
+            gameState: null,
+            pendingRequest: null,
+            dice: null,
+            presentations: [],
+            gameOverWinner: undefined,
+            responsePending: false,
+            error: reason,
+            logs: appendLog(current.logs, `Control lost: ${reason}`),
+          }));
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.close(PLAYER_CONTROL_REPLACED_CLOSE_CODE, reason);
+          }
+          return;
+        }
         setClientState((current) => {
           switch (message.msg) {
             case "assign_player": {
@@ -293,6 +325,14 @@ export function useGameClient(defaultUri: string) {
                     : `Save failed: ${message.error ?? "unknown error"}`,
                 ),
               };
+            case "input_rejected":
+              responsePendingRef.current = false;
+              return {
+                ...current,
+                error: message.error,
+                responsePending: false,
+                logs: appendLog(current.logs, `Response rejected: ${message.error}`),
+              };
             case "error":
               responsePendingRef.current = false;
               return {
@@ -332,10 +372,11 @@ export function useGameClient(defaultUri: string) {
         });
       });
 
-      socket.addEventListener("close", () => {
+      socket.addEventListener("close", (event) => {
         if (!isCurrentSocket()) {
           return;
         }
+        const replacementReason = playerControlReplacementReason(event.code, event.reason);
         socketRef.current = null;
         playerIdRef.current = null;
         gameIdRef.current = null;
@@ -346,10 +387,19 @@ export function useGameClient(defaultUri: string) {
           status: "disconnected",
           playerId: null,
           gameId: null,
+          gameState: null,
           pendingRequest: null,
+          dice: null,
           presentations: [],
+          gameOverWinner: undefined,
           responsePending: false,
-          logs: appendLog(current.logs, "Disconnected from server"),
+          error: replacementReason ?? current.error,
+          logs: appendLog(
+            current.logs,
+            replacementReason
+              ? `Control moved: ${replacementReason}`
+              : "Disconnected from server",
+          ),
         }));
       });
 

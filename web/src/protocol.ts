@@ -134,6 +134,7 @@ export type ServerMessage =
   | { msg: "dice"; value: number; remaining: number; game_id?: string }
   | { msg: "game_over"; winner: number | null; game_id?: string }
   | { msg: "save_result"; success: boolean; path?: string; error?: string; game_id?: string }
+  | { msg: "input_rejected"; error: string; ownership_lost: boolean; game_id?: string }
   | { msg: "error"; error: string; game_id?: string }
   | { msg: "game_created"; game_id: string; config: Record<string, unknown> }
   | { msg: "joined_game"; game_id: string; player_id: number }

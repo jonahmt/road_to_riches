@@ -14,6 +14,7 @@ from road_to_riches.protocol import (
     msg_claim_player,
     msg_create_game,
     msg_dev_event,
+    msg_input_response,
     msg_join_game,
     msg_list_games,
     msg_save_game,
@@ -25,9 +26,15 @@ from road_to_riches.server.server import GameServer
 class FakeWebSocket:
     def __init__(self) -> None:
         self.sent: list[str] = []
+        self.close_code: int | None = None
+        self.close_reason: str | None = None
 
     async def send(self, raw: str) -> None:
         self.sent.append(raw)
+
+    async def close(self, code: int = 1000, reason: str = "") -> None:
+        self.close_code = code
+        self.close_reason = reason
 
 
 class FakeIncomingWebSocket(FakeWebSocket):
@@ -318,8 +325,51 @@ def test_default_session_force_claim_replaces_active_human_and_sends_state():
         assert session.player_to_ws == {0: second_ws}
         assert server._sessions.sessions_for_connection(first_ws) == set()
         assert server._sessions.sessions_for_connection(second_ws) == {"default"}
+        assert first_ws.close_code == 4001
+        assert first_ws.close_reason == "Player 0 was opened in another browser tab."
         session.remove_connection(second_ws)
         await asyncio.sleep(0.05)
+
+    asyncio.run(scenario())
+
+
+def test_stale_socket_input_gets_visible_ownership_rejection():
+    async def scenario() -> None:
+        server = GameServer(
+            GameConfig(board_path="boards/test_board.json", num_players=1),
+            num_humans=1,
+            num_ai=0,
+            ai_delay=0,
+        )
+        server._loop = asyncio.get_running_loop()
+        session = server._default_session
+        assert session is not None
+        server._prepare_session(session)
+        current_ws = FakeWebSocket()
+        await server._assign_human(session, current_ws)
+        session.started = True
+        session.game_loop = FakeGameLoop(_make_state(num_players=1), RecordingPipeline())  # type: ignore[assignment]
+        assert session.player_input is not None
+        session.player_input._expecting_player = 0
+        session.player_input._expecting_request_type = InputRequestType.PRE_ROLL
+        stale_ws = FakeIncomingWebSocket(
+            [msg_input_response("roll", player_id=0, game_id="default")]
+        )
+
+        await server._handle_client(stale_ws)
+        await session.player_input.wait_for_client_messages(stale_ws)
+
+        assert _messages(stale_ws) == [
+            {
+                "msg": "input_rejected",
+                "error": "This browser no longer controls Player 0.",
+                "ownership_lost": True,
+                "game_id": "default",
+            }
+        ]
+        assert stale_ws.close_code == 4001
+        assert stale_ws.close_reason == "This browser no longer controls Player 0."
+        session.remove_connection(current_ws)
 
     asyncio.run(scenario())
 

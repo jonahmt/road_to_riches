@@ -25,6 +25,7 @@ from websockets.asyncio.server import ServerConnection
 from road_to_riches.board.loader import load_board
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
 from road_to_riches.protocol import (
+    PLAYER_CONTROL_REPLACED_CLOSE_CODE,
     decode,
     encode,
     msg_assign_player,
@@ -32,6 +33,7 @@ from road_to_riches.protocol import (
     msg_game_created,
     msg_game_starting,
     msg_games_list,
+    msg_input_rejected,
     msg_joined_game,
     msg_save_result,
 )
@@ -205,7 +207,35 @@ class GameServer:
                         value = tuple(value)
                     resp_pid = msg.get("player_id")
                     assert session.player_input is not None
-                    session.player_input.receive_response(value, ws, resp_pid)
+                    accepted = session.player_input.receive_response(value, ws, resp_pid)
+                    if not accepted:
+                        ownership_lost = (
+                            not isinstance(resp_pid, int)
+                            or session.player_to_ws.get(resp_pid) is not ws
+                        )
+                        error = (
+                            f"This browser no longer controls Player {resp_pid}."
+                            if ownership_lost and isinstance(resp_pid, int)
+                            else "That response no longer matches the active player prompt."
+                        )
+                        await session.player_input.send_message_to_client(
+                            ws,
+                            msg_input_rejected(
+                                error,
+                                ownership_lost=ownership_lost,
+                                game_id=session.session_id,
+                            ),
+                        )
+                        if ownership_lost:
+                            await ws.close(
+                                code=PLAYER_CONTROL_REPLACED_CLOSE_CODE,
+                                reason=error,
+                            )
+                        elif session.game_loop is not None:
+                            session.player_input.send_snapshot_to_client(
+                                ws,
+                                session.game_loop.state,
+                            )
 
                 elif msg_type == "presentation_ack":
                     assert session.player_input is not None
@@ -345,6 +375,10 @@ class GameServer:
         self._sessions.bind_connection(ws, session.session_id)
         if replaced_ws is not None and not session.ws_to_players.get(replaced_ws):
             self._sessions.unbind_connection(replaced_ws, session.session_id)
+            await replaced_ws.close(
+                code=PLAYER_CONTROL_REPLACED_CLOSE_CODE,
+                reason=f"Player {player_id} was opened in another browser tab.",
+            )
         await ws.send(encode(msg_assign_player(player_id, game_id=session.session_id)))
         logger.info(
             "Human player %d claimed in %s (%d/%d humans)",
