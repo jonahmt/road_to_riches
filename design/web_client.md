@@ -274,6 +274,11 @@ cancels only optional transactions. All legal constraints remain sourced from
 the active server prompt, while display-only market and shop context is derived
 from authoritative `state_sync` data.
 
+Stock typography is intentionally larger than the compact board HUD: table
+headers, row values, shop metrics, transaction math, and keyboard hints remain
+readable at a 1280×720 viewport without increasing the overlay shell, fixed
+sidebar width, district row height, or shop-card column footprint.
+
 After a successful claim, the backend draws the card and pauses on a
 `venture_card_revealed` presentation barrier before executing its script. The
 browser queues the presentation and shows its name and description in a centered
