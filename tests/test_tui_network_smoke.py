@@ -84,6 +84,14 @@ async def _run_recording_basic_ai(
                 response = ai.response_message(req, game_id=msg.get("game_id") or game_id)
                 if response is not None:
                     await ws.send(encode(response))
+            elif msg_type == "presentation_request":
+                acknowledgment = ai.presentation_ack_message(
+                    msg["request_id"],
+                    msg["player_id"],
+                    game_id=msg.get("game_id") or game_id,
+                )
+                if acknowledgment is not None:
+                    await ws.send(encode(acknowledgment))
             elif msg_type == "game_over":
                 winners[player_id] = msg.get("winner")
                 return

@@ -18,12 +18,15 @@ from road_to_riches.models.serialize import game_state_to_dict
 from road_to_riches.protocol import (
     InputRequest,
     InputRequestType,
+    PresentationRequest,
     encode,
     msg_dice,
     msg_game_over,
     msg_input_request,
     msg_log,
     msg_log_retract,
+    msg_presentation_request,
+    msg_presentation_resolved,
     msg_state_sync,
     msg_ui_notification,
 )
@@ -52,6 +55,8 @@ class WebSocketPlayerInput(PlayerInput):
         self._expecting_player: int | None = None  # which player_id we're waiting for
         self._expecting_request_type: InputRequestType | None = None
         self._pending_request: InputRequest | None = None
+        self._pending_presentation: PresentationRequest | None = None
+        self._presentation_ack_ready = threading.Event()
         self._last_dice: tuple[int, int] | None = None
 
     def set_client_for_player(self, player_id: int, ws: Any) -> None:
@@ -113,6 +118,42 @@ class WebSocketPlayerInput(PlayerInput):
             return
         self._response = value
         self._response_ready.set()
+
+    def receive_presentation_ack(
+        self,
+        request_id: str | None,
+        ws: Any,
+        player_id: int | None = None,
+    ) -> None:
+        """Accept an acknowledgment only from the presentation's owning player."""
+        request = self._pending_presentation
+        if request is None:
+            logger.warning("Ignoring presentation acknowledgment when none is pending")
+            return
+        if request_id != request.request_id:
+            logger.warning(
+                "Ignoring stale presentation acknowledgment %r (expecting %s)",
+                request_id,
+                request.request_id,
+            )
+            return
+        if player_id != request.player_id:
+            logger.warning(
+                "Ignoring presentation acknowledgment from player %r (owner is %d)",
+                player_id,
+                request.player_id,
+            )
+            return
+        if self._player_ws.get(request.player_id) is not ws:
+            logger.warning(
+                "Ignoring presentation acknowledgment for player %d from unassigned WebSocket",
+                request.player_id,
+            )
+            return
+        if self._presentation_ack_ready.is_set():
+            logger.debug("Ignoring duplicate acknowledgment for presentation %s", request_id)
+            return
+        self._presentation_ack_ready.set()
 
     def can_save_game(self, ws: Any, player_id: int | None) -> bool:
         """Return whether this connection may save at the active prompt."""
@@ -188,12 +229,21 @@ class WebSocketPlayerInput(PlayerInput):
         while True:
             raw = await queue.get()
             if raw is None:
+                queue.task_done()
                 return
             try:
                 await ws.send(raw)
             except Exception:
                 logger.exception("Failed to send websocket message")
+                queue.task_done()
                 return
+            queue.task_done()
+
+    async def wait_for_client_messages(self, ws: Any) -> None:
+        """Wait until all messages already queued for one client are sent."""
+        queue = self._send_queues.get(ws)
+        if queue is not None:
+            await queue.join()
 
     def _stop_sender(self, ws: Any) -> None:
         """Stop and forget the sender task for a disconnected websocket."""
@@ -224,6 +274,16 @@ class WebSocketPlayerInput(PlayerInput):
             self._send_raw(
                 ws,
                 encode(msg_input_request(self._pending_request, game_id=self._game_id)),
+            )
+        if self._pending_presentation is not None:
+            self._send_raw(
+                ws,
+                encode(
+                    msg_presentation_request(
+                        self._pending_presentation,
+                        game_id=self._game_id,
+                    )
+                ),
             )
 
     def _request_input(self, req: InputRequest, state: GameState) -> Any:
@@ -651,6 +711,22 @@ class WebSocketPlayerInput(PlayerInput):
 
     def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
         self._broadcast(msg_ui_notification(notification_type, data, game_id=self._game_id))
+
+    def present(self, state: GameState, request: PresentationRequest) -> None:
+        """Broadcast a presentation and block until its owning socket acknowledges."""
+        self._presentation_ack_ready.clear()
+        self._pending_presentation = request
+        self._send_state(state)
+        self._broadcast(msg_presentation_request(request, game_id=self._game_id))
+        logger.debug(
+            "Waiting for presentation %s acknowledgment from player %d",
+            request.request_id,
+            request.player_id,
+        )
+        self._presentation_ack_ready.wait()
+        self._broadcast(msg_presentation_resolved(request.request_id, game_id=self._game_id))
+        self._pending_presentation = None
+        logger.debug("Presentation %s acknowledged", request.request_id)
 
     def retract_log(self, count: int) -> None:
         self._broadcast(msg_log_retract(count, game_id=self._game_id))

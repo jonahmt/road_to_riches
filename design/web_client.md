@@ -105,15 +105,14 @@ roll resolves, the die leaves, the full header returns, and the next contextual
 action returns without moving the board.
 
 Passing the bank with all four suits opens a full-screen promotion ceremony.
-The backend emits a structured `promotion_completed` UI notification containing
-the promoted player, previous and next levels, base salary, level bonus, shop
-value bonus, comeback bonus, total salary, and resulting ready cash. The browser
-renders all four colored suit icons, an animated level transition, and the full
-salary breakdown. The ceremony remains until the player explicitly continues;
-it does not add a gameplay acknowledgment to the backend. If the bank's stock
-opportunity is already waiting behind the ceremony while movement still has
-remaining steps, that action panel becomes visible immediately after dismissal
-instead of remaining hidden by the roll-phase layout.
+The backend emits a blocking `promotion_completed` presentation request
+containing the promoted player, previous and next levels, base salary, level
+bonus, shop value bonus, comeback bonus, total salary, and resulting ready cash.
+The browser renders all four colored suit icons, an animated level transition,
+and the full salary breakdown. Only the promoted player's assigned client can
+continue the ceremony; other clients see a read-only waiting state. The server
+does not process the bank's stock opportunity, continued movement, or any later
+gameplay until the owning client acknowledges the presentation.
 
 The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
@@ -143,7 +142,8 @@ The web client treats the Python backend as the source of truth.
 
 * `web/src/protocol.ts` mirrors the JSON messages and serialized state shape.
 * `web/src/useGameClient.ts` owns the WebSocket, message routing, current player
-  assignment, game id, logs, dice state, and pending prompt.
+  assignment, game id, logs, dice state, pending prompt, and ordered presentation
+  queue.
 * `web/src/App.tsx` renders the application shell and prompt controls.
 * `web/src/styles.css` owns the first visual system.
 
@@ -255,12 +255,20 @@ After WASD/arrow navigation begins, stale focus and stationary pointer hover are
 cleared so only the current keyboard cursor remains highlighted. Pointer hover
 feedback returns only after the mouse physically moves again.
 
-After a successful claim, the browser consumes the existing
-`venture_card_revealed` UI notification and briefly presents the drawn card's
-name and description in a centered modal. The reveal uses the TUI's 1.5-second
-presentation pause, can be dismissed early by click, Enter, Space, or Escape,
-and does not delay or alter backend script execution. Any decision produced by
-the card script returns to the standard contextual action panel after the reveal.
+After a successful claim, the backend draws the card and pauses on a
+`venture_card_revealed` presentation barrier before executing its script. The
+browser queues the presentation and shows its name and description in a centered
+modal with no automatic timeout. Only the drawing player's assigned client can
+acknowledge it using click, Enter, Space, or the explicit continue control;
+observers see `Waiting for Player …`. The card script and any decision it
+produces begin only after the server validates the owner's acknowledgment.
+
+Blocking presentations are stored in a FIFO client queue rather than a single
+replaceable notification slot. Ordinary board controls and prompt keyboard
+handling are suppressed while the queue is non-empty. A submitted acknowledgment
+is sent at most once, and the active presentation remains mounted in a resolving
+state until the server broadcasts `presentation_resolved`. Reconnecting clients
+receive the pending presentation again with its original request ID.
 
 For local default-server play, a browser disconnect or reload should not require
 restarting the Python server. The backend treats human slots as active socket
@@ -268,7 +276,7 @@ bindings rather than historical assignments, and the local web client explicitly
 force-claims Player 0 in the default game when it connects. This lets the
 visible browser take over from a stale-but-still-open local socket during
 development. After a claim, the server immediately resends the authoritative
-game state and any active input prompt for that player.
+game state, any active input prompt, and any active presentation barrier.
 
 ## Non-Goals for This Pass
 

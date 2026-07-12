@@ -35,6 +35,7 @@ from road_to_riches.protocol import (
     encode,
     msg_identify,
     msg_input_response,
+    msg_presentation_ack,
 )
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,18 @@ class BasicAIClient:
         if isinstance(response, tuple):
             response = list(response)
         return msg_input_response(response, self.player_id, game_id=game_id)
+
+    def presentation_ack_message(
+        self,
+        request_id: str,
+        owner_player_id: int,
+        game_id: str | None = None,
+    ) -> dict | None:
+        """Automatically acknowledge this AI's presentation after normal pacing."""
+        if owner_player_id != self.player_id:
+            return None
+        time.sleep(self.delay)
+        return msg_presentation_ack(request_id, self.player_id, game_id=game_id)
 
 
 # ---------------------------------------------------------------------------
@@ -537,6 +550,15 @@ async def run(
                 response = ai.response_message(req, game_id=msg.get("game_id") or game_id)
                 if response is not None:
                     await ws.send(encode(response))
+
+            elif msg_type == "presentation_request":
+                acknowledgment = ai.presentation_ack_message(
+                    msg["request_id"],
+                    msg["player_id"],
+                    game_id=msg.get("game_id") or game_id,
+                )
+                if acknowledgment is not None:
+                    await ws.send(encode(acknowledgment))
 
             elif msg_type == "log":
                 logger.debug("[log] %s", msg.get("text"))

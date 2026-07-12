@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import asyncio
-import time
+import threading
 from types import SimpleNamespace
 
 from textual.widgets import Input
 
-from road_to_riches.client.tui_app import VENTURE_CARD_REVEAL_PAUSE_SECONDS, GameApp, PromptBar
+from road_to_riches.client.tui_app import GameApp, PromptBar
 from road_to_riches.client.tui_input import InputRequest, InputRequestType, TuiPlayerInput
 from road_to_riches.models.board_state import BoardState, PromotionInfo, SquareInfo, Waypoint
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
 from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.stock_state import StockPrice, StockState
+from road_to_riches.protocol import PresentationRequest
 
 
 class HarnessGameApp(GameApp):
@@ -53,6 +54,9 @@ class RecordingInput:
 
     def submit_response(self, response: object) -> None:
         self.app.submitted.append(response)
+
+    def acknowledge_presentation(self, request_id: str) -> None:
+        self.app.submitted.append(request_id)
 
 
 def _state() -> GameState:
@@ -163,20 +167,62 @@ def test_tui_player_input_forwards_ui_notifications():
     ]
 
 
-def test_venture_card_reveal_pause_is_client_owned():
+def test_tui_player_input_blocks_until_matching_presentation_ack():
+    player_input = TuiPlayerInput()
+    requests: list[PresentationRequest] = []
+    resolved: list[str] = []
+    request_ready = threading.Event()
+
+    def capture_request(request: PresentationRequest) -> None:
+        requests.append(request)
+        request_ready.set()
+
+    player_input.set_presentation_callback(capture_request)
+    player_input.set_presentation_resolved_callback(resolved.append)
+    request = PresentationRequest(
+        request_id="presentation-1",
+        presentation_type="venture_card_revealed",
+        player_id=0,
+        data={"name": "Lucky"},
+    )
+    worker = threading.Thread(target=player_input.present, args=(_state(), request))
+
+    worker.start()
+    assert request_ready.wait(timeout=1)
+    assert requests == [request]
+    assert worker.is_alive()
+
+    player_input.acknowledge_presentation("stale")
+    assert worker.is_alive()
+    player_input.acknowledge_presentation("presentation-1")
+    worker.join(timeout=1)
+
+    assert not worker.is_alive()
+    assert resolved == ["presentation-1"]
+
+
+def test_venture_card_presentation_requires_owner_ack_and_has_no_timer():
     app = HarnessGameApp(_state())
+    app.player_input = RecordingInput(app)
 
     async def run() -> None:
         async with app.run_test():
-            before = time.monotonic()
-            app.handle_ui_notification(
-                app.UiNotification(
-                    "venture_card_revealed",
-                    {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
-                )
+            request = PresentationRequest(
+                request_id="presentation-1",
+                presentation_type="venture_card_revealed",
+                player_id=0,
+                data={"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
             )
+            app.handle_presentation_ready(app.PresentationReady(request))
 
-            assert app._log_pause_until >= before + VENTURE_CARD_REVEAL_PAUSE_SECONDS
+            assert app._current_presentation == request
+            assert "Press Enter" in app.query_one("#prompt-bar", PromptBar).prompt_text
+            app._acknowledge_current_presentation()
+            assert app.submitted == ["presentation-1"]
+            assert app._current_presentation == request
+
+            app.handle_presentation_resolved(app.PresentationResolved("presentation-1"))
+            assert app._current_presentation is None
 
     asyncio.run(run())
 

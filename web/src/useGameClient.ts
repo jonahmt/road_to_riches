@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type GameState, type InputRequest, decode, encode } from "./protocol";
+import {
+  dismissNonblockingPresentation,
+  enqueuePresentation,
+  markPresentationAcknowledging,
+  resolvePresentation,
+  type PresentationState,
+} from "./presentationQueue";
+
+export type { PresentationState } from "./presentationQueue";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected";
 
 export interface DiceState {
   value: number;
   remaining: number;
-}
-
-export interface UiNotificationState {
-  id: number;
-  type: string;
-  data: Record<string, unknown>;
 }
 
 export interface GameClientState {
@@ -23,7 +26,7 @@ export interface GameClientState {
   pendingRequest: InputRequest | null;
   logs: string[];
   dice: DiceState | null;
-  uiNotification: UiNotificationState | null;
+  presentations: PresentationState[];
   gameOverWinner: number | null | undefined;
   responsePending: boolean;
   error: string | null;
@@ -77,6 +80,7 @@ export function useGameClient(defaultUri: string) {
   const gameIdRef = useRef<string | null>(null);
   const responsePendingRef = useRef(false);
   const notificationIdRef = useRef(0);
+  const presentationAckPendingRef = useRef(new Set<string>());
   const [clientState, setClientState] = useState<GameClientState>({
     status: "disconnected",
     uri: defaultUri,
@@ -86,7 +90,7 @@ export function useGameClient(defaultUri: string) {
     pendingRequest: null,
     logs: [],
     dice: null,
-    uiNotification: null,
+    presentations: [],
     gameOverWinner: undefined,
     responsePending: false,
     error: null,
@@ -99,13 +103,14 @@ export function useGameClient(defaultUri: string) {
     playerIdRef.current = null;
     gameIdRef.current = null;
     responsePendingRef.current = false;
+    presentationAckPendingRef.current.clear();
     setClientState((current) => ({
       ...current,
       status: "disconnected",
       playerId: null,
       gameId: null,
       pendingRequest: null,
-      uiNotification: null,
+      presentations: [],
       responsePending: false,
     }));
   }, []);
@@ -132,6 +137,7 @@ export function useGameClient(defaultUri: string) {
       playerIdRef.current = null;
       gameIdRef.current = null;
       responsePendingRef.current = false;
+      presentationAckPendingRef.current.clear();
       setClientState((current) => ({
         ...current,
         uri,
@@ -142,7 +148,7 @@ export function useGameClient(defaultUri: string) {
         pendingRequest: null,
         logs: [],
         dice: null,
-        uiNotification: null,
+        presentations: [],
         gameOverWinner: undefined,
         responsePending: false,
         error: null,
@@ -230,13 +236,37 @@ export function useGameClient(defaultUri: string) {
               };
             case "ui_notification": {
               notificationIdRef.current += 1;
+              const requestId = `notification:${notificationIdRef.current}`;
               return {
                 ...current,
-                uiNotification: {
-                  id: notificationIdRef.current,
+                presentations: enqueuePresentation(current.presentations, {
+                  requestId,
+                  playerId: Number(message.data?.player_id ?? -1),
+                  acknowledgmentPending: false,
+                  requiresAcknowledgment: false,
                   type: message.type,
                   data: message.data ?? {},
-                },
+                }),
+              };
+            }
+            case "presentation_request": {
+              return {
+                ...current,
+                presentations: enqueuePresentation(current.presentations, {
+                  requestId: message.request_id,
+                  playerId: message.player_id,
+                  acknowledgmentPending: presentationAckPendingRef.current.has(message.request_id),
+                  requiresAcknowledgment: true,
+                  type: message.type,
+                  data: message.data ?? {},
+                }),
+              };
+            }
+            case "presentation_resolved": {
+              presentationAckPendingRef.current.delete(message.request_id);
+              return {
+                ...current,
+                presentations: resolvePresentation(current.presentations, message.request_id),
               };
             }
             case "dice":
@@ -310,13 +340,14 @@ export function useGameClient(defaultUri: string) {
         playerIdRef.current = null;
         gameIdRef.current = null;
         responsePendingRef.current = false;
+        presentationAckPendingRef.current.clear();
         setClientState((current) => ({
           ...current,
           status: "disconnected",
           playerId: null,
           gameId: null,
           pendingRequest: null,
-          uiNotification: null,
+          presentations: [],
           responsePending: false,
           logs: appendLog(current.logs, "Disconnected from server"),
         }));
@@ -378,13 +409,33 @@ export function useGameClient(defaultUri: string) {
     });
   }, [send]);
 
-  const clearUiNotification = useCallback((id?: number) => {
-    setClientState((current) => {
-      if (id !== undefined && current.uiNotification?.id !== id) {
-        return current;
-      }
-      return current.uiNotification ? { ...current, uiNotification: null } : current;
+  const acknowledgePresentation = useCallback((requestId: string) => {
+    if (presentationAckPendingRef.current.has(requestId)) {
+      return;
+    }
+    const sent = send({
+      msg: "presentation_ack",
+      request_id: requestId,
+      player_id: playerIdRef.current ?? undefined,
+      game_id: gameIdRef.current ?? undefined,
     });
+    if (!sent) {
+      return;
+    }
+    presentationAckPendingRef.current.add(requestId);
+    setClientState((current) => {
+      return {
+        ...current,
+        presentations: markPresentationAcknowledging(current.presentations, requestId),
+      };
+    });
+  }, [send]);
+
+  const dismissPresentation = useCallback((requestId: string) => {
+    setClientState((current) => ({
+      ...current,
+      presentations: dismissNonblockingPresentation(current.presentations, requestId),
+    }));
   }, []);
 
   useEffect(() => disconnect, [disconnect]);
@@ -396,6 +447,7 @@ export function useGameClient(defaultUri: string) {
     submitResponse,
     saveGame,
     requestSync,
-    clearUiNotification,
+    acknowledgePresentation,
+    dismissPresentation,
   };
 }

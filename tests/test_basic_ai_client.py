@@ -54,6 +54,18 @@ def test_ai_does_not_respond_to_other_players_requests():
     assert ai.response_message(req) is None
 
 
+def test_ai_acknowledges_only_its_own_presentation():
+    ai = BasicAIClient(player_id=1, delay=0)
+
+    assert ai.presentation_ack_message("presentation-1", 1, game_id="game-1") == {
+        "msg": "presentation_ack",
+        "request_id": "presentation-1",
+        "player_id": 1,
+        "game_id": "game-1",
+    }
+    assert ai.presentation_ack_message("presentation-2", 0, game_id="game-1") is None
+
+
 def test_ai_can_buy_more_than_99_total_stock_in_a_district():
     board = BoardState(
         max_dice_roll=6,

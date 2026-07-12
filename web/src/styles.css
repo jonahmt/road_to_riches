@@ -1043,6 +1043,11 @@ dd {
   filter: none;
 }
 
+.venture-card:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
 .venture-card-kicker {
   color: #ffd166;
   font-size: 11px;
@@ -1314,6 +1319,11 @@ dd {
   background: #ffd166;
   box-shadow: 0 0 30px rgba(255, 209, 102, 0.22);
   font-size: 15px;
+}
+
+.promotion-continue:disabled {
+  cursor: default;
+  opacity: 0.72;
 }
 
 @keyframes venture-reveal-backdrop {

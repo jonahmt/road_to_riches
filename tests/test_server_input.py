@@ -13,7 +13,7 @@ from road_to_riches.board import load_board
 from road_to_riches.engine.game_loop import GameLog
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
-from road_to_riches.protocol import InputRequest, InputRequestType
+from road_to_riches.protocol import InputRequest, InputRequestType, PresentationRequest
 from road_to_riches.server.server_input import WebSocketPlayerInput
 
 
@@ -128,6 +128,96 @@ def test_snapshot_to_client_replays_dice_and_pending_prompt():
     finally:
         loop.call_soon_threadsafe(loop.stop)
         thread.join()
+        loop.close()
+
+
+def test_snapshot_to_client_replays_pending_presentation():
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever)
+    thread.start()
+    try:
+        player_input = WebSocketPlayerInput(loop, game_id="default")
+        ws = SlowRecordingWebSocket()
+        player_input.set_client_for_player(0, ws)
+        player_input._pending_presentation = PresentationRequest(
+            request_id="presentation-1",
+            presentation_type="venture_card_revealed",
+            player_id=0,
+            data={"name": "Lucky"},
+        )
+
+        player_input.send_snapshot_to_client(ws, _make_state())
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(ws, 2), loop).result(timeout=2)
+
+        messages = [json.loads(raw) for raw in ws.sent]
+        assert messages[0]["msg"] == "state_sync"
+        assert messages[1] == {
+            "msg": "presentation_request",
+            "request_id": "presentation-1",
+            "type": "venture_card_revealed",
+            "player_id": 0,
+            "data": {"name": "Lucky"},
+            "game_id": "default",
+        }
+        player_input.remove_client_for_player(0)
+        asyncio.run_coroutine_threadsafe(asyncio.sleep(0.05), loop).result(timeout=2)
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join()
+        loop.close()
+
+
+def test_presentation_blocks_until_owning_socket_acknowledges():
+    loop = asyncio.new_event_loop()
+    loop_thread = threading.Thread(target=loop.run_forever)
+    loop_thread.start()
+    try:
+        player_input = WebSocketPlayerInput(loop, game_id="game-1")
+        owner = SlowRecordingWebSocket()
+        observer = SlowRecordingWebSocket()
+        intruder = SlowRecordingWebSocket()
+        player_input.set_client_for_player(0, owner)
+        player_input.set_client_for_player(1, observer)
+        request = PresentationRequest(
+            request_id="presentation-1",
+            presentation_type="promotion_completed",
+            player_id=0,
+            data={"next_level": 2},
+        )
+        presentation_thread = threading.Thread(
+            target=player_input.present,
+            args=(_make_state(), request),
+        )
+        presentation_thread.start()
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(owner, 2), loop).result(timeout=2)
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(observer, 2), loop).result(timeout=2)
+
+        assert presentation_thread.is_alive()
+        assert json.loads(owner.sent[1])["msg"] == "presentation_request"
+        assert json.loads(observer.sent[1])["msg"] == "presentation_request"
+
+        player_input.receive_presentation_ack("stale", owner, player_id=0)
+        player_input.receive_presentation_ack("presentation-1", observer, player_id=1)
+        player_input.receive_presentation_ack("presentation-1", intruder, player_id=0)
+        assert presentation_thread.is_alive()
+
+        player_input.receive_presentation_ack("presentation-1", owner, player_id=0)
+        presentation_thread.join(timeout=2)
+        assert not presentation_thread.is_alive()
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(owner, 3), loop).result(timeout=2)
+        assert json.loads(owner.sent[2]) == {
+            "msg": "presentation_resolved",
+            "request_id": "presentation-1",
+            "game_id": "game-1",
+        }
+        assert player_input._pending_presentation is None
+
+        player_input.remove_client_for_player(0)
+        player_input.remove_client_for_player(1)
+        asyncio.run_coroutine_threadsafe(asyncio.sleep(0.05), loop).result(timeout=2)
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        loop_thread.join()
         loop.close()
 
 

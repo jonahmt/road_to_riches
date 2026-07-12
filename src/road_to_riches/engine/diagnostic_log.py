@@ -15,6 +15,7 @@ from typing import Any
 
 from road_to_riches.events.event import GameEvent
 from road_to_riches.models.game_state import GameState
+from road_to_riches.protocol import PresentationRequest
 
 
 class DiagnosticLog:
@@ -90,6 +91,24 @@ class DiagnosticLog:
             },
         )
 
+    def record_presentation(
+        self,
+        action: str,
+        request: PresentationRequest,
+        state: GameState,
+    ) -> None:
+        self._write(
+            "presentation",
+            {
+                "action": action,
+                "request_id": request.request_id,
+                "presentation_type": request.presentation_type,
+                "player_id": request.player_id,
+                "data": request.data,
+                "current_player": state.current_player.player_id,
+            },
+        )
+
     def record_game_over(self, state: GameState, winner: int | None) -> None:
         self._write(
             "game_over",
@@ -131,6 +150,15 @@ class DiagnosticPlayerInput:
 
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._wrapped, name)
+        if name == "present" and callable(attr):
+
+            def wrapped_presentation(state: GameState, request: PresentationRequest) -> Any:
+                self._diagnostic_log.record_presentation("requested", request, state)
+                result = attr(state, request)
+                self._diagnostic_log.record_presentation("acknowledged", request, state)
+                return result
+
+            return wrapped_presentation
         if not callable(attr) or not name.startswith(self._RECORDED_METHOD_PREFIXES):
             return attr
 

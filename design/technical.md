@@ -65,12 +65,22 @@ enabled through runtime configuration. It is not saved inside normal save files
 and should record backend events, player input results, presentation messages,
 and log retractions without deleting or rewriting earlier entries.
 
-Structured UI notifications are allowed for semantic presentation milestones
-that should not live in the player-facing log stream, such as
-`venture_card_revealed`. These messages must describe game facts only. The
-backend must not send client timing, duration, delay, animation, or pacing
-instructions; each client owns how, whether, and for how long to present those
-semantic notifications.
+Semantic presentation milestones that must finish before gameplay continues use
+serializable `PresentationBarrierEvent` checkpoints in the normal event
+pipeline. The server sends a uniquely identified `presentation_request` owned
+by one player and blocks until the socket currently assigned to that player
+sends the matching `presentation_ack`. Other clients may render the presentation
+as read-only observers, but cannot release it. AI clients acknowledge their own
+presentations after their normal configured response delay. The active barrier
+is replayed during reconnect/state synchronization, and stale, duplicate,
+wrong-player, or wrong-socket acknowledgments are ignored. Request and
+acknowledgment records belong in the append-only diagnostic log.
+
+Presentation requests contain semantic game facts only. The backend does not
+send animation durations or client timing instructions; each client owns how it
+renders the checkpoint. Routine movement, logs, and minor feedback remain
+non-blocking, while fire-and-forget `ui_notification` messages remain available
+only for presentation metadata that is explicitly not a gameplay barrier.
 
 ### P0.5 Readiness Evidence
 

@@ -28,6 +28,13 @@ export interface InputRequest {
   data: Record<string, unknown>;
 }
 
+export interface PresentationRequest {
+  request_id: string;
+  type: string;
+  player_id: number;
+  data: Record<string, unknown>;
+}
+
 export interface PromotionInfo {
   base_salary: number;
   salary_increment: number;
@@ -122,6 +129,8 @@ export type ServerMessage =
   | { msg: "log"; text: string; game_id?: string }
   | { msg: "log_retract"; count: number; game_id?: string }
   | { msg: "ui_notification"; type: string; data?: Record<string, unknown>; game_id?: string }
+  | { msg: "presentation_request"; request_id: string; type: string; player_id: number; data?: Record<string, unknown>; game_id?: string }
+  | { msg: "presentation_resolved"; request_id: string; game_id?: string }
   | { msg: "dice"; value: number; remaining: number; game_id?: string }
   | { msg: "game_over"; winner: number | null; game_id?: string }
   | { msg: "save_result"; success: boolean; path?: string; error?: string; game_id?: string }
@@ -133,6 +142,7 @@ export type ServerMessage =
 
 export type ClientMessage =
   | { msg: "input_response"; value: unknown; player_id?: number; game_id?: string }
+  | { msg: "presentation_ack"; request_id: string; player_id?: number; game_id?: string }
   | { msg: "save_game"; player_id?: number; save_name?: string; game_id?: string }
   | { msg: "sync_request"; game_id?: string }
   | { msg: "start_game"; config: Record<string, unknown>; game_id?: string }

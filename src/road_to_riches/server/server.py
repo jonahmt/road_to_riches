@@ -24,7 +24,6 @@ from websockets.asyncio.server import ServerConnection
 
 from road_to_riches.board.loader import load_board
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
-from road_to_riches.models.serialize import game_state_to_dict
 from road_to_riches.protocol import (
     decode,
     encode,
@@ -35,7 +34,6 @@ from road_to_riches.protocol import (
     msg_games_list,
     msg_joined_game,
     msg_save_result,
-    msg_state_sync,
 )
 from road_to_riches.save import save_game
 from road_to_riches.server.server_input import WebSocketPlayerInput
@@ -195,6 +193,14 @@ class GameServer:
                     resp_pid = msg.get("player_id")
                     assert session.player_input is not None
                     session.player_input.receive_response(value, ws, resp_pid)
+
+                elif msg_type == "presentation_ack":
+                    assert session.player_input is not None
+                    session.player_input.receive_presentation_ack(
+                        msg.get("request_id"),
+                        ws,
+                        msg.get("player_id"),
+                    )
 
                 elif msg_type == "start_game":
                     await self._handle_start_game(ws, session, msg, host=host, port=port)
@@ -493,14 +499,9 @@ class GameServer:
         if session.game_loop is None:
             await ws.send(encode(msg_error("game is not running", game_id=session.session_id)))
             return
-        await ws.send(
-            encode(
-                msg_state_sync(
-                    game_state_to_dict(session.game_loop.state),
-                    game_id=session.session_id,
-                )
-            )
-        )
+        assert session.player_input is not None
+        session.player_input.send_snapshot_to_client(ws, session.game_loop.state)
+        await session.player_input.wait_for_client_messages(ws)
 
     def _check_session_progress(
         self,

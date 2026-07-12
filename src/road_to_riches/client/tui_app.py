@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import re
 import threading
-import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from rich.markup import escape
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -32,6 +32,7 @@ from road_to_riches.client.display import (
 )
 from road_to_riches.client.tui_input import InputRequest, InputRequestType, TuiPlayerInput
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
+from road_to_riches.protocol import PresentationRequest
 
 if TYPE_CHECKING:
     from road_to_riches.events.event import GameEvent
@@ -46,9 +47,6 @@ _PLAYER_RE = re.compile(r"\bPlayer (\d)\b")
 _GOLD_RE = re.compile(r"\b(\d+)G\b")
 
 STOCK_MAX_PER_BUY = 99
-VENTURE_CARD_REVEAL_PAUSE_SECONDS = 1.5
-
-
 def _stock_fluct_delta(current_price: int) -> int:
     """Fluctuation delta applied when buying/selling >=10 stock in a turn."""
     return current_price // 16 + 1
@@ -272,6 +270,16 @@ class GameApp(App):
             self.notification_type = notification_type
             self.data = data
 
+    class PresentationReady(Message):
+        def __init__(self, request: PresentationRequest) -> None:
+            super().__init__()
+            self.request = request
+
+    class PresentationResolved(Message):
+        def __init__(self, request_id: str) -> None:
+            super().__init__()
+            self.request_id = request_id
+
     def __init__(
         self,
         config: GameConfig | None = None,
@@ -294,11 +302,10 @@ class GameApp(App):
             self.player_input = TuiPlayerInput()
         self.game_loop: GameLoop | None = None
         self._current_request: InputRequest | None = None
+        self._current_presentation: PresentationRequest | None = None
+        self._presentation_ack_pending = False
         self._info_visible = False
         self._log_messages: list[str] = []
-        self._log_pause_until: float = 0.0
-        self._pending_log_messages: list[str] = []
-        self._log_flush_timer: Timer | None = None
         # Input mode: "text" (normal Input widget), "keypress" (WASD path),
         # "selection" (option bar with highlight)
         self._input_mode = "text"
@@ -358,6 +365,10 @@ class GameApp(App):
             self.player_input.set_retract_callback(self._on_retract_log)
         if hasattr(self.player_input, "set_ui_notification_callback"):
             self.player_input.set_ui_notification_callback(self._on_ui_notification)
+        if hasattr(self.player_input, "set_presentation_callback"):
+            self.player_input.set_presentation_callback(self._on_presentation)
+        if hasattr(self.player_input, "set_presentation_resolved_callback"):
+            self.player_input.set_presentation_resolved_callback(self._on_presentation_resolved)
         if self._networked:
             self._client_bridge.set_retract_callback(self._on_retract_log)
             self._client_bridge.set_state_callback(self._on_state_changed)
@@ -386,36 +397,98 @@ class GameApp(App):
         """Called from game/bridge thread for presentation-only notifications."""
         self.post_message(self.UiNotification(notification_type, data))
 
+    def _on_presentation(self, request: PresentationRequest) -> None:
+        self.post_message(self.PresentationReady(request))
+
+    def _on_presentation_resolved(self, request_id: str) -> None:
+        self.post_message(self.PresentationResolved(request_id))
+
     @on(LogMessage)
     def handle_log_message(self, event: LogMessage) -> None:
-        if time.monotonic() < self._log_pause_until:
-            self._pending_log_messages.append(event.text)
-            self._ensure_log_flush_timer()
-            return
         self._render_log_append(event.text)
 
     @on(UiNotification)
     def handle_ui_notification(self, event: UiNotification) -> None:
-        if event.notification_type != "venture_card_revealed":
-            return
-        seconds = VENTURE_CARD_REVEAL_PAUSE_SECONDS
-        self._log_pause_until = max(self._log_pause_until, time.monotonic() + seconds)
-        self._ensure_log_flush_timer()
+        pass
 
-    def _ensure_log_flush_timer(self) -> None:
-        if self._log_flush_timer is not None:
-            self._log_flush_timer.stop()
-        delay = max(0.0, self._log_pause_until - time.monotonic())
-        self._log_flush_timer = self.set_timer(delay, self._flush_pending_logs)
+    @on(PresentationReady)
+    def handle_presentation_ready(self, event: PresentationReady) -> None:
+        self._current_presentation = event.request
+        self._presentation_ack_pending = False
+        self._reset_input_mode()
+        self._clear_command_input()
+        self._render_presentation(event.request)
 
-    def _flush_pending_logs(self) -> None:
-        self._log_flush_timer = None
-        if time.monotonic() < self._log_pause_until:
-            self._ensure_log_flush_timer()
+    @on(PresentationResolved)
+    def handle_presentation_resolved(self, event: PresentationResolved) -> None:
+        if (
+            self._current_presentation is None
+            or self._current_presentation.request_id != event.request_id
+        ):
             return
-        pending, self._pending_log_messages = self._pending_log_messages, []
-        for text in pending:
-            self._render_log_append(text)
+        self._current_presentation = None
+        self._presentation_ack_pending = False
+        info = self.query_one("#info-area", RichLog)
+        info.clear()
+        info.display = False
+        with self.batch_update():
+            self._refresh_board()
+            self._refresh_player_info()
+            self._show_waiting()
+
+    def _controls_presentation_owner(self, request: PresentationRequest) -> bool:
+        if not self._networked:
+            return True
+        return getattr(self.player_input, "player_id", None) == request.player_id
+
+    def _render_presentation(self, request: PresentationRequest) -> None:
+        info = self.query_one("#info-area", RichLog)
+        info.clear()
+        info.display = True
+        data = request.data
+        if request.presentation_type == "venture_card_revealed":
+            info.write("[bold gold1]VENTURE CARD[/bold gold1]")
+            info.write(f"[bold]{escape(str(data.get('name', 'Venture Card')))}[/bold]")
+            description = str(data.get("description", ""))
+            if description:
+                info.write(escape(description))
+        elif request.presentation_type == "promotion_completed":
+            info.write(f"[bold gold1]PLAYER {request.player_id} PROMOTED![/bold gold1]")
+            info.write(
+                f"Level {data.get('previous_level', '?')} → {data.get('next_level', '?')}"
+            )
+            info.write(
+                "  |  ".join(
+                    [
+                        f"Base +{data.get('base_bonus', 0)}G",
+                        f"Level +{data.get('level_bonus', 0)}G",
+                        f"Shops +{data.get('shop_bonus', 0)}G",
+                        f"Comeback +{data.get('comeback_bonus', 0)}G",
+                    ]
+                )
+            )
+            info.write(f"[bold]Total +{data.get('total_bonus', 0)}G[/bold]")
+        else:
+            info.write(f"[bold]{escape(request.presentation_type)}[/bold]")
+            info.write(escape(str(data)))
+
+        prompt = self.query_one("#prompt-bar", PromptBar)
+        if self._controls_presentation_owner(request):
+            prompt.prompt_text = "Press Enter or Space to continue"
+        else:
+            prompt.prompt_text = f"Waiting for Player {request.player_id}..."
+
+    def _acknowledge_current_presentation(self) -> None:
+        request = self._current_presentation
+        if (
+            request is None
+            or self._presentation_ack_pending
+            or not self._controls_presentation_owner(request)
+        ):
+            return
+        self._presentation_ack_pending = True
+        self.query_one("#prompt-bar", PromptBar).prompt_text = "Continuing..."
+        self.player_input.acknowledge_presentation(request.request_id)
 
     def _render_log_append(self, text: str) -> None:
         self._log_messages.append(text)
@@ -463,7 +536,7 @@ class GameApp(App):
             self._refresh_board()
             self._refresh_player_info()
             # Update "Player X's turn" if we're waiting
-            if self._current_request is None:
+            if self._current_request is None and self._current_presentation is None:
                 self._show_waiting()
 
     @on(DiceUpdate)
@@ -477,6 +550,13 @@ class GameApp(App):
     def on_key(self, event) -> None:
         """Dispatch raw keypresses based on current input mode."""
         char = (event.character or "").lower()
+
+        if self._current_presentation is not None:
+            event.prevent_default()
+            event.stop()
+            if event.key in ("enter", "space") or char == " ":
+                self._acknowledge_current_presentation()
+            return
 
         # E toggles browse mode from any state
         if char == "e" and self._current_request is not None:

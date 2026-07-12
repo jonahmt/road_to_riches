@@ -8,7 +8,7 @@ from road_to_riches.ai.basic.client import BasicAIClient
 from road_to_riches.engine.affordability import stock_liquidation_value
 from road_to_riches.engine.game_loop import GameLog, PlayerInput
 from road_to_riches.models.game_state import GameState
-from road_to_riches.protocol import InputRequest, InputRequestType
+from road_to_riches.protocol import InputRequest, InputRequestType, PresentationRequest
 
 
 class BasicAIPlayerInput(PlayerInput):
@@ -37,6 +37,11 @@ class BasicAIPlayerInput(PlayerInput):
                 data=data or {},
             )
         )
+
+    def present(self, state: GameState, request: PresentationRequest) -> None:
+        ai = self.ais.get(request.player_id)
+        if ai is not None:
+            ai.presentation_ack_message(request.request_id, request.player_id)
 
     def choose_pre_roll_action(self, state: GameState, player_id: int, log: GameLog) -> str:
         player = state.get_player(player_id)

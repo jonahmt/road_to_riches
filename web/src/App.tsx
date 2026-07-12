@@ -17,7 +17,7 @@ import {
   type SquareInfo,
   stockPrice,
 } from "./protocol";
-import { type DiceState, type UiNotificationState, useGameClient } from "./useGameClient";
+import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
 const LAYOUT_STORAGE_KEY = "road-to-riches-layout";
@@ -89,7 +89,6 @@ const ACTIVE_PLAYER_TOKEN_RADIUS = 0.95;
 const BOARD_ZOOM_STEP = 0.25;
 const BOARD_WHEEL_ZOOM_SPEED = 0.0015;
 const BOARD_DRAG_THRESHOLD = 4;
-const VENTURE_CARD_REVEAL_MS = 1500;
 const VENTURE_LINE_BONUSES: Record<number, number> = { 4: 40, 5: 50, 6: 60, 7: 70, 8: 200 };
 const VENTURE_AXES: ReadonlyArray<readonly [number, number]> = [
   [0, 1],
@@ -530,17 +529,24 @@ function getInitialLayoutMode(): GameLayoutMode {
 }
 
 function App() {
-  const { clientState, connect, disconnect, submitResponse, saveGame, requestSync, clearUiNotification } =
-    useGameClient(DEFAULT_URI);
+  const {
+    clientState,
+    connect,
+    disconnect,
+    submitResponse,
+    saveGame,
+    requestSync,
+    acknowledgePresentation,
+    dismissPresentation,
+  } = useGameClient(DEFAULT_URI);
   const [uri, setUri] = useState(DEFAULT_URI);
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
   const [layoutMode, setLayoutMode] = useState<GameLayoutMode>(getInitialLayoutMode);
   const ventureRequest =
     clientState.pendingRequest?.type === "CHOOSE_VENTURE_CELL" ? clientState.pendingRequest : null;
-  const blockingPresentationActive = ["venture_card_revealed", "promotion_completed"].includes(
-    clientState.uiNotification?.type ?? "",
-  );
+  const activePresentation = clientState.presentations[0] ?? null;
+  const blockingPresentationActive = activePresentation !== null;
   const standardKeyboardRequest = ventureRequest || blockingPresentationActive ? null : clientState.pendingRequest;
   useWasdPromptControls(clientState.responsePending ? null : standardKeyboardRequest, submitResponse);
 
@@ -681,20 +687,42 @@ function App() {
         </>
       )}
 
-      {clientState.uiNotification?.type === "venture_card_revealed" && (
+      {activePresentation?.type === "venture_card_revealed" && (
         <VentureCardReveal
-          notification={clientState.uiNotification}
-          onDismiss={clearUiNotification}
+          presentation={activePresentation}
+          assignedPlayerId={clientState.playerId}
+          onContinue={() =>
+            activePresentation.requiresAcknowledgment
+              ? acknowledgePresentation(activePresentation.requestId)
+              : dismissPresentation(activePresentation.requestId)
+          }
         />
       )}
 
-      {clientState.uiNotification?.type === "promotion_completed" && (
+      {activePresentation?.type === "promotion_completed" && (
         <PromotionCeremony
-          notification={clientState.uiNotification}
+          presentation={activePresentation}
           assignedPlayerId={clientState.playerId}
-          onDismiss={clearUiNotification}
+          onContinue={() =>
+            activePresentation.requiresAcknowledgment
+              ? acknowledgePresentation(activePresentation.requestId)
+              : dismissPresentation(activePresentation.requestId)
+          }
         />
       )}
+
+      {activePresentation &&
+        !["venture_card_revealed", "promotion_completed"].includes(activePresentation.type) && (
+          <GenericPresentation
+            presentation={activePresentation}
+            assignedPlayerId={clientState.playerId}
+            onContinue={() =>
+              activePresentation.requiresAcknowledgment
+                ? acknowledgePresentation(activePresentation.requestId)
+                : dismissPresentation(activePresentation.requestId)
+            }
+          />
+        )}
 
       <DevPanel
         open={devPanelOpen}
@@ -2120,94 +2148,150 @@ function VentureGridOverlay({
 }
 
 function VentureCardReveal({
-  notification,
-  onDismiss,
+  presentation,
+  assignedPlayerId,
+  onContinue,
 }: {
-  notification: UiNotificationState;
-  onDismiss: (id?: number) => void;
+  presentation: PresentationState;
+  assignedPlayerId: number | null;
+  onContinue: () => void;
 }) {
-  const name = String(notification.data.name ?? "Venture Card");
-  const description = String(notification.data.description ?? "");
+  const name = String(presentation.data.name ?? "Venture Card");
+  const description = String(presentation.data.description ?? "");
+  const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
+  const canContinue = isOwner && !presentation.acknowledgmentPending;
 
   useEffect(() => {
-    const dismiss = () => onDismiss(notification.id);
-    const timeoutId = window.setTimeout(dismiss, VENTURE_CARD_REVEAL_MS);
     function handleKeyDown(event: KeyboardEvent) {
-      if (["Escape", "Enter", " "].includes(event.key)) {
+      if (
+        ["Escape", "Enter", " "].includes(event.key) ||
+        WASD_KEYS.has(event.key.toLowerCase()) ||
+        event.key.startsWith("Arrow")
+      ) {
         event.preventDefault();
         event.stopPropagation();
-        dismiss();
-        return;
-      }
-      if (WASD_KEYS.has(event.key.toLowerCase()) || event.key.startsWith("Arrow")) {
-        event.preventDefault();
-        event.stopPropagation();
+        if (canContinue && ["Enter", " "].includes(event.key)) {
+          onContinue();
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown, true);
-    return () => {
-      window.clearTimeout(timeoutId);
-      window.removeEventListener("keydown", handleKeyDown, true);
-    };
-  }, [notification.id, onDismiss]);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [canContinue, onContinue]);
 
   return (
     <div className="venture-card-reveal" role="dialog" aria-modal="true" aria-labelledby="venture-card-title">
       <button
         type="button"
         className="venture-card"
-        autoFocus
-        onClick={() => onDismiss(notification.id)}
-        aria-label="Dismiss Venture Card"
+        autoFocus={isOwner}
+        disabled={!canContinue}
+        onClick={onContinue}
+        aria-label={isOwner ? "Continue from Venture Card" : `Waiting for Player ${presentation.playerId}`}
       >
         <span className="venture-card-kicker">Venture Card</span>
         <strong id="venture-card-title">{name}</strong>
         {description && <span className="venture-card-description">{description}</span>}
-        <small>Click or press Enter to continue</small>
+        <small>
+          {presentation.acknowledgmentPending
+            ? "Continuing..."
+            : isOwner
+              ? "Click or press Enter to continue"
+              : `Waiting for Player ${presentation.playerId}...`}
+        </small>
+      </button>
+    </div>
+  );
+}
+
+function GenericPresentation({
+  presentation,
+  assignedPlayerId,
+  onContinue,
+}: {
+  presentation: PresentationState;
+  assignedPlayerId: number | null;
+  onContinue: () => void;
+}) {
+  const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
+  const canContinue = isOwner && !presentation.acknowledgmentPending;
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (canContinue && ["Enter", " "].includes(event.key)) {
+        onContinue();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [canContinue, onContinue]);
+
+  return (
+    <div className="venture-card-reveal" role="dialog" aria-modal="true" aria-labelledby="presentation-title">
+      <button
+        type="button"
+        className="venture-card"
+        autoFocus={isOwner}
+        disabled={!canContinue}
+        onClick={onContinue}
+      >
+        <span className="venture-card-kicker">Game Event</span>
+        <strong id="presentation-title">{readableType(presentation.type)}</strong>
+        <small>
+          {presentation.acknowledgmentPending
+            ? "Continuing..."
+            : isOwner
+              ? "Click or press Enter to continue"
+              : `Waiting for Player ${presentation.playerId}...`}
+        </small>
       </button>
     </div>
   );
 }
 
 function PromotionCeremony({
-  notification,
+  presentation,
   assignedPlayerId,
-  onDismiss,
+  onContinue,
 }: {
-  notification: UiNotificationState;
+  presentation: PresentationState;
   assignedPlayerId: number | null;
-  onDismiss: (id?: number) => void;
+  onContinue: () => void;
 }) {
-  const playerId = asNumber(notification.data.player_id);
-  const previousLevel = asNumber(notification.data.previous_level, 1);
-  const nextLevel = asNumber(notification.data.next_level, previousLevel + 1);
-  const totalBonus = asNumber(notification.data.total_bonus);
-  const readyCashAfter = asNumber(notification.data.ready_cash_after);
+  const playerId = asNumber(presentation.data.player_id, presentation.playerId);
+  const previousLevel = asNumber(presentation.data.previous_level, 1);
+  const nextLevel = asNumber(presentation.data.next_level, previousLevel + 1);
+  const totalBonus = asNumber(presentation.data.total_bonus);
+  const readyCashAfter = asNumber(presentation.data.ready_cash_after);
   const isAssignedPlayer = playerId === assignedPlayerId;
+  const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
+  const canContinue = isOwner && !presentation.acknowledgmentPending;
   const salaryRows = [
-    ["Base salary", asNumber(notification.data.base_bonus)],
-    ["Level bonus", asNumber(notification.data.level_bonus)],
-    ["Shop value bonus", asNumber(notification.data.shop_bonus)],
-    ["Comeback bonus", asNumber(notification.data.comeback_bonus)],
+    ["Base salary", asNumber(presentation.data.base_bonus)],
+    ["Level bonus", asNumber(presentation.data.level_bonus)],
+    ["Shop value bonus", asNumber(presentation.data.shop_bonus)],
+    ["Comeback bonus", asNumber(presentation.data.comeback_bonus)],
   ] as const;
 
   useEffect(() => {
-    const dismiss = () => onDismiss(notification.id);
     function handleKeyDown(event: KeyboardEvent) {
-      if (["Escape", "Enter", " "].includes(event.key)) {
+      if (
+        ["Escape", "Enter", " "].includes(event.key) ||
+        WASD_KEYS.has(event.key.toLowerCase()) ||
+        event.key.startsWith("Arrow")
+      ) {
         event.preventDefault();
         event.stopPropagation();
-        dismiss();
-        return;
-      }
-      if (WASD_KEYS.has(event.key.toLowerCase()) || event.key.startsWith("Arrow")) {
-        event.preventDefault();
-        event.stopPropagation();
+        if (canContinue && ["Enter", " "].includes(event.key)) {
+          onContinue();
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [notification.id, onDismiss]);
+  }, [canContinue, onContinue]);
 
   return (
     <div
@@ -2282,10 +2366,15 @@ function PromotionCeremony({
         <button
           type="button"
           className="promotion-continue"
-          autoFocus
-          onClick={() => onDismiss(notification.id)}
+          autoFocus={isOwner}
+          disabled={!canContinue}
+          onClick={onContinue}
         >
-          Continue
+          {presentation.acknowledgmentPending
+            ? "Continuing..."
+            : isOwner
+              ? "Continue"
+              : `Waiting for Player ${presentation.playerId}...`}
         </button>
       </section>
     </div>

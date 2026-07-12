@@ -250,24 +250,27 @@ class TestHandleVentureCard:
         card = VentureCard(card_id=1, name="T", description="desc", script_path=path)
         loop.state.venture_deck = VentureDeck(cards={1: card}, remaining=[1], full_deck=[1])
         loop.input.choose_venture_cell.return_value = (0, 0)
+        cash_when_presented: list[int] = []
+        loop.input.present.side_effect = (
+            lambda state, request: cash_when_presented.append(state.players[0].ready_cash)
+        )
 
         loop._handle_venture_card(player_id=0)
 
+        assert cash_when_presented == [1000]
         assert loop.state.players[0].ready_cash == 1011
         assert loop.state.venture_grid is not None
         assert loop.state.venture_grid.cells[0][0] == 0
         assert not any(message.startswith("<<PAUSE:") for message in loop.log.messages)
-        loop.input.notify_ui.assert_called_once_with(
-            "venture_card_revealed",
-            {
-                "player_id": 0,
-                "card_id": 1,
-                "name": "T",
-                "description": "desc",
-            },
-        )
-        notification_data = loop.input.notify_ui.call_args.args[1]
-        assert "seconds" not in notification_data
+        request = loop.input.present.call_args.args[1]
+        assert request.presentation_type == "venture_card_revealed"
+        assert request.player_id == 0
+        assert request.data == {
+            "player_id": 0,
+            "card_id": 1,
+            "name": "T",
+            "description": "desc",
+        }
 
     def test_multiple_claims_in_one_turn_see_prior_pick(self, tmp_path):
         first_script = (

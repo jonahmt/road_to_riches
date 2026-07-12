@@ -14,7 +14,7 @@ from typing import Any
 from road_to_riches.engine.affordability import stock_liquidation_value
 from road_to_riches.engine.game_loop import GameLog, PlayerInput
 from road_to_riches.models.game_state import GameState
-from road_to_riches.protocol import InputRequest, InputRequestType
+from road_to_riches.protocol import InputRequest, InputRequestType, PresentationRequest
 
 # Re-export for backward compatibility
 __all__ = ["InputRequest", "InputRequestType", "TuiPlayerInput"]
@@ -39,6 +39,10 @@ class TuiPlayerInput(PlayerInput):
         self._dice_callback: Any = None
         self._retract_callback: Any = None
         self._ui_notification_callback: Any = None
+        self._presentation_callback: Any = None
+        self._presentation_resolved_callback: Any = None
+        self._pending_presentation: PresentationRequest | None = None
+        self._presentation_ack_ready = threading.Event()
 
     def set_log_callback(self, callback: Any) -> None:
         self._log_callback = callback
@@ -51,6 +55,19 @@ class TuiPlayerInput(PlayerInput):
 
     def set_ui_notification_callback(self, callback: Any) -> None:
         self._ui_notification_callback = callback
+
+    def set_presentation_callback(self, callback: Any) -> None:
+        self._presentation_callback = callback
+
+    def set_presentation_resolved_callback(self, callback: Any) -> None:
+        self._presentation_resolved_callback = callback
+
+    def acknowledge_presentation(self, request_id: str) -> None:
+        if (
+            self._pending_presentation is not None
+            and self._pending_presentation.request_id == request_id
+        ):
+            self._presentation_ack_ready.set()
 
     def _notify_dice(self, value: int, remaining: int) -> None:
         if self._dice_callback:
@@ -468,6 +485,17 @@ class TuiPlayerInput(PlayerInput):
     def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
         if self._ui_notification_callback:
             self._ui_notification_callback(notification_type, data or {})
+
+    def present(self, state: GameState, request: PresentationRequest) -> None:
+        if self._presentation_callback is None:
+            return
+        self._presentation_ack_ready.clear()
+        self._pending_presentation = request
+        self._presentation_callback(request)
+        self._presentation_ack_ready.wait()
+        self._pending_presentation = None
+        if self._presentation_resolved_callback:
+            self._presentation_resolved_callback(request.request_id)
 
     def retract_log(self, count: int) -> None:
         if self._retract_callback and count > 0:

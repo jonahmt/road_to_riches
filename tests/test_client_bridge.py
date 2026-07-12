@@ -7,7 +7,7 @@ import json
 import pytest
 
 from road_to_riches.client.client_bridge import ClientBridge
-from road_to_riches.protocol import InputRequestType
+from road_to_riches.protocol import InputRequestType, PresentationRequest
 
 
 def _input_request(player_id: int) -> dict:
@@ -211,6 +211,84 @@ def test_ui_notification_is_ignored_for_other_game():
     )
 
     assert notifications == []
+
+
+def test_presentation_requests_and_resolution_are_forwarded_to_tui():
+    bridge = ClientBridge("ws://localhost:8765")
+    requests: list[PresentationRequest] = []
+    resolved: list[str] = []
+    bridge.set_presentation_callback(requests.append)
+    bridge.set_presentation_resolved_callback(resolved.append)
+
+    bridge._handle_message(
+        {
+            "msg": "presentation_request",
+            "request_id": "presentation-1",
+            "type": "venture_card_revealed",
+            "player_id": 1,
+            "data": {"name": "Lucky"},
+        }
+    )
+    bridge._handle_message(
+        {"msg": "presentation_resolved", "request_id": "presentation-1"}
+    )
+
+    assert requests == [
+        PresentationRequest(
+            request_id="presentation-1",
+            presentation_type="venture_card_revealed",
+            player_id=1,
+            data={"name": "Lucky"},
+        )
+    ]
+    assert resolved == ["presentation-1"]
+
+
+def test_pending_presentation_is_delivered_when_tui_callback_attaches_after_reconnect():
+    bridge = ClientBridge("ws://localhost:8765")
+    bridge._handle_message(
+        {
+            "msg": "presentation_request",
+            "request_id": "presentation-1",
+            "type": "promotion_completed",
+            "player_id": 0,
+            "data": {"next_level": 2},
+        }
+    )
+    requests: list[PresentationRequest] = []
+
+    bridge.set_presentation_callback(requests.append)
+
+    assert [request.request_id for request in requests] == ["presentation-1"]
+
+
+def test_acknowledge_presentation_includes_owner_and_game_id(monkeypatch):
+    scheduled = []
+
+    class FakeLoop:
+        pass
+
+    class FakeWebSocket:
+        def send(self, msg: str) -> str:
+            return msg
+
+    bridge = ClientBridge("ws://localhost:8765")
+    bridge._loop = FakeLoop()
+    bridge._ws = FakeWebSocket()
+    bridge._handle_message({"msg": "assign_player", "player_id": 1, "game_id": "game-1"})
+    monkeypatch.setattr(
+        "road_to_riches.client.client_bridge.asyncio.run_coroutine_threadsafe",
+        lambda payload, loop: scheduled.append(payload),
+    )
+
+    bridge.acknowledge_presentation("presentation-1")
+
+    assert json.loads(scheduled[0]) == {
+        "msg": "presentation_ack",
+        "request_id": "presentation-1",
+        "player_id": 1,
+        "game_id": "game-1",
+    }
 
 
 def test_request_state_sync_includes_assigned_game_id(monkeypatch):

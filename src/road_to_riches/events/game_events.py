@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from uuid import uuid4
 
 from road_to_riches.engine.affordability import stock_liquidation_value
 from road_to_riches.engine.lut import max_cap_multiplier
@@ -26,6 +27,20 @@ from road_to_riches.models.suit import Suit
 # =============================================================================
 # Property Events
 # =============================================================================
+
+
+@register_event
+@dataclass
+class PresentationBarrierEvent(GameEvent):
+    """Pause gameplay for a semantic presentation owned by one player."""
+
+    player_id: int
+    presentation_type: str
+    data: dict = field(default_factory=dict)
+    request_id: str = field(default_factory=lambda: uuid4().hex)
+
+    def execute(self, state: GameState) -> None:
+        pass
 
 
 @register_event

@@ -83,6 +83,13 @@ This section is always present and takes the bottom portion of the screen, say t
 
 Throughout, the player should be able to scroll the log infinitely back to the start of the game, to see exactly what happened. Additionally, the viewing board should cause all UI elements to vanish except for the game view. In the screen the player can move squares with wasd to view the info of each square (in a separate UI box overlaid in the top right). Basically, moving the center of the board from (0,0) by 1 each key press. And whatever square is in the center will have its info displayed.
 
+Semantic presentations that block the backend event pipeline, including venture
+card reveals and promotions, replace the normal prompt with a dedicated detail
+panel. The involved player acknowledges with Enter or Space; non-owning network
+clients see the same facts with a read-only `Waiting for Player …` prompt. The
+TUI must not use a fixed timer or release a presentation locally before the
+server confirms that the barrier resolved.
+
 ## (P0) Info
 
 Any time a player is inputting a decision, they should also be able to type I/info/Info to get info about the game. They can request info player to see a player’s full stats, info square type to see the definition of that square (same as would appear in viewing board), etc. info game would return the victory condition for example. This is how the game can be remotely playable before the following UI components are implemented. This is also how agents should interact with the program while testing.
@@ -143,4 +150,3 @@ The border for each player’s box should be their color.
 ## (P0.5) Stock market view
 
 When a player inputs a command to buy, sell, or view stocks, an overlay table must appear, temporarily covering the Game View. As defined in the Gameplay Spec, this table must have Players across the top (columns) and Districts along the left (rows), with the current Stock Price next to the District name. The intersecting cells display the number of stocks that player owns in that district.
-

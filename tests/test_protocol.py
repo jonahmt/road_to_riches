@@ -3,6 +3,7 @@
 from road_to_riches.protocol import (
     InputRequest,
     InputRequestType,
+    PresentationRequest,
     decode,
     encode,
     msg_assign_player,
@@ -22,6 +23,9 @@ from road_to_riches.protocol import (
     msg_list_games,
     msg_log,
     msg_log_retract,
+    msg_presentation_ack,
+    msg_presentation_request,
+    msg_presentation_resolved,
     msg_save_game,
     msg_save_result,
     msg_start_game,
@@ -50,6 +54,41 @@ def test_round_trip_ui_notification():
         {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
     )
     assert decode(encode(original)) == original
+
+
+def test_round_trip_presentation_request_and_ack():
+    request = PresentationRequest(
+        request_id="presentation-1",
+        presentation_type="venture_card_revealed",
+        player_id=2,
+        data={"name": "Lucky"},
+    )
+    outbound = msg_presentation_request(request, game_id="game-1")
+    acknowledgment = msg_presentation_ack(
+        request.request_id,
+        request.player_id,
+        game_id="game-1",
+    )
+
+    assert decode(encode(outbound)) == {
+        "msg": "presentation_request",
+        "request_id": "presentation-1",
+        "type": "venture_card_revealed",
+        "player_id": 2,
+        "data": {"name": "Lucky"},
+        "game_id": "game-1",
+    }
+    assert decode(encode(acknowledgment)) == {
+        "msg": "presentation_ack",
+        "request_id": "presentation-1",
+        "player_id": 2,
+        "game_id": "game-1",
+    }
+    assert msg_presentation_resolved("presentation-1", "game-1") == {
+        "msg": "presentation_resolved",
+        "request_id": "presentation-1",
+        "game_id": "game-1",
+    }
 
 
 def test_round_trip_dice():

@@ -16,10 +16,12 @@ from road_to_riches.models.serialize import game_state_from_dict
 from road_to_riches.protocol import (
     InputRequest,
     InputRequestType,
+    PresentationRequest,
     decode,
     encode,
     msg_dev_event,
     msg_input_response,
+    msg_presentation_ack,
     msg_save_game,
     msg_start_game,
     msg_sync_request,
@@ -53,6 +55,9 @@ class ClientBridge:
         self._state_callback: Any = None
         self._retract_callback: Any = None
         self._ui_notification_callback: Any = None
+        self._presentation_callback: Any = None
+        self._presentation_resolved_callback: Any = None
+        self._pending_presentations: dict[str, PresentationRequest] = {}
         self._player_id: int | None = None  # assigned by server
         self._game_id: str | None = None  # assigned by server
 
@@ -88,6 +93,14 @@ class ClientBridge:
     def set_ui_notification_callback(self, callback: Any) -> None:
         self._ui_notification_callback = callback
 
+    def set_presentation_callback(self, callback: Any) -> None:
+        self._presentation_callback = callback
+        for request in self._pending_presentations.values():
+            callback(request)
+
+    def set_presentation_resolved_callback(self, callback: Any) -> None:
+        self._presentation_resolved_callback = callback
+
     def set_state_callback(self, callback: Any) -> None:
         self._state_callback = callback
 
@@ -113,6 +126,19 @@ class ClientBridge:
         if isinstance(response, tuple):
             response = list(response)
         msg = encode(msg_input_response(response, self._player_id, game_id=self._game_id))
+        asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
+
+    def acknowledge_presentation(self, request_id: str) -> None:
+        """Acknowledge a presentation owned by this client's assigned player."""
+        if self._loop is None or self._ws is None:
+            return
+        msg = encode(
+            msg_presentation_ack(
+                request_id,
+                self._player_id,
+                game_id=self._game_id,
+            )
+        )
         asyncio.run_coroutine_threadsafe(self._ws.send(msg), self._loop)
 
     def connect(self, timeout: float = 5.0) -> None:
@@ -252,6 +278,23 @@ class ClientBridge:
         elif msg_type == "ui_notification":
             if self._ui_notification_callback:
                 self._ui_notification_callback(msg["type"], msg.get("data", {}))
+
+        elif msg_type == "presentation_request":
+            request = PresentationRequest(
+                request_id=msg["request_id"],
+                presentation_type=msg["type"],
+                player_id=msg["player_id"],
+                data=msg.get("data", {}),
+            )
+            is_new = request.request_id not in self._pending_presentations
+            self._pending_presentations[request.request_id] = request
+            if is_new and self._presentation_callback:
+                self._presentation_callback(request)
+
+        elif msg_type == "presentation_resolved":
+            self._pending_presentations.pop(msg["request_id"], None)
+            if self._presentation_resolved_callback:
+                self._presentation_resolved_callback(msg["request_id"])
 
         elif msg_type == "assign_player":
             self._player_id = msg["player_id"]

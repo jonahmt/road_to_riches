@@ -40,6 +40,7 @@ from road_to_riches.events.game_events import (
     CollectSuitEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
+    PresentationBarrierEvent,
     PromotionEvent,
     RenovatePropertyEvent,
     SellStockEvent,
@@ -89,6 +90,7 @@ from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
 from road_to_riches.models.square_type import SquareType
 from road_to_riches.paths import resolve_resource_path
+from road_to_riches.protocol import PresentationRequest
 
 
 @dataclass
@@ -318,6 +320,14 @@ class PlayerInput(ABC):
         animation durations, delays, or other client pacing instructions here.
         """
 
+    def present(self, state: GameState, request: PresentationRequest) -> None:
+        """Block for a semantic presentation acknowledgment when supported.
+
+        Headless/direct inputs may accept immediately. Interactive inputs
+        override this method and return only after the owning player has
+        acknowledged the request.
+        """
+
     def retract_log(self, count: int) -> None:
         """Remove the last *count* messages from the client's log display.
 
@@ -510,9 +520,25 @@ class GameLoop:
             self._handle_venture_card_event(event)
         elif isinstance(event, RollAgainEvent):
             self._handle_roll_again(event)
+        elif isinstance(event, PresentationBarrierEvent):
+            self.input.present(
+                self.state,
+                PresentationRequest(
+                    request_id=event.request_id,
+                    presentation_type=event.presentation_type,
+                    player_id=event.player_id,
+                    data=event.data,
+                ),
+            )
         # --- Leaf mutation events: handled by log_message() ---
         elif isinstance(event, PromotionEvent):
-            self.input.notify_ui("promotion_completed", event.presentation_data())
+            self._execute_event(
+                PresentationBarrierEvent(
+                    player_id=event.player_id,
+                    presentation_type="promotion_completed",
+                    data=event.presentation_data(),
+                )
+            )
         elif isinstance(event, VictoryEvent):
             # Control flow: must set game_over on the loop instance
             self.game_over = True
@@ -1274,14 +1300,17 @@ class GameLoop:
         card = deck.draw()
         self.log.log(f"Venture Card: {card.name} — {card.description}")
         self.input.notify(self.state, self.log)
-        self.input.notify_ui(
-            "venture_card_revealed",
-            {
-                "player_id": player_id,
-                "card_id": card.card_id,
-                "name": card.name,
-                "description": card.description,
-            },
+        self._execute_event(
+            PresentationBarrierEvent(
+                player_id=player_id,
+                presentation_type="venture_card_revealed",
+                data={
+                    "player_id": player_id,
+                    "card_id": card.card_id,
+                    "name": card.name,
+                    "description": card.description,
+                },
+            )
         )
         self.run_script(card.script_path, player_id)
 

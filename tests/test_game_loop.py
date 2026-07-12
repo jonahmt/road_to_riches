@@ -8,6 +8,7 @@ mock methods it expects to be called.
 from __future__ import annotations
 
 import json
+import threading
 from unittest.mock import create_autospec
 
 from road_to_riches.board import load_board
@@ -19,6 +20,7 @@ from road_to_riches.events.game_events import (
     BuyVacantPlotEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
+    PresentationBarrierEvent,
     RenovatePropertyEvent,
     SellStockEvent,
     WarpEvent,
@@ -262,6 +264,33 @@ class TestDiagnosticLog:
                 "timestamp": records[0]["timestamp"],
             }
         ]
+
+    def test_records_presentation_request_and_acknowledgment(self, tmp_path):
+        from road_to_riches.protocol import PresentationRequest
+
+        state, _ = _make_game(2)
+        path = tmp_path / "game.jsonl"
+        loop = GameLoop(
+            GameConfig(
+                board_path="boards/test_board.json",
+                num_players=2,
+                diagnostic_log_path=str(path),
+            ),
+            _make_mock_input(),
+            saved_state=state,
+        )
+        request = PresentationRequest(
+            request_id="presentation-1",
+            presentation_type="promotion_completed",
+            player_id=0,
+            data={"next_level": 2},
+        )
+
+        loop.input.present(loop.state, request)
+
+        records = [json.loads(line) for line in path.read_text().splitlines()]
+        assert [record["action"] for record in records] == ["requested", "acknowledged"]
+        assert all(record["request_id"] == "presentation-1" for record in records)
 
 
 # ===========================================================================
@@ -1331,9 +1360,10 @@ class TestWarpEventVoluntary:
         loop._execute_event(PromotionEvent(player_id=0))
 
         assert any("promoted" in m for m in loop.log.messages)
-        loop.input.notify_ui.assert_called_once_with(
-            "promotion_completed",
-            {
+        request = loop.input.present.call_args.args[1]
+        assert request.presentation_type == "promotion_completed"
+        assert request.player_id == 0
+        assert request.data == {
                 "player_id": 0,
                 "previous_level": 1,
                 "next_level": 2,
@@ -1343,8 +1373,53 @@ class TestWarpEventVoluntary:
                 "comeback_bonus": 0,
                 "total_bonus": 400,
                 "ready_cash_after": 1900,
-            },
+            }
+        assert any(
+            isinstance(entry.event, PresentationBarrierEvent)
+            and entry.event.request_id == request.request_id
+            for entry in loop.pipeline.history
         )
+
+    def test_promotion_barrier_blocks_later_pipeline_events(self):
+        from road_to_riches.events.game_events import PromotionEvent, TransferCashEvent
+        from road_to_riches.models.suit import Suit
+
+        loop = _make_loop(num_players=2)
+        loop.state.players[0].suits = {
+            Suit.SPADE: 1,
+            Suit.HEART: 1,
+            Suit.DIAMOND: 1,
+            Suit.CLUB: 1,
+        }
+        presentation_started = threading.Event()
+        presentation_released = threading.Event()
+
+        def wait_for_ack(state, request):
+            presentation_started.set()
+            presentation_released.wait(timeout=2)
+
+        loop.input.present.side_effect = wait_for_ack
+        loop.pipeline.enqueue(PromotionEvent(player_id=0))
+        loop.pipeline.enqueue(TransferCashEvent(from_player_id=None, to_player_id=0, amount=1))
+
+        def process_events() -> None:
+            for _ in range(2):
+                event = loop.pipeline.process_next(loop.state)
+                assert event is not None
+                loop._dispatch(event)
+
+        worker = threading.Thread(target=process_events)
+        worker.start()
+        assert presentation_started.wait(timeout=1)
+
+        assert loop.state.players[0].ready_cash == 1900
+        assert loop.pipeline.pending == 1
+
+        presentation_released.set()
+        worker.join(timeout=2)
+
+        assert not worker.is_alive()
+        assert loop.state.players[0].ready_cash == 1901
 
     def test_voluntary_warp_to_suit_collects_suit_via_pass_handler(self):
         """Voluntary warp to a SUIT square: PassActionEvent enqueues CollectSuitEvent."""

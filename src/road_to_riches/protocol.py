@@ -48,6 +48,16 @@ class InputRequest:
     data: dict = field(default_factory=dict)
 
 
+@dataclass
+class PresentationRequest:
+    """A semantic presentation checkpoint owned by one player."""
+
+    request_id: str
+    presentation_type: str
+    player_id: int
+    data: dict = field(default_factory=dict)
+
+
 # --- Message encoding/decoding ---
 
 
@@ -97,6 +107,29 @@ def msg_ui_notification(
 ) -> dict:
     return _with_game_id(
         {"msg": "ui_notification", "type": notification_type, "data": data or {}},
+        game_id,
+    )
+
+
+def msg_presentation_request(
+    request: PresentationRequest,
+    game_id: str | None = None,
+) -> dict:
+    return _with_game_id(
+        {
+            "msg": "presentation_request",
+            "request_id": request.request_id,
+            "type": request.presentation_type,
+            "player_id": request.player_id,
+            "data": request.data,
+        },
+        game_id,
+    )
+
+
+def msg_presentation_resolved(request_id: str, game_id: str | None = None) -> dict:
+    return _with_game_id(
+        {"msg": "presentation_resolved", "request_id": request_id},
         game_id,
     )
 
@@ -162,6 +195,17 @@ def msg_input_response(
     game_id: str | None = None,
 ) -> dict:
     msg: dict = {"msg": "input_response", "value": value}
+    if player_id is not None:
+        msg["player_id"] = player_id
+    return _with_game_id(msg, game_id)
+
+
+def msg_presentation_ack(
+    request_id: str,
+    player_id: int | None = None,
+    game_id: str | None = None,
+) -> dict:
+    msg: dict = {"msg": "presentation_ack", "request_id": request_id}
     if player_id is not None:
         msg["player_id"] = player_id
     return _with_game_id(msg, game_id)

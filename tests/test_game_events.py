@@ -11,6 +11,7 @@ from road_to_riches.engine.statuses import (
     add_player_status,
     add_square_status,
 )
+from road_to_riches.events.event import GameEvent
 from road_to_riches.events.game_events import (
     AuctionSellEvent,
     BuyShopEvent,
@@ -30,6 +31,7 @@ from road_to_riches.events.game_events import (
     PayCheckpointTollEvent,
     PayRentEvent,
     PayTaxEvent,
+    PresentationBarrierEvent,
     RenovatePropertyEvent,
     ScriptEvent,
     SellStockEvent,
@@ -53,6 +55,19 @@ def _make_game(num_players: int = 2, cash: int = 2000) -> GameState:
 def _give_shop(state: GameState, player_id: int, square_id: int) -> None:
     state.board.squares[square_id].property_owner = player_id
     state.get_player(player_id).owned_properties.append(square_id)
+
+
+def test_presentation_barrier_round_trips_with_stable_request_id():
+    event = PresentationBarrierEvent(
+        player_id=1,
+        presentation_type="venture_card_revealed",
+        data={"card_id": 7},
+        request_id="presentation-7",
+    )
+
+    restored = GameEvent.from_dict(event.to_dict())
+
+    assert restored == event
 
 
 # ---------------------------------------------------------------------------
