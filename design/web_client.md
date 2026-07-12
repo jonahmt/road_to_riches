@@ -205,7 +205,7 @@ active-player view and locks manual camera input again.
 Automatic Follow-camera changes default to a 360-millisecond cubic ease-in-out
 curve. Turn changes, returning from Free Cam, and other automatic reframing use
 that default. A same-player move between two squares connected by a board
-waypoint overrides it with a fast 160-millisecond linear transition for both the
+waypoint overrides it with a fast 100-millisecond linear transition for both the
 camera and player token. This keeps ordinary step-by-step movement direct while
 reserving eased motion for broader framing changes. The initial board framing is
 immediate. If another follow target arrives during an animation, the camera
