@@ -18,6 +18,13 @@ import {
   stockPrice,
 } from "./protocol";
 import { adjacentStepAnimationDuration } from "./cameraTiming";
+import {
+  clampStockQuantity,
+  defaultStockQuantity,
+  districtLabel,
+  maxBuyQuantity,
+  type StockOverlayMode,
+} from "./stockOverlay";
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
@@ -68,6 +75,44 @@ const RENT_MULTIPLIERS: Record<string, number> = {
   "6:8": 4.5,
   "7:8": 6,
   "8:8": 8,
+};
+const MAX_CAP_MULTIPLIERS: Record<string, number> = {
+  "1:1": 2,
+  "1:2": 1.5,
+  "2:2": 3,
+  "1:3": 1.5,
+  "2:3": 2.25,
+  "3:3": 6,
+  "1:4": 1.5,
+  "2:4": 2,
+  "3:4": 4,
+  "4:4": 10,
+  "1:5": 1.5,
+  "2:5": 2,
+  "3:5": 4,
+  "4:5": 10,
+  "5:5": 12,
+  "1:6": 1.5,
+  "2:6": 2,
+  "3:6": 4,
+  "4:6": 10,
+  "5:6": 12,
+  "6:6": 14,
+  "1:7": 1.5,
+  "2:7": 2,
+  "3:7": 4,
+  "4:7": 10,
+  "5:7": 12,
+  "6:7": 14,
+  "7:7": 16,
+  "1:8": 1.5,
+  "2:8": 2,
+  "3:8": 4,
+  "4:8": 10,
+  "5:8": 12,
+  "6:8": 14,
+  "7:8": 16,
+  "8:8": 19,
 };
 const BOARD_TILE_SIZE = 4;
 const BOARD_TILE_RADIUS = BOARD_TILE_SIZE / 2;
@@ -533,9 +578,15 @@ function App() {
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
   const ventureRequest =
     clientState.pendingRequest?.type === "CHOOSE_VENTURE_CELL" ? clientState.pendingRequest : null;
+  const stockRequest =
+    clientState.pendingRequest &&
+    ["BUY_STOCK", "SELL_STOCK", "LIQUIDATION"].includes(clientState.pendingRequest.type)
+      ? clientState.pendingRequest
+      : null;
   const activePresentation = clientState.presentations[0] ?? null;
   const blockingPresentationActive = activePresentation !== null;
-  const standardKeyboardRequest = ventureRequest || blockingPresentationActive ? null : clientState.pendingRequest;
+  const standardKeyboardRequest =
+    ventureRequest || stockRequest || blockingPresentationActive ? null : clientState.pendingRequest;
   useWasdPromptControls(clientState.responsePending ? null : standardKeyboardRequest, submitResponse);
 
   const currentPlayer = clientState.gameState
@@ -641,18 +692,28 @@ function App() {
                 latestEvent={latestEvent}
                 gameOverWinner={clientState.gameOverWinner}
               />
-              <PromptPanel
-                request={clientState.pendingRequest}
-                onSubmit={submitResponse}
-                connected={clientState.status === "connected"}
-                responsePending={clientState.responsePending}
-              />
+              {!stockRequest && (
+                <PromptPanel
+                  request={clientState.pendingRequest}
+                  onSubmit={submitResponse}
+                  connected={clientState.status === "connected"}
+                  responsePending={clientState.responsePending}
+                />
+              )}
               <SquarePanel square={focusSquare} state={clientState.gameState} />
             </aside>
           </section>
           {ventureRequest && (
             <VentureGridOverlay
               request={ventureRequest}
+              responsePending={clientState.responsePending}
+              onSubmit={submitResponse}
+            />
+          )}
+          {stockRequest && (
+            <StockOverlay
+              request={stockRequest}
+              state={clientState.gameState}
               responsePending={clientState.responsePending}
               onSubmit={submitResponse}
             />
@@ -1525,6 +1586,25 @@ function currentShopRent(state: GameState, square: SquareInfo): number {
   );
 }
 
+function remainingShopCapital(state: GameState, square: SquareInfo): number {
+  if (
+    square.property_owner === null ||
+    square.shop_base_value === null ||
+    square.shop_current_value === null ||
+    square.property_district === null
+  ) {
+    return 0;
+  }
+  const numTotal = countDistrictShops(state, square.property_district);
+  const numOwned = countOwnedDistrictShops(
+    state,
+    square.property_district,
+    square.property_owner,
+  );
+  const multiplier = MAX_CAP_MULTIPLIERS[`${numOwned}:${numTotal}`] ?? 1;
+  return Math.max(0, Math.floor(multiplier * square.shop_base_value - square.shop_current_value));
+}
+
 function rawGold(value: number | null | undefined): string {
   if (value === null || value === undefined) {
     return "-";
@@ -2119,6 +2199,445 @@ function VentureGridOverlay({
             ))}
           </div>
         </aside>
+      </div>
+    </section>
+  );
+}
+
+function StockOverlay({
+  request,
+  state,
+  responsePending,
+  onSubmit,
+}: {
+  request: InputRequest;
+  state: GameState;
+  responsePending: boolean;
+  onSubmit: (value: unknown) => void;
+}) {
+  const mode: StockOverlayMode =
+    request.type === "BUY_STOCK"
+      ? "buy"
+      : request.type === "SELL_STOCK"
+        ? "sell"
+        : "liquidate";
+  const player = state.players.find((candidate) => candidate.player_id === request.player_id) ?? null;
+  const liquidationOptions = asRecord(request.data.options);
+  const liquidationStocks = asRecord(liquidationOptions.stock);
+  const liquidationShops = asArray(liquidationOptions.shops).map(asRecord);
+  const buyStocks = asArray(request.data.stocks).map(asRecord);
+  const sellHoldings = asRecord(request.data.holdings);
+  const promptPriceByDistrict = new Map<number, number>();
+  const maximumByDistrict = new Map<number, number>();
+  const cash = asNumber(request.data.cash, player?.ready_cash ?? 0);
+  const cashDeficit = asNumber(liquidationOptions.cash_deficit, Math.max(0, -cash));
+
+  if (mode === "buy") {
+    buyStocks.forEach((stock) => {
+      const districtId = asNumber(stock.district_id, -1);
+      const price = asNumber(stock.price);
+      if (districtId >= 0) {
+        promptPriceByDistrict.set(districtId, price);
+        maximumByDistrict.set(districtId, maxBuyQuantity(cash, price));
+      }
+    });
+  } else if (mode === "sell") {
+    Object.entries(sellHoldings).forEach(([districtKey, rawHolding]) => {
+      const districtId = Number(districtKey);
+      const holding = asRecord(rawHolding);
+      promptPriceByDistrict.set(districtId, asNumber(holding.price));
+      maximumByDistrict.set(districtId, asNumber(holding.quantity));
+    });
+  } else {
+    Object.entries(liquidationStocks).forEach(([districtKey, rawHolding]) => {
+      const districtId = Number(districtKey);
+      const holding = asRecord(rawHolding);
+      promptPriceByDistrict.set(districtId, asNumber(holding.price_per_share));
+      maximumByDistrict.set(districtId, asNumber(holding.quantity));
+    });
+  }
+
+  const districts = [...state.stock.stocks].sort(
+    (left, right) => left.district_id - right.district_id,
+  );
+  const firstLiquidationShopDistrict = liquidationShops
+    .map((shop) => asNumber(shop.district, -1))
+    .find((districtId) => districtId >= 0);
+  const firstDistrictId =
+    districts.find((stock) => (maximumByDistrict.get(stock.district_id) ?? 0) > 0)?.district_id ??
+    firstLiquidationShopDistrict ??
+    districts[0]?.district_id ??
+    0;
+  const requestKey = `${request.type}:${request.player_id}:${[...maximumByDistrict.entries()].map(([id, maximum]) => `${id}-${maximum}`).join("|")}`;
+  const [selectedDistrictId, setSelectedDistrictId] = useState(firstDistrictId);
+  const [quantity, setQuantity] = useState(1);
+  const submittedRef = useRef(false);
+  const overlayRef = useRef<HTMLElement | null>(null);
+
+  const selectedStock =
+    districts.find((stock) => stock.district_id === selectedDistrictId) ?? districts[0] ?? null;
+  const selectedPrice = selectedStock
+    ? (promptPriceByDistrict.get(selectedStock.district_id) ?? stockPrice(selectedStock))
+    : 0;
+  const selectedMaximum = selectedStock
+    ? (maximumByDistrict.get(selectedStock.district_id) ?? 0)
+    : 0;
+  const normalizedQuantity = clampStockQuantity(quantity, selectedMaximum);
+  const transactionTotal = selectedPrice * normalizedQuantity;
+  const cashAfter = mode === "buy" ? cash - transactionTotal : cash + transactionTotal;
+  const deficitAfter = Math.max(0, cashDeficit - transactionTotal);
+  const selectedShops = state.board.squares.filter(
+    (square) =>
+      square.type === "SHOP" && square.property_district === selectedStock?.district_id,
+  );
+  const selectedHolding = player?.owned_stock[String(selectedStock?.district_id ?? -1)] ?? 0;
+  const liquidatableShopValues = new Map(
+    liquidationShops.map((shop) => [asNumber(shop.square_id, -1), asNumber(shop.sell_value)]),
+  );
+  const canSubmitStock =
+    selectedStock !== null &&
+    selectedMaximum > 0 &&
+    normalizedQuantity > 0 &&
+    !responsePending &&
+    !submittedRef.current;
+
+  function selectDistrict(districtId: number) {
+    const stock = districts.find((candidate) => candidate.district_id === districtId);
+    if (!stock) {
+      return;
+    }
+    const price = promptPriceByDistrict.get(districtId) ?? stockPrice(stock);
+    const maximum = maximumByDistrict.get(districtId) ?? 0;
+    setSelectedDistrictId(districtId);
+    setQuantity(defaultStockQuantity(mode, maximum, price, cashDeficit));
+  }
+
+  function submitStock() {
+    if (!canSubmitStock || selectedStock === null) {
+      return;
+    }
+    submittedRef.current = true;
+    onSubmit(
+      mode === "liquidate"
+        ? ["stock", selectedStock.district_id, normalizedQuantity]
+        : [selectedStock.district_id, normalizedQuantity],
+    );
+  }
+
+  function submitShop(squareId: number) {
+    if (
+      mode !== "liquidate" ||
+      !liquidatableShopValues.has(squareId) ||
+      responsePending ||
+      submittedRef.current
+    ) {
+      return;
+    }
+    submittedRef.current = true;
+    onSubmit(["shop", squareId, 0]);
+  }
+
+  function cancel() {
+    if (mode === "liquidate" || responsePending || submittedRef.current) {
+      return;
+    }
+    submittedRef.current = true;
+    onSubmit(null);
+  }
+
+  useEffect(() => {
+    submittedRef.current = false;
+    setSelectedDistrictId(firstDistrictId);
+    const firstStock = districts.find((stock) => stock.district_id === firstDistrictId);
+    const price = firstStock
+      ? (promptPriceByDistrict.get(firstDistrictId) ?? stockPrice(firstStock))
+      : 0;
+    setQuantity(
+      defaultStockQuantity(
+        mode,
+        maximumByDistrict.get(firstDistrictId) ?? 0,
+        price,
+        cashDeficit,
+      ),
+    );
+    window.requestAnimationFrame(() => overlayRef.current?.focus());
+  }, [requestKey]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        responsePending ||
+        submittedRef.current ||
+        isTypingTarget(event.target)
+      ) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      const currentIndex = districts.findIndex(
+        (stock) => stock.district_id === selectedDistrictId,
+      );
+      if (["w", "arrowup", "s", "arrowdown"].includes(key) && districts.length > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        const direction = key === "w" || key === "arrowup" ? -1 : 1;
+        const nextIndex = (currentIndex + direction + districts.length) % districts.length;
+        selectDistrict(districts[nextIndex].district_id);
+        return;
+      }
+      if (["a", "arrowleft", "d", "arrowright"].includes(key)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const direction = key === "a" || key === "arrowleft" ? -1 : 1;
+        setQuantity((current) => clampStockQuantity(current + direction, selectedMaximum));
+        return;
+      }
+      if ((key === "enter" || key === " ") && !event.repeat) {
+        event.preventDefault();
+        event.stopPropagation();
+        submitStock();
+        return;
+      }
+      if (key === "escape" && mode !== "liquidate") {
+        event.preventDefault();
+        event.stopPropagation();
+        cancel();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [
+    districts,
+    mode,
+    responsePending,
+    selectedDistrictId,
+    selectedMaximum,
+    normalizedQuantity,
+  ]);
+
+  const title = mode === "buy" ? "Buy Stock" : mode === "sell" ? "Sell Stock" : "Raise Cash";
+  const instruction =
+    mode === "buy"
+      ? "Choose a district and purchase amount."
+      : mode === "sell"
+        ? "Choose a district and the shares to sell."
+        : `Sell assets until your cash is nonnegative. ${formatGold(cashDeficit)} still needed.`;
+  const primaryLabel =
+    mode === "buy"
+      ? `Buy ${normalizedQuantity}`
+      : mode === "sell"
+        ? `Sell ${normalizedQuantity}`
+        : `Sell ${normalizedQuantity} shares`;
+
+  return (
+    <section
+      ref={overlayRef}
+      className={`stock-overlay stock-mode-${mode} ${responsePending ? "is-resolving" : ""}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="stock-overlay-title"
+      aria-busy={responsePending}
+      tabIndex={-1}
+    >
+      <div className="stock-overlay-shell">
+        <header className="stock-overlay-header">
+          <div>
+            <p className="eyebrow">Stock Exchange</p>
+            <h2 id="stock-overlay-title">{title}</h2>
+            <p>{instruction}</p>
+          </div>
+          <div className="stock-player-summary">
+            <span className="player-token large" style={{ background: getPlayerColor(request.player_id) }}>
+              {request.player_id}
+            </span>
+            <dl>
+              <div><dt>Stocks</dt><dd>{Object.values(player?.owned_stock ?? {}).reduce((sum, held) => sum + held, 0)}</dd></div>
+              <div><dt>Ready cash</dt><dd>{formatGold(cash)}</dd></div>
+            </dl>
+          </div>
+        </header>
+
+        <div className="stock-overlay-main">
+          <div className="stock-market-panel">
+            <div
+              className="stock-district-table"
+              style={{ "--stock-player-count": Math.max(1, state.players.length) } as CSSProperties}
+              role="table"
+              aria-label="District stock market"
+            >
+              <div className="stock-district-header" role="row">
+                <span>District</span>
+                <span>Price</span>
+                {state.players.map((marketPlayer) => (
+                  <span key={marketPlayer.player_id} style={{ color: getPlayerColor(marketPlayer.player_id) }}>
+                    P{marketPlayer.player_id}
+                  </span>
+                ))}
+                <span>Shop value</span>
+              </div>
+              {districts.map((stock) => {
+                const districtId = stock.district_id;
+                const maximum = maximumByDistrict.get(districtId) ?? 0;
+                const selected = districtId === selectedStock?.district_id;
+                const shops = state.board.squares.filter(
+                  (square) => square.type === "SHOP" && square.property_district === districtId,
+                );
+                const shopValue = shops.reduce(
+                  (sum, shop) => sum + (shop.shop_current_value ?? shop.shop_base_value ?? 0),
+                  0,
+                );
+                return (
+                  <button
+                    key={districtId}
+                    type="button"
+                    className={`stock-district-row ${selected ? "is-selected" : ""} ${maximum <= 0 ? "is-unavailable" : ""}`}
+                    style={{ "--district-color": getDistrictColor(districtId) } as CSSProperties}
+                    role="row"
+                    aria-selected={selected}
+                    onClick={() => selectDistrict(districtId)}
+                  >
+                    <strong>{districtLabel(districtId)}</strong>
+                    <span>{formatGold(promptPriceByDistrict.get(districtId) ?? stockPrice(stock))}</span>
+                    {state.players.map((marketPlayer) => {
+                      const held = marketPlayer.owned_stock[String(districtId)] ?? 0;
+                      return <span key={marketPlayer.player_id}>{held > 0 ? held : "—"}</span>;
+                    })}
+                    <span>{formatGold(shopValue)}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <section className="stock-shop-section" aria-label="Selected district shops">
+              <header>
+                <div>
+                  <p className="eyebrow">Selected district</p>
+                  <h3>{selectedStock ? districtLabel(selectedStock.district_id) : "No district"}</h3>
+                </div>
+                <span>{selectedShops.length} shops</span>
+              </header>
+              <div className="stock-shop-strip">
+                {selectedShops.map((shop) => {
+                  const saleValue = liquidatableShopValues.get(shop.id);
+                  const ownerColor =
+                    shop.property_owner === null ? "#70747d" : getPlayerColor(shop.property_owner);
+                  return (
+                    <article
+                      key={shop.id}
+                      className="stock-shop-card"
+                      style={{ "--shop-owner-color": ownerColor } as CSSProperties}
+                    >
+                      <div className="stock-shop-owner">
+                        <span>Shop #{shop.id}</span>
+                        <strong>{shop.property_owner === null ? "Unowned" : `Player ${shop.property_owner}`}</strong>
+                      </div>
+                      <dl>
+                        <div><dt>Value</dt><dd>{formatGold(shop.shop_current_value ?? shop.shop_base_value)}</dd></div>
+                        <div><dt>Rent</dt><dd>{formatGold(currentShopRent(state, shop))}</dd></div>
+                        <div>
+                          <dt>Max capital</dt>
+                          <dd>
+                            {shop.property_owner === null
+                              ? "—"
+                              : formatGold(remainingShopCapital(state, shop))}
+                          </dd>
+                        </div>
+                      </dl>
+                      {mode === "liquidate" && saleValue !== undefined && (
+                        <button
+                          type="button"
+                          disabled={responsePending || submittedRef.current}
+                          onClick={() => submitShop(shop.id)}
+                        >
+                          Sell shop for {formatGold(saleValue)}
+                        </button>
+                      )}
+                    </article>
+                  );
+                })}
+                {selectedShops.length === 0 && <p className="muted">This district has no shops.</p>}
+              </div>
+            </section>
+          </div>
+
+          <aside className="stock-transaction-panel">
+            <div className="stock-selection-summary">
+              <span>Selected</span>
+              <strong>{selectedStock ? districtLabel(selectedStock.district_id) : "—"}</strong>
+              <p>{formatGold(selectedPrice)} per share · You hold {selectedHolding}</p>
+            </div>
+
+            <div className="stock-quantity-control">
+              <span>{mode === "buy" ? "Purchase amount" : "Sale amount"}</span>
+              <div>
+                <button
+                  type="button"
+                  aria-label="Decrease stock quantity"
+                  disabled={selectedMaximum <= 0}
+                  onClick={() => setQuantity((current) => clampStockQuantity(current - 1, selectedMaximum))}
+                >−</button>
+                <input
+                  aria-label="Stock quantity"
+                  type="number"
+                  min={selectedMaximum > 0 ? 1 : 0}
+                  max={selectedMaximum}
+                  step="1"
+                  value={normalizedQuantity}
+                  onChange={(event) =>
+                    setQuantity(clampStockQuantity(Number(event.target.value), selectedMaximum))
+                  }
+                />
+                <button
+                  type="button"
+                  aria-label="Increase stock quantity"
+                  disabled={selectedMaximum <= 0}
+                  onClick={() => setQuantity((current) => clampStockQuantity(current + 1, selectedMaximum))}
+                >+</button>
+              </div>
+              <button
+                type="button"
+                className="secondary stock-max-button"
+                disabled={selectedMaximum <= 0}
+                onClick={() => setQuantity(selectedMaximum)}
+              >
+                Max {selectedMaximum}
+              </button>
+            </div>
+
+            <dl className="stock-transaction-math">
+              <div><dt>Stock price</dt><dd>{formatGold(selectedPrice)}</dd></div>
+              <div><dt>{mode === "buy" ? "Purchase total" : "Sale proceeds"}</dt><dd>{formatGold(transactionTotal)}</dd></div>
+              <div><dt>Ready cash</dt><dd>{formatGold(cash)} → <strong>{formatGold(cashAfter)}</strong></dd></div>
+              {mode === "liquidate" && (
+                <div className={deficitAfter === 0 ? "is-covered" : "is-deficit"}>
+                  <dt>Still needed</dt><dd>{formatGold(deficitAfter)}</dd>
+                </div>
+              )}
+            </dl>
+
+            <button
+              type="button"
+              className="stock-confirm-button"
+              disabled={!canSubmitStock}
+              onClick={submitStock}
+            >
+              {responsePending || submittedRef.current ? "Resolving..." : primaryLabel}
+            </button>
+            {mode !== "liquidate" && (
+              <button type="button" className="secondary" onClick={cancel}>
+                Cancel
+              </button>
+            )}
+            <div className="stock-keyboard-help">
+              <p><strong>W/S or ↑/↓</strong> district</p>
+              <p><strong>A/D or ←/→</strong> quantity</p>
+              <p><strong>Enter</strong> confirm{mode !== "liquidate" ? " · Esc cancel" : ""}</p>
+            </div>
+          </aside>
+        </div>
       </div>
     </section>
   );

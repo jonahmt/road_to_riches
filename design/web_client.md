@@ -253,6 +253,27 @@ After WASD/arrow navigation begins, stale focus and stationary pointer hover are
 cleared so only the current keyboard cursor remains highlighted. Pointer hover
 feedback returns only after the mouse physically moves again.
 
+`BUY_STOCK`, `SELL_STOCK`, and stock-related `LIQUIDATION` prompts open one
+shared full-screen Stock Exchange overlay. Its primary table keeps districts in
+stable rows with current price, one holdings column per player, and aggregate
+district shop value. Rows that are unavailable for the current transaction stay
+visible for context but cannot produce a transaction. Selecting any row reveals
+all shops in that district in a lower strip with owner color, current value,
+current rent, and remaining capital capacity.
+
+The transaction sidebar provides minus/plus, direct numeric entry, and Max
+controls; it previews total cost or proceeds and resulting ready cash before
+submission. Buy and voluntary-sell modes allow cancellation, while liquidation
+does not and additionally reports the remaining deficit. Liquidation shop
+options appear on the same district shop cards and submit the canonical
+`["shop", square_id, 0]` response; stock transactions submit
+`["stock", district_id, quantity]`. Ordinary buy/sell submissions retain their
+canonical `[district_id, quantity]` shape. W/S or vertical arrows change the
+district, A/D or horizontal arrows adjust quantity, Enter confirms, and Escape
+cancels only optional transactions. All legal constraints remain sourced from
+the active server prompt, while display-only market and shop context is derived
+from authoritative `state_sync` data.
+
 After a successful claim, the backend draws the card and pauses on a
 `venture_card_revealed` presentation barrier before executing its script. The
 browser queues the presentation and shows its name and description in a centered

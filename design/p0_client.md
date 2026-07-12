@@ -150,3 +150,9 @@ The border for each player’s box should be their color.
 ## (P0.5) Stock market view
 
 When a player inputs a command to buy, sell, or view stocks, an overlay table must appear, temporarily covering the Game View. As defined in the Gameplay Spec, this table must have Players across the top (columns) and Districts along the left (rows), with the current Stock Price next to the District name. The intersecting cells display the number of stocks that player owns in that district.
+
+Selecting a district exposes every shop in that district beneath the table. Each
+shop summary identifies its owner and shows current value, rent, and remaining
+capital capacity. Buy, voluntary sell, and forced-liquidation stock decisions
+reuse this same view, changing only legal districts, quantity bounds,
+transaction math, and whether cancellation is allowed.
