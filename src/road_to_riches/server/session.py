@@ -31,8 +31,8 @@ class PlayerAlreadyConnectedError(SessionError):
     """Raised when a player slot already has a connected client."""
 
 
-DEFAULT_AI_DELAY = 0.25
-DEFAULT_AI_PRESENTATION_DELAY = 1.0
+DEFAULT_AI_DELAY = 0.3375
+DEFAULT_AI_PRESENTATION_DELAY = 1.35
 
 
 @dataclass

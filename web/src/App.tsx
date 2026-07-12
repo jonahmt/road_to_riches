@@ -17,6 +17,7 @@ import {
   type SquareInfo,
   stockPrice,
 } from "./protocol";
+import { adjacentStepAnimationDuration } from "./cameraTiming";
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
@@ -82,7 +83,6 @@ const MIN_BOARD_ZOOM = 0.5;
 const MAX_BOARD_ZOOM = 3;
 const FOLLOW_VISIBLE_TILE_WIDTHS = 6;
 const FOLLOW_CAMERA_ANIMATION_MS = 360;
-const ADJACENT_STEP_ANIMATION_MS = 100;
 const PLAYER_TOKEN_RADIUS = 0.34;
 const ACTIVE_PLAYER_TOKEN_RADIUS = 0.95;
 const BOARD_ZOOM_STEP = 0.25;
@@ -625,6 +625,7 @@ function App() {
           <section className="game-layout">
             <BoardPanel
               state={clientState.gameState}
+              assignedPlayerId={clientState.playerId}
               dice={clientState.dice}
               showDice={isRollingOrMoving}
               selectedSquare={selectedSquare}
@@ -827,12 +828,14 @@ function StatusPill({
 
 function BoardPanel({
   state,
+  assignedPlayerId,
   dice,
   showDice,
   selectedSquare,
   onSelectSquare,
 }: {
   state: GameState | null;
+  assignedPlayerId: number | null;
   dice: DiceState | null;
   showDice: boolean;
   selectedSquare: SquareInfo | null;
@@ -872,9 +875,11 @@ function BoardPanel({
     );
     return {
       curve: (isAdjacentActiveMove ? "linear" : "cubic") as BoardAnimationCurve,
-      duration: isAdjacentActiveMove ? ADJACENT_STEP_ANIMATION_MS : FOLLOW_CAMERA_ANIMATION_MS,
+      duration: isAdjacentActiveMove
+        ? adjacentStepAnimationDuration(activePlayer?.player_id ?? -1, assignedPlayerId)
+        : FOLLOW_CAMERA_ANIMATION_MS,
     };
-  }, [activePlayer?.player_id, activeSquare?.id]);
+  }, [activePlayer?.player_id, activeSquare?.id, assignedPlayerId]);
   const automaticAnimationCurve = automaticAnimation.curve;
   const automaticAnimationDuration = automaticAnimation.duration;
   const playerTokens = useMemo(() => getBoardPlayerTokens(state), [state]);

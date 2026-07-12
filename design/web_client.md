@@ -201,10 +201,12 @@ input again.
 Automatic Follow-camera changes default to a 360-millisecond cubic ease-in-out
 curve. Turn changes, returning from Free Cam, and other automatic reframing use
 that default. A same-player move between two squares connected by a board
-waypoint overrides it with a fast 100-millisecond linear transition for both the
-camera and player token. This keeps ordinary step-by-step movement direct while
-reserving eased motion for broader framing changes. The initial board framing is
-immediate. If another follow target arrives during an animation, the camera
+waypoint overrides it with a fast linear transition for both the camera and
+player token. Locally controlled movement uses 100 milliseconds; AI movement in
+the default single-human web game uses 135 milliseconds, 35% longer than the
+earlier shared timing. This keeps ordinary step-by-step movement direct while
+reserving eased motion for broader framing changes. The initial board framing
+is immediate. If another follow target arrives during an animation, the camera
 retargets from its current interpolated position; entering Free Cam cancels the
 animation and leaves the camera at that position for manual control.
 

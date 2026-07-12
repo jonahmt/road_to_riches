@@ -54,6 +54,13 @@ def test_ai_does_not_respond_to_other_players_requests():
     assert ai.response_message(req) is None
 
 
+def test_standalone_ai_defaults_are_thirty_five_percent_slower():
+    ai = BasicAIClient(player_id=1)
+
+    assert ai.delay == 0.675
+    assert ai.presentation_delay == 1.35
+
+
 def test_ai_acknowledges_only_its_own_presentation(monkeypatch):
     sleeps: list[float] = []
     monkeypatch.setattr("road_to_riches.ai.basic.client.time.sleep", sleeps.append)

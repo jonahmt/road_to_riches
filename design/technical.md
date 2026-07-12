@@ -444,14 +444,18 @@ independently of other sessions. The local launcher still uses the default
 session path for compatibility.
 
 Hosted games expose ordinary AI response pacing through `--ai-delay`. The
-default is 0.25 seconds per AI response, including each path-selection step, so
-automated movement remains readable without pausing for a full second between
-squares. Presentation barriers use a separate `--ai-presentation-delay`, which
-defaults to 1 second before the owning AI acknowledges and releases the barrier.
-This gives major readable events a visible pause without slowing routine play.
-Launchers and server/session fallbacks share both defaults, while explicit flags
-or the `ai_delay` and `ai_presentation_delay` lobby session values can override
-them independently.
+default is 0.3375 seconds per AI response, including each path-selection step.
+This is 35% longer than the earlier 0.25-second pacing. Presentation barriers
+use a separate `--ai-presentation-delay`, now 1.35 seconds by default—also 35%
+longer than its earlier 1-second value—before the owning AI acknowledges and
+releases the barrier. Launchers and server/session fallbacks share both
+defaults, while explicit flags or the `ai_delay` and `ai_presentation_delay`
+lobby session values can override them independently.
+
+The standalone Basic AI client retains its deliberately slower baseline than a
+server-spawned match, but that baseline is also 35% longer: 0.675 seconds rather
+than 0.5 seconds when no `--delay` is supplied directly. Its standalone
+presentation default is likewise 1.35 seconds.
 
 Lobby discovery is also socket-driven. Clients send `list_games` and receive
 `games_list` summaries for public sessions that have not started or finished.

@@ -8,7 +8,7 @@ script is interrupted), the server is terminated.
 All configuration is via flags - no positional args:
 
     ./play.sh
-    ./play.sh --ai-delay=0.25
+    ./play.sh --ai-delay=0.3375
     ./play.sh --board=boards/large_test_board.json --humans=1 --ai=3
     ./play.sh --diagnostic-log=/tmp/road_to_riches_game.jsonl
     ./play.sh --resume
@@ -26,8 +26,8 @@ import sys
 import time
 from typing import IO
 
-DEFAULT_AI_DELAY = 0.25
-DEFAULT_AI_PRESENTATION_DELAY = 1.0
+DEFAULT_AI_DELAY = 0.3375
+DEFAULT_AI_PRESENTATION_DELAY = 1.35
 
 
 def _wait_for_port(host: str, port: int, timeout: float = 5.0) -> bool:

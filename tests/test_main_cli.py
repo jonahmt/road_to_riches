@@ -14,7 +14,7 @@ from road_to_riches.main import (
 def test_server_ai_delay_defaults_to_fast_pacing():
     config = parse_run_config(["server"])
 
-    assert config.ai_delay == DEFAULT_AI_DELAY == 0.25
+    assert config.ai_delay == DEFAULT_AI_DELAY == 0.3375
 
 
 def test_server_ai_delay_accepts_explicit_override():
@@ -23,10 +23,10 @@ def test_server_ai_delay_accepts_explicit_override():
     assert config.ai_delay == 0.1
 
 
-def test_server_ai_presentation_delay_defaults_to_one_second():
+def test_server_ai_presentation_delay_defaults_to_slower_pacing():
     config = parse_run_config(["server"])
 
-    assert config.ai_presentation_delay == DEFAULT_AI_PRESENTATION_DELAY == 1.0
+    assert config.ai_presentation_delay == DEFAULT_AI_PRESENTATION_DELAY == 1.35
 
 
 def test_server_ai_presentation_delay_accepts_explicit_override():

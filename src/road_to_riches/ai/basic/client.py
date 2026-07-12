@@ -48,7 +48,8 @@ AUCTION_BID_MULTIPLIER = 3
 
 # Presentation barriers are major, readable moments and use slower pacing than
 # ordinary AI decisions and adjacent movement.
-DEFAULT_PRESENTATION_DELAY = 1.0
+DEFAULT_RESPONSE_DELAY = 0.675
+DEFAULT_PRESENTATION_DELAY = 1.35
 
 
 class BasicAIClient:
@@ -61,7 +62,7 @@ class BasicAIClient:
     def __init__(
         self,
         player_id: int,
-        delay: float = 0.5,
+        delay: float = DEFAULT_RESPONSE_DELAY,
         presentation_delay: float = DEFAULT_PRESENTATION_DELAY,
     ) -> None:
         self.player_id = player_id
@@ -532,7 +533,7 @@ async def run(
     host: str,
     port: int,
     player_id: int,
-    delay: float = 0.5,
+    delay: float = DEFAULT_RESPONSE_DELAY,
     game_id: str | None = None,
     presentation_delay: float = DEFAULT_PRESENTATION_DELAY,
 ) -> None:
@@ -595,7 +596,12 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--player-id", type=int, required=True)
     parser.add_argument("--game-id", default=None)
-    parser.add_argument("--delay", type=float, default=0.5, help="Response delay in seconds")
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=DEFAULT_RESPONSE_DELAY,
+        help=f"Response delay in seconds (default {DEFAULT_RESPONSE_DELAY})",
+    )
     parser.add_argument(
         "--presentation-delay",
         type=float,

@@ -8,8 +8,8 @@ from dataclasses import dataclass
 
 DEFAULT_BOARD = "boards/test_board.json"
 DEFAULT_PLAYERS = 4
-DEFAULT_AI_DELAY = 0.25
-DEFAULT_AI_PRESENTATION_DELAY = 1.0
+DEFAULT_AI_DELAY = 0.3375
+DEFAULT_AI_PRESENTATION_DELAY = 1.35
 
 
 @dataclass(frozen=True)
