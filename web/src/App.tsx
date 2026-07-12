@@ -84,6 +84,7 @@ const MAX_BOARD_ZOOM = 3;
 const FOLLOW_BOARD_ZOOM = 1.5;
 const FOLLOW_CAMERA_ANIMATION_MS = 360;
 const ADJACENT_STEP_ANIMATION_MS = 160;
+const SOFT_FOLLOW_SAFE_ZONE_RATIO = 0.68;
 const PLAYER_TOKEN_RADIUS = 0.34;
 const ACTIVE_PLAYER_TOKEN_RADIUS = 0.95;
 const BOARD_ZOOM_STEP = 0.25;
@@ -191,6 +192,36 @@ function centeredBoardCamera(
     minX: center.x - bounds.width / zoom / 2,
     minY: center.y - bounds.height / zoom / 2,
   };
+}
+
+function softFollowBoardCamera(
+  camera: BoardCamera,
+  bounds: BoardBounds,
+  position: { x: number; y: number },
+): BoardCamera {
+  const width = bounds.width / camera.zoom;
+  const height = bounds.height / camera.zoom;
+  const horizontalInset = (width * (1 - SOFT_FOLLOW_SAFE_ZONE_RATIO)) / 2;
+  const verticalInset = (height * (1 - SOFT_FOLLOW_SAFE_ZONE_RATIO)) / 2;
+  const safeMinX = camera.minX + horizontalInset;
+  const safeMaxX = camera.minX + width - horizontalInset;
+  const safeMinY = camera.minY + verticalInset;
+  const safeMaxY = camera.minY + height - verticalInset;
+  let minX = camera.minX;
+  let minY = camera.minY;
+
+  if (position.x < safeMinX) {
+    minX -= safeMinX - position.x;
+  } else if (position.x > safeMaxX) {
+    minX += position.x - safeMaxX;
+  }
+  if (position.y < safeMinY) {
+    minY -= safeMinY - position.y;
+  } else if (position.y > safeMaxY) {
+    minY += position.y - safeMaxY;
+  }
+
+  return { ...camera, minX, minY };
 }
 
 function easeInOutCubic(progress: number): number {
@@ -649,6 +680,7 @@ function App() {
               state={clientState.gameState}
               dice={clientState.dice}
               showDice={layoutMode === "classic" || isRollingOrMoving}
+              movementActive={isRollingOrMoving}
               selectedSquare={selectedSquare}
               onSelectSquare={setSelectedSquareId}
             />
@@ -829,12 +861,14 @@ function BoardPanel({
   state,
   dice,
   showDice,
+  movementActive,
   selectedSquare,
   onSelectSquare,
 }: {
   state: GameState | null;
   dice: DiceState | null;
   showDice: boolean;
+  movementActive: boolean;
   selectedSquare: SquareInfo | null;
   onSelectSquare: (squareId: number) => void;
 }) {
@@ -871,10 +905,12 @@ function BoardPanel({
         areBoardSquaresAdjacent(state, previous.squareId, activeSquare.id),
     );
     return {
+      isAdjacentActiveMove,
       curve: (isAdjacentActiveMove ? "linear" : "cubic") as BoardAnimationCurve,
       duration: isAdjacentActiveMove ? ADJACENT_STEP_ANIMATION_MS : FOLLOW_CAMERA_ANIMATION_MS,
     };
-  }, [activePlayer?.player_id, activeSquare?.id]);
+  }, [activePlayer?.player_id, activeSquare?.id, movementActive]);
+  const isAdjacentActiveMove = automaticAnimation.isAdjacentActiveMove;
   const automaticAnimationCurve = automaticAnimation.curve;
   const automaticAnimationDuration = automaticAnimation.duration;
   const playerTokens = useMemo(() => getBoardPlayerTokens(state), [state]);
@@ -904,7 +940,10 @@ function BoardPanel({
       const center = activeSquare
         ? { x: activeSquare.position[0], y: activeSquare.position[1] }
         : { x: boardBounds.minX + boardBounds.width / 2, y: boardBounds.minY + boardBounds.height / 2 };
-      const target = centeredBoardCamera(boardBounds, FOLLOW_BOARD_ZOOM, center);
+      const target =
+        movementActive && isAdjacentActiveMove
+          ? softFollowBoardCamera(cameraRef.current, boardBounds, center)
+          : centeredBoardCamera(boardBounds, FOLLOW_BOARD_ZOOM, center);
       const from = { ...cameraRef.current };
       const shouldAnimate =
         cameraReadyRef.current &&
@@ -953,7 +992,15 @@ function BoardPanel({
       }
       svg.dataset.cameraAnimating = "false";
     };
-  }, [activePositionKey, boundsKey, cameraMode, automaticAnimationCurve, automaticAnimationDuration]);
+  }, [
+    activePositionKey,
+    boundsKey,
+    cameraMode,
+    automaticAnimationCurve,
+    automaticAnimationDuration,
+    isAdjacentActiveMove,
+    movementActive,
+  ]);
 
   useEffect(() => {
     const canvas = boardCanvasRef.current;

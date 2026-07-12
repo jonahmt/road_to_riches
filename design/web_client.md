@@ -193,24 +193,31 @@ in a short resolving state until the backend sends the next prompt or error.
 This avoids transient idle-panel swaps and browser scroll anchoring adjustments
 that would make the board appear to flicker vertically during keyboard input.
 
-The board camera has follow and free modes. Follow mode is the default: it uses a
-fixed 150% zoom and keeps the active turn player's current square at the center
-of the view as that player moves or turn ownership changes. Its only camera
-control is a `Free Cam` button in the lower-right. Free mode begins from the
-current followed framing and enables cursor-centered mouse-wheel zoom from 50%
-to 300%, primary-button drag panning, and compact minus, reset, plus, and follow
-controls. Reset returns free mode to the original fitted board; Follow returns to
-the 150% active-player view and locks manual camera input again.
+The board camera has follow and free modes. Follow mode is the default and uses a
+fixed 150% zoom. It centers the active player for initial framing, turn changes,
+returning from Free Cam, and the end of a roll. During ordinary adjacent-square
+movement, the camera instead uses soft follow: the player token moves inside a
+stationary frame while it remains within the central 68% safe zone. If the token
+would leave that zone, the camera moves only far enough to keep it inside. This
+substantially reduces repeated movement of board labels while preserving
+automatic tracking. Follow mode's only camera control is a `Free Cam` button in
+the lower-right. Free mode begins from the current followed framing and enables
+cursor-centered mouse-wheel zoom from 50% to 300%, primary-button drag panning,
+and compact minus, reset, plus, and follow controls. Reset returns free mode to
+the original fitted board; Follow returns to the 150% active-player view and
+locks manual camera input again.
 
 Automatic Follow-camera changes default to a 360-millisecond cubic ease-in-out
-curve. Turn changes, returning from Free Cam, and other automatic reframing use
-that default. A same-player move between two squares connected by a board
-waypoint overrides it with a fast 160-millisecond linear transition for both the
-camera and player token. This keeps ordinary step-by-step movement direct while
-reserving eased motion for broader framing changes. The initial board framing is
-immediate. If another follow target arrives during an animation, the camera
-retargets from its current interpolated position; entering Free Cam cancels the
-animation and leaves the camera at that position for manual control.
+curve. Turn changes, end-of-roll recentering, returning from Free Cam, and other
+automatic reframing use that default. A same-player move between two squares
+connected by a board waypoint gives the player token a fast 160-millisecond
+linear transition. The camera remains still for that step unless the token exits
+the soft-follow safe zone; any minimal edge correction uses the same fast linear
+transition. This keeps ordinary step-by-step movement direct while reserving
+eased motion for broader framing changes. The initial board framing is immediate.
+If another follow target arrives during an animation, the camera retargets from
+its current interpolated position; entering Free Cam cancels the animation and
+leaves the camera at that position for manual control.
 
 Player tokens render in a stable SVG overlay above the square layer so movement
 does not recreate the token at each destination. The active turn player's token
