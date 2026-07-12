@@ -484,6 +484,20 @@ class GameApp(App):
                         f"  Player {payout.get('player_id', '?')}: "
                         f"+{payout.get('amount', 0)}G"
                     )
+        elif request.presentation_type == "stock_price_changed":
+            old_price = data.get("old_price", 0)
+            new_price = data.get("new_price", 0)
+            info.write(
+                f"[bold gold1]DISTRICT {data.get('district_id', '?')} STOCK[/bold gold1]"
+            )
+            info.write(f"[bold]{old_price}G → {new_price}G[/bold]")
+            for holding in data.get("holdings", []):
+                value_change = holding.get("value_change", 0)
+                sign = "+" if value_change > 0 else ""
+                info.write(
+                    f"  Player {holding.get('player_id', '?')}: "
+                    f"{holding.get('quantity', 0)} shares ({sign}{value_change}G)"
+                )
         else:
             info.write(f"[bold]{escape(request.presentation_type)}[/bold]")
             info.write(escape(str(data)))

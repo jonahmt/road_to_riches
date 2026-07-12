@@ -19,6 +19,7 @@ import {
 } from "./protocol";
 import { adjacentStepAnimationDuration } from "./cameraTiming";
 import { rentPaymentFacts } from "./paymentPresentation";
+import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
   clampStockQuantity,
   defaultStockQuantity,
@@ -585,6 +586,10 @@ function App() {
       ? clientState.pendingRequest
       : null;
   const activePresentation = clientState.presentations[0] ?? null;
+  const activeStockPriceChange =
+    activePresentation?.type === "stock_price_changed"
+      ? stockPriceChangeFacts(activePresentation.data, activePresentation.playerId)
+      : null;
   const blockingPresentationActive = activePresentation !== null;
   const standardKeyboardRequest =
     ventureRequest || stockRequest || blockingPresentationActive ? null : clientState.pendingRequest;
@@ -681,6 +686,7 @@ function App() {
               dice={clientState.dice}
               showDice={isRollingOrMoving}
               selectedSquare={selectedSquare}
+              focusDistrictId={activeStockPriceChange?.districtId ?? null}
               onSelectSquare={setSelectedSquareId}
             />
             <aside className="game-side">
@@ -759,10 +765,26 @@ function App() {
         />
       )}
 
+      {activePresentation?.type === "stock_price_changed" && (
+        <StockPriceChangeOverlay
+          presentation={activePresentation}
+          state={clientState.gameState}
+          assignedPlayerId={clientState.playerId}
+          onContinue={() =>
+            activePresentation.requiresAcknowledgment
+              ? acknowledgePresentation(activePresentation.requestId)
+              : dismissPresentation(activePresentation.requestId)
+          }
+        />
+      )}
+
       {activePresentation &&
-        !["venture_card_revealed", "promotion_completed", "rent_payment"].includes(
-          activePresentation.type,
-        ) && (
+        ![
+          "venture_card_revealed",
+          "promotion_completed",
+          "rent_payment",
+          "stock_price_changed",
+        ].includes(activePresentation.type) && (
           <GenericPresentation
             presentation={activePresentation}
             assignedPlayerId={clientState.playerId}
@@ -909,6 +931,7 @@ function BoardPanel({
   dice,
   showDice,
   selectedSquare,
+  focusDistrictId,
   onSelectSquare,
 }: {
   state: GameState | null;
@@ -916,6 +939,7 @@ function BoardPanel({
   dice: DiceState | null;
   showDice: boolean;
   selectedSquare: SquareInfo | null;
+  focusDistrictId: number | null;
   onSelectSquare: (squareId: number) => void;
 }) {
   const boardCanvasRef = useRef<HTMLDivElement>(null);
@@ -939,10 +963,31 @@ function BoardPanel({
       ? state.board.squares.find((square) => square.id === activePlayer.position) ?? null
       : null;
   const activePositionKey = activeSquare ? `${activeSquare.position[0]}:${activeSquare.position[1]}` : "";
+  const focusedDistrictSquares =
+    state && focusDistrictId !== null
+      ? state.board.squares.filter(
+          (square) => square.type === "SHOP" && square.property_district === focusDistrictId,
+        )
+      : [];
+  const focusedDistrictCenter =
+    focusedDistrictSquares.length > 0
+      ? {
+          x:
+            focusedDistrictSquares.reduce((total, square) => total + square.position[0], 0) /
+            focusedDistrictSquares.length,
+          y:
+            focusedDistrictSquares.reduce((total, square) => total + square.position[1], 0) /
+            focusedDistrictSquares.length,
+        }
+      : null;
+  const districtFocusKey = focusedDistrictCenter
+    ? `${focusDistrictId}:${focusedDistrictCenter.x}:${focusedDistrictCenter.y}`
+    : "";
   const automaticAnimation = useMemo(() => {
     const previous = activePlayerFrameRef.current;
     const isAdjacentActiveMove = Boolean(
-      state &&
+      focusDistrictId === null &&
+        state &&
         activePlayer &&
         activeSquare &&
         previous &&
@@ -956,7 +1001,7 @@ function BoardPanel({
         ? adjacentStepAnimationDuration(activePlayer?.player_id ?? -1, assignedPlayerId)
         : FOLLOW_CAMERA_ANIMATION_MS,
     };
-  }, [activePlayer?.player_id, activeSquare?.id, assignedPlayerId]);
+  }, [activePlayer?.player_id, activeSquare?.id, assignedPlayerId, focusDistrictId]);
   const automaticAnimationCurve = automaticAnimation.curve;
   const automaticAnimationDuration = automaticAnimation.duration;
   const playerTokens = useMemo(() => getBoardPlayerTokens(state), [state]);
@@ -983,9 +1028,14 @@ function BoardPanel({
     }
     svg.dataset.cameraMode = cameraMode;
     if (cameraMode === "follow") {
-      const center = activeSquare
-        ? { x: activeSquare.position[0], y: activeSquare.position[1] }
-        : { x: boardBounds.minX + boardBounds.width / 2, y: boardBounds.minY + boardBounds.height / 2 };
+      const center =
+        focusedDistrictCenter ??
+        (activeSquare
+          ? { x: activeSquare.position[0], y: activeSquare.position[1] }
+          : {
+              x: boardBounds.minX + boardBounds.width / 2,
+              y: boardBounds.minY + boardBounds.height / 2,
+            });
       const target = centeredBoardCamera(boardBounds, getFollowBoardZoom(boardBounds), center);
       const from = { ...cameraRef.current };
       const shouldAnimate =
@@ -1035,7 +1085,14 @@ function BoardPanel({
       }
       svg.dataset.cameraAnimating = "false";
     };
-  }, [activePositionKey, boundsKey, cameraMode, automaticAnimationCurve, automaticAnimationDuration]);
+  }, [
+    activePositionKey,
+    boundsKey,
+    cameraMode,
+    automaticAnimationCurve,
+    automaticAnimationDuration,
+    districtFocusKey,
+  ]);
 
   useEffect(() => {
     const canvas = boardCanvasRef.current;
@@ -1287,11 +1344,20 @@ function BoardPanel({
             const valueLabel = valueLabelForSquare(square, state);
             const shouldRenderSuitIcon = isSuitIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
+            const isStockPriceFocus =
+              shouldRenderShopTile && square.property_district === focusDistrictId;
             const shouldRenderDefaultText = !shouldRenderSuitIcon && !shouldRenderShopTile;
             return (
               <g
                 key={square.id}
-                className={`board-square-group ${isSelected ? "selected" : ""}`}
+                className={`board-square-group ${isSelected ? "selected" : ""} ${isStockPriceFocus ? "stock-price-focus" : ""}`}
+                style={
+                  isStockPriceFocus
+                    ? ({
+                        "--stock-focus-color": getDistrictColor(square.property_district),
+                      } as CSSProperties)
+                    : undefined
+                }
                 role="button"
                 tabIndex={0}
                 aria-label={`Square ${square.id}: ${displayTypeForSquare(square)}`}
@@ -2873,6 +2939,108 @@ function RentPaymentOverlay({
         <button
           type="button"
           className="payment-continue"
+          autoFocus={isOwner}
+          disabled={!canContinue}
+          onClick={onContinue}
+        >
+          {presentation.acknowledgmentPending
+            ? "Continuing..."
+            : isOwner
+              ? "Continue"
+              : `Waiting for Player ${presentation.playerId}...`}
+        </button>
+      </section>
+    </div>
+  );
+}
+
+function StockPriceChangeOverlay({
+  presentation,
+  state,
+  assignedPlayerId,
+  onContinue,
+}: {
+  presentation: PresentationState;
+  state: GameState | null;
+  assignedPlayerId: number | null;
+  onContinue: () => void;
+}) {
+  const change = stockPriceChangeFacts(presentation.data, presentation.playerId);
+  const impactByPlayer = new Map(
+    change.holdings.map((holding) => [holding.playerId, holding]),
+  );
+  const playerIds =
+    state?.players.map((player) => player.player_id) ??
+    change.holdings.map((holding) => holding.playerId);
+  const isRise = change.delta > 0;
+  const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
+  const canContinue = isOwner && !presentation.acknowledgmentPending;
+  const title = `${districtLabel(change.districtId)} stock price ${isRise ? "rises" : "falls"}!`;
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        ["Escape", "Enter", " "].includes(event.key) ||
+        WASD_KEYS.has(event.key.toLowerCase()) ||
+        event.key.startsWith("Arrow")
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (canContinue && ["Enter", " "].includes(event.key)) {
+          onContinue();
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [canContinue, onContinue]);
+
+  return (
+    <div
+      className={`stock-price-change-overlay ${isRise ? "is-rise" : "is-fall"}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="stock-price-change-title"
+    >
+      <section className="stock-price-change-card">
+        <header>
+          <span>Market update</span>
+          <h2 id="stock-price-change-title">{title}</h2>
+        </header>
+
+        <div className="stock-price-transition" aria-label={`${change.oldPrice}G to ${change.newPrice}G`}>
+          <strong>{formatGold(change.oldPrice)}</strong>
+          <span aria-hidden="true">→</span>
+          <strong>{formatGold(change.newPrice)}</strong>
+        </div>
+
+        <div className="stock-price-impact-grid" aria-label="Player stock value changes">
+          {playerIds.map((playerId) => {
+            const holding = impactByPlayer.get(playerId) ?? {
+              playerId,
+              quantity: 0,
+              valueChange: 0,
+            };
+            const sign = holding.valueChange > 0 ? "+" : "";
+            return (
+              <article
+                key={playerId}
+                className={holding.valueChange !== 0 ? "has-impact" : ""}
+                style={{ "--stock-player-color": getPlayerColor(playerId) } as CSSProperties}
+              >
+                <span className="stock-price-player-token">{playerId}</span>
+                <span>Player {playerId}</span>
+                <strong>{holding.quantity}</strong>
+                <small>shares</small>
+                <em>{sign}{formatGold(holding.valueChange)}</em>
+              </article>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          className="stock-price-continue"
           autoFocus={isOwner}
           disabled={!canContinue}
           onClick={onContinue}

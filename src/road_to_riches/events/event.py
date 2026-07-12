@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from road_to_riches.events.registry import get_event_class
@@ -11,6 +11,12 @@ from road_to_riches.models.game_state import GameState
 @dataclass
 class GameEvent(ABC):
     """Base class for all game events."""
+
+    _stock_price_changes: list[tuple[int, int, int]] = field(
+        default_factory=list,
+        init=False,
+        repr=False,
+    )
 
     @property
     def event_type(self) -> str:

@@ -119,6 +119,19 @@ gradients. Only the payer may continue with click, Enter, or Space; observers
 wait for that player, and gameplay remains paused until the server resolves the
 presentation.
 
+An authoritative `stock_price_changed` presentation temporarily reframes the
+board around the average position of the changed district's shop squares while
+the camera is in Follow mode. It keeps the normal six-square-wide Follow zoom,
+uses the standard cubic automatic-camera transition, and does not move a player
+who is already using Free Cam. All shop tiles in that district begin a pulsing
+district-colored glow immediately; after the camera's 360-millisecond move, the
+flat stock-change card appears with a 440-millisecond client-side delay. The card
+shows district, old → new price, and stable per-player slots containing shares
+held and the resulting holding-value gain or loss. The presentation owner
+continues with click, Enter, or Space, after which Follow mode eases back to the
+active player. Immediate and deferred backend changes share this exact client
+sequence; timing is presentation-only and never sent by the backend.
+
 The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
 review, but it should not be treated as the main game UI.

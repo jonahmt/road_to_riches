@@ -94,6 +94,10 @@ Opponent-shop rent uses the same barrier contract. The detail panel names the
 payer and owner, shows the final rent, and lists any district dividend payouts;
 the payer acknowledges before the turn continues.
 
+Stock-price-change barriers show the district's old and new price plus every
+player's shares and resulting holding-value change. This includes immediate
+changes and deferred buy/sell fluctuations when they are applied at end of turn.
+
 ## (P0) Info
 
 Any time a player is inputting a decision, they should also be able to type I/info/Info to get info about the game. They can request info player to see a player’s full stats, info square type to see the definition of that square (same as would appear in viewing board), etc. info game would return the victory condition for example. This is how the game can be remotely playable before the following UI components are implemented. This is also how agents should interact with the program while testing.

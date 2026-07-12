@@ -508,6 +508,24 @@ h3 {
   filter: brightness(1.12) drop-shadow(0 0.34px 0.5px rgba(0, 0, 0, 0.45));
 }
 
+.board-square-group.stock-price-focus .board-square-tile {
+  animation: stock-price-shop-glow 900ms ease-in-out infinite alternate;
+}
+
+@keyframes stock-price-shop-glow {
+  from {
+    filter:
+      brightness(1.08)
+      drop-shadow(0 0 3px var(--stock-focus-color));
+  }
+  to {
+    filter:
+      brightness(1.35)
+      drop-shadow(0 0 7px var(--stock-focus-color))
+      drop-shadow(0 0 15px var(--stock-focus-color));
+  }
+}
+
 .board-square-selection {
   fill: none;
   stroke: #f7f7f2;
@@ -1779,6 +1797,195 @@ dd {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+.stock-price-change-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 57;
+  display: grid;
+  place-items: start center;
+  overflow: auto;
+  padding: clamp(72px, 12vh, 130px) 18px 24px;
+  background: rgba(2, 4, 8, 0.34);
+  pointer-events: none;
+}
+
+.stock-price-change-card {
+  width: min(760px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  border: 2px solid rgba(119, 221, 119, 0.72);
+  border-radius: 18px;
+  padding: 22px;
+  background: rgba(12, 15, 22, 0.97);
+  color: #f7f7f2;
+  box-shadow:
+    0 0 0 5px rgba(0, 0, 0, 0.2),
+    0 24px 70px rgba(0, 0, 0, 0.58);
+  pointer-events: auto;
+  animation: stock-price-card-in 240ms cubic-bezier(0.2, 0.85, 0.25, 1.08) 440ms both;
+}
+
+.stock-price-change-overlay.is-fall .stock-price-change-card {
+  border-color: rgba(255, 122, 182, 0.76);
+}
+
+.stock-price-change-card > header {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.stock-price-change-card > header span {
+  color: rgba(247, 247, 242, 0.48);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stock-price-change-card > header h2 {
+  font-size: clamp(23px, 4vw, 34px);
+}
+
+.stock-price-transition {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
+  width: min(480px, 100%);
+}
+
+.stock-price-transition strong {
+  color: rgba(247, 247, 242, 0.72);
+  font-size: clamp(44px, 8vw, 70px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+}
+
+.stock-price-transition strong:last-child {
+  color: #77dd77;
+}
+
+.stock-price-change-overlay.is-fall .stock-price-transition strong:last-child {
+  color: #ff7ab6;
+}
+
+.stock-price-transition > span {
+  color: rgba(247, 247, 242, 0.56);
+  font-size: 42px;
+  line-height: 1;
+}
+
+.stock-price-impact-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.stock-price-impact-grid article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(247, 247, 242, 0.48);
+}
+
+.stock-price-impact-grid article.has-impact {
+  border-color: color-mix(in srgb, var(--stock-player-color) 62%, rgba(255, 255, 255, 0.14));
+  background: color-mix(in srgb, var(--stock-player-color) 12%, rgba(255, 255, 255, 0.035));
+  color: #f7f7f2;
+}
+
+.stock-price-player-token {
+  grid-row: 1 / span 2;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--stock-player-color) 82%, white 18%);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--stock-player-color) 44%, #11151d);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.stock-price-impact-grid article > span:nth-child(2) {
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stock-price-impact-grid article > strong {
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.stock-price-impact-grid article > small {
+  grid-column: 2;
+  color: rgba(247, 247, 242, 0.42);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stock-price-impact-grid article > em {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 7px;
+  color: rgba(247, 247, 242, 0.5);
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.stock-price-change-overlay.is-rise .stock-price-impact-grid article.has-impact > em {
+  color: #77dd77;
+}
+
+.stock-price-change-overlay.is-fall .stock-price-impact-grid article.has-impact > em {
+  color: #ff7ab6;
+}
+
+.stock-price-continue {
+  min-width: 220px;
+  min-height: 44px;
+  border-color: #77dd77;
+  background: #77dd77;
+  color: #11151d;
+  font-size: 14px;
+}
+
+.stock-price-change-overlay.is-fall .stock-price-continue {
+  border-color: #ff7ab6;
+  background: #ff7ab6;
+}
+
+.stock-price-continue:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+@keyframes stock-price-card-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .promotion-overlay {
   position: fixed;
   inset: 0;
@@ -2069,12 +2276,20 @@ dd {
   .payment-overlay,
   .payment-card,
   .payment-dividends,
+  .stock-price-change-card,
+  .board-square-group.stock-price-focus .board-square-tile,
   .promotion-overlay,
   .promotion-ceremony,
   .promotion-suit,
   .promotion-level.next,
   .promotion-radiance {
     animation: none;
+  }
+
+  .board-square-group.stock-price-focus .board-square-tile {
+    filter:
+      brightness(1.28)
+      drop-shadow(0 0 8px var(--stock-focus-color));
   }
 
   .promotion-suit {
@@ -2114,6 +2329,23 @@ dd {
   }
 
   .payment-dividend-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stock-price-change-overlay {
+    padding: 42px 8px 16px;
+  }
+
+  .stock-price-change-card {
+    gap: 12px;
+    padding: 16px 10px;
+  }
+
+  .stock-price-transition {
+    gap: 10px;
+  }
+
+  .stock-price-impact-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

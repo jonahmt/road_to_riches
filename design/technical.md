@@ -91,6 +91,19 @@ must not recalculate those values. Closed shops and other zero-rent outcomes do
 not open the barrier. AI payers release it using the configured presentation
 delay, while human payers explicitly continue it.
 
+The event pipeline snapshots current stock prices immediately around every
+event execution and records only authoritative before/after changes on that
+event. Pending buy/sell fluctuation is deliberately excluded because it is not
+part of `current_price`; the change is detected later when the end-turn
+`StockFluctuationEvent` applies it. The game loop turns each recorded district
+delta into a sequential `stock_price_changed` presentation barrier owned by the
+event's player (or the current player when an event has no explicit owner).
+Payload facts include district, old/new price, delta, cause event, and every
+player's post-event quantity and resulting holding-value change. This same path
+therefore covers immediate investment/property/event changes and deferred
+buy/sell changes without maintaining a second list of price-changing event
+types.
+
 ### P0.5 Readiness Evidence
 
 As of 2026-07-02, backend readiness is tracked by Bead

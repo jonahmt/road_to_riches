@@ -209,7 +209,7 @@ class EndTurnEvent(GameEvent):
         return [
             LiquidationPhaseEvent(player_id=self.player_id),
             BankruptcyCheckEvent(player_id=self.player_id),
-            StockFluctuationEvent(),
+            StockFluctuationEvent(player_id=self.player_id),
             TickStatusesEvent(),
             GameOverCheckEvent(),
             AdvanceTurnEvent(),
@@ -249,6 +249,7 @@ class BankruptcyCheckEvent(GameEvent):
 class StockFluctuationEvent(GameEvent):
     """Apply pending stock fluctuation changes at end of turn."""
 
+    player_id: int | None = None
     _changes: list[tuple[int, int]] = field(default_factory=list, repr=False)
 
     def execute(self, state: GameState) -> None:

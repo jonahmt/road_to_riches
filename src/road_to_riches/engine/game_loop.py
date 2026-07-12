@@ -558,6 +558,46 @@ class GameLoop:
         # TransferPropertyEvent, TransferCashEvent, ScriptEvent,
         # CloseShopsEvent, GainCommissionEvent, etc.) return None
         # from log_message() and produce no output.
+        self._present_stock_price_changes(event)
+
+    def _present_stock_price_changes(self, event: GameEvent) -> None:
+        """Block on one presentation for every stock price changed by *event*."""
+        if not event._stock_price_changes:
+            return
+
+        event_player_id = getattr(event, "player_id", None)
+        player_id = (
+            event_player_id
+            if isinstance(event_player_id, int)
+            else self.state.current_player.player_id
+        )
+        for district_id, old_price, new_price in event._stock_price_changes:
+            delta = new_price - old_price
+            holdings = []
+            for player in self.state.players:
+                quantity = player.owned_stock.get(district_id, 0)
+                holdings.append(
+                    {
+                        "player_id": player.player_id,
+                        "quantity": quantity,
+                        "value_change": quantity * delta,
+                    }
+                )
+            self._execute_event(
+                PresentationBarrierEvent(
+                    player_id=player_id,
+                    presentation_type="stock_price_changed",
+                    data={
+                        "player_id": player_id,
+                        "district_id": district_id,
+                        "old_price": old_price,
+                        "new_price": new_price,
+                        "delta": delta,
+                        "holdings": holdings,
+                        "cause_event": event.event_type,
+                    },
+                )
+            )
 
     def _execute_event(self, event: GameEvent) -> GameEvent:
         """Execute a single event through the pipeline and dispatch it.

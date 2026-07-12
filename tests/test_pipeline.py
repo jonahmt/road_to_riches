@@ -12,7 +12,10 @@ from road_to_riches.events.pipeline import EventPipeline
 
 def _fake_state(player_id: int = 0):
     """Minimal stand-in for GameState (pipeline only reads current_player.player_id)."""
-    return SimpleNamespace(current_player=SimpleNamespace(player_id=player_id))
+    return SimpleNamespace(
+        current_player=SimpleNamespace(player_id=player_id),
+        stock=SimpleNamespace(stocks=[]),
+    )
 
 
 @dataclass
@@ -108,6 +111,28 @@ class TestProcessNext:
         pipe.enqueue(RecordEvent(name="a", follow_ups=[]))
         pipe.process_next(_fake_state())
         assert pipe.is_empty
+
+    def test_records_authoritative_stock_price_changes_on_event(self):
+        stock = SimpleNamespace(
+            district_id=2,
+            current_price=9,
+        )
+        state = SimpleNamespace(
+            current_player=SimpleNamespace(player_id=0),
+            stock=SimpleNamespace(stocks=[stock]),
+        )
+
+        @dataclass
+        class RaiseStock(GameEvent):
+            def execute(self, state):
+                state.stock.stocks[0].current_price = 10
+
+        event = RaiseStock()
+        pipe = EventPipeline()
+        pipe.enqueue(event)
+        pipe.process_next(state)
+
+        assert event._stock_price_changes == [(2, 9, 10)]
 
 
 class TestPeekAndClear:

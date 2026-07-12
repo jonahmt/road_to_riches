@@ -646,6 +646,73 @@ class TestEndTurnEvent:
         assert AdvanceTurnEvent in queued_types
 
 
+class TestStockPricePresentations:
+    def test_immediate_investment_change_opens_district_presentation(self):
+        loop = _make_loop(num_players=3)
+        shop = loop.state.board.squares[1]
+        shop.property_owner = 0
+        loop.state.players[0].owned_properties.append(1)
+        loop.state.players[1].owned_stock = {0: 12}
+        price_before = loop.state.stock.get_price(0).current_price
+
+        loop._execute_event(InvestInShopEvent(player_id=0, square_id=1, amount=100))
+
+        request = loop.input.present.call_args.args[1]
+        price_after = loop.state.stock.get_price(0).current_price
+        assert price_after > price_before
+        assert request.presentation_type == "stock_price_changed"
+        assert request.player_id == 0
+        assert request.data == {
+            "player_id": 0,
+            "district_id": 0,
+            "old_price": price_before,
+            "new_price": price_after,
+            "delta": price_after - price_before,
+            "holdings": [
+                {"player_id": 0, "quantity": 0, "value_change": 0},
+                {
+                    "player_id": 1,
+                    "quantity": 12,
+                    "value_change": 12 * (price_after - price_before),
+                },
+                {"player_id": 2, "quantity": 0, "value_change": 0},
+            ],
+            "cause_event": "InvestInShopEvent",
+        }
+
+    def test_stock_purchase_waits_until_end_turn_fluctuation_is_applied(self):
+        loop = _make_loop(num_players=2)
+        loop._execute_event(BuyStockEvent(player_id=0, district_id=0, quantity=10))
+
+        loop.input.present.assert_not_called()
+        price_before = loop.state.stock.get_price(0).current_price
+
+        loop._execute_event(StockFluctuationEvent(player_id=0))
+
+        request = loop.input.present.call_args.args[1]
+        assert request.presentation_type == "stock_price_changed"
+        assert request.player_id == 0
+        assert request.data["old_price"] == price_before
+        assert request.data["new_price"] > price_before
+        assert request.data["cause_event"] == "StockFluctuationEvent"
+
+    def test_stock_sale_presents_decrease_only_when_end_turn_applies_it(self):
+        loop = _make_loop(num_players=2)
+        loop.state.players[0].owned_stock = {0: 20}
+        loop._execute_event(SellStockEvent(player_id=0, district_id=0, quantity=10))
+
+        loop.input.present.assert_not_called()
+        price_before = loop.state.stock.get_price(0).current_price
+
+        loop._execute_event(StockFluctuationEvent(player_id=0))
+
+        request = loop.input.present.call_args.args[1]
+        assert request.presentation_type == "stock_price_changed"
+        assert request.data["old_price"] == price_before
+        assert request.data["new_price"] < price_before
+        assert request.data["delta"] < 0
+
+
 # ===========================================================================
 # StopAction → Init event → mutation event flow
 # ===========================================================================

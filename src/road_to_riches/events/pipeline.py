@@ -48,7 +48,15 @@ class EventPipeline:
             return None
         event = self._queue.popleft()
         logger.debug("processing %s", event.event_type)
+        prices_before = {
+            price.district_id: price.current_price for price in state.stock.stocks
+        }
         follow_ups = event.execute(state)
+        event._stock_price_changes = [
+            (price.district_id, prices_before[price.district_id], price.current_price)
+            for price in state.stock.stocks
+            if prices_before.get(price.district_id, price.current_price) != price.current_price
+        ]
         self.history.append(EventLog(event=event, player_id=state.current_player.player_id))
         if follow_ups:
             for fu in reversed(follow_ups):
