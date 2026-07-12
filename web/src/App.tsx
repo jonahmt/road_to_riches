@@ -20,7 +20,6 @@ import {
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
-const LAYOUT_STORAGE_KEY = "road-to-riches-layout";
 
 const PLAYER_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
 const DISTRICT_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
@@ -117,7 +116,6 @@ interface BoardCamera {
 
 type BoardCameraMode = "follow" | "free";
 type BoardAnimationCurve = "cubic" | "linear";
-type GameLayoutMode = "immersive" | "classic";
 type VentureCellOwner = number | null;
 type VentureCursor = readonly [number, number];
 
@@ -519,19 +517,6 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-function getInitialLayoutMode(): GameLayoutMode {
-  const requested = new URLSearchParams(window.location.search).get("layout");
-  if (requested === "classic" || requested === "immersive") {
-    return requested;
-  }
-  try {
-    const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
-    return stored === "classic" || stored === "immersive" ? stored : "immersive";
-  } catch {
-    return "immersive";
-  }
-}
-
 function App() {
   const {
     clientState,
@@ -546,21 +531,12 @@ function App() {
   const [uri, setUri] = useState(DEFAULT_URI);
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
-  const [layoutMode, setLayoutMode] = useState<GameLayoutMode>(getInitialLayoutMode);
   const ventureRequest =
     clientState.pendingRequest?.type === "CHOOSE_VENTURE_CELL" ? clientState.pendingRequest : null;
   const activePresentation = clientState.presentations[0] ?? null;
   const blockingPresentationActive = activePresentation !== null;
   const standardKeyboardRequest = ventureRequest || blockingPresentationActive ? null : clientState.pendingRequest;
   useWasdPromptControls(clientState.responsePending ? null : standardKeyboardRequest, submitResponse);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(LAYOUT_STORAGE_KEY, layoutMode);
-    } catch {
-      // The layout still works when storage is unavailable.
-    }
-  }, [layoutMode]);
 
   const currentPlayer = clientState.gameState
     ? clientState.gameState.players[clientState.gameState.current_player_index]
@@ -605,8 +581,7 @@ function App() {
 
   return (
     <main
-      className={`app-shell layout-${layoutMode} ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
-      data-layout={layoutMode}
+      className={`app-shell layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
     >
       <header className="game-header">
         <div className="brand-lockup">
@@ -621,13 +596,6 @@ function App() {
           </div>
         )}
         <div className="game-header-actions">
-          <button
-            type="button"
-            className="secondary layout-toggle"
-            onClick={() => setLayoutMode((mode) => (mode === "immersive" ? "classic" : "immersive"))}
-          >
-            {layoutMode === "immersive" ? "Classic UI" : "Immersive UI"}
-          </button>
           <button
             type="button"
             className="secondary dev-toggle"
@@ -658,7 +626,7 @@ function App() {
             <BoardPanel
               state={clientState.gameState}
               dice={clientState.dice}
-              showDice={layoutMode === "classic" || isRollingOrMoving}
+              showDice={isRollingOrMoving}
               selectedSquare={selectedSquare}
               onSelectSquare={setSelectedSquareId}
             />

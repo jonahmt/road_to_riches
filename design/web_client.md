@@ -74,7 +74,7 @@ and the raw response fallback are hidden in a collapsible Tools panel. This keep
 local backend operation available during development without making transport
 details part of the ordinary player experience.
 
-The default player-facing shell is now an experimental Immersive layout. Its
+The player-facing shell uses the full-screen interactive layout exclusively. Its
 board fills the entire viewport and all HUD surfaces overlay the board: the
 players form a compact four-row stack in the lower-right, contextual actions
 occupy the upper-right, the latest turn/event status is a compact upper-center
@@ -82,22 +82,16 @@ toast, match identity and tools sit upper-left, square details sit lower-left,
 and camera controls remain lower-left beneath the details. Overlay panels use
 translucent dark surfaces so board state stays visible around them.
 
-The prior layout remains available as Classic UI and retains its static header,
-four-column player HUD, board/sidebar grid, persistent upper-left die, and side
-panels. Both shells render the same React game components and protocol state;
-Immersive is a CSS/layout layer rather than a fork of gameplay behavior. A
-header switch persists the chosen shell in local storage. Immersive is the
-default when no preference exists, and `?layout=classic` or
-`?layout=immersive` provides a direct URL override for review and rollback.
-
-In Immersive mode, the action panel occupies the upper-right before a roll and
+The retired Classic layout, its header toggle, persisted layout preference, and
+URL override are not part of the client. The action panel occupies the
+upper-right before a roll and
 for landing/management prompts, while the die is absent. From roll submission
 through `CHOOSE_PATH`, the action panel becomes hidden and a large die appears
 in the upper-left with its original roll and remaining-move count. Its linear
 dimensions are twice the earlier Immersive die, giving it four times the area.
 The match identity and summary temporarily hide during this phase so the die
-owns that corner without overlap, while the compact Classic UI and Tools
-controls remain available beside it. WASD movement remains active while its
+owns that corner without overlap, while the compact Tools control remains
+available beside it. WASD movement remains active while its
 visual path buttons are hidden. When the backend sends `CONFIRM_STOP` at the
 final square, the die remains visible and a dedicated upper-right panel appears
 with explicit `Stop Here` and, when available, `Undo Step` controls. Once the
@@ -239,8 +233,8 @@ The server retains the latest dice update for the active game and includes it
 when replaying a state snapshot and pending prompt to a reconnecting browser,
 so a reload during movement restores both the original roll and remaining count.
 
-`CHOOSE_VENTURE_CELL` opens a shared 8x8 Venture Grid overlay in both Immersive
-and Classic layouts. It initializes on the first unclaimed square and supports
+`CHOOSE_VENTURE_CELL` opens a shared 8x8 Venture Grid overlay. It initializes on
+the first unclaimed square and supports
 bounded WASD/arrow navigation with Space/Enter confirmation, matching the TUI.
 Clicking any square moves the cursor there without claiming it; double-clicking
 an unclaimed square claims it immediately. A dedicated claim button provides the

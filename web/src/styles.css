@@ -1804,7 +1804,7 @@ dd {
   }
 }
 
-/* Experimental full-screen shell. Classic rules above remain the fallback. */
+/* Full-screen interactive game shell. */
 .layout-immersive.is-playing {
   position: relative;
   isolation: isolate;
