@@ -14,9 +14,20 @@ from road_to_riches.protocol import InputRequest, InputRequestType, Presentation
 class BasicAIPlayerInput(PlayerInput):
     """Use BasicAIClient decisions directly through the GameLoop input API."""
 
-    def __init__(self, player_ids: list[int], delay: float = 0.0) -> None:
+    def __init__(
+        self,
+        player_ids: list[int],
+        delay: float = 0.0,
+        presentation_delay: float | None = None,
+    ) -> None:
+        resolved_presentation_delay = delay if presentation_delay is None else presentation_delay
         self.ais = {
-            player_id: BasicAIClient(player_id=player_id, delay=delay) for player_id in player_ids
+            player_id: BasicAIClient(
+                player_id=player_id,
+                delay=delay,
+                presentation_delay=resolved_presentation_delay,
+            )
+            for player_id in player_ids
         }
         self.messages: list[str] = []
         self.dice_updates: list[tuple[int, int]] = []

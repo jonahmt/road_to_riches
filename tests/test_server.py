@@ -222,6 +222,31 @@ def test_default_launcher_path_still_assigns_default_and_spawns_ai():
     asyncio.run(scenario())
 
 
+def test_spawned_ai_receives_separate_presentation_delay(monkeypatch):
+    commands: list[list[str]] = []
+
+    def fake_popen(command):
+        commands.append(command)
+        return object()
+
+    monkeypatch.setattr("road_to_riches.server.server.subprocess.Popen", fake_popen)
+    server = GameServer(
+        GameConfig(board_path="boards/test_board.json", num_players=2),
+        num_humans=1,
+        num_ai=1,
+        ai_delay=0.25,
+        ai_presentation_delay=1.5,
+    )
+    session = server._default_session
+    assert session is not None
+
+    server._spawn_ai_clients(session, "localhost", 8765)
+
+    assert len(commands) == 1
+    assert commands[0][commands[0].index("--delay") + 1] == "0.25"
+    assert commands[0][commands[0].index("--presentation-delay") + 1] == "1.5"
+
+
 def test_default_session_reassigns_disconnected_human_and_sends_state():
     async def scenario() -> None:
         server = GameServer(

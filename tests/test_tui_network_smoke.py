@@ -64,7 +64,7 @@ async def _run_recording_basic_ai(
     game_id: str,
     winners: dict[int, int | None],
 ) -> None:
-    ai = BasicAIClient(player_id=player_id, delay=0)
+    ai = BasicAIClient(player_id=player_id, delay=0, presentation_delay=0)
 
     async with websockets.connect(f"ws://{host}:{port}") as ws:
         await ws.send(encode(msg_identify(player_id, game_id=game_id)))

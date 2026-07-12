@@ -9,6 +9,7 @@ from dataclasses import dataclass
 DEFAULT_BOARD = "boards/test_board.json"
 DEFAULT_PLAYERS = 4
 DEFAULT_AI_DELAY = 0.25
+DEFAULT_AI_PRESENTATION_DELAY = 1.0
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,7 @@ class ParsedRunConfig:
     humans: int
     ai: int
     ai_delay: float
+    ai_presentation_delay: float
     host: str
     port: int
     log_lines: int | None
@@ -70,6 +72,15 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=DEFAULT_AI_DELAY,
         help=f"AI response delay in seconds (server mode, default {DEFAULT_AI_DELAY})",
+    )
+    parser.add_argument(
+        "--ai-presentation-delay",
+        type=float,
+        default=DEFAULT_AI_PRESENTATION_DELAY,
+        help=(
+            "AI presentation acknowledgment delay in seconds "
+            f"(server mode, default {DEFAULT_AI_PRESENTATION_DELAY})"
+        ),
     )
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=8765)
@@ -167,6 +178,7 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         humans=args.humans,
         ai=args.ai,
         ai_delay=args.ai_delay,
+        ai_presentation_delay=args.ai_presentation_delay,
         host=args.host,
         port=args.port,
         log_lines=args.log_lines,
@@ -199,6 +211,7 @@ def main() -> None:
             num_humans=args.humans,
             num_ai=args.ai,
             ai_delay=args.ai_delay,
+            ai_presentation_delay=args.ai_presentation_delay,
             host=args.host,
             port=args.port,
             debug=args.debug,

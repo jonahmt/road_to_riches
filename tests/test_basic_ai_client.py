@@ -54,8 +54,10 @@ def test_ai_does_not_respond_to_other_players_requests():
     assert ai.response_message(req) is None
 
 
-def test_ai_acknowledges_only_its_own_presentation():
-    ai = BasicAIClient(player_id=1, delay=0)
+def test_ai_acknowledges_only_its_own_presentation(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr("road_to_riches.ai.basic.client.time.sleep", sleeps.append)
+    ai = BasicAIClient(player_id=1, delay=0.25, presentation_delay=1.0)
 
     assert ai.presentation_ack_message("presentation-1", 1, game_id="game-1") == {
         "msg": "presentation_ack",
@@ -64,6 +66,7 @@ def test_ai_acknowledges_only_its_own_presentation():
         "game_id": "game-1",
     }
     assert ai.presentation_ack_message("presentation-2", 0, game_id="game-1") is None
+    assert sleeps == [1.0]
 
 
 def test_ai_can_buy_more_than_99_total_stock_in_a_district():

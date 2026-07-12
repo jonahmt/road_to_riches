@@ -27,6 +27,7 @@ import time
 from typing import IO
 
 DEFAULT_AI_DELAY = 0.25
+DEFAULT_AI_PRESENTATION_DELAY = 1.0
 
 
 def _wait_for_port(host: str, port: int, timeout: float = 5.0) -> bool:
@@ -98,6 +99,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--ai_delay", "--ai-delay", dest="ai_delay", type=float,
                         default=DEFAULT_AI_DELAY,
                         help=f"AI response delay in seconds (default {DEFAULT_AI_DELAY})")
+    parser.add_argument(
+        "--ai_presentation_delay",
+        "--ai-presentation-delay",
+        dest="ai_presentation_delay",
+        type=float,
+        default=DEFAULT_AI_PRESENTATION_DELAY,
+        help=(
+            "AI presentation acknowledgment delay in seconds "
+            f"(default {DEFAULT_AI_PRESENTATION_DELAY})"
+        ),
+    )
     parser.add_argument("--host", default="localhost",
                         help="Server host")
     parser.add_argument("--port", type=int, default=8765,
@@ -158,6 +170,8 @@ def main() -> None:
         "--humans", str(human_players),
         "--ai", str(ai_players),
         "--ai-delay", str(args.ai_delay),
+        "--ai-presentation-delay",
+        str(args.ai_presentation_delay),
         "--host", args.host,
         "--port", str(args.port),
     ]

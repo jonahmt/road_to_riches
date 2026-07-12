@@ -39,6 +39,7 @@ from road_to_riches.save import save_game
 from road_to_riches.server.server_input import WebSocketPlayerInput
 from road_to_riches.server.session import (
     DEFAULT_AI_DELAY,
+    DEFAULT_AI_PRESENTATION_DELAY,
     GameSession,
     GameSessionSettings,
     ServerSessionManager,
@@ -58,6 +59,7 @@ def _session_config_payload(session: GameSession) -> dict:
         "humans": session.num_humans,
         "ai": session.num_ai,
         "ai_delay": session.ai_delay,
+        "ai_presentation_delay": session.ai_presentation_delay,
         "public": session.public,
     }
 
@@ -91,6 +93,7 @@ class GameServer:
         num_humans: int = 1,
         num_ai: int = 0,
         ai_delay: float = DEFAULT_AI_DELAY,
+        ai_presentation_delay: float = DEFAULT_AI_PRESENTATION_DELAY,
         saved_state: "GameState | None" = None,
         create_default_session: bool = True,
         shutdown_when_default_finished: bool = True,
@@ -105,6 +108,7 @@ class GameServer:
                 num_humans=num_humans,
                 num_ai=num_ai,
                 ai_delay=ai_delay,
+                ai_presentation_delay=ai_presentation_delay,
                 saved_state=saved_state,
                 debug_mode=debug_mode,
             )
@@ -115,6 +119,7 @@ class GameServer:
             )
         self._fallback_config = config
         self._fallback_ai_delay = ai_delay
+        self._fallback_ai_presentation_delay = ai_presentation_delay
         self._shutdown_when_default_finished = shutdown_when_default_finished
         self._loop: asyncio.AbstractEventLoop | None = None
         self._default_finished: asyncio.Event | None = None
@@ -134,6 +139,14 @@ class GameServer:
     @property
     def ai_delay(self) -> float:
         return self._default_session.ai_delay if self._default_session else self._fallback_ai_delay
+
+    @property
+    def ai_presentation_delay(self) -> float:
+        return (
+            self._default_session.ai_presentation_delay
+            if self._default_session
+            else self._fallback_ai_presentation_delay
+        )
 
     async def _handle_client(
         self,
@@ -358,6 +371,11 @@ class GameServer:
         ai_delay = float(config.get("ai_delay", self.ai_delay))
         if ai_delay < 0:
             raise ValueError("ai_delay cannot be negative")
+        ai_presentation_delay = float(
+            config.get("ai_presentation_delay", self.ai_presentation_delay)
+        )
+        if ai_presentation_delay < 0:
+            raise ValueError("ai_presentation_delay cannot be negative")
         game_config = GameConfig(
             board_path=board_path,
             num_players=num_humans + num_ai,
@@ -372,6 +390,7 @@ class GameServer:
             num_humans=num_humans,
             num_ai=num_ai,
             ai_delay=ai_delay,
+            ai_presentation_delay=ai_presentation_delay,
             public=bool(config.get("public", True)),
             debug_mode=self._debug_mode,
         )
@@ -547,6 +566,8 @@ class GameServer:
                 str(player_id),
                 "--delay",
                 str(session.ai_delay),
+                "--presentation-delay",
+                str(session.ai_presentation_delay),
                 "--game-id",
                 session.session_id,
             ]
@@ -666,6 +687,7 @@ def run_server(
     num_humans: int = 1,
     num_ai: int = 3,
     ai_delay: float = DEFAULT_AI_DELAY,
+    ai_presentation_delay: float = DEFAULT_AI_PRESENTATION_DELAY,
     host: str = "localhost",
     port: int = 8765,
     debug: bool = False,
@@ -706,6 +728,7 @@ def run_server(
         num_humans=num_humans,
         num_ai=num_ai,
         ai_delay=ai_delay,
+        ai_presentation_delay=ai_presentation_delay,
         saved_state=saved_state,
         create_default_session=not lobby,
         shutdown_when_default_finished=not lobby,

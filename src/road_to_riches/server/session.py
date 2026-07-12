@@ -32,6 +32,7 @@ class PlayerAlreadyConnectedError(SessionError):
 
 
 DEFAULT_AI_DELAY = 0.25
+DEFAULT_AI_PRESENTATION_DELAY = 1.0
 
 
 @dataclass
@@ -40,6 +41,7 @@ class GameSessionSettings:
     num_humans: int = 1
     num_ai: int = 0
     ai_delay: float = DEFAULT_AI_DELAY
+    ai_presentation_delay: float = DEFAULT_AI_PRESENTATION_DELAY
     saved_state: Any = None
     public: bool = True
     debug_mode: bool = False
@@ -78,6 +80,10 @@ class GameSession:
     @property
     def ai_delay(self) -> float:
         return self.settings.ai_delay
+
+    @property
+    def ai_presentation_delay(self) -> float:
+        return self.settings.ai_presentation_delay
 
     @property
     def public(self) -> bool:

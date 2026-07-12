@@ -46,6 +46,10 @@ OWN_DISTRICT_WEIGHT = 1.5
 # Max auction bid as a multiple of shop value
 AUCTION_BID_MULTIPLIER = 3
 
+# Presentation barriers are major, readable moments and use slower pacing than
+# ordinary AI decisions and adjacent movement.
+DEFAULT_PRESENTATION_DELAY = 1.0
+
 
 class BasicAIClient:
     """Greedy suit-collector AI.
@@ -54,9 +58,15 @@ class BasicAIClient:
     always buys affordable shops, and buys stock in the highest-capital district.
     """
 
-    def __init__(self, player_id: int, delay: float = 0.5) -> None:
+    def __init__(
+        self,
+        player_id: int,
+        delay: float = 0.5,
+        presentation_delay: float = DEFAULT_PRESENTATION_DELAY,
+    ) -> None:
         self.player_id = player_id
         self.delay = delay
+        self.presentation_delay = presentation_delay
         self.state: GameState | None = None
         self._route: list[int] = []  # planned tour of square IDs to visit
 
@@ -111,10 +121,10 @@ class BasicAIClient:
         owner_player_id: int,
         game_id: str | None = None,
     ) -> dict | None:
-        """Automatically acknowledge this AI's presentation after normal pacing."""
+        """Automatically acknowledge this AI's presentation after readable pacing."""
         if owner_player_id != self.player_id:
             return None
-        time.sleep(self.delay)
+        time.sleep(self.presentation_delay)
         return msg_presentation_ack(request_id, self.player_id, game_id=game_id)
 
 
@@ -524,10 +534,15 @@ async def run(
     player_id: int,
     delay: float = 0.5,
     game_id: str | None = None,
+    presentation_delay: float = DEFAULT_PRESENTATION_DELAY,
 ) -> None:
     """Connect to the server and play the game."""
     uri = f"ws://{host}:{port}"
-    ai = BasicAIClient(player_id=player_id, delay=delay)
+    ai = BasicAIClient(
+        player_id=player_id,
+        delay=delay,
+        presentation_delay=presentation_delay,
+    )
 
     async with websockets.connect(uri) as ws:
         # Identify ourselves to the server
@@ -581,6 +596,15 @@ def main() -> None:
     parser.add_argument("--player-id", type=int, required=True)
     parser.add_argument("--game-id", default=None)
     parser.add_argument("--delay", type=float, default=0.5, help="Response delay in seconds")
+    parser.add_argument(
+        "--presentation-delay",
+        type=float,
+        default=DEFAULT_PRESENTATION_DELAY,
+        help=(
+            "Delay before acknowledging presentation barriers in seconds "
+            f"(default {DEFAULT_PRESENTATION_DELAY})"
+        ),
+    )
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
@@ -590,7 +614,16 @@ def main() -> None:
     )
     logging.getLogger("websockets").setLevel(logging.WARNING)
 
-    asyncio.run(run(args.host, args.port, args.player_id, args.delay, game_id=args.game_id))
+    asyncio.run(
+        run(
+            args.host,
+            args.port,
+            args.player_id,
+            args.delay,
+            presentation_delay=args.presentation_delay,
+            game_id=args.game_id,
+        )
+    )
 
 
 if __name__ == "__main__":

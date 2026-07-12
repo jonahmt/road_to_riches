@@ -58,6 +58,8 @@ def test_arg_parser_accepts_documented_launcher_aliases():
             "2",
             "--ai-delay",
             "0.1",
+            "--ai-presentation-delay",
+            "1.5",
             "--log-lines",
             "20",
             "--server-log",
@@ -73,6 +75,7 @@ def test_arg_parser_accepts_documented_launcher_aliases():
     assert args.human_players == 2
     assert args.ai_players == 2
     assert args.ai_delay == 0.1
+    assert args.ai_presentation_delay == 1.5
     assert args.log_lines == 20
     assert args.server_log == "/tmp/server.log"
     assert args.diagnostic_log == "/tmp/game.jsonl"
@@ -83,6 +86,7 @@ def test_arg_parser_defaults_to_fast_ai_pacing():
     args = play.build_arg_parser().parse_args([])
 
     assert args.ai_delay == play.DEFAULT_AI_DELAY == 0.25
+    assert args.ai_presentation_delay == play.DEFAULT_AI_PRESENTATION_DELAY == 1.0
 
 
 def test_terminate_process_tree_signals_process_group_on_posix(monkeypatch):
