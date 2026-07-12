@@ -1180,7 +1180,7 @@ dd {
   opacity: 0.65;
 }
 
-.stock-district-row:hover,
+.stock-overlay:not(.is-keyboard-navigation) .stock-district-row:hover,
 .stock-district-row:focus-visible {
   border-color: rgba(255, 255, 255, 0.38);
   border-left-color: var(--district-color);

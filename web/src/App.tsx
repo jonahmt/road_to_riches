@@ -2271,6 +2271,7 @@ function StockOverlay({
   const requestKey = `${request.type}:${request.player_id}:${[...maximumByDistrict.entries()].map(([id, maximum]) => `${id}-${maximum}`).join("|")}`;
   const [selectedDistrictId, setSelectedDistrictId] = useState(firstDistrictId);
   const [quantity, setQuantity] = useState(1);
+  const [usingKeyboardNavigation, setUsingKeyboardNavigation] = useState(false);
   const submittedRef = useRef(false);
   const overlayRef = useRef<HTMLElement | null>(null);
 
@@ -2301,13 +2302,14 @@ function StockOverlay({
     !responsePending &&
     !submittedRef.current;
 
-  function selectDistrict(districtId: number) {
+  function selectDistrict(districtId: number, inputMode: "pointer" | "keyboard" = "pointer") {
     const stock = districts.find((candidate) => candidate.district_id === districtId);
     if (!stock) {
       return;
     }
     const price = promptPriceByDistrict.get(districtId) ?? stockPrice(stock);
     const maximum = maximumByDistrict.get(districtId) ?? 0;
+    setUsingKeyboardNavigation(inputMode === "keyboard");
     setSelectedDistrictId(districtId);
     setQuantity(defaultStockQuantity(mode, maximum, price, cashDeficit));
   }
@@ -2347,6 +2349,7 @@ function StockOverlay({
 
   useEffect(() => {
     submittedRef.current = false;
+    setUsingKeyboardNavigation(false);
     setSelectedDistrictId(firstDistrictId);
     const firstStock = districts.find((stock) => stock.district_id === firstDistrictId);
     const price = firstStock
@@ -2382,14 +2385,28 @@ function StockOverlay({
       if (["w", "arrowup", "s", "arrowdown"].includes(key) && districts.length > 0) {
         event.preventDefault();
         event.stopPropagation();
+        setUsingKeyboardNavigation(true);
+        if (
+          document.activeElement instanceof HTMLElement &&
+          document.activeElement.closest(".stock-district-table")
+        ) {
+          document.activeElement.blur();
+        }
         const direction = key === "w" || key === "arrowup" ? -1 : 1;
         const nextIndex = (currentIndex + direction + districts.length) % districts.length;
-        selectDistrict(districts[nextIndex].district_id);
+        selectDistrict(districts[nextIndex].district_id, "keyboard");
         return;
       }
       if (["a", "arrowleft", "d", "arrowright"].includes(key)) {
         event.preventDefault();
         event.stopPropagation();
+        setUsingKeyboardNavigation(true);
+        if (
+          document.activeElement instanceof HTMLElement &&
+          document.activeElement.closest(".stock-district-table")
+        ) {
+          document.activeElement.blur();
+        }
         const direction = key === "a" || key === "arrowleft" ? -1 : 1;
         setQuantity((current) => clampStockQuantity(current + direction, selectedMaximum));
         return;
@@ -2435,12 +2452,13 @@ function StockOverlay({
   return (
     <section
       ref={overlayRef}
-      className={`stock-overlay stock-mode-${mode} ${responsePending ? "is-resolving" : ""}`}
+      className={`stock-overlay stock-mode-${mode} ${usingKeyboardNavigation ? "is-keyboard-navigation" : ""} ${responsePending ? "is-resolving" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="stock-overlay-title"
       aria-busy={responsePending}
       tabIndex={-1}
+      onPointerMove={() => setUsingKeyboardNavigation(false)}
     >
       <div className="stock-overlay-shell">
         <header className="stock-overlay-header">

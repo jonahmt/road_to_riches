@@ -281,6 +281,11 @@ sidebar width, district row height, or shop-card column footprint. Stock
 surfaces use flat translucent fills rather than gradients; buy/sell mode is
 communicated with solid header borders and button accents.
 
+When district navigation switches from pointer input to W/S or arrow keys, the
+previously clicked row is blurred and stationary pointer hover is suppressed so
+only the current keyboard district has a visual selection indicator. Pointer
+hover feedback resumes after the mouse physically moves again.
+
 After a successful claim, the backend draws the card and pauses on a
 `venture_card_revealed` presentation barrier before executing its script. The
 browser queues the presentation and shows its name and description in a centered
