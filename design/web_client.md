@@ -192,15 +192,17 @@ in a short resolving state until the backend sends the next prompt or error.
 This avoids transient idle-panel swaps and browser scroll anchoring adjustments
 that would make the board appear to flicker vertically during keyboard input.
 
-The board camera has follow and free modes. Follow mode is the default: it uses a
-fixed 175% zoom and keeps the active turn player's current square at the center
-of the view as that player moves or turn ownership changes. The tighter framing
-reduces how many board labels are visible at once. Its only camera control is a
-`Free Cam` button in the lower-right. Free mode begins from the current followed
-framing and enables cursor-centered mouse-wheel zoom from 50% to 300%,
-primary-button drag panning, and compact minus, reset, plus, and follow controls.
-Reset returns free mode to the original fitted board; Follow returns to the 175%
-active-player view and locks manual camera input again.
+The board camera has follow and free modes. Follow mode is the default: it frames
+six board-square widths across the camera and keeps the active turn player's
+current square at the center of the view as that player moves or turn ownership
+changes. Deriving this framing from the fixed square width instead of the full
+board bounds keeps tile scale consistent across differently sized boards. Its
+only camera control is a `Free Cam` button in the lower-right. Free mode begins
+from the current followed framing and enables cursor-centered mouse-wheel zoom
+from 50% to 300%, primary-button drag panning, and compact minus, reset, plus,
+and follow controls. Reset returns free mode to the original fitted board;
+Follow returns to the six-square-wide active-player view and locks manual camera
+input again.
 
 Automatic Follow-camera changes default to a 360-millisecond cubic ease-in-out
 curve. Turn changes, returning from Free Cam, and other automatic reframing use

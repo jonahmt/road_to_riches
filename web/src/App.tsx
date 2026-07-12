@@ -81,7 +81,7 @@ const WASD_KEYS = new Set(["w", "a", "s", "d"]);
 const CHORD_TIMEOUT_MS = 180;
 const MIN_BOARD_ZOOM = 0.5;
 const MAX_BOARD_ZOOM = 3;
-const FOLLOW_BOARD_ZOOM = 1.75;
+const FOLLOW_VISIBLE_TILE_WIDTHS = 6;
 const FOLLOW_CAMERA_ANIMATION_MS = 360;
 const ADJACENT_STEP_ANIMATION_MS = 100;
 const PLAYER_TOKEN_RADIUS = 0.34;
@@ -190,6 +190,10 @@ function centeredBoardCamera(
     minX: center.x - bounds.width / zoom / 2,
     minY: center.y - bounds.height / zoom / 2,
   };
+}
+
+function getFollowBoardZoom(bounds: BoardBounds): number {
+  return bounds.width / (BOARD_TILE_SIZE * FOLLOW_VISIBLE_TILE_WIDTHS);
 }
 
 function easeInOutCubic(progress: number): number {
@@ -932,7 +936,7 @@ function BoardPanel({
       const center = activeSquare
         ? { x: activeSquare.position[0], y: activeSquare.position[1] }
         : { x: boardBounds.minX + boardBounds.width / 2, y: boardBounds.minY + boardBounds.height / 2 };
-      const target = centeredBoardCamera(boardBounds, FOLLOW_BOARD_ZOOM, center);
+      const target = centeredBoardCamera(boardBounds, getFollowBoardZoom(boardBounds), center);
       const from = { ...cameraRef.current };
       const shouldAnimate =
         cameraReadyRef.current &&
