@@ -1036,18 +1036,16 @@ dd {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  border-top: 3px solid rgba(84, 214, 255, 0.72);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   padding: 17px 20px;
-  background:
-    linear-gradient(90deg, rgba(84, 214, 255, 0.13), transparent 46%),
-    rgba(255, 255, 255, 0.025);
+  background: rgba(13, 24, 30, 0.98);
 }
 
 .stock-mode-sell .stock-overlay-header,
 .stock-mode-liquidate .stock-overlay-header {
-  background:
-    linear-gradient(90deg, rgba(255, 122, 182, 0.13), transparent 46%),
-    rgba(255, 255, 255, 0.025);
+  border-top-color: rgba(255, 122, 182, 0.72);
+  background: rgba(31, 19, 27, 0.98);
 }
 
 .stock-overlay-header h2 {

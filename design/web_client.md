@@ -277,7 +277,9 @@ from authoritative `state_sync` data.
 Stock typography is intentionally larger than the compact board HUD: table
 headers, row values, shop metrics, transaction math, and keyboard hints remain
 readable at a 1280×720 viewport without increasing the overlay shell, fixed
-sidebar width, district row height, or shop-card column footprint.
+sidebar width, district row height, or shop-card column footprint. Stock
+surfaces use flat translucent fills rather than gradients; buy/sell mode is
+communicated with solid header borders and button accents.
 
 After a successful claim, the backend draws the card and pauses on a
 `venture_card_revealed` presentation barrier before executing its script. The
