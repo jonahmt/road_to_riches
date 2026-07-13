@@ -88,7 +88,9 @@ same four-coordinate-unit footprint as a full board tile, so neighboring path
 squares share edges instead of appearing as disconnected dots. Each active
 player is represented by a bordered player-color marker at their
 authoritative position; the current player receives a stronger ring. Direction
-arrows are intentionally deferred. The full board tiles do not render square
+arrows are intentionally deferred. Unowned minimap shops use one neutral medium
+grey rather than district colors; after purchase, the square switches to its
+owner's player color. The full board tiles do not render square
 IDs. Unowned shops retain their centered purchase value, while owned shops use
 the owner's solid color across the main tile and place only current rent in a
 flat black bar across the lower third. The rent bar is tall enough to hold the

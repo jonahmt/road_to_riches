@@ -24,3 +24,11 @@ export const DISTRICT_BORDER_COLORS = [
   "#7952b3",
   "#c66313",
 ] as const;
+
+export const UNOWNED_MINIMAP_SHOP_COLOR = "#70747d";
+
+export function getMinimapShopColor(ownerId: number | null): string {
+  return ownerId === null
+    ? UNOWNED_MINIMAP_SHOP_COLOR
+    : PLAYER_COLORS[ownerId % PLAYER_COLORS.length];
+}

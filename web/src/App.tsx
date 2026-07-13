@@ -8,7 +8,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { DISTRICT_BORDER_COLORS, DISTRICT_COLORS, PLAYER_COLORS } from "./boardColors";
+import {
+  DISTRICT_BORDER_COLORS,
+  DISTRICT_COLORS,
+  getMinimapShopColor,
+  PLAYER_COLORS,
+} from "./boardColors";
 import { getPathKeyActions, getWasdResponseMap, type WasdResponseMap } from "./controls";
 import { formatGold, netWorth, readableType } from "./format";
 import {
@@ -396,9 +401,7 @@ function getSquareFill(square: SquareInfo): string {
 
 function getMinimapSquareFill(square: SquareInfo): string {
   if (square.type === "SHOP") {
-    return square.property_owner === null
-      ? getDistrictColor(square.property_district)
-      : getPlayerColor(square.property_owner);
+    return getMinimapShopColor(square.property_owner);
   }
   if (square.type === "BANK") {
     return "#ffd166";
