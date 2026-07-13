@@ -83,8 +83,10 @@ and camera controls remain lower-left beneath the details. Overlay panels use
 translucent dark surfaces so board state stays visible around them.
 
 A fixed lower-left minimap shows the entire board independently of camera pan
-and zoom. Every board square is represented by a tiny color-coded square, and
-each active player is represented by a bordered player-color marker at their
+and zoom. Every board square is represented by a color-coded square using the
+same four-coordinate-unit footprint as a full board tile, so neighboring path
+squares share edges instead of appearing as disconnected dots. Each active
+player is represented by a bordered player-color marker at their
 authoritative position; the current player receives a stronger ring. Direction
 arrows are intentionally deferred. The full board tiles do not render square
 IDs. Unowned shops retain their centered purchase value, while owned shops use

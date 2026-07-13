@@ -1856,11 +1856,11 @@ function BoardMinimap({ state, bounds }: { state: GameState; bounds: BoardBounds
         {state.board.squares.map((square) => (
           <rect
             key={square.id}
-            x={square.position[0] - 0.5}
-            y={square.position[1] - 0.5}
-            width="1"
-            height="1"
-            rx="0.12"
+            x={square.position[0] - BOARD_TILE_RADIUS}
+            y={square.position[1] - BOARD_TILE_RADIUS}
+            width={BOARD_TILE_SIZE}
+            height={BOARD_TILE_SIZE}
+            rx="0.24"
             fill={getMinimapSquareFill(square)}
           />
         ))}
@@ -1873,8 +1873,8 @@ function BoardMinimap({ state, bounds }: { state: GameState; bounds: BoardBounds
             }
             const group = groups.get(square.id) ?? [player];
             const index = Math.max(0, group.findIndex((candidate) => candidate.player_id === player.player_id));
-            const offsetX = group.length > 1 ? (index % 2 === 0 ? -0.32 : 0.32) : 0;
-            const offsetY = group.length > 2 ? (index < 2 ? -0.32 : 0.32) : 0;
+            const offsetX = group.length > 1 ? (index % 2 === 0 ? -1 : 1) : 0;
+            const offsetY = group.length > 2 ? (index < 2 ? -1 : 1) : 0;
             const isActive = activePlayer?.player_id === player.player_id;
             return (
               <g
@@ -1882,7 +1882,7 @@ function BoardMinimap({ state, bounds }: { state: GameState; bounds: BoardBounds
                 className={`minimap-player ${isActive ? "active" : ""}`}
                 transform={`translate(${square.position[0] + offsetX} ${square.position[1] + offsetY})`}
               >
-                <circle r={isActive ? 0.64 : 0.5} fill={getPlayerColor(player.player_id)} />
+                <circle r={isActive ? 1.12 : 0.88} fill={getPlayerColor(player.player_id)} />
                 <text x="0" y="0.04">{player.player_id}</text>
               </g>
             );
