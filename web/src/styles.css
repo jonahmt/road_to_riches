@@ -512,6 +512,36 @@ h3 {
   animation: stock-price-shop-glow 900ms ease-in-out infinite alternate;
 }
 
+.board-canvas.is-square-selection-active .board-square-group {
+  cursor: default;
+}
+
+.board-canvas.is-square-selection-active .board-square-group.square-selection-eligible {
+  cursor: pointer;
+}
+
+.board-square-group.square-selection-eligible .board-square-tile {
+  animation: eligible-square-glow 760ms ease-in-out infinite alternate;
+}
+
+.board-square-group.square-selection-eligible.selected .board-square-tile {
+  animation-duration: 520ms;
+}
+
+@keyframes eligible-square-glow {
+  from {
+    filter:
+      brightness(1.12)
+      drop-shadow(0 0 2px var(--square-selection-glow));
+  }
+  to {
+    filter:
+      brightness(1.42)
+      drop-shadow(0 0 6px var(--square-selection-glow))
+      drop-shadow(0 0 13px var(--square-selection-glow));
+  }
+}
+
 @keyframes stock-price-shop-glow {
   from {
     filter:
@@ -2278,6 +2308,7 @@ dd {
   .payment-dividends,
   .stock-price-change-card,
   .board-square-group.stock-price-focus .board-square-tile,
+  .board-square-group.square-selection-eligible .board-square-tile,
   .promotion-overlay,
   .promotion-ceremony,
   .promotion-suit,
@@ -2290,6 +2321,12 @@ dd {
     filter:
       brightness(1.28)
       drop-shadow(0 0 8px var(--stock-focus-color));
+  }
+
+  .board-square-group.square-selection-eligible .board-square-tile {
+    filter:
+      brightness(1.32)
+      drop-shadow(0 0 8px var(--square-selection-glow));
   }
 
   .promotion-suit {
@@ -3069,6 +3106,138 @@ dd {
 
 .layout-immersive.is-playing .action-panel .action-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.investment-widget {
+  width: min(340px, calc(100vw - 32px)) !important;
+}
+
+.investment-widget .panel-header {
+  margin-bottom: 10px;
+}
+
+.investment-widget .panel-header h2 {
+  font-size: 17px;
+}
+
+.investment-widget .panel-header p:last-child,
+.investment-selection-hint {
+  color: rgba(247, 247, 242, 0.72);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.investment-selected-shop {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.investment-selected-shop > span,
+.investment-selected-shop > small {
+  color: rgba(247, 247, 242, 0.68);
+  font-size: 10px;
+}
+
+.investment-selected-shop > strong {
+  font-size: 15px;
+}
+
+.investment-selected-shop > button {
+  margin-top: 4px;
+}
+
+.investment-cancel {
+  width: 100%;
+}
+
+.investment-widget form {
+  display: grid;
+  gap: 10px;
+}
+
+.investment-summary {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.investment-summary > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+}
+
+.investment-summary dt {
+  color: rgba(247, 247, 242, 0.62);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.investment-summary dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.investment-amount-input {
+  display: grid;
+  gap: 5px;
+  color: rgba(247, 247, 242, 0.72);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.investment-amount-input > span {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
+}
+
+.investment-amount-input button,
+.investment-amount-input input {
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 0;
+}
+
+.investment-amount-input button:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.investment-amount-input button:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.investment-amount-input input {
+  border-right: 0;
+  border-left: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f7f2;
+  font-size: 16px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.investment-amount-actions,
+.investment-secondary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.investment-secondary-actions button {
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 10px;
 }
 
 .layout-immersive.is-playing.is-roll-active .action-panel {

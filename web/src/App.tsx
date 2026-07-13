@@ -21,6 +21,13 @@ import { adjacentStepAnimationDuration } from "./cameraTiming";
 import { rentPaymentFacts } from "./paymentPresentation";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
+  clampInvestmentAmount,
+  investmentSquareChoices,
+  maximumInvestment,
+  squareIdsFromOptions,
+  type InvestmentSquareChoice,
+} from "./squareSelection";
+import {
   clampStockQuantity,
   defaultStockQuantity,
   districtLabel,
@@ -165,6 +172,12 @@ type BoardCameraMode = "follow" | "free";
 type BoardAnimationCurve = "cubic" | "linear";
 type VentureCellOwner = number | null;
 type VentureCursor = readonly [number, number];
+
+interface BoardSquareSelection {
+  eligibleSquareIds: ReadonlySet<number>;
+  selectedSquareId: number | null;
+  onConfirmSquare: (squareId: number) => void;
+}
 
 type ActivePlayerFrame = {
   playerId: number;
@@ -578,8 +591,37 @@ function App() {
   const [uri, setUri] = useState(DEFAULT_URI);
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
+  const [confirmedInvestmentSquareId, setConfirmedInvestmentSquareId] = useState<number | null>(null);
   const ventureRequest =
     clientState.pendingRequest?.type === "CHOOSE_VENTURE_CELL" ? clientState.pendingRequest : null;
+  const investmentRequest =
+    clientState.pendingRequest?.type === "INVEST" ? clientState.pendingRequest : null;
+  const simpleSquareRequest =
+    clientState.pendingRequest &&
+    ["CHOOSE_ANY_SQUARE", "CHOOSE_SHOP_AUCTION"].includes(clientState.pendingRequest.type)
+      ? clientState.pendingRequest
+      : null;
+  const investmentChoices = useMemo(
+    () => investmentSquareChoices(investmentRequest?.data.investable),
+    [investmentRequest],
+  );
+  const investmentSquareIds = useMemo(
+    () => new Set(investmentChoices.map((choice) => choice.squareId)),
+    [investmentChoices],
+  );
+  const investmentRequestKey = investmentRequest
+    ? `${investmentRequest.player_id}:${investmentChoices.map((choice) => `${choice.squareId}-${choice.maxCapital}`).join("|")}`
+    : "";
+  const simpleSquareIds = useMemo(() => {
+    if (!simpleSquareRequest) {
+      return new Set<number>();
+    }
+    const optionKey = simpleSquareRequest.type === "CHOOSE_ANY_SQUARE" ? "squares" : "shops";
+    return new Set(squareIdsFromOptions(simpleSquareRequest.data[optionKey]));
+  }, [simpleSquareRequest]);
+  const simpleSquareRequestKey = simpleSquareRequest
+    ? `${simpleSquareRequest.type}:${simpleSquareRequest.player_id}:${[...simpleSquareIds].join("|")}`
+    : "";
   const stockRequest =
     clientState.pendingRequest &&
     ["BUY_STOCK", "SELL_STOCK", "LIQUIDATION"].includes(clientState.pendingRequest.type)
@@ -592,8 +634,23 @@ function App() {
       : null;
   const blockingPresentationActive = activePresentation !== null;
   const standardKeyboardRequest =
-    ventureRequest || stockRequest || blockingPresentationActive ? null : clientState.pendingRequest;
+    ventureRequest || investmentRequest || simpleSquareRequest || stockRequest || blockingPresentationActive
+      ? null
+      : clientState.pendingRequest;
   useWasdPromptControls(clientState.responsePending ? null : standardKeyboardRequest, submitResponse);
+
+  useEffect(() => {
+    setConfirmedInvestmentSquareId(null);
+    if (investmentRequest) {
+      setSelectedSquareId(null);
+    }
+  }, [investmentRequestKey]);
+
+  useEffect(() => {
+    if (simpleSquareRequest) {
+      setSelectedSquareId(null);
+    }
+  }, [simpleSquareRequestKey]);
 
   const currentPlayer = clientState.gameState
     ? clientState.gameState.players[clientState.gameState.current_player_index]
@@ -687,6 +744,27 @@ function App() {
               showDice={isRollingOrMoving}
               selectedSquare={selectedSquare}
               focusDistrictId={activeStockPriceChange?.districtId ?? null}
+              temporaryFreeCamera={Boolean(
+                (investmentRequest || simpleSquareRequest) && !clientState.responsePending,
+              )}
+              squareSelection={
+                investmentRequest && !clientState.responsePending && confirmedInvestmentSquareId === null
+                  ? {
+                      eligibleSquareIds: investmentSquareIds,
+                      selectedSquareId,
+                      onConfirmSquare: (squareId) => {
+                        setSelectedSquareId(squareId);
+                        setConfirmedInvestmentSquareId(squareId);
+                      },
+                    }
+                  : simpleSquareRequest && !clientState.responsePending
+                    ? {
+                        eligibleSquareIds: simpleSquareIds,
+                        selectedSquareId,
+                        onConfirmSquare: submitResponse,
+                      }
+                    : null
+              }
               onSelectSquare={setSelectedSquareId}
             />
             <aside className="game-side">
@@ -699,14 +777,42 @@ function App() {
                 latestEvent={latestEvent}
                 gameOverWinner={clientState.gameOverWinner}
               />
-              {!stockRequest && (
-                <PromptPanel
-                  request={clientState.pendingRequest}
-                  onSubmit={submitResponse}
-                  connected={clientState.status === "connected"}
-                  responsePending={clientState.responsePending}
-                />
-              )}
+              {!stockRequest &&
+                (investmentRequest ? (
+                  <InvestmentWidget
+                    request={investmentRequest}
+                    choices={investmentChoices}
+                    selectedSquareId={selectedSquareId}
+                    confirmedSquareId={confirmedInvestmentSquareId}
+                    responsePending={clientState.responsePending}
+                    onConfirmSquare={(squareId) => {
+                      setSelectedSquareId(squareId);
+                      setConfirmedInvestmentSquareId(squareId);
+                    }}
+                    onChangeSquare={() => setConfirmedInvestmentSquareId(null)}
+                    onSubmit={submitResponse}
+                  />
+                ) : simpleSquareRequest ? (
+                  <SquareChoiceWidget
+                    request={simpleSquareRequest}
+                    selectedSquareId={selectedSquareId}
+                    eligibleSquareIds={simpleSquareIds}
+                    responsePending={clientState.responsePending}
+                    onConfirmSquare={submitResponse}
+                    onCancel={
+                      simpleSquareRequest.type === "CHOOSE_SHOP_AUCTION"
+                        ? () => submitResponse(null)
+                        : null
+                    }
+                  />
+                ) : (
+                  <PromptPanel
+                    request={clientState.pendingRequest}
+                    onSubmit={submitResponse}
+                    connected={clientState.status === "connected"}
+                    responsePending={clientState.responsePending}
+                  />
+                ))}
               <SquarePanel square={focusSquare} state={clientState.gameState} />
             </aside>
           </section>
@@ -932,6 +1038,8 @@ function BoardPanel({
   showDice,
   selectedSquare,
   focusDistrictId,
+  temporaryFreeCamera,
+  squareSelection,
   onSelectSquare,
 }: {
   state: GameState | null;
@@ -940,6 +1048,8 @@ function BoardPanel({
   showDice: boolean;
   selectedSquare: SquareInfo | null;
   focusDistrictId: number | null;
+  temporaryFreeCamera: boolean;
+  squareSelection: BoardSquareSelection | null;
   onSelectSquare: (squareId: number) => void;
 }) {
   const boardCanvasRef = useRef<HTMLDivElement>(null);
@@ -954,8 +1064,10 @@ function BoardPanel({
   const tokenElementsRef = useRef(new Map<number, SVGGElement>());
   const tokenVisualsRef = useRef(new Map<number, BoardTokenVisual>());
   const tokenAnimationFrameRef = useRef<number | null>(null);
+  const temporaryAutoFreeRef = useRef(false);
   const [cameraMode, setCameraMode] = useState<BoardCameraMode>("follow");
   const [isDragging, setIsDragging] = useState(false);
+  const squareSelectionActive = squareSelection !== null;
   const boardBounds = state ? getBoardBounds(state) : null;
   const activePlayer = state?.players[state.current_player_index] ?? null;
   const activeSquare =
@@ -1011,6 +1123,18 @@ function BoardPanel({
   const boundsKey = boardBounds
     ? `${boardBounds.minX}:${boardBounds.minY}:${boardBounds.width}:${boardBounds.height}`
     : "";
+
+  useEffect(() => {
+    if (temporaryFreeCamera && cameraMode === "follow") {
+      temporaryAutoFreeRef.current = true;
+      setCameraMode("free");
+      return;
+    }
+    if (!temporaryFreeCamera && temporaryAutoFreeRef.current) {
+      temporaryAutoFreeRef.current = false;
+      setCameraMode("follow");
+    }
+  }, [cameraMode, temporaryFreeCamera]);
 
   useLayoutEffect(() => {
     const svg = boardSvgRef.current;
@@ -1242,6 +1366,9 @@ function BoardPanel({
   }
 
   function enableFollowCamera() {
+    if (temporaryFreeCamera) {
+      return;
+    }
     boardDragRef.current = null;
     setIsDragging(false);
     setCameraMode("follow");
@@ -1315,7 +1442,7 @@ function BoardPanel({
       <div className="location-backdrop" />
       <div
         ref={boardCanvasRef}
-        className={`board-canvas ${cameraMode === "free" ? "is-free-camera" : "is-follow-camera"} ${isDragging ? "is-dragging" : ""}`}
+        className={`board-canvas ${cameraMode === "free" ? "is-free-camera" : "is-follow-camera"} ${isDragging ? "is-dragging" : ""} ${squareSelectionActive ? "is-square-selection-active" : ""}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={finishPointerDrag}
@@ -1337,7 +1464,10 @@ function BoardPanel({
           role="img"
         >
           {state.board.squares.map((square) => {
-            const isSelected = selectedSquare?.id === square.id;
+            const isSelected =
+              selectedSquare?.id === square.id || squareSelection?.selectedSquareId === square.id;
+            const isSelectionEligible =
+              squareSelection?.eligibleSquareIds.has(square.id) ?? false;
             const ownerColor =
               square.property_owner === null ? "rgba(255,255,255,0.78)" : getPlayerColor(square.property_owner);
             const label = labelForSquare(square);
@@ -1347,25 +1477,42 @@ function BoardPanel({
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
             const shouldRenderDefaultText = !shouldRenderSuitIcon && !shouldRenderShopTile;
+            const squareStyle = {
+              ...(isStockPriceFocus
+                ? { "--stock-focus-color": getDistrictColor(square.property_district) }
+                : {}),
+              ...(isSelectionEligible
+                ? { "--square-selection-glow": getPlayerColor(square.property_owner ?? 0) }
+                : {}),
+            } as CSSProperties;
             return (
               <g
                 key={square.id}
-                className={`board-square-group ${isSelected ? "selected" : ""} ${isStockPriceFocus ? "stock-price-focus" : ""}`}
-                style={
-                  isStockPriceFocus
-                    ? ({
-                        "--stock-focus-color": getDistrictColor(square.property_district),
-                      } as CSSProperties)
-                    : undefined
-                }
+                className={`board-square-group ${isSelected ? "selected" : ""} ${isStockPriceFocus ? "stock-price-focus" : ""} ${isSelectionEligible ? "square-selection-eligible" : ""}`}
+                style={squareStyle}
                 role="button"
-                tabIndex={0}
-                aria-label={`Square ${square.id}: ${displayTypeForSquare(square)}`}
-                onClick={() => onSelectSquare(square.id)}
+                tabIndex={squareSelectionActive && !isSelectionEligible ? -1 : 0}
+                aria-disabled={squareSelectionActive && !isSelectionEligible}
+                aria-label={`${isSelectionEligible ? "Eligible " : ""}Square ${square.id}: ${displayTypeForSquare(square)}`}
+                onClick={() => {
+                  if (!squareSelectionActive || isSelectionEligible) {
+                    onSelectSquare(square.id);
+                  }
+                }}
+                onDoubleClick={() => {
+                  if (isSelectionEligible) {
+                    squareSelection?.onConfirmSquare(square.id);
+                  }
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    onSelectSquare(square.id);
+                    if (isSelectionEligible) {
+                      onSelectSquare(square.id);
+                      squareSelection?.onConfirmSquare(square.id);
+                    } else if (!squareSelectionActive) {
+                      onSelectSquare(square.id);
+                    }
                   }
                 }}
               >
@@ -1495,9 +1642,10 @@ function BoardPanel({
               className="board-camera-mode"
               aria-label="Follow active player"
               title="Follow active player"
+              disabled={temporaryFreeCamera}
               onClick={enableFollowCamera}
             >
-              Follow
+              {temporaryFreeCamera ? "Choosing" : "Follow"}
             </button>
           </>
         )}
@@ -3183,6 +3331,240 @@ function PromotionCeremony({
         </button>
       </section>
     </div>
+  );
+}
+
+function SquareChoiceWidget({
+  request,
+  selectedSquareId,
+  eligibleSquareIds,
+  responsePending,
+  onConfirmSquare,
+  onCancel,
+}: {
+  request: InputRequest;
+  selectedSquareId: number | null;
+  eligibleSquareIds: ReadonlySet<number>;
+  responsePending: boolean;
+  onConfirmSquare: (squareId: number) => void;
+  onCancel: (() => void) | null;
+}) {
+  const selectedIsEligible =
+    selectedSquareId !== null && eligibleSquareIds.has(selectedSquareId);
+  const isAuction = request.type === "CHOOSE_SHOP_AUCTION";
+  const prompt = String(
+    request.data.prompt ??
+      (isAuction
+        ? "Choose one of your shops to put up for auction."
+        : "Choose a square on the board."),
+  );
+
+  return (
+    <section
+      className={`panel action-panel investment-widget is-selecting ${responsePending ? "is-resolving" : ""}`}
+      aria-label={isAuction ? "Choose a shop to auction" : "Choose a square"}
+      aria-busy={responsePending}
+    >
+      <header className="panel-header prompt-header">
+        <div>
+          <p className="eyebrow">{isAuction ? "Auction" : "Choose Square"}</p>
+          <h2>{isAuction ? "Choose a Shop" : "Choose a Square"}</h2>
+          <p>{prompt} Click to inspect; double-click to choose.</p>
+        </div>
+      </header>
+      {selectedSquareId !== null && selectedIsEligible ? (
+        <div className="investment-selected-shop">
+          <span>Selected</span>
+          <strong>{isAuction ? "Shop" : "Square"} #{selectedSquareId}</strong>
+          <button
+            type="button"
+            disabled={responsePending}
+            onClick={() => onConfirmSquare(selectedSquareId)}
+          >
+            Choose This {isAuction ? "Shop" : "Square"}
+          </button>
+        </div>
+      ) : (
+        <p className="investment-selection-hint">Pan and zoom freely, then choose a glowing square.</p>
+      )}
+      {onCancel && (
+        <button type="button" className="secondary investment-cancel" disabled={responsePending} onClick={onCancel}>
+          Cancel
+        </button>
+      )}
+    </section>
+  );
+}
+
+function InvestmentWidget({
+  request,
+  choices,
+  selectedSquareId,
+  confirmedSquareId,
+  responsePending,
+  onConfirmSquare,
+  onChangeSquare,
+  onSubmit,
+}: {
+  request: InputRequest;
+  choices: InvestmentSquareChoice[];
+  selectedSquareId: number | null;
+  confirmedSquareId: number | null;
+  responsePending: boolean;
+  onConfirmSquare: (squareId: number) => void;
+  onChangeSquare: () => void;
+  onSubmit: (value: unknown) => void;
+}) {
+  const selectedChoice =
+    choices.find((choice) => choice.squareId === selectedSquareId) ?? null;
+  const confirmedChoice =
+    choices.find((choice) => choice.squareId === confirmedSquareId) ?? null;
+  const readyCash = asNumber(request.data.cash);
+  const spendableCash = asNumber(request.data.spendable_cash, readyCash);
+  const maximum = confirmedChoice ? maximumInvestment(confirmedChoice, spendableCash) : 0;
+  const [amount, setAmount] = useState("1");
+  const normalizedAmount = clampInvestmentAmount(Number(amount), maximum);
+
+  useEffect(() => {
+    if (confirmedChoice) {
+      setAmount(String(maximumInvestment(confirmedChoice, spendableCash)));
+    }
+  }, [confirmedChoice?.squareId, maximum, spendableCash]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape" || responsePending || isTypingTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      if (confirmedChoice) {
+        onChangeSquare();
+      } else {
+        onSubmit(null);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [confirmedChoice, onChangeSquare, onSubmit, responsePending]);
+
+  function submitInvestment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!confirmedChoice || normalizedAmount <= 0 || responsePending) {
+      return;
+    }
+    onSubmit([confirmedChoice.squareId, normalizedAmount]);
+  }
+
+  if (!confirmedChoice) {
+    return (
+      <section className="panel action-panel investment-widget is-selecting" aria-label="Choose a shop to invest in">
+        <header className="panel-header prompt-header">
+          <div>
+            <p className="eyebrow">Invest</p>
+            <h2>Choose a Shop</h2>
+            <p>Eligible shops are glowing. Click to inspect; double-click to choose.</p>
+          </div>
+        </header>
+        {selectedChoice ? (
+          <div className="investment-selected-shop">
+            <span>Selected shop</span>
+            <strong>Shop #{selectedChoice.squareId}</strong>
+            <small>
+              {formatGold(selectedChoice.currentValue)} value · {formatGold(selectedChoice.maxCapital)} max capital
+            </small>
+            <button type="button" onClick={() => onConfirmSquare(selectedChoice.squareId)}>
+              Choose This Shop
+            </button>
+          </div>
+        ) : (
+          <p className="investment-selection-hint">Pan and zoom freely, then choose one of the glowing shops.</p>
+        )}
+        <button type="button" className="secondary investment-cancel" onClick={() => onSubmit(null)}>
+          Skip Investment
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      className={`panel action-panel investment-widget is-amount ${responsePending ? "is-resolving" : ""}`}
+      aria-busy={responsePending}
+    >
+      <header className="panel-header prompt-header">
+        <div>
+          <p className="eyebrow">Invest · Shop #{confirmedChoice.squareId}</p>
+          <h2>Choose Amount</h2>
+          <p>Enter how much capital to add to this shop.</p>
+        </div>
+      </header>
+      <form onSubmit={submitInvestment}>
+        <dl className="investment-summary">
+          <div>
+            <dt>Shop value</dt>
+            <dd>
+              {formatGold(confirmedChoice.currentValue)} → {formatGold(confirmedChoice.currentValue + normalizedAmount)}
+            </dd>
+          </div>
+          <div>
+            <dt>Available</dt>
+            <dd>{formatGold(maximum)}</dd>
+          </div>
+          <div>
+            <dt>Ready cash</dt>
+            <dd>{formatGold(readyCash)}</dd>
+          </div>
+        </dl>
+        <label className="investment-amount-input">
+          Investment amount
+          <span>
+            <button
+              type="button"
+              aria-label="Decrease investment"
+              disabled={responsePending || normalizedAmount <= 1}
+              onClick={() => setAmount(String(clampInvestmentAmount(normalizedAmount - 1, maximum)))}
+            >
+              −
+            </button>
+            <input
+              type="number"
+              min="1"
+              max={maximum}
+              step="1"
+              value={normalizedAmount}
+              disabled={responsePending}
+              onChange={(event) => setAmount(event.target.value)}
+              autoFocus
+            />
+            <button
+              type="button"
+              aria-label="Increase investment"
+              disabled={responsePending || normalizedAmount >= maximum}
+              onClick={() => setAmount(String(clampInvestmentAmount(normalizedAmount + 1, maximum)))}
+            >
+              +
+            </button>
+          </span>
+        </label>
+        <div className="investment-amount-actions">
+          <button type="button" className="secondary" disabled={responsePending} onClick={() => setAmount(String(maximum))}>
+            Max {formatGold(maximum)}
+          </button>
+          <button type="submit" disabled={responsePending || normalizedAmount <= 0}>
+            {responsePending ? "Investing..." : `Invest ${formatGold(normalizedAmount)}`}
+          </button>
+        </div>
+        <div className="investment-secondary-actions">
+          <button type="button" className="secondary" disabled={responsePending} onClick={onChangeSquare}>
+            Change Shop
+          </button>
+          <button type="button" className="secondary" disabled={responsePending} onClick={() => onSubmit(null)}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }
 
