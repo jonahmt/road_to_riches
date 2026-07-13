@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { DISTRICT_BORDER_COLORS, DISTRICT_COLORS, PLAYER_COLORS } from "./boardColors";
 import { getPathKeyActions, getWasdResponseMap, type WasdResponseMap } from "./controls";
 import { formatGold, netWorth, readableType } from "./format";
 import {
@@ -45,8 +46,6 @@ import { type DiceState, type PresentationState, useGameClient } from "./useGame
 
 const DEFAULT_URI = "ws://localhost:8765";
 
-const PLAYER_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
-const DISTRICT_COLORS = ["#54d6ff", "#ff7ab6", "#ffd166", "#77dd77", "#c792ea", "#ff9f1c"];
 const SUIT_COLORS: Record<string, string> = {
   SPADE: "#56cfff",
   HEART: "#ff6aae",
@@ -132,7 +131,7 @@ const MAX_CAP_MULTIPLIERS: Record<string, number> = {
 };
 const BOARD_TILE_SIZE = 4;
 const BOARD_TILE_RADIUS = BOARD_TILE_SIZE / 2;
-const BOARD_TILE_STROKE_WIDTH = 0.14;
+const BOARD_TILE_STROKE_WIDTH = 0.24;
 const BOARD_TILE_STROKE_INSET = BOARD_TILE_STROKE_WIDTH / 2;
 const BOARD_TILE_DRAW_SIZE = BOARD_TILE_SIZE - BOARD_TILE_STROKE_WIDTH;
 const BOARD_TILE_SELECTION_INSET = 0.34;
@@ -363,6 +362,13 @@ function getDistrictColor(districtId: number | null): string {
     return "#ffffff";
   }
   return DISTRICT_COLORS[districtId % DISTRICT_COLORS.length];
+}
+
+function getDistrictBorderColor(districtId: number | null): string {
+  if (districtId === null) {
+    return "#f7f7f2";
+  }
+  return DISTRICT_BORDER_COLORS[districtId % DISTRICT_BORDER_COLORS.length];
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -1686,24 +1692,10 @@ function BoardPanel({
                   height={BOARD_TILE_DRAW_SIZE}
                   rx="0.32"
                   ry="0.32"
-                  strokeWidth={BOARD_TILE_STROKE_WIDTH}
                   style={{
-                    stroke: shouldRenderSuitIcon ? "#f7f7f2" : getDistrictColor(square.property_district),
                     fill: getSquareFill(square),
                   }}
                 />
-                {isSelected && (
-                  <rect
-                    className="board-square-selection"
-                    x={square.position[0] - BOARD_TILE_RADIUS + BOARD_TILE_SELECTION_INSET}
-                    y={square.position[1] - BOARD_TILE_RADIUS + BOARD_TILE_SELECTION_INSET}
-                    width={BOARD_TILE_SELECTION_SIZE}
-                    height={BOARD_TILE_SELECTION_SIZE}
-                    rx="0.24"
-                    ry="0.24"
-                    strokeWidth={BOARD_TILE_SELECTION_STROKE_WIDTH}
-                  />
-                )}
                 {shouldRenderSuitIcon ? (
                   <SuitIcon suit={square.suit} squareType={square.type} x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
@@ -1722,6 +1714,33 @@ function BoardPanel({
                   <text className="square-value" x={square.position[0]} y={square.position[1] + 0.38}>
                     {valueLabel}
                   </text>
+                )}
+                <rect
+                  className="board-square-border"
+                  x={square.position[0] - BOARD_TILE_RADIUS + BOARD_TILE_STROKE_INSET}
+                  y={square.position[1] - BOARD_TILE_RADIUS + BOARD_TILE_STROKE_INSET}
+                  width={BOARD_TILE_DRAW_SIZE}
+                  height={BOARD_TILE_DRAW_SIZE}
+                  rx="0.32"
+                  ry="0.32"
+                  strokeWidth={BOARD_TILE_STROKE_WIDTH}
+                  style={{
+                    stroke: shouldRenderSuitIcon
+                      ? "#f7f7f2"
+                      : getDistrictBorderColor(square.property_district),
+                  }}
+                />
+                {isSelected && (
+                  <rect
+                    className="board-square-selection"
+                    x={square.position[0] - BOARD_TILE_RADIUS + BOARD_TILE_SELECTION_INSET}
+                    y={square.position[1] - BOARD_TILE_RADIUS + BOARD_TILE_SELECTION_INSET}
+                    width={BOARD_TILE_SELECTION_SIZE}
+                    height={BOARD_TILE_SELECTION_SIZE}
+                    rx="0.24"
+                    ry="0.24"
+                    strokeWidth={BOARD_TILE_SELECTION_STROKE_WIDTH}
+                  />
                 )}
               </g>
             );

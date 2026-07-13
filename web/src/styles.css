@@ -631,6 +631,11 @@ h3 {
   stroke: #f7f7f2;
 }
 
+.board-square-border {
+  fill: none;
+  pointer-events: none;
+}
+
 .square-type,
 .square-value,
 .shop-tile text,

@@ -95,7 +95,10 @@ flat black bar across the lower third. The rent bar is tall enough to hold the
 large value with optical vertical centering. Ordinary board tiles do not use
 individual drop shadows, because shadows at a shared edge make SVG paint order
 read as one adjacent square sitting above another; hover remains a flat
-brightness change, while semantic district-event glows remain available.
+brightness change, while semantic district-event glows remain available. Every
+tile border is a thicker final paint layer above its labels, icons, and rent bar;
+the inset selection outline is the only layer above it. District borders use a
+dedicated darker palette that never duplicates any player ownership color.
 
 The retired Classic layout, its header toggle, persisted layout preference, and
 URL override are not part of the client. The action panel occupies the
