@@ -1468,6 +1468,7 @@ function BoardPanel({
               selectedSquare?.id === square.id || squareSelection?.selectedSquareId === square.id;
             const isSelectionEligible =
               squareSelection?.eligibleSquareIds.has(square.id) ?? false;
+            const isSelectionUnavailable = squareSelectionActive && !isSelectionEligible;
             const ownerColor =
               square.property_owner === null ? "rgba(255,255,255,0.78)" : getPlayerColor(square.property_owner);
             const label = labelForSquare(square);
@@ -1480,9 +1481,6 @@ function BoardPanel({
             const squareStyle = {
               ...(isStockPriceFocus
                 ? { "--stock-focus-color": getDistrictColor(square.property_district) }
-                : {}),
-              ...(isSelectionEligible
-                ? { "--square-selection-glow": getPlayerColor(square.property_owner ?? 0) }
                 : {}),
             } as CSSProperties;
             return (
@@ -1531,6 +1529,25 @@ function BoardPanel({
                     fill: getSquareFill(square),
                   }}
                 />
+                {isSelectionUnavailable && (
+                  <rect
+                    className="board-square-selection-unavailable-tint"
+                    x={
+                      square.position[0] -
+                      BOARD_TILE_RADIUS +
+                      BOARD_TILE_STROKE_INSET
+                    }
+                    y={
+                      square.position[1] -
+                      BOARD_TILE_RADIUS +
+                      BOARD_TILE_STROKE_INSET
+                    }
+                    width={BOARD_TILE_DRAW_SIZE}
+                    height={BOARD_TILE_DRAW_SIZE}
+                    rx="0.32"
+                    ry="0.32"
+                  />
+                )}
                 {isSelected && (
                   <rect
                     className="board-square-selection"
@@ -3385,7 +3402,7 @@ function SquareChoiceWidget({
           </button>
         </div>
       ) : (
-        <p className="investment-selection-hint">Pan and zoom freely, then choose a glowing square.</p>
+        <p className="investment-selection-hint">Pan and zoom freely, then choose an untinted square.</p>
       )}
       {onCancel && (
         <button type="button" className="secondary investment-cancel" disabled={responsePending} onClick={onCancel}>
@@ -3463,7 +3480,7 @@ function InvestmentWidget({
           <div>
             <p className="eyebrow">Invest</p>
             <h2>Choose a Shop</h2>
-            <p>Eligible shops are glowing. Click to inspect; double-click to choose.</p>
+            <p>Your available shops stay clear; other squares are tinted. Click to inspect; double-click to choose.</p>
           </div>
         </header>
         {selectedChoice ? (
@@ -3478,7 +3495,7 @@ function InvestmentWidget({
             </button>
           </div>
         ) : (
-          <p className="investment-selection-hint">Pan and zoom freely, then choose one of the glowing shops.</p>
+          <p className="investment-selection-hint">Pan and zoom freely, then choose one of the untinted shops.</p>
         )}
         <button type="button" className="secondary investment-cancel" onClick={() => onSubmit(null)}>
           Skip Investment

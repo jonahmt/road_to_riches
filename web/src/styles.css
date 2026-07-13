@@ -520,26 +520,9 @@ h3 {
   cursor: pointer;
 }
 
-.board-square-group.square-selection-eligible .board-square-tile {
-  animation: eligible-square-glow 760ms ease-in-out infinite alternate;
-}
-
-.board-square-group.square-selection-eligible.selected .board-square-tile {
-  animation-duration: 520ms;
-}
-
-@keyframes eligible-square-glow {
-  from {
-    filter:
-      brightness(1.12)
-      drop-shadow(0 0 2px var(--square-selection-glow));
-  }
-  to {
-    filter:
-      brightness(1.42)
-      drop-shadow(0 0 6px var(--square-selection-glow))
-      drop-shadow(0 0 13px var(--square-selection-glow));
-  }
+.board-square-selection-unavailable-tint {
+  fill: rgba(5, 7, 11, 0.48);
+  pointer-events: none;
 }
 
 @keyframes stock-price-shop-glow {
@@ -2308,7 +2291,6 @@ dd {
   .payment-dividends,
   .stock-price-change-card,
   .board-square-group.stock-price-focus .board-square-tile,
-  .board-square-group.square-selection-eligible .board-square-tile,
   .promotion-overlay,
   .promotion-ceremony,
   .promotion-suit,
@@ -2321,12 +2303,6 @@ dd {
     filter:
       brightness(1.28)
       drop-shadow(0 0 8px var(--stock-focus-color));
-  }
-
-  .board-square-group.square-selection-eligible .board-square-tile {
-    filter:
-      brightness(1.32)
-      drop-shadow(0 0 8px var(--square-selection-glow));
   }
 
   .promotion-suit {
