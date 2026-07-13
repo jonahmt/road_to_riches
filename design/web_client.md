@@ -289,6 +289,13 @@ immediately, and Enter provides the keyboard equivalent. If the workflow began
 in Follow, the camera returns to Follow when the decision resolves; a player who
 was already using Free Cam remains in Free Cam.
 
+Free-camera pointer capture begins only after movement crosses the board's drag
+threshold. A stationary press therefore remains targeted at the underlying SVG
+square and can produce native click and double-click events; crossing the
+threshold instead captures the pointer for uninterrupted panning and suppresses
+the resulting click. This applies equally to ordinary Free Cam and temporary
+square-selection Free Cam.
+
 Investment is the first complete consumer of this shared square-selection mode.
 Only the active player's owned shops with positive remaining capital remain
 inside clear cutouts. Once the shop is confirmed, a compact upper-right widget

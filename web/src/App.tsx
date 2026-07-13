@@ -1548,8 +1548,6 @@ function BoardPanel({
     if (cameraMode !== "free" || event.button !== 0) {
       return;
     }
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
     didDragRef.current = false;
     boardDragRef.current = {
       pointerId: event.pointerId,
@@ -1558,7 +1556,6 @@ function BoardPanel({
       lastX: event.clientX,
       lastY: event.clientY,
     };
-    setIsDragging(true);
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
@@ -1577,7 +1574,12 @@ function BoardPanel({
     ) {
       return;
     }
-    didDragRef.current = true;
+    if (!didDragRef.current) {
+      didDragRef.current = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setIsDragging(true);
+    }
+    event.preventDefault();
     const svg = boardSvgRef.current;
     const matrix = svg?.getScreenCTM();
     if (!svg || !matrix) {
