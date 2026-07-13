@@ -92,7 +92,9 @@ arrows are intentionally deferred. The full board tiles do not render square
 IDs. Unowned shops retain their centered purchase value, while owned shops use
 the owner's solid color across the main tile and place only current rent in a
 flat black bar across the lower third. The rent bar is tall enough to hold the
-large value with optical vertical centering. Ordinary board tiles do not use
+large value with optical vertical centering. Its sides and rounded bottom edge
+extend beneath the tile's foreground border, leaving no ownership-color seam
+between the black bar and border. Ordinary board tiles do not use
 individual drop shadows, because shadows at a shared edge make SVG paint order
 read as one adjacent square sitting above another; hover remains a flat
 brightness change, while semantic district-event glows remain available. Every

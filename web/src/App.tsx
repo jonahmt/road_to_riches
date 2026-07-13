@@ -2100,16 +2100,27 @@ function ShopTile({
     );
   }
 
+  const left = x - BOARD_TILE_RADIUS + BOARD_TILE_STROKE_INSET;
+  const right = x + BOARD_TILE_RADIUS - BOARD_TILE_STROKE_INSET;
+  const top = y + 0.35;
+  const bottom = y + BOARD_TILE_RADIUS - BOARD_TILE_STROKE_INSET;
+  const topRadius = 0.18;
+  const bottomRadius = 0.32;
+  const rentBarPath = [
+    `M ${left + topRadius} ${top}`,
+    `Q ${left} ${top} ${left} ${top + topRadius}`,
+    `L ${left} ${bottom - bottomRadius}`,
+    `Q ${left} ${bottom} ${left + bottomRadius} ${bottom}`,
+    `L ${right - bottomRadius} ${bottom}`,
+    `Q ${right} ${bottom} ${right} ${bottom - bottomRadius}`,
+    `L ${right} ${top + topRadius}`,
+    `Q ${right} ${top} ${right - topRadius} ${top}`,
+    "Z",
+  ].join(" ");
+
   return (
     <g className="shop-tile shop-tile-owned" aria-hidden="true">
-      <rect
-        className="shop-tile-rent-bar"
-        x={x - 1.72}
-        y={y + 0.35}
-        width="3.44"
-        height="1.48"
-        rx="0.18"
-      />
+      <path className="shop-tile-rent-bar" d={rentBarPath} />
       <text className="shop-tile-price" x={x} y={y + 1.17}>
         {rawGold(rent)}G
       </text>
