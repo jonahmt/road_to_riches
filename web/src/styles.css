@@ -587,13 +587,12 @@ h3 {
 }
 
 .board-square-tile {
-  filter: drop-shadow(0 0.34px 0.5px rgba(0, 0, 0, 0.45));
   transition: filter 120ms ease;
 }
 
 .board-square-group:hover .board-square-tile,
 .board-square-group:focus-visible .board-square-tile {
-  filter: brightness(1.12) drop-shadow(0 0.34px 0.5px rgba(0, 0, 0, 0.45));
+  filter: brightness(1.12);
 }
 
 .board-square-group.stock-price-focus .board-square-tile {

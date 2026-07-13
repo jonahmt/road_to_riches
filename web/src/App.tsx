@@ -2084,12 +2084,12 @@ function ShopTile({
       <rect
         className="shop-tile-rent-bar"
         x={x - 1.72}
-        y={y + 0.48}
+        y={y + 0.35}
         width="3.44"
-        height="1.24"
+        height="1.48"
         rx="0.18"
       />
-      <text className="shop-tile-price" x={x} y={y + 1.09}>
+      <text className="shop-tile-price" x={x} y={y + 1.17}>
         {rawGold(rent)}G
       </text>
     </g>

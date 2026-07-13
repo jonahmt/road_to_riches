@@ -91,7 +91,11 @@ authoritative position; the current player receives a stronger ring. Direction
 arrows are intentionally deferred. The full board tiles do not render square
 IDs. Unowned shops retain their centered purchase value, while owned shops use
 the owner's solid color across the main tile and place only current rent in a
-flat black bar across the lower third.
+flat black bar across the lower third. The rent bar is tall enough to hold the
+large value with optical vertical centering. Ordinary board tiles do not use
+individual drop shadows, because shadows at a shared edge make SVG paint order
+read as one adjacent square sitting above another; hover remains a flat
+brightness change, while semantic district-event glows remain available.
 
 The retired Classic layout, its header toggle, persisted layout preference, and
 URL override are not part of the client. The action panel occupies the
