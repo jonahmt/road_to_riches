@@ -237,6 +237,7 @@ h3 {
 }
 
 .hud-player-card {
+  position: relative;
   min-width: 0;
   display: grid;
   gap: 10px;
@@ -245,6 +246,48 @@ h3 {
   padding: 10px;
   background: rgba(5, 7, 10, 0.76);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+}
+
+.hud-cash-delta {
+  position: absolute;
+  top: 50%;
+  left: -112px;
+  z-index: 2;
+  min-width: 92px;
+  border: 2px solid rgba(8, 10, 14, 0.22);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: #f7f7f2;
+  color: #11151d;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+  font-size: 20px;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.hud-cash-delta::after {
+  position: absolute;
+  top: 50%;
+  right: -13px;
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 14px solid #f7f7f2;
+  content: "";
+  transform: translateY(-50%);
+}
+
+.hud-cash-delta.is-positive {
+  color: #087a43;
+}
+
+.hud-cash-delta.is-negative {
+  color: #d9192d;
 }
 
 .hud-player-card.current {
@@ -493,6 +536,51 @@ h3 {
   min-width: 72px;
 }
 
+.board-minimap {
+  position: absolute;
+  bottom: 64px;
+  left: 16px;
+  z-index: 9;
+  width: min(220px, 28vw);
+  height: min(220px, 28vw);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(5, 7, 10, 0.76);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
+.board-minimap svg {
+  width: 100%;
+  height: 100%;
+}
+
+.board-minimap rect {
+  stroke: rgba(5, 7, 10, 0.92);
+  stroke-width: 0.16;
+}
+
+.minimap-player circle {
+  stroke: #f7f7f2;
+  stroke-width: 0.16;
+}
+
+.minimap-player.active circle {
+  stroke-width: 0.28;
+  filter: drop-shadow(0 0 0.45px #f7f7f2);
+}
+
+.minimap-player text {
+  fill: #101114;
+  font-size: 0.48px;
+  font-weight: 950;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
 .board-square-group {
   cursor: pointer;
   outline: none;
@@ -546,7 +634,6 @@ h3 {
 
 .square-type,
 .square-value,
-.square-id,
 .shop-tile text,
 .player-token-svg text {
   font-family:
@@ -588,6 +675,12 @@ h3 {
   font-weight: 950;
 }
 
+.shop-tile-rent-bar {
+  fill: rgba(3, 4, 7, 0.94);
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 0.05;
+}
+
 .suit-icon {
   pointer-events: none;
 }
@@ -614,14 +707,6 @@ h3 {
 
 .suit-mini-row .suit-icon-shape {
   stroke-width: 0.16;
-}
-
-.square-id {
-  color: rgba(247, 247, 242, 0.78);
-  fill: rgba(247, 247, 242, 0.72);
-  font-size: 0.42px;
-  font-weight: 850;
-  text-anchor: end;
 }
 
 .player-token-svg circle {
@@ -1426,6 +1511,11 @@ dd {
   color: #ffd166;
 }
 
+.stock-transaction-math > div:first-child dd {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
 .stock-transaction-math .is-deficit dd {
   color: #ff7ab6;
 }
@@ -2016,23 +2106,6 @@ dd {
   animation: promotion-backdrop-in 240ms ease-out both;
 }
 
-.promotion-radiance {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: -1;
-  width: max(110vw, 110vh);
-  height: max(110vw, 110vh);
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(255, 209, 102, 0.12) 0deg 5deg,
-    transparent 5deg 15deg
-  );
-  opacity: 0.65;
-  transform: translate(-50%, -50%);
-  animation: promotion-radiance-spin 24s linear infinite;
-}
-
 .promotion-ceremony {
   position: relative;
   width: min(920px, 100%);
@@ -2211,6 +2284,9 @@ dd {
 }
 
 .promotion-salary-card .promotion-salary-total {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
   margin-top: 2px;
   border-bottom: 0;
   border-radius: 9px;
@@ -2218,11 +2294,18 @@ dd {
   background: rgba(255, 209, 102, 0.12);
 }
 
-.promotion-salary-total dt,
-.promotion-salary-total dd {
+.promotion-salary-total dt {
   color: #f7f7f2;
   font-size: 14px;
   font-weight: 900;
+}
+
+.promotion-salary-total dd {
+  color: #ffd166;
+  font-size: clamp(34px, 5vw, 54px);
+  font-weight: 950;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
 }
 
 .promotion-salary-card > p {
@@ -2265,11 +2348,6 @@ dd {
   to { opacity: 1; }
 }
 
-@keyframes promotion-radiance-spin {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
 @keyframes promotion-ceremony-in {
   from { opacity: 0; transform: translateY(24px) scale(0.94); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -2294,8 +2372,7 @@ dd {
   .promotion-overlay,
   .promotion-ceremony,
   .promotion-suit,
-  .promotion-level.next,
-  .promotion-radiance {
+  .promotion-level.next {
     animation: none;
   }
 
@@ -2949,6 +3026,10 @@ dd {
   margin: 0;
 }
 
+.layout-immersive.is-playing > .player-hud.has-cash-deltas {
+  z-index: 59;
+}
+
 .layout-immersive.is-playing .hud-player-card {
   grid-template-columns: minmax(112px, 0.8fr) minmax(0, 1.8fr);
   align-items: center;
@@ -3131,6 +3212,57 @@ dd {
   width: 100%;
 }
 
+.liquidation-choice-widget {
+  width: min(390px, calc(100vw - 32px)) !important;
+}
+
+.liquidation-asset-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.liquidation-asset-options button {
+  min-height: 96px;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 6px;
+  border-color: rgba(255, 255, 255, 0.24);
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.075);
+  color: #f7f7f2;
+  text-align: left;
+}
+
+.liquidation-asset-options button:hover:not(:disabled),
+.liquidation-asset-options button:focus-visible {
+  border-color: #ffd166;
+  background: rgba(255, 209, 102, 0.12);
+}
+
+.liquidation-asset-options button strong {
+  font-size: 16px;
+}
+
+.liquidation-asset-options button span {
+  color: rgba(247, 247, 242, 0.64);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.liquidation-shop-widget > .secondary {
+  width: 100%;
+}
+
+.liquidation-shop-widget > small {
+  display: block;
+  margin-top: 7px;
+  color: rgba(247, 247, 242, 0.54);
+  font-size: 10px;
+  text-align: right;
+}
+
 .investment-widget form {
   display: grid;
   gap: 10px;
@@ -3278,7 +3410,7 @@ dd {
 .layout-immersive.is-playing .square-panel {
   position: fixed;
   left: 16px;
-  bottom: 66px;
+  bottom: 300px;
   z-index: 9;
   width: min(300px, calc(100vw - 32px));
   max-height: 250px;
@@ -3403,6 +3535,29 @@ dd {
     right: 8px;
     bottom: 8px;
     width: calc(100vw - 16px);
+  }
+
+  .layout-immersive.is-playing .board-minimap {
+    top: auto;
+    bottom: 218px;
+    left: 8px;
+    width: 140px;
+    height: 140px;
+    padding: 7px;
+  }
+
+  .layout-immersive.is-playing .hud-cash-delta {
+    top: -12px;
+    right: 8px;
+    left: auto;
+    min-width: 76px;
+    padding: 7px 10px;
+    font-size: 15px;
+    transform: none;
+  }
+
+  .layout-immersive.is-playing .hud-cash-delta::after {
+    display: none;
   }
 
   .layout-immersive.is-playing .hud-player-card {

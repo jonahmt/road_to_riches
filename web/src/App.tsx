@@ -18,7 +18,12 @@ import {
   stockPrice,
 } from "./protocol";
 import { adjacentStepAnimationDuration } from "./cameraTiming";
-import { rentPaymentFacts } from "./paymentPresentation";
+import {
+  hasLiquidatableStock,
+  liquidationShopChoices,
+  type LiquidationShopChoice,
+} from "./liquidationSelection";
+import { rentPaymentCashDeltas, rentPaymentFacts } from "./paymentPresentation";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
   boardSelectionScrimPath,
@@ -33,6 +38,7 @@ import {
   defaultStockQuantity,
   districtLabel,
   maxBuyQuantity,
+  projectedStockPrice,
   type StockOverlayMode,
 } from "./stockOverlay";
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
@@ -171,6 +177,7 @@ interface BoardCamera {
 
 type BoardCameraMode = "follow" | "free";
 type BoardAnimationCurve = "cubic" | "linear";
+type LiquidationAssetMode = "choose" | "stock" | "shop";
 type VentureCellOwner = number | null;
 type VentureCursor = readonly [number, number];
 
@@ -373,9 +380,30 @@ function isTintablePropertyTile(square: SquareInfo): boolean {
 function getSquareFill(square: SquareInfo): string {
   const ownerId = square.property_owner;
   if (ownerId !== null && isTintablePropertyTile(square)) {
+    if (square.type === "SHOP") {
+      return getPlayerColor(ownerId);
+    }
     return hexToRgba(getPlayerColor(ownerId), 0.34);
   }
   return "rgba(8, 10, 14, 0.92)";
+}
+
+function getMinimapSquareFill(square: SquareInfo): string {
+  if (square.type === "SHOP") {
+    return square.property_owner === null
+      ? getDistrictColor(square.property_district)
+      : getPlayerColor(square.property_owner);
+  }
+  if (square.type === "BANK") {
+    return "#ffd166";
+  }
+  if (square.suit) {
+    return getSuitColor(square.suit);
+  }
+  if (square.type === "VENTURE") {
+    return "#77dd77";
+  }
+  return "#d8d9dc";
 }
 
 function parseResponseInput(value: string): unknown {
@@ -593,6 +621,7 @@ function App() {
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
   const [confirmedInvestmentSquareId, setConfirmedInvestmentSquareId] = useState<number | null>(null);
+  const [liquidationAssetMode, setLiquidationAssetMode] = useState<LiquidationAssetMode>("choose");
   const ventureRequest =
     clientState.pendingRequest?.type === "CHOOSE_VENTURE_CELL" ? clientState.pendingRequest : null;
   const investmentRequest =
@@ -623,9 +652,24 @@ function App() {
   const simpleSquareRequestKey = simpleSquareRequest
     ? `${simpleSquareRequest.type}:${simpleSquareRequest.player_id}:${[...simpleSquareIds].join("|")}`
     : "";
+  const liquidationRequest =
+    clientState.pendingRequest?.type === "LIQUIDATION" ? clientState.pendingRequest : null;
+  const liquidationChoices = useMemo(
+    () => liquidationShopChoices(liquidationRequest?.data.options),
+    [liquidationRequest],
+  );
+  const liquidationSquareIds = useMemo(
+    () => new Set(liquidationChoices.map((choice) => choice.squareId)),
+    [liquidationChoices],
+  );
+  const liquidationHasStock = hasLiquidatableStock(liquidationRequest?.data.options);
+  const liquidationRequestKey = liquidationRequest
+    ? `${liquidationRequest.player_id}:${asNumber(liquidationRequest.data.cash)}:${liquidationChoices.map((choice) => `${choice.squareId}-${choice.sellValue}`).join("|")}:${liquidationHasStock}`
+    : "";
   const stockRequest =
     clientState.pendingRequest &&
-    ["BUY_STOCK", "SELL_STOCK", "LIQUIDATION"].includes(clientState.pendingRequest.type)
+    (["BUY_STOCK", "SELL_STOCK"].includes(clientState.pendingRequest.type) ||
+      (clientState.pendingRequest.type === "LIQUIDATION" && liquidationAssetMode === "stock"))
       ? clientState.pendingRequest
       : null;
   const activePresentation = clientState.presentations[0] ?? null;
@@ -633,9 +677,22 @@ function App() {
     activePresentation?.type === "stock_price_changed"
       ? stockPriceChangeFacts(activePresentation.data, activePresentation.playerId)
       : null;
+  const paymentCashDeltas =
+    activePresentation?.type === "rent_payment"
+      ? new Map(
+          rentPaymentCashDeltas(
+            rentPaymentFacts(activePresentation.data, activePresentation.playerId),
+          ).map((delta) => [delta.playerId, delta.amount]),
+        )
+      : null;
   const blockingPresentationActive = activePresentation !== null;
   const standardKeyboardRequest =
-    ventureRequest || investmentRequest || simpleSquareRequest || stockRequest || blockingPresentationActive
+    ventureRequest ||
+    investmentRequest ||
+    simpleSquareRequest ||
+    liquidationRequest ||
+    stockRequest ||
+    blockingPresentationActive
       ? null
       : clientState.pendingRequest;
   useWasdPromptControls(clientState.responsePending ? null : standardKeyboardRequest, submitResponse);
@@ -652,6 +709,13 @@ function App() {
       setSelectedSquareId(null);
     }
   }, [simpleSquareRequestKey]);
+
+  useEffect(() => {
+    setLiquidationAssetMode("choose");
+    if (liquidationRequest) {
+      setSelectedSquareId(null);
+    }
+  }, [liquidationRequestKey]);
 
   const currentPlayer = clientState.gameState
     ? clientState.gameState.players[clientState.gameState.current_player_index]
@@ -736,7 +800,11 @@ function App() {
         />
       ) : (
         <>
-          <PlayerHud state={clientState.gameState} assignedPlayerId={clientState.playerId} />
+          <PlayerHud
+            state={clientState.gameState}
+            assignedPlayerId={clientState.playerId}
+            cashDeltas={paymentCashDeltas}
+          />
           <section className="game-layout">
             <BoardPanel
               state={clientState.gameState}
@@ -746,7 +814,10 @@ function App() {
               selectedSquare={selectedSquare}
               focusDistrictId={activeStockPriceChange?.districtId ?? null}
               temporaryFreeCamera={Boolean(
-                (investmentRequest || simpleSquareRequest) && !clientState.responsePending,
+                (investmentRequest ||
+                  simpleSquareRequest ||
+                  (liquidationRequest && liquidationAssetMode === "shop")) &&
+                  !clientState.responsePending,
               )}
               squareSelection={
                 investmentRequest && !clientState.responsePending && confirmedInvestmentSquareId === null
@@ -764,6 +835,15 @@ function App() {
                         selectedSquareId,
                         onConfirmSquare: submitResponse,
                       }
+                    : liquidationRequest &&
+                        liquidationAssetMode === "shop" &&
+                        !clientState.responsePending
+                      ? {
+                          eligibleSquareIds: liquidationSquareIds,
+                          selectedSquareId,
+                          onConfirmSquare: (squareId) =>
+                            submitResponse(["shop", squareId, 0]),
+                        }
                     : null
               }
               onSelectSquare={setSelectedSquareId}
@@ -779,7 +859,28 @@ function App() {
                 gameOverWinner={clientState.gameOverWinner}
               />
               {!stockRequest &&
-                (investmentRequest ? (
+                (liquidationRequest ? (
+                  liquidationAssetMode === "choose" ? (
+                    <LiquidationChoiceWidget
+                      request={liquidationRequest}
+                      hasStock={liquidationHasStock}
+                      hasShops={liquidationChoices.length > 0}
+                      onChoose={setLiquidationAssetMode}
+                    />
+                  ) : liquidationAssetMode === "shop" ? (
+                    <LiquidationShopWidget
+                      request={liquidationRequest}
+                      choices={liquidationChoices}
+                      selectedSquareId={selectedSquareId}
+                      responsePending={clientState.responsePending}
+                      onConfirm={(squareId) => submitResponse(["shop", squareId, 0])}
+                      onBack={() => {
+                        setSelectedSquareId(null);
+                        setLiquidationAssetMode("choose");
+                      }}
+                    />
+                  ) : null
+                ) : investmentRequest ? (
                   <InvestmentWidget
                     request={investmentRequest}
                     choices={investmentChoices}
@@ -830,6 +931,11 @@ function App() {
               state={clientState.gameState}
               responsePending={clientState.responsePending}
               onSubmit={submitResponse}
+              onBack={
+                stockRequest.type === "LIQUIDATION"
+                  ? () => setLiquidationAssetMode("choose")
+                  : null
+              }
             />
           )}
         </>
@@ -1061,6 +1167,7 @@ function BoardPanel({
   const cameraBoundsKeyRef = useRef("");
   const cameraAnimationFrameRef = useRef<number | null>(null);
   const cameraReadyRef = useRef(false);
+  const followZoomScaleRef = useRef(1);
   const activePlayerFrameRef = useRef<ActivePlayerFrame | null>(null);
   const tokenElementsRef = useRef(new Map<number, SVGGElement>());
   const tokenVisualsRef = useRef(new Map<number, BoardTokenVisual>());
@@ -1096,6 +1203,16 @@ function BoardPanel({
   const districtFocusKey = focusedDistrictCenter
     ? `${focusDistrictId}:${focusedDistrictCenter.x}:${focusedDistrictCenter.y}`
     : "";
+  const followCenter =
+    focusedDistrictCenter ??
+    (activeSquare
+      ? { x: activeSquare.position[0], y: activeSquare.position[1] }
+      : boardBounds
+        ? {
+            x: boardBounds.minX + boardBounds.width / 2,
+            y: boardBounds.minY + boardBounds.height / 2,
+          }
+        : null);
   const automaticAnimation = useMemo(() => {
     const previous = activePlayerFrameRef.current;
     const isAdjacentActiveMove = Boolean(
@@ -1150,18 +1267,18 @@ function BoardPanel({
     if (boundsChanged) {
       cameraRef.current = resetBoardCamera(boardBounds);
       cameraBoundsKeyRef.current = boundsKey;
+      followZoomScaleRef.current = 1;
     }
     svg.dataset.cameraMode = cameraMode;
     if (cameraMode === "follow") {
-      const center =
-        focusedDistrictCenter ??
-        (activeSquare
-          ? { x: activeSquare.position[0], y: activeSquare.position[1] }
-          : {
-              x: boardBounds.minX + boardBounds.width / 2,
-              y: boardBounds.minY + boardBounds.height / 2,
-            });
-      const target = centeredBoardCamera(boardBounds, getFollowBoardZoom(boardBounds), center);
+      const target = centeredBoardCamera(
+        boardBounds,
+        clampBoardZoom(getFollowBoardZoom(boardBounds) * followZoomScaleRef.current),
+        followCenter ?? {
+          x: boardBounds.minX + boardBounds.width / 2,
+          y: boardBounds.minY + boardBounds.height / 2,
+        },
+      );
       const from = { ...cameraRef.current };
       const shouldAnimate =
         cameraReadyRef.current &&
@@ -1222,7 +1339,7 @@ function BoardPanel({
   useEffect(() => {
     const canvas = boardCanvasRef.current;
     const svg = boardSvgRef.current;
-    if (!canvas || !svg || !boardBounds || cameraMode !== "free") {
+    if (!canvas || !svg || !boardBounds) {
       return;
     }
     const activeSvg = svg;
@@ -1230,11 +1347,26 @@ function BoardPanel({
 
     function handleWheel(event: WheelEvent) {
       event.preventDefault();
+      const factor = Math.exp(-event.deltaY * BOARD_WHEEL_ZOOM_SPEED);
+      if (cameraMode === "follow") {
+        if (!followCenter) {
+          return;
+        }
+        if (cameraAnimationFrameRef.current !== null) {
+          window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+          cameraAnimationFrameRef.current = null;
+        }
+        const zoom = clampBoardZoom(cameraRef.current.zoom * factor);
+        followZoomScaleRef.current = zoom / getFollowBoardZoom(activeBounds);
+        cameraRef.current = centeredBoardCamera(activeBounds, zoom, followCenter);
+        activeSvg.dataset.cameraAnimating = "false";
+        applyBoardCamera(activeSvg, cameraRef.current, activeBounds);
+        return;
+      }
       const point = svgPointAt(activeSvg, event.clientX, event.clientY);
       if (!point) {
         return;
       }
-      const factor = Math.exp(-event.deltaY * BOARD_WHEEL_ZOOM_SPEED);
       cameraRef.current = zoomBoardCameraAt(
         cameraRef.current,
         cameraRef.current.zoom * factor,
@@ -1246,7 +1378,7 @@ function BoardPanel({
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
-  }, [boundsKey, cameraMode]);
+  }, [activePositionKey, boundsKey, cameraMode, districtFocusKey]);
 
   useLayoutEffect(() => {
     if (tokenAnimationFrameRef.current !== null) {
@@ -1342,6 +1474,18 @@ function BoardPanel({
       return;
     }
     const camera = cameraRef.current;
+    if (cameraMode === "follow" && followCenter) {
+      if (cameraAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+        cameraAnimationFrameRef.current = null;
+      }
+      const zoom = clampBoardZoom(camera.zoom + delta);
+      followZoomScaleRef.current = zoom / getFollowBoardZoom(bounds);
+      cameraRef.current = centeredBoardCamera(bounds, zoom, followCenter);
+      svg.dataset.cameraAnimating = "false";
+      applyBoardCamera(svg, cameraRef.current, bounds);
+      return;
+    }
     const point = {
       x: camera.minX + bounds.width / camera.zoom / 2,
       y: camera.minY + bounds.height / camera.zoom / 2,
@@ -1353,6 +1497,21 @@ function BoardPanel({
   function resetCamera() {
     const svg = boardSvgRef.current;
     if (!svg) {
+      return;
+    }
+    if (cameraMode === "follow" && followCenter) {
+      if (cameraAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+        cameraAnimationFrameRef.current = null;
+      }
+      followZoomScaleRef.current = 1;
+      cameraRef.current = centeredBoardCamera(
+        bounds,
+        clampBoardZoom(getFollowBoardZoom(bounds)),
+        followCenter,
+      );
+      svg.dataset.cameraAnimating = "false";
+      applyBoardCamera(svg, cameraRef.current, bounds);
       return;
     }
     cameraRef.current = resetBoardCamera(bounds);
@@ -1564,11 +1723,6 @@ function BoardPanel({
                     {valueLabel}
                   </text>
                 )}
-                {!shouldRenderShopTile && (
-                  <text className="square-id" x={square.position[0] + 1.55} y={square.position[1] + 1.48}>
-                    #{square.id}
-                  </text>
-                )}
               </g>
             );
           })}
@@ -1609,7 +1763,33 @@ function BoardPanel({
         </svg>
       </div>
       {showDice && <BoardDice dice={dice} />}
+      <BoardMinimap state={state} bounds={bounds} />
       <div className="board-camera-controls" aria-label="Board zoom controls">
+        <button
+          type="button"
+          aria-label="Zoom out"
+          title="Zoom out"
+          onClick={() => zoomFromCenter(-BOARD_ZOOM_STEP)}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          className="board-camera-reset"
+          aria-label="Reset board view"
+          title="Reset board view"
+          onClick={resetCamera}
+        >
+          Reset
+        </button>
+        <button
+          type="button"
+          aria-label="Zoom in"
+          title="Zoom in"
+          onClick={() => zoomFromCenter(BOARD_ZOOM_STEP)}
+        >
+          +
+        </button>
         {cameraMode === "follow" ? (
           <button
             type="button"
@@ -1621,43 +1801,16 @@ function BoardPanel({
             Free Cam
           </button>
         ) : (
-          <>
-            <button
-              type="button"
-              aria-label="Zoom out"
-              title="Zoom out"
-              onClick={() => zoomFromCenter(-BOARD_ZOOM_STEP)}
-            >
-              −
-            </button>
-            <button
-              type="button"
-              className="board-camera-reset"
-              aria-label="Reset board view"
-              title="Reset board view"
-              onClick={resetCamera}
-            >
-              Reset
-            </button>
-            <button
-              type="button"
-              aria-label="Zoom in"
-              title="Zoom in"
-              onClick={() => zoomFromCenter(BOARD_ZOOM_STEP)}
-            >
-              +
-            </button>
-            <button
-              type="button"
-              className="board-camera-mode"
-              aria-label="Follow active player"
-              title="Follow active player"
-              disabled={temporaryFreeCamera}
-              onClick={enableFollowCamera}
-            >
-              {temporaryFreeCamera ? "Choosing" : "Follow"}
-            </button>
-          </>
+          <button
+            type="button"
+            className="board-camera-mode"
+            aria-label="Follow active player"
+            title="Follow active player"
+            disabled={temporaryFreeCamera}
+            onClick={enableFollowCamera}
+          >
+            {temporaryFreeCamera ? "Choosing" : "Follow"}
+          </button>
         )}
       </div>
     </section>
@@ -1686,6 +1839,56 @@ function BoardDice({ dice }: { dice: DiceState | null }) {
       </div>
       <span className={`board-die-roll ${roll > 0 ? "" : "is-empty"}`}>Roll {roll || "-"}</span>
     </div>
+  );
+}
+
+function BoardMinimap({ state, bounds }: { state: GameState; bounds: BoardBounds }) {
+  const groups = groupPlayersBySquare(state.players);
+  const activePlayer = state.players[state.current_player_index] ?? null;
+  return (
+    <aside className="board-minimap" aria-label="Board minimap">
+      <svg
+        viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="Miniature board and player locations"
+      >
+        {state.board.squares.map((square) => (
+          <rect
+            key={square.id}
+            x={square.position[0] - 0.5}
+            y={square.position[1] - 0.5}
+            width="1"
+            height="1"
+            rx="0.12"
+            fill={getMinimapSquareFill(square)}
+          />
+        ))}
+        {state.players
+          .filter((player) => !player.bankrupt)
+          .map((player) => {
+            const square = state.board.squares.find((candidate) => candidate.id === player.position);
+            if (!square) {
+              return null;
+            }
+            const group = groups.get(square.id) ?? [player];
+            const index = Math.max(0, group.findIndex((candidate) => candidate.player_id === player.player_id));
+            const offsetX = group.length > 1 ? (index % 2 === 0 ? -0.32 : 0.32) : 0;
+            const offsetY = group.length > 2 ? (index < 2 ? -0.32 : 0.32) : 0;
+            const isActive = activePlayer?.player_id === player.player_id;
+            return (
+              <g
+                key={player.player_id}
+                className={`minimap-player ${isActive ? "active" : ""}`}
+                transform={`translate(${square.position[0] + offsetX} ${square.position[1] + offsetY})`}
+              >
+                <circle r={isActive ? 0.64 : 0.5} fill={getPlayerColor(player.player_id)} />
+                <text x="0" y="0.04">{player.player_id}</text>
+              </g>
+            );
+          })}
+      </svg>
+    </aside>
   );
 }
 
@@ -1878,7 +2081,15 @@ function ShopTile({
 
   return (
     <g className="shop-tile shop-tile-owned" aria-hidden="true">
-      <text className="shop-tile-price" x={x} y={y}>
+      <rect
+        className="shop-tile-rent-bar"
+        x={x - 1.72}
+        y={y + 0.48}
+        width="3.44"
+        height="1.24"
+        rx="0.18"
+      />
+      <text className="shop-tile-price" x={x} y={y + 1.09}>
         {rawGold(rent)}G
       </text>
     </g>
@@ -2057,25 +2268,39 @@ function displayTypeForSquare(square: SquareInfo): string {
 function PlayerHud({
   state,
   assignedPlayerId,
+  cashDeltas,
 }: {
   state: GameState | null;
   assignedPlayerId: number | null;
+  cashDeltas: ReadonlyMap<number, number> | null;
 }) {
   if (!state) {
     return null;
   }
 
   return (
-    <section className="player-hud" aria-label="Players">
+    <section
+      className={`player-hud ${cashDeltas ? "has-cash-deltas" : ""}`}
+      aria-label="Players"
+    >
       {state.players.map((player) => {
         const isCurrent = state.players[state.current_player_index]?.player_id === player.player_id;
         const isAssigned = assignedPlayerId === player.player_id;
+        const cashDelta = cashDeltas?.get(player.player_id) ?? 0;
         return (
           <article
             key={player.player_id}
             className={`hud-player-card ${isCurrent ? "current" : ""} ${isAssigned ? "assigned" : ""}`}
             style={{ borderColor: getPlayerColor(player.player_id) }}
           >
+            {cashDelta !== 0 && (
+              <span
+                className={`hud-cash-delta ${cashDelta > 0 ? "is-positive" : "is-negative"}`}
+                aria-label={`Ready cash ${cashDelta > 0 ? "increases" : "decreases"} by ${formatGold(Math.abs(cashDelta))}`}
+              >
+                {cashDelta > 0 ? "+" : "−"}{formatGold(Math.abs(cashDelta))}
+              </span>
+            )}
             <div className="hud-player-title">
               <span className="player-token large" style={{ backgroundColor: getPlayerColor(player.player_id) }}>
                 {player.player_id}
@@ -2222,6 +2447,98 @@ function SquarePanel({ square, state }: { square: SquareInfo | null; state: Game
           </div>
         </dl>
       )}
+    </section>
+  );
+}
+
+function LiquidationChoiceWidget({
+  request,
+  hasStock,
+  hasShops,
+  onChoose,
+}: {
+  request: InputRequest;
+  hasStock: boolean;
+  hasShops: boolean;
+  onChoose: (mode: LiquidationAssetMode) => void;
+}) {
+  const cash = asNumber(request.data.cash);
+  return (
+    <section className="panel action-panel liquidation-choice-widget" aria-label="Choose an asset to sell">
+      <header className="panel-header prompt-header">
+        <div>
+          <p className="eyebrow">Negative Ready Cash</p>
+          <h2>Choose What to Sell</h2>
+          <p>
+            Ready cash is {formatGold(cash)}. Sell assets until it is nonnegative.
+          </p>
+        </div>
+      </header>
+      <div className="liquidation-asset-options">
+        <button type="button" disabled={!hasStock} onClick={() => onChoose("stock")}>
+          <strong>Sell Stock</strong>
+          <span>{hasStock ? "Open the stock exchange" : "No stock available"}</span>
+        </button>
+        <button type="button" disabled={!hasShops} onClick={() => onChoose("shop")}>
+          <strong>Sell a Shop</strong>
+          <span>{hasShops ? "Choose a shop on the board" : "No shops available"}</span>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function LiquidationShopWidget({
+  request,
+  choices,
+  selectedSquareId,
+  responsePending,
+  onConfirm,
+  onBack,
+}: {
+  request: InputRequest;
+  choices: LiquidationShopChoice[];
+  selectedSquareId: number | null;
+  responsePending: boolean;
+  onConfirm: (squareId: number) => void;
+  onBack: () => void;
+}) {
+  const selected = choices.find((choice) => choice.squareId === selectedSquareId) ?? null;
+  return (
+    <section
+      className={`panel action-panel investment-widget is-selecting liquidation-shop-widget ${responsePending ? "is-resolving" : ""}`}
+      aria-label="Choose a shop to sell"
+      aria-busy={responsePending}
+    >
+      <header className="panel-header prompt-header">
+        <div>
+          <p className="eyebrow">Sell a Shop</p>
+          <h2>Choose on the Board</h2>
+          <p>
+            Shops available for sale remain clear. Click to inspect; double-click to sell.
+          </p>
+        </div>
+      </header>
+      {selected ? (
+        <div className="investment-selected-shop">
+          <span>Selected shop</span>
+          <strong>Square #{selected.squareId}</strong>
+          <p>Bank sale value: {formatGold(selected.sellValue)}</p>
+          <button
+            type="button"
+            disabled={responsePending}
+            onClick={() => onConfirm(selected.squareId)}
+          >
+            Sell for {formatGold(selected.sellValue)}
+          </button>
+        </div>
+      ) : (
+        <p className="investment-selection-hint">Choose one of the clear shops.</p>
+      )}
+      <button type="button" className="secondary" disabled={responsePending} onClick={onBack}>
+        Back to Asset Choice
+      </button>
+      <small>Ready cash: {formatGold(asNumber(request.data.cash))}</small>
     </section>
   );
 }
@@ -2449,11 +2766,13 @@ function StockOverlay({
   state,
   responsePending,
   onSubmit,
+  onBack,
 }: {
   request: InputRequest;
   state: GameState;
   responsePending: boolean;
   onSubmit: (value: unknown) => void;
+  onBack: (() => void) | null;
 }) {
   const mode: StockOverlayMode =
     request.type === "BUY_STOCK"
@@ -2464,7 +2783,6 @@ function StockOverlay({
   const player = state.players.find((candidate) => candidate.player_id === request.player_id) ?? null;
   const liquidationOptions = asRecord(request.data.options);
   const liquidationStocks = asRecord(liquidationOptions.stock);
-  const liquidationShops = asArray(liquidationOptions.shops).map(asRecord);
   const buyStocks = asArray(request.data.stocks).map(asRecord);
   const sellHoldings = asRecord(request.data.holdings);
   const promptPriceByDistrict = new Map<number, number>();
@@ -2500,12 +2818,8 @@ function StockOverlay({
   const districts = [...state.stock.stocks].sort(
     (left, right) => left.district_id - right.district_id,
   );
-  const firstLiquidationShopDistrict = liquidationShops
-    .map((shop) => asNumber(shop.district, -1))
-    .find((districtId) => districtId >= 0);
   const firstDistrictId =
     districts.find((stock) => (maximumByDistrict.get(stock.district_id) ?? 0) > 0)?.district_id ??
-    firstLiquidationShopDistrict ??
     districts[0]?.district_id ??
     0;
   const requestKey = `${request.type}:${request.player_id}:${[...maximumByDistrict.entries()].map(([id, maximum]) => `${id}-${maximum}`).join("|")}`;
@@ -2527,14 +2841,19 @@ function StockOverlay({
   const transactionTotal = selectedPrice * normalizedQuantity;
   const cashAfter = mode === "buy" ? cash - transactionTotal : cash + transactionTotal;
   const deficitAfter = Math.max(0, cashDeficit - transactionTotal);
+  const selectedProjectedPrice = selectedStock
+    ? projectedStockPrice(
+        selectedPrice,
+        selectedStock.pending_fluctuation ?? 0,
+        mode,
+        normalizedQuantity,
+      )
+    : selectedPrice;
   const selectedShops = state.board.squares.filter(
     (square) =>
       square.type === "SHOP" && square.property_district === selectedStock?.district_id,
   );
   const selectedHolding = player?.owned_stock[String(selectedStock?.district_id ?? -1)] ?? 0;
-  const liquidatableShopValues = new Map(
-    liquidationShops.map((shop) => [asNumber(shop.square_id, -1), asNumber(shop.sell_value)]),
-  );
   const canSubmitStock =
     selectedStock !== null &&
     selectedMaximum > 0 &&
@@ -2566,21 +2885,12 @@ function StockOverlay({
     );
   }
 
-  function submitShop(squareId: number) {
-    if (
-      mode !== "liquidate" ||
-      !liquidatableShopValues.has(squareId) ||
-      responsePending ||
-      submittedRef.current
-    ) {
+  function cancel() {
+    if (responsePending || submittedRef.current) {
       return;
     }
-    submittedRef.current = true;
-    onSubmit(["shop", squareId, 0]);
-  }
-
-  function cancel() {
-    if (mode === "liquidate" || responsePending || submittedRef.current) {
+    if (mode === "liquidate") {
+      onBack?.();
       return;
     }
     submittedRef.current = true;
@@ -2657,7 +2967,7 @@ function StockOverlay({
         submitStock();
         return;
       }
-      if (key === "escape" && mode !== "liquidate") {
+      if (key === "escape" && (mode !== "liquidate" || onBack)) {
         event.preventDefault();
         event.stopPropagation();
         cancel();
@@ -2673,6 +2983,7 @@ function StockOverlay({
     selectedDistrictId,
     selectedMaximum,
     normalizedQuantity,
+    onBack,
   ]);
 
   const title = mode === "buy" ? "Buy Stock" : mode === "sell" ? "Sell Stock" : "Raise Cash";
@@ -2681,7 +2992,7 @@ function StockOverlay({
       ? "Choose a district and purchase amount."
       : mode === "sell"
         ? "Choose a district and the shares to sell."
-        : `Sell assets until your cash is nonnegative. ${formatGold(cashDeficit)} still needed.`;
+        : `Choose stock to sell. ${formatGold(cashDeficit)} still needed.`;
   const primaryLabel =
     mode === "buy"
       ? `Buy ${normalizedQuantity}`
@@ -2779,7 +3090,6 @@ function StockOverlay({
               </header>
               <div className="stock-shop-strip">
                 {selectedShops.map((shop) => {
-                  const saleValue = liquidatableShopValues.get(shop.id);
                   const ownerColor =
                     shop.property_owner === null ? "#70747d" : getPlayerColor(shop.property_owner);
                   return (
@@ -2804,15 +3114,6 @@ function StockOverlay({
                           </dd>
                         </div>
                       </dl>
-                      {mode === "liquidate" && saleValue !== undefined && (
-                        <button
-                          type="button"
-                          disabled={responsePending || submittedRef.current}
-                          onClick={() => submitShop(shop.id)}
-                        >
-                          Sell shop for {formatGold(saleValue)}
-                        </button>
-                      )}
                     </article>
                   );
                 })}
@@ -2866,7 +3167,15 @@ function StockOverlay({
             </div>
 
             <dl className="stock-transaction-math">
-              <div><dt>Stock price</dt><dd>{formatGold(selectedPrice)}</dd></div>
+              <div>
+                <dt>Stock price</dt>
+                <dd>
+                  {formatGold(selectedPrice)}
+                  {selectedProjectedPrice !== selectedPrice && (
+                    <> → <strong>{formatGold(selectedProjectedPrice)}</strong></>
+                  )}
+                </dd>
+              </div>
               <div><dt>{mode === "buy" ? "Purchase total" : "Sale proceeds"}</dt><dd>{formatGold(transactionTotal)}</dd></div>
               <div><dt>Ready cash</dt><dd>{formatGold(cash)} → <strong>{formatGold(cashAfter)}</strong></dd></div>
               {mode === "liquidate" && (
@@ -2884,15 +3193,18 @@ function StockOverlay({
             >
               {responsePending || submittedRef.current ? "Resolving..." : primaryLabel}
             </button>
-            {mode !== "liquidate" && (
+            {(mode !== "liquidate" || onBack) && (
               <button type="button" className="secondary" onClick={cancel}>
-                Cancel
+                {mode === "liquidate" ? "Back to Asset Choice" : "Cancel"}
               </button>
             )}
             <div className="stock-keyboard-help">
               <p><strong>W/S or ↑/↓</strong> district</p>
               <p><strong>A/D or ←/→</strong> quantity</p>
-              <p><strong>Enter</strong> confirm{mode !== "liquidate" ? " · Esc cancel" : ""}</p>
+              <p>
+                <strong>Enter</strong> confirm
+                {mode === "liquidate" ? " · Esc back" : " · Esc cancel"}
+              </p>
             </div>
           </aside>
         </div>
@@ -3264,7 +3576,6 @@ function PromotionCeremony({
       aria-labelledby="promotion-title"
       style={{ "--promotion-player-color": getPlayerColor(playerId) } as CSSProperties}
     >
-      <div className="promotion-radiance" aria-hidden="true" />
       <section className="promotion-ceremony">
         <header className="promotion-header">
           <span className="promotion-eyebrow">Bank Promotion</span>

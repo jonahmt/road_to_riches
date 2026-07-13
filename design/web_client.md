@@ -82,6 +82,15 @@ toast, match identity and tools sit upper-left, square details sit lower-left,
 and camera controls remain lower-left beneath the details. Overlay panels use
 translucent dark surfaces so board state stays visible around them.
 
+A fixed lower-left minimap shows the entire board independently of camera pan
+and zoom. Every board square is represented by a tiny color-coded square, and
+each active player is represented by a bordered player-color marker at their
+authoritative position; the current player receives a stronger ring. Direction
+arrows are intentionally deferred. The full board tiles do not render square
+IDs. Unowned shops retain their centered purchase value, while owned shops use
+the owner's solid color across the main tile and place only current rent in a
+flat black bar across the lower third.
+
 The retired Classic layout, its header toggle, persisted layout preference, and
 URL override are not part of the client. The action panel occupies the
 upper-right before a roll and
@@ -103,8 +112,10 @@ The backend emits a blocking `promotion_completed` presentation request
 containing the promoted player, previous and next levels, base salary, level
 bonus, shop value bonus, comeback bonus, total salary, and resulting ready cash.
 The browser renders all four colored suit icons, an animated level transition,
-and the full salary breakdown. Only the promoted player's assigned client can
-continue the ceremony; other clients see a read-only waiting state. The server
+and the full salary breakdown. The ceremony has no rotating/radiating gold-ray
+layer, and the final total salary is substantially larger than every component
+amount because it is the primary result. Only the promoted player's assigned
+client can continue the ceremony; other clients see a read-only waiting state. The server
 does not process the bank's stock opportunity, continued movement, or any later
 gameplay until the owning client acknowledges the presentation.
 
@@ -115,13 +126,17 @@ stock dividend payouts, a second card appears beneath it with the district and
 one dedicated payout slot per player; players without a payout keep their slot
 and display `0G`. With no dividends, the second card is omitted so routine
 payments stay compact. Payment surfaces use flat translucent fills without
-gradients. Only the payer may continue with click, Enter, or Space; observers
-wait for that player, and gameplay remains paused until the server resolves the
-presentation.
+gradients. While the overlay is active, the normal lower-right player HUD rises
+above the backdrop and shows speech-bubble cash deltas: rent is subtracted from
+the payer, added to the owner, and any dividend is added to its recipient. When
+one player receives both rent and a dividend, the HUD combines them into one
+net positive amount. Only the payer may continue with click, Enter, or Space;
+observers wait for that player, and gameplay remains paused until the server
+resolves the presentation.
 
 An authoritative `stock_price_changed` presentation temporarily reframes the
 board around the average position of the changed district's shop squares while
-the camera is in Follow mode. It keeps the normal six-square-wide Follow zoom,
+the camera is in Follow mode. It keeps the player's current Follow zoom,
 uses the standard cubic automatic-camera transition, and does not move a player
 who is already using Free Cam. All shop tiles in that district begin a pulsing
 district-colored glow immediately; after the camera's 360-millisecond move, the
@@ -131,6 +146,8 @@ held and the resulting holding-value gain or loss. The presentation owner
 continues with click, Enter, or Space, after which Follow mode eases back to the
 active player. Immediate and deferred backend changes share this exact client
 sequence; timing is presentation-only and never sent by the backend.
+The overlay uses a translucent shade without backdrop blur, so the reframed and
+highlighted district remains legible behind the card.
 
 The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
@@ -214,13 +231,14 @@ The board camera has follow and free modes. Follow mode is the default: it frame
 six board-square widths across the camera and keeps the active turn player's
 current square at the center of the view as that player moves or turn ownership
 changes. Deriving this framing from the fixed square width instead of the full
-board bounds keeps tile scale consistent across differently sized boards. Its
-only camera control is a `Free Cam` button in the lower-right. Free mode begins
-from the current followed framing and enables cursor-centered mouse-wheel zoom
-from 50% to 300%, primary-button drag panning, and compact minus, reset, plus,
-and follow controls. Reset returns free mode to the original fitted board;
-Follow returns to the six-square-wide active-player view and locks manual camera
-input again.
+board bounds keeps tile scale consistent across differently sized boards.
+Follow mode allows immediate mouse-wheel and minus/plus zoom from 50% to 300%,
+but always zooms around the automatic follow target and never permits manual
+panning. Its reset control restores the standard six-square framing. Free mode
+begins from the current followed framing and enables cursor-centered mouse-wheel
+zoom, primary-button drag panning, and the same compact minus, reset, plus, and
+follow controls. Reset returns free mode to the original fitted board; Follow
+returns to the active-player target while retaining the last Follow zoom.
 
 Automatic Follow-camera changes default to a 360-millisecond cubic ease-in-out
 curve. Turn changes, returning from Free Cam, and other automatic reframing use
@@ -301,8 +319,16 @@ After WASD/arrow navigation begins, stale focus and stationary pointer hover are
 cleared so only the current keyboard cursor remains highlighted. Pointer hover
 feedback returns only after the mouse physically moves again.
 
-`BUY_STOCK`, `SELL_STOCK`, and stock-related `LIQUIDATION` prompts open one
-shared full-screen Stock Exchange overlay. Its primary table keeps districts in
+`BUY_STOCK` and `SELL_STOCK` prompts open one shared full-screen Stock Exchange
+overlay. A `LIQUIDATION` prompt first presents a dedicated asset-type choice.
+Choosing stock opens the same Stock Exchange in forced-sale mode; choosing shop
+temporarily enters the shared free-camera square picker, where only the
+prompt-provided sellable shops remain clear and double-click confirms the sale.
+Shops are never sold from inside the stock table. If the player still has
+negative ready cash after a sale, the next authoritative liquidation prompt
+returns to the stock-or-shop choice before another asset can be sold.
+
+The Stock Exchange's primary table keeps districts in
 stable rows with current price, one holdings column per player, and aggregate
 district shop value. Rows that are unavailable for the current transaction stay
 visible for context but cannot produce a transaction. Selecting any row reveals
@@ -311,16 +337,20 @@ current rent, and remaining capital capacity.
 
 The transaction sidebar provides minus/plus, direct numeric entry, and Max
 controls; it previews total cost or proceeds and resulting ready cash before
-submission. Buy and voluntary-sell modes allow cancellation, while liquidation
-does not and additionally reports the remaining deficit. Liquidation shop
-options appear on the same district shop cards and submit the canonical
-`["shop", square_id, 0]` response; stock transactions submit
+submission. The stock-price row also shows current → projected end-of-turn
+price whenever existing pending fluctuation plus the proposed purchase or sale
+would change it. This projection accumulates earlier qualifying buys/sales in
+the same turn and applies the same ten-share threshold/delta rule as the engine.
+Buy and voluntary-sell modes allow cancellation, while liquidation reports the
+remaining deficit and offers a local Back control to return to the asset choice.
+Shop-picker sales submit the canonical `["shop", square_id, 0]` response;
+liquidation stock transactions submit
 `["stock", district_id, quantity]`. Ordinary buy/sell submissions retain their
 canonical `[district_id, quantity]` shape. W/S or vertical arrows change the
 district, A/D or horizontal arrows adjust quantity, Enter confirms, and Escape
-cancels only optional transactions. All legal constraints remain sourced from
-the active server prompt, while display-only market and shop context is derived
-from authoritative `state_sync` data.
+cancels optional transactions or returns from liquidation stock mode. All legal
+constraints remain sourced from the active server prompt, while display-only
+market and shop context is derived from authoritative `state_sync` data.
 
 Stock typography is intentionally larger than the compact board HUD: table
 headers, row values, shop metrics, transaction math, and keyboard hints remain

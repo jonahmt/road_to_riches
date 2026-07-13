@@ -35,3 +35,16 @@ export function districtLabel(districtId: number): string {
   }
   return `District ${districtId + 1}`;
 }
+
+export function projectedStockPrice(
+  currentPrice: number,
+  pendingFluctuation: number,
+  mode: StockOverlayMode,
+  quantity: number,
+): number {
+  const transactionDelta =
+    quantity >= 10
+      ? (Math.floor(currentPrice / 16) + 1) * (mode === "buy" ? 1 : -1)
+      : 0;
+  return currentPrice + pendingFluctuation + transactionDelta;
+}

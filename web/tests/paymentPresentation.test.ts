@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { rentPaymentFacts } from "../src/paymentPresentation.ts";
+import { rentPaymentCashDeltas, rentPaymentFacts } from "../src/paymentPresentation.ts";
 
 test("rent payment facts preserve a payment without dividends", () => {
   assert.deepEqual(
@@ -52,5 +52,26 @@ test("rent payment facts keep positive dividend payouts", () => {
       rentAmount: 27,
       dividends: [{ playerId: 0, amount: 5 }],
     },
+  );
+});
+
+test("payment cash deltas combine rent and dividends for the player HUD", () => {
+  assert.deepEqual(
+    rentPaymentCashDeltas({
+      payerId: 3,
+      ownerId: 1,
+      squareId: 7,
+      districtId: 4,
+      rentAmount: 27,
+      dividends: [
+        { playerId: 0, amount: 5 },
+        { playerId: 1, amount: 2 },
+      ],
+    }),
+    [
+      { playerId: 0, amount: 5 },
+      { playerId: 1, amount: 29 },
+      { playerId: 3, amount: -27 },
+    ],
   );
 });

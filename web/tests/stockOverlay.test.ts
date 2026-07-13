@@ -6,6 +6,7 @@ import {
   defaultStockQuantity,
   districtLabel,
   maxBuyQuantity,
+  projectedStockPrice,
 } from "../src/stockOverlay.ts";
 
 test("buy quantity respects cash and the per-opportunity cap", () => {
@@ -31,4 +32,11 @@ test("district labels use compact letter names", () => {
   assert.equal(districtLabel(0), "District A");
   assert.equal(districtLabel(4), "District E");
   assert.equal(districtLabel(26), "District 27");
+});
+
+test("stock price projection includes prior and proposed turn fluctuations", () => {
+  assert.equal(projectedStockPrice(16, 2, "buy", 10), 20);
+  assert.equal(projectedStockPrice(16, 2, "sell", 10), 16);
+  assert.equal(projectedStockPrice(16, -2, "liquidate", 9), 14);
+  assert.equal(projectedStockPrice(1, -5, "sell", 10), -5);
 });

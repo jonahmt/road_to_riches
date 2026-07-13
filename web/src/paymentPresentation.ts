@@ -12,6 +12,11 @@ export interface RentPaymentFacts {
   dividends: PaymentPayout[];
 }
 
+export interface PlayerCashDelta {
+  playerId: number;
+  amount: number;
+}
+
 function finiteInteger(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : fallback;
 }
@@ -44,4 +49,23 @@ export function rentPaymentFacts(
     rentAmount: Math.max(0, finiteInteger(data.rent_amount, 0)),
     dividends: parsePayouts(data.dividends),
   };
+}
+
+export function rentPaymentCashDeltas(payment: RentPaymentFacts): PlayerCashDelta[] {
+  const deltas = new Map<number, number>();
+  const add = (playerId: number, amount: number) => {
+    if (playerId < 0 || amount === 0) {
+      return;
+    }
+    deltas.set(playerId, (deltas.get(playerId) ?? 0) + amount);
+  };
+
+  add(payment.payerId, -payment.rentAmount);
+  add(payment.ownerId, payment.rentAmount);
+  payment.dividends.forEach((payout) => add(payout.playerId, payout.amount));
+
+  return [...deltas.entries()]
+    .filter(([, amount]) => amount !== 0)
+    .map(([playerId, amount]) => ({ playerId, amount }))
+    .sort((left, right) => left.playerId - right.playerId);
 }
