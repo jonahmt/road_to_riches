@@ -5,6 +5,53 @@ export interface InvestmentSquareChoice {
   districtId: number | null;
 }
 
+export interface SelectionScrimBounds {
+  minX: number;
+  minY: number;
+  width: number;
+  height: number;
+}
+
+export interface SelectionScrimSquare {
+  id: number;
+  position: readonly [number, number];
+}
+
+export function boardSelectionScrimPath(
+  bounds: SelectionScrimBounds,
+  squares: SelectionScrimSquare[],
+  eligibleSquareIds: ReadonlySet<number>,
+  tileSize = 4,
+  strokeWidth = 0.14,
+): string | null {
+  if (squares.length === 0) {
+    return null;
+  }
+  const eligibleSquares = squares.filter((square) => eligibleSquareIds.has(square.id));
+  if (eligibleSquares.length === squares.length) {
+    return null;
+  }
+
+  const outer = rectanglePath(bounds.minX, bounds.minY, bounds.width, bounds.height);
+  const cutoutSize = tileSize + strokeWidth;
+  const cutoutRadius = cutoutSize / 2;
+  const cutouts = eligibleSquares
+    .map((square) =>
+      rectanglePath(
+        square.position[0] - cutoutRadius,
+        square.position[1] - cutoutRadius,
+        cutoutSize,
+        cutoutSize,
+      ),
+    )
+    .join("");
+  return `${outer}${cutouts}`;
+}
+
+function rectanglePath(x: number, y: number, width: number, height: number): string {
+  return `M${x} ${y}h${width}v${height}h-${width}Z`;
+}
+
 export function squareIdsFromOptions(value: unknown): number[] {
   if (!Array.isArray(value)) {
     return [];

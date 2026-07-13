@@ -252,9 +252,11 @@ short drag threshold distinguishes free-camera panning from selecting a square.
 Board-square decisions use one shared direct-manipulation workflow instead of
 lists of square IDs. When a prompt asks the player to choose a square, Follow
 camera temporarily becomes Free Cam so the player can pan and zoom. If only a
-subset is legal, legal squares retain their normal appearance while all other
-board squares receive a translucent dark tint behind their content. This keeps
-the board legible without adding a per-square animation cost.
+subset is legal, one static translucent scrim covers the board with clear
+cutouts around legal squares. Legal squares therefore retain their completely
+normal appearance while the rest of the board recedes as one readable layer.
+The scrim is omitted when every square is legal and avoids per-square animation
+or filter costs.
 One click selects and inspects a legal square; a true double-click confirms it
 immediately, and Enter provides the keyboard equivalent. If the workflow began
 in Follow, the camera returns to Follow when the decision resolves; a player who
@@ -262,14 +264,14 @@ was already using Free Cam remains in Free Cam.
 
 Investment is the first complete consumer of this shared square-selection mode.
 Only the active player's owned shops with positive remaining capital remain
-untinted. Once the shop is confirmed, a compact upper-right widget asks for the
-amount and
-shows current-to-resulting shop value, ready cash, and the legal maximum. The
+inside clear cutouts. Once the shop is confirmed, a compact upper-right widget
+asks for the amount and shows current-to-resulting shop value, ready cash, and
+the legal maximum. The
 maximum is the lesser of remaining capital and cash plus liquidatable stock,
 matching the authoritative engine rule. The player may return to square
 selection or cancel before submitting. Unrestricted venture/script square
 choices use the same interaction with every square legal, while voluntary shop
-auctions tint every non-auctionable square and allow canceling.
+auctions cut out only the player's auctionable shops and allow canceling.
 
 The game board has a persistent die overlay in its upper-left corner. It consumes
 the same backend `dice` message as the TUI: the face displays the remaining move

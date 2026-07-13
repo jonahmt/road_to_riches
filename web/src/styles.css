@@ -520,8 +520,8 @@ h3 {
   cursor: pointer;
 }
 
-.board-square-selection-unavailable-tint {
-  fill: rgba(5, 7, 11, 0.48);
+.board-square-selection-scrim {
+  fill: rgba(3, 5, 9, 0.46);
   pointer-events: none;
 }
 

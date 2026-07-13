@@ -21,6 +21,7 @@ import { adjacentStepAnimationDuration } from "./cameraTiming";
 import { rentPaymentFacts } from "./paymentPresentation";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
+  boardSelectionScrimPath,
   clampInvestmentAmount,
   investmentSquareChoices,
   maximumInvestment,
@@ -1330,6 +1331,10 @@ function BoardPanel({
   }
 
   const bounds = boardBounds;
+  const selectionScrimPath =
+    squareSelectionActive && squareSelection
+      ? boardSelectionScrimPath(bounds, state.board.squares, squareSelection.eligibleSquareIds)
+      : null;
 
   function zoomFromCenter(delta: number) {
     const svg = boardSvgRef.current;
@@ -1468,7 +1473,6 @@ function BoardPanel({
               selectedSquare?.id === square.id || squareSelection?.selectedSquareId === square.id;
             const isSelectionEligible =
               squareSelection?.eligibleSquareIds.has(square.id) ?? false;
-            const isSelectionUnavailable = squareSelectionActive && !isSelectionEligible;
             const ownerColor =
               square.property_owner === null ? "rgba(255,255,255,0.78)" : getPlayerColor(square.property_owner);
             const label = labelForSquare(square);
@@ -1529,25 +1533,6 @@ function BoardPanel({
                     fill: getSquareFill(square),
                   }}
                 />
-                {isSelectionUnavailable && (
-                  <rect
-                    className="board-square-selection-unavailable-tint"
-                    x={
-                      square.position[0] -
-                      BOARD_TILE_RADIUS +
-                      BOARD_TILE_STROKE_INSET
-                    }
-                    y={
-                      square.position[1] -
-                      BOARD_TILE_RADIUS +
-                      BOARD_TILE_STROKE_INSET
-                    }
-                    width={BOARD_TILE_DRAW_SIZE}
-                    height={BOARD_TILE_DRAW_SIZE}
-                    rx="0.32"
-                    ry="0.32"
-                  />
-                )}
                 {isSelected && (
                   <rect
                     className="board-square-selection"
@@ -1587,6 +1572,14 @@ function BoardPanel({
               </g>
             );
           })}
+          {selectionScrimPath && (
+            <path
+              className="board-square-selection-scrim"
+              d={selectionScrimPath}
+              fillRule="evenodd"
+              clipRule="evenodd"
+            />
+          )}
           <g className="player-token-layer" aria-label="Player positions">
             {playerTokens.map((token) => {
               const renderedVisual = tokenVisualsRef.current.get(token.player.player_id) ?? token;
