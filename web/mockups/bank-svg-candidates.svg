@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1400" viewBox="0 0 1400 1400">
+  <title>Road to Riches bank square SVG candidates</title>
+  <desc>Ten simple gold bank icons previewed on dark Road to Riches board tiles.</desc>
+
+  <defs>
+    <symbol id="bank-01-classic" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M8 35 50 8l42 27v7H8z"/>
+      <rect fill="currentColor" x="13" y="46" width="74" height="7" rx="2"/>
+      <rect fill="currentColor" x="18" y="55" width="11" height="27" rx="2"/>
+      <rect fill="currentColor" x="36" y="55" width="10" height="27" rx="2"/>
+      <rect fill="currentColor" x="54" y="55" width="10" height="27" rx="2"/>
+      <rect fill="currentColor" x="71" y="55" width="11" height="27" rx="2"/>
+      <rect fill="currentColor" x="11" y="84" width="78" height="6" rx="2"/>
+      <rect fill="currentColor" x="6" y="92" width="88" height="5" rx="2.5"/>
+    </symbol>
+
+    <symbol id="bank-02-linework" viewBox="0 0 100 100">
+      <path fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" d="M12 38 50 12l38 26"/>
+      <path fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" d="M16 48h68M21 56v27M40 56v27M60 56v27M79 56v27M14 89h72M9 96h82"/>
+    </symbol>
+
+    <symbol id="bank-03-monolith" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M7 37 50 9l43 28v9H7zM14 50h72v37H14zM9 90h82v7H9z"/>
+      <rect fill="var(--bank-cutout, #080a0e)" x="24" y="57" width="9" height="30" rx="4.5"/>
+      <rect fill="var(--bank-cutout, #080a0e)" x="45.5" y="57" width="9" height="30" rx="4.5"/>
+      <rect fill="var(--bank-cutout, #080a0e)" x="67" y="57" width="9" height="30" rx="4.5"/>
+    </symbol>
+
+    <symbol id="bank-04-coinhouse" viewBox="0 0 100 100">
+      <circle fill="currentColor" cx="50" cy="20" r="13"/>
+      <path fill="var(--bank-cutout, #080a0e)" d="M54.5 11v3.2c3 .8 5 2.8 5 5.5h-6c0-1.2-1.2-2-3.2-2-1.8 0-3 .6-3 1.6 0 1.2 1.8 1.6 4.7 2.2 4.8 1 8 2.8 8 7 0 3.4-2.2 5.8-5.5 6.7V38h-7v-2.7c-4-1-6.2-3.5-6.2-6.8h6.2c0 1.6 1.4 2.6 3.7 2.6 2 0 3.1-.7 3.1-1.8 0-1.3-1.6-1.7-4.8-2.4-4.7-1-7.8-2.8-7.8-6.7 0-3.3 2.2-5.6 5.8-6.4V11z"/>
+      <path fill="currentColor" d="M7 47 50 24l43 23v7H7zM15 58h70v7H15zM20 68h12v19H20zM44 68h12v19H44zM68 68h12v19H68zM12 90h76v7H12z"/>
+    </symbol>
+
+    <symbol id="bank-05-rotunda" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M12 43a38 27 0 0 1 76 0v5H12z"/>
+      <circle fill="var(--bank-cutout, #080a0e)" cx="50" cy="35" r="7"/>
+      <rect fill="currentColor" x="15" y="52" width="70" height="7" rx="3"/>
+      <rect fill="currentColor" x="20" y="62" width="10" height="24" rx="5"/>
+      <rect fill="currentColor" x="38" y="62" width="9" height="24" rx="4.5"/>
+      <rect fill="currentColor" x="53" y="62" width="9" height="24" rx="4.5"/>
+      <rect fill="currentColor" x="70" y="62" width="10" height="24" rx="5"/>
+      <rect fill="currentColor" x="11" y="89" width="78" height="8" rx="4"/>
+    </symbol>
+
+    <symbol id="bank-06-keystone" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M6 39 50 8l44 31-5 8-39-25-39 25z"/>
+      <path fill="currentColor" d="M17 48h66v9H17zM21 61h13v25H21zM67 61h13v25H67zM39 86V72a11 11 0 0 1 22 0v14zM13 89h74v8H13z"/>
+      <circle fill="var(--bank-cutout, #080a0e)" cx="50" cy="72" r="4"/>
+    </symbol>
+
+    <symbol id="bank-07-portal" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M9 36 50 8l41 28v8H9zM16 48h68v40H16zM10 91h80v6H10z"/>
+      <path fill="var(--bank-cutout, #080a0e)" d="M25 57h10v31H25zM65 57h10v31H65zM42 88V72a8 8 0 0 1 16 0v16z"/>
+    </symbol>
+
+    <symbol id="bank-08-pillars" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M11 33 50 9l39 24-4 7H15z"/>
+      <rect fill="currentColor" x="12" y="43" width="76" height="8" rx="4"/>
+      <path fill="currentColor" d="M19 54h15l-2 31H21zM42.5 54h15l-2 31h-11zM66 54h15l-2 31H68z"/>
+      <rect fill="currentColor" x="14" y="85" width="72" height="6" rx="3"/>
+      <rect fill="currentColor" x="7" y="93" width="86" height="5" rx="2.5"/>
+    </symbol>
+
+    <symbol id="bank-09-vault" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M8 36 50 9l42 27v8H8zM14 48h72v39H14zM9 90h82v7H9z"/>
+      <circle fill="var(--bank-cutout, #080a0e)" cx="50" cy="69" r="16"/>
+      <circle fill="currentColor" cx="50" cy="69" r="10"/>
+      <circle fill="var(--bank-cutout, #080a0e)" cx="50" cy="69" r="3"/>
+      <path fill="var(--bank-cutout, #080a0e)" d="M48.5 56h3v26h-3zM37 67.5h26v3H37z"/>
+    </symbol>
+
+    <symbol id="bank-10-crest" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M50 7 94 36l-5 8-39-24-39 24-5-8z"/>
+      <path fill="currentColor" d="M15 47h70v8H15zM19 59h13v27H19zM68 59h13v27H68zM39 59h22v27H39zM11 89h78v8H11z"/>
+      <path fill="var(--bank-cutout, #080a0e)" d="M44 64h12v22H44z"/>
+      <circle fill="currentColor" cx="50" cy="42" r="7"/>
+      <path fill="var(--bank-cutout, #080a0e)" d="M47 38h6v8h-6z"/>
+    </symbol>
+
+    <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="1400" fill="#171b24"/>
+  <text x="48" y="72" fill="#f7f7f2" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="34" font-weight="800" letter-spacing="1.4">BANK SVG DIRECTIONS</text>
+  <text x="1352" y="69" fill="#9da5b4" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" text-anchor="end">ONE-COLOR • TILE-SCALE • NO GRADIENTS</text>
+
+  <g color="#ffd166" style="--bank-cutout:#080a0e" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <g transform="translate(46 155)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-01-classic" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">01  CLASSIC</text>
+    </g>
+    <g transform="translate(317 155)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-02-linework" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">02  LINEWORK</text>
+    </g>
+    <g transform="translate(588 155)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-03-monolith" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">03  MONOLITH</text>
+    </g>
+    <g transform="translate(859 155)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-04-coinhouse" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">04  COINHOUSE</text>
+    </g>
+    <g transform="translate(1130 155)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-05-rotunda" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">05  ROTUNDA</text>
+    </g>
+
+    <g transform="translate(46 825)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-06-keystone" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">06  KEYSTONE</text>
+    </g>
+    <g transform="translate(317 825)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-07-portal" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">07  PORTAL</text>
+    </g>
+    <g transform="translate(588 825)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-08-pillars" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">08  PILLARS</text>
+    </g>
+    <g transform="translate(859 825)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-09-vault" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">09  VAULT</text>
+    </g>
+    <g transform="translate(1130 825)">
+      <rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/>
+      <text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.6" text-anchor="middle">BANK</text>
+      <use href="#bank-10-crest" x="45" y="52" width="134" height="134"/>
+      <text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">10  CREST</text>
+    </g>
+  </g>
+</svg>
