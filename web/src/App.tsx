@@ -2289,7 +2289,7 @@ function VentureIcon({ x, y }: { x: number; y: number }) {
       <text className="suit-icon-label" x={x} y={y - 1.22}>
         VENTURE
       </text>
-      <g transform={`translate(${x} ${y + 0.34}) scale(0.0225) translate(-50 -51)`}>
+      <g transform={`translate(${x} ${y + 0.34}) scale(0.02025) translate(-50 -51)`}>
         <VentureShape />
       </g>
     </g>
