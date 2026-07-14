@@ -701,7 +701,8 @@ h3 {
 .take-a-break-icon,
 .arcade-icon,
 .roll-on-icon,
-.cannon-icon {
+.cannon-icon,
+.backstreet-icon {
   pointer-events: none;
 }
 
@@ -720,6 +721,10 @@ h3 {
 }
 
 .take-a-break-icon-label {
+  font-size: 0.39px;
+}
+
+.backstreet-icon-label {
   font-size: 0.39px;
 }
 

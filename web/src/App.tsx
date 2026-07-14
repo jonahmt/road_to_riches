@@ -53,6 +53,7 @@ import {
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
+const DEFAULT_BACKSTREET_COLOR = "#56cfff";
 
 const SUIT_ORDER = ["SPADE", "HEART", "DIAMOND", "CLUB"];
 const RENT_MULTIPLIERS: Record<string, number> = {
@@ -396,6 +397,13 @@ function getSquareFill(square: SquareInfo): string {
   return "rgba(8, 10, 14, 0.92)";
 }
 
+function getBackstreetColor(square: SquareInfo): string {
+  const configuredColor = square.custom_vars.backstreet_color;
+  return typeof configuredColor === "string" && /^#[0-9a-f]{6}$/i.test(configuredColor)
+    ? configuredColor
+    : DEFAULT_BACKSTREET_COLOR;
+}
+
 function getMinimapSquareFill(square: SquareInfo): string {
   if (square.type === "SHOP") {
     return getMinimapShopColor(square.property_owner);
@@ -417,6 +425,9 @@ function getMinimapSquareFill(square: SquareInfo): string {
   }
   if (square.type === "ARCADE") {
     return "#ff5aa5";
+  }
+  if (square.type === "BACKSTREET") {
+    return getBackstreetColor(square);
   }
   if (square.suit) {
     return getSuitColor(square.suit);
@@ -1667,6 +1678,7 @@ function BoardPanel({
             const shouldRenderArcadeIcon = isArcadeIconSquare(square);
             const shouldRenderRollOnIcon = isRollOnIconSquare(square);
             const shouldRenderCannonIcon = isCannonIconSquare(square);
+            const shouldRenderBackstreetIcon = isBackstreetIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
@@ -1679,6 +1691,7 @@ function BoardPanel({
               !shouldRenderArcadeIcon &&
               !shouldRenderRollOnIcon &&
               !shouldRenderCannonIcon &&
+              !shouldRenderBackstreetIcon &&
               !shouldRenderShopTile;
             const squareStyle = {
               ...(isStockPriceFocus
@@ -1745,6 +1758,8 @@ function BoardPanel({
                   <RollOnIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderCannonIcon ? (
                   <CannonIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderBackstreetIcon ? (
+                  <BackstreetIcon square={square} x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
                   <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
                 ) : (
@@ -1780,7 +1795,8 @@ function BoardPanel({
                       shouldRenderTakeABreakIcon ||
                       shouldRenderArcadeIcon ||
                       shouldRenderRollOnIcon ||
-                      shouldRenderCannonIcon
+                      shouldRenderCannonIcon ||
+                      shouldRenderBackstreetIcon
                         ? "#f7f7f2"
                         : getDistrictBorderColor(square.property_district),
                   }}
@@ -2085,6 +2101,10 @@ function isRollOnIconSquare(square: SquareInfo): boolean {
 
 function isCannonIconSquare(square: SquareInfo): boolean {
   return square.type === "CANNON";
+}
+
+function isBackstreetIconSquare(square: SquareInfo): boolean {
+  return square.type === "BACKSTREET";
 }
 
 function rentMultiplier(numOwned: number, numTotal: number): number {
@@ -2521,6 +2541,39 @@ function ArcadeIcon({ x, y }: { x: number; y: number }) {
       <SquareIconLabel label="ARCADE" x={x} y={y} />
       <g transform={`translate(${x} ${y + 0.43}) scale(0.026) translate(-50 -50)`}>
         <ArcadeShape />
+      </g>
+    </g>
+  );
+}
+
+function BackstreetArm() {
+  return <path d="M8 2C18 5 29 3 38-4 44-9 48-16 49-24" />;
+}
+
+function BackstreetShape({ color }: { color: string }) {
+  return (
+    <g
+      className="backstreet-icon-shape"
+      fill="none"
+      stroke={color}
+      strokeWidth="8.5"
+      strokeLinecap="round"
+    >
+      {Array.from({ length: 8 }, (_, index) => (
+        <g key={index} transform={`rotate(${index * 45})`}>
+          <BackstreetArm />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+function BackstreetIcon({ square, x, y }: { square: SquareInfo; x: number; y: number }) {
+  return (
+    <g className="backstreet-icon" aria-hidden="true">
+      <SquareIconLabel className="backstreet-icon-label" label="BACKSTREET" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.43}) scale(0.025)`}>
+        <BackstreetShape color={getBackstreetColor(square)} />
       </g>
     </g>
   );

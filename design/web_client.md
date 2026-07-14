@@ -285,6 +285,16 @@ label above exactly three dotted fireworks that differ in color and visible
 size. The large firework is sky blue, the medium firework is pink, and the small
 firework is amber yellow, all on the standard dark tile with a white border.
 
+The backstreet square uses refinement candidate 02 "Thick Stroke": a fitted
+`BACKSTREET` label above eight clearly separated, thick curved arms with rounded
+ends and an open center, closer to a bent firework or whirlpool than filled
+pinwheel wedges. The tile uses the standard dark background and white border.
+Its icon color defaults unconditionally to sky blue (`#56cfff`); district,
+ownership, and destination do not change that fallback. A board may explicitly
+override an individual square with a six-digit hex string in
+`custom_vars.backstreet_color`, allowing differently colored backstreets to
+coexist on the same board.
+
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
 to match the side column, so WASD input, prompt transitions, square details, and
