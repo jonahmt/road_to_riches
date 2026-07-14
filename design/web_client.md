@@ -234,7 +234,9 @@ selected smooth custom silhouette based on the "29D Slimmer Width" mockup.
 The selected bank-square visual direction is candidate 01 "Classic": a bold,
 single-color classical bank silhouette with a triangular pediment, four simple
 columns, and a two-step base. It should use the same clean filled-vector language
-as the suit icons. The stockbroker should read as an architectural sibling to
+as the suit icons. The implemented bank tile uses a white border and `BANK`
+label above this gold silhouette on the standard dark tile background. The
+stockbroker should read as an architectural sibling to
 the bank, using a brokerage or exchange building in the same bold one-color
 language, while remaining distinct through its roofline, storefront, ticker,
 signage, windows, or market motif. Its final icon and color remain pending

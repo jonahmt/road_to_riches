@@ -689,6 +689,10 @@ h3 {
   pointer-events: none;
 }
 
+.bank-icon {
+  pointer-events: none;
+}
+
 .suit-icon-label {
   fill: #f7f7f2;
   font-family:
@@ -707,6 +711,12 @@ h3 {
   stroke: rgba(8, 10, 14, 0.88);
   stroke-linejoin: round;
   stroke-width: 0.12;
+}
+
+.bank-icon-shape {
+  stroke: rgba(8, 10, 14, 0.88);
+  stroke-linejoin: round;
+  stroke-width: 3.4;
 }
 
 .suit-mini-row .suit-icon-shape {

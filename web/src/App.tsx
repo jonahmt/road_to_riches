@@ -1648,10 +1648,12 @@ function BoardPanel({
             const label = labelForSquare(square);
             const valueLabel = valueLabelForSquare(square, state);
             const shouldRenderSuitIcon = isSuitIconSquare(square);
+            const shouldRenderBankIcon = isBankIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
-            const shouldRenderDefaultText = !shouldRenderSuitIcon && !shouldRenderShopTile;
+            const shouldRenderDefaultText =
+              !shouldRenderSuitIcon && !shouldRenderBankIcon && !shouldRenderShopTile;
             const squareStyle = {
               ...(isStockPriceFocus
                 ? { "--stock-focus-color": getDistrictColor(square.property_district) }
@@ -1703,6 +1705,8 @@ function BoardPanel({
                 />
                 {shouldRenderSuitIcon ? (
                   <SuitIcon suit={square.suit} squareType={square.type} x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderBankIcon ? (
+                  <BankIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
                   <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
                 ) : (
@@ -1730,7 +1734,7 @@ function BoardPanel({
                   ry="0.32"
                   strokeWidth={BOARD_TILE_STROKE_WIDTH}
                   style={{
-                    stroke: shouldRenderSuitIcon
+                    stroke: shouldRenderSuitIcon || shouldRenderBankIcon
                       ? "#f7f7f2"
                       : getDistrictBorderColor(square.property_district),
                   }}
@@ -2009,6 +2013,10 @@ function isSuitIconSquare(square: SquareInfo): boolean {
   return Boolean(square.suit && ["SUIT", "CHANGE_OF_SUIT"].includes(square.type));
 }
 
+function isBankIconSquare(square: SquareInfo): boolean {
+  return square.type === "BANK";
+}
+
 function rentMultiplier(numOwned: number, numTotal: number): number {
   if (numOwned <= 0) {
     return 0;
@@ -2217,6 +2225,34 @@ function SuitIcon({
           ))}
         </g>
       )}
+    </g>
+  );
+}
+
+function BankShape({ fill = "#ffd166" }: { fill?: string }) {
+  return (
+    <g className="bank-icon-shape" fill={fill}>
+      <path d="M8 35 50 8l42 27v7H8z" />
+      <rect x="13" y="46" width="74" height="7" rx="2" />
+      <rect x="18" y="55" width="11" height="27" rx="2" />
+      <rect x="36" y="55" width="10" height="27" rx="2" />
+      <rect x="54" y="55" width="10" height="27" rx="2" />
+      <rect x="71" y="55" width="11" height="27" rx="2" />
+      <rect x="11" y="84" width="78" height="6" rx="2" />
+      <rect x="6" y="92" width="88" height="5" rx="2.5" />
+    </g>
+  );
+}
+
+function BankIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="bank-icon" aria-hidden="true">
+      <text className="suit-icon-label" x={x} y={y - 1.22}>
+        BANK
+      </text>
+      <g transform={`translate(${x} ${y + 0.35}) scale(0.0235) translate(-50 -52.5)`}>
+        <BankShape />
+      </g>
     </g>
   );
 }
