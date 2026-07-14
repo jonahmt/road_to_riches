@@ -1649,11 +1649,15 @@ function BoardPanel({
             const valueLabel = valueLabelForSquare(square, state);
             const shouldRenderSuitIcon = isSuitIconSquare(square);
             const shouldRenderBankIcon = isBankIconSquare(square);
+            const shouldRenderVentureIcon = isVentureIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
             const shouldRenderDefaultText =
-              !shouldRenderSuitIcon && !shouldRenderBankIcon && !shouldRenderShopTile;
+              !shouldRenderSuitIcon &&
+              !shouldRenderBankIcon &&
+              !shouldRenderVentureIcon &&
+              !shouldRenderShopTile;
             const squareStyle = {
               ...(isStockPriceFocus
                 ? { "--stock-focus-color": getDistrictColor(square.property_district) }
@@ -1707,6 +1711,8 @@ function BoardPanel({
                   <SuitIcon suit={square.suit} squareType={square.type} x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderBankIcon ? (
                   <BankIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderVentureIcon ? (
+                  <VentureIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
                   <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
                 ) : (
@@ -1734,7 +1740,7 @@ function BoardPanel({
                   ry="0.32"
                   strokeWidth={BOARD_TILE_STROKE_WIDTH}
                   style={{
-                    stroke: shouldRenderSuitIcon || shouldRenderBankIcon
+                    stroke: shouldRenderSuitIcon || shouldRenderBankIcon || shouldRenderVentureIcon
                       ? "#f7f7f2"
                       : getDistrictBorderColor(square.property_district),
                   }}
@@ -2017,6 +2023,10 @@ function isBankIconSquare(square: SquareInfo): boolean {
   return square.type === "BANK";
 }
 
+function isVentureIconSquare(square: SquareInfo): boolean {
+  return square.type === "VENTURE";
+}
+
 function rentMultiplier(numOwned: number, numTotal: number): number {
   if (numOwned <= 0) {
     return 0;
@@ -2252,6 +2262,35 @@ function BankIcon({ x, y }: { x: number; y: number }) {
       </text>
       <g transform={`translate(${x} ${y + 0.35}) scale(0.0235) translate(-50 -52.5)`}>
         <BankShape />
+      </g>
+    </g>
+  );
+}
+
+function VentureShape({ fill = "#ff6aae" }: { fill?: string }) {
+  return (
+    <g className="venture-icon-shape" color={fill}>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="17"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M25 30C25 18 35 11 50 11 65 11 75 19 75 31c0 12-9 17-18 22-7 4-10 9-10 15"
+      />
+      <circle fill="currentColor" cx="47" cy="92" r="8" />
+    </g>
+  );
+}
+
+function VentureIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="venture-icon" aria-hidden="true">
+      <text className="suit-icon-label" x={x} y={y - 1.22}>
+        VENTURE
+      </text>
+      <g transform={`translate(${x} ${y + 0.34}) scale(0.0225) translate(-50 -51)`}>
+        <VentureShape />
       </g>
     </g>
   );

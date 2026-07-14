@@ -693,6 +693,10 @@ h3 {
   pointer-events: none;
 }
 
+.venture-icon {
+  pointer-events: none;
+}
+
 .suit-icon-label {
   fill: #f7f7f2;
   font-family:

@@ -242,10 +242,12 @@ language, while remaining distinct through its roofline, storefront, ticker,
 signage, windows, or market motif. Its final icon and color remain pending
 visual selection.
 
-The venture square should show only one large pink question mark on the standard
-dark tile with a white border. It should not include a `VENTURE` label or any
-secondary imagery. The exact question-mark silhouette remains pending visual
-selection.
+The venture square uses a white border and a fitted white `VENTURE` label at the
+top, matching the label hierarchy of the other SVG-based special squares. Below
+the label it shows the selected thicker B3 question-mark silhouette in heart
+pink on the standard dark tile. The full mark, including its clearly separated
+circular dot, is centered in the space below the label with comfortable inset
+from the tile border and no secondary imagery.
 
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
