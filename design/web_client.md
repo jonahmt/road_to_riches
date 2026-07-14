@@ -267,6 +267,14 @@ The take-a-break square uses selected candidate 03 "Full": one pale-yellow,
 single-path crescent moon below a fitted `TAKE A BREAK` label in the same
 presentation. Neither tile includes secondary imagery.
 
+The roll-on square should use a fitted `ROLL ON` label above one clean die seen
+from a corner, with its top, left, and right faces visible. The cannon square
+should use a fitted `CANNON` label above one simple, immediately recognizable
+cannon silhouette. The arcade square should use a fitted `ARCADE` label above
+exactly three fireworks that differ in color and visible size. Five candidate
+directions for each of these three square types are retained as mockups; their
+final silhouettes and colors remain pending visual selection.
+
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
 to match the side column, so WASD input, prompt transitions, square details, and
