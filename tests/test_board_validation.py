@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections import Counter
+
 import pytest
 
 from road_to_riches.board.loader import load_board, validate_board_data
+from road_to_riches.models.square_type import SquareType
 
 
 def _board_data(squares: list[dict]) -> dict:
@@ -30,11 +33,20 @@ def test_validate_board_data_accepts_known_boards():
         "boards/test_board.json",
         "boards/solo_board.json",
         "boards/large_test_board.json",
+        "boards/all_square_types.json",
         "boards/conversion_tests/bobomb/bobomb.json",
         "boards/conversion_tests/trodain/trodain.json",
     ):
         board, _ = load_board(path)
         assert board.squares
+
+
+def test_all_square_types_board_contains_each_type_exactly_once():
+    board, _ = load_board("boards/all_square_types.json")
+
+    assert Counter(square.type for square in board.squares) == Counter(
+        {square_type: 1 for square_type in SquareType}
+    )
 
 
 def test_validate_board_data_rejects_non_contiguous_ids():

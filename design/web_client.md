@@ -195,6 +195,12 @@ The web client treats the Python backend as the source of truth.
 * `web/src/App.tsx` renders the application shell and prompt controls.
 * `web/src/styles.css` owns the first visual system.
 
+`boards/all_square_types.json` is the canonical visual showcase fixture for the
+web board. It uses one connected perimeter loop containing exactly one instance
+of every `SquareType`, including types whose gameplay remains unimplemented, so
+UI work can inspect complete square coverage without treating the fixture as a
+game-balance baseline.
+
 The board renderer is deliberately data-driven. Squares are placed from backend
 `SquareInfo.position`, and player tokens are layered by current square. The
 player-facing board does not render waypoint/path guide lines during normal play;

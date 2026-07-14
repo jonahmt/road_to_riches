@@ -1,0 +1,216 @@
+{
+  "name": "All Square Types",
+  "max_dice_roll": 6,
+  "target_networth": 5000,
+  "max_bankruptcies": 1,
+  "num_districts": 1,
+  "starting_cash": 1500,
+  "num_players": 4,
+  "promotion": {
+    "base_salary": 250,
+    "salary_increment": 150,
+    "shop_value_multiplier": 0.1,
+    "comeback_multiplier": 0.1
+  },
+  "squares": [
+    {
+      "id": 0,
+      "type": "BANK",
+      "position": [0, 0],
+      "waypoints": [
+        {"from_id": 19, "to_ids": [1]},
+        {"from_id": 1, "to_ids": [19]}
+      ]
+    },
+    {
+      "id": 1,
+      "type": "STOCKBROKER",
+      "position": [4, 0],
+      "waypoints": [
+        {"from_id": 0, "to_ids": [2]},
+        {"from_id": 2, "to_ids": [0]}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "SHOP",
+      "position": [8, 0],
+      "district": 0,
+      "base_value": 200,
+      "base_rent": 30,
+      "waypoints": [
+        {"from_id": 1, "to_ids": [3]},
+        {"from_id": 3, "to_ids": [1]}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "VACANT_PLOT",
+      "position": [12, 0],
+      "district": 0,
+      "base_value": 250,
+      "base_rent": 40,
+      "vacant_plot_options": ["VP_CHECKPOINT", "VP_TAX_OFFICE"],
+      "waypoints": [
+        {"from_id": 2, "to_ids": [4]},
+        {"from_id": 4, "to_ids": [2]}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "VP_CHECKPOINT",
+      "position": [16, 0],
+      "district": 0,
+      "base_value": 250,
+      "base_rent": 40,
+      "waypoints": [
+        {"from_id": 3, "to_ids": [5]},
+        {"from_id": 5, "to_ids": [3]}
+      ]
+    },
+    {
+      "id": 5,
+      "type": "VP_TAX_OFFICE",
+      "position": [20, 0],
+      "district": 0,
+      "base_value": 250,
+      "base_rent": 40,
+      "waypoints": [
+        {"from_id": 4, "to_ids": [6]},
+        {"from_id": 6, "to_ids": [4]}
+      ]
+    },
+    {
+      "id": 6,
+      "type": "SUIT",
+      "position": [20, 4],
+      "suit": "SPADE",
+      "waypoints": [
+        {"from_id": 5, "to_ids": [7]},
+        {"from_id": 7, "to_ids": [5]}
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CHANGE_OF_SUIT",
+      "position": [20, 8],
+      "suit": "HEART",
+      "waypoints": [
+        {"from_id": 6, "to_ids": [8]},
+        {"from_id": 8, "to_ids": [6]}
+      ]
+    },
+    {
+      "id": 8,
+      "type": "SUIT_YOURSELF",
+      "position": [20, 12],
+      "waypoints": [
+        {"from_id": 7, "to_ids": [9]},
+        {"from_id": 9, "to_ids": [7]}
+      ]
+    },
+    {
+      "id": 9,
+      "type": "VENTURE",
+      "position": [20, 16],
+      "waypoints": [
+        {"from_id": 8, "to_ids": [10]},
+        {"from_id": 10, "to_ids": [8]}
+      ]
+    },
+    {
+      "id": 10,
+      "type": "TAKE_A_BREAK",
+      "position": [20, 20],
+      "waypoints": [
+        {"from_id": 9, "to_ids": [11]},
+        {"from_id": 11, "to_ids": [9]}
+      ]
+    },
+    {
+      "id": 11,
+      "type": "BOON",
+      "position": [16, 20],
+      "waypoints": [
+        {"from_id": 10, "to_ids": [12]},
+        {"from_id": 12, "to_ids": [10]}
+      ]
+    },
+    {
+      "id": 12,
+      "type": "BOOM",
+      "position": [12, 20],
+      "waypoints": [
+        {"from_id": 11, "to_ids": [13]},
+        {"from_id": 13, "to_ids": [11]}
+      ]
+    },
+    {
+      "id": 13,
+      "type": "ARCADE",
+      "position": [8, 20],
+      "waypoints": [
+        {"from_id": 12, "to_ids": [14]},
+        {"from_id": 14, "to_ids": [12]}
+      ]
+    },
+    {
+      "id": 14,
+      "type": "ROLL_ON",
+      "position": [4, 20],
+      "waypoints": [
+        {"from_id": 13, "to_ids": [15]},
+        {"from_id": 15, "to_ids": [13]}
+      ]
+    },
+    {
+      "id": 15,
+      "type": "BACKSTREET",
+      "position": [0, 20],
+      "backstreet_destination": 0,
+      "waypoints": [
+        {"from_id": 14, "to_ids": [16]},
+        {"from_id": 16, "to_ids": [14]}
+      ]
+    },
+    {
+      "id": 16,
+      "type": "DOORWAY",
+      "position": [0, 16],
+      "doorway_destination": 10,
+      "waypoints": [
+        {"from_id": 15, "to_ids": [17]},
+        {"from_id": 17, "to_ids": [15]}
+      ]
+    },
+    {
+      "id": 17,
+      "type": "CANNON",
+      "position": [0, 12],
+      "waypoints": [
+        {"from_id": 16, "to_ids": [18]},
+        {"from_id": 18, "to_ids": [16]}
+      ]
+    },
+    {
+      "id": 18,
+      "type": "SWITCH",
+      "position": [0, 8],
+      "switch_next_state": 0,
+      "waypoints": [
+        {"from_id": 17, "to_ids": [19]},
+        {"from_id": 19, "to_ids": [17]}
+      ]
+    },
+    {
+      "id": 19,
+      "type": "CUSTOM",
+      "position": [0, 4],
+      "custom_vars": {"showcase": true},
+      "waypoints": [
+        {"from_id": 18, "to_ids": [0]},
+        {"from_id": 0, "to_ids": [18]}
+      ]
+    }
+  ]
+}
