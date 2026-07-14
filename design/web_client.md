@@ -242,6 +242,11 @@ language, while remaining distinct through its roofline, storefront, ticker,
 signage, windows, or market motif. Its final icon and color remain pending
 visual selection.
 
+The venture square should show only one large pink question mark on the standard
+dark tile with a white border. It should not include a `VENTURE` label or any
+secondary imagery. The exact question-mark silhouette remains pending visual
+selection.
+
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
 to match the side column, so WASD input, prompt transitions, square details, and
