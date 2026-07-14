@@ -234,9 +234,11 @@ selected smooth custom silhouette based on the "29D Slimmer Width" mockup.
 The selected bank-square visual direction is candidate 01 "Classic": a bold,
 single-color classical bank silhouette with a triangular pediment, four simple
 columns, and a two-step base. It should use the same clean filled-vector language
-as the suit icons. The stockbroker square must remain immediately distinct from
-the bank and therefore should not use a bank building, pediment, or classical
-columns; its final icon and color remain pending visual selection.
+as the suit icons. The stockbroker should read as an architectural sibling to
+the bank, using a brokerage or exchange building in the same bold one-color
+language, while remaining distinct through its roofline, storefront, ticker,
+signage, windows, or market motif. Its final icon and color remain pending
+visual selection.
 
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
