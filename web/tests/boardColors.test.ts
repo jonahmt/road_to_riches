@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  BOON_ICON_COLOR,
   DISTRICT_BORDER_COLORS,
   getMinimapShopColor,
   PLAYER_COLORS,
+  SUIT_COLORS,
   UNOWNED_MINIMAP_SHOP_COLOR,
 } from "../src/boardColors.ts";
 
@@ -19,4 +21,8 @@ test("unowned minimap shops use neutral grey while owned shops use player colors
   assert.equal(getMinimapShopColor(null), UNOWNED_MINIMAP_SHOP_COLOR);
   assert.equal(getMinimapShopColor(0), PLAYER_COLORS[0]);
   assert.equal(getMinimapShopColor(3), PLAYER_COLORS[3]);
+});
+
+test("boon star color remains distinct from the diamond suit", () => {
+  assert.notEqual(BOON_ICON_COLOR.toLowerCase(), SUIT_COLORS.DIAMOND.toLowerCase());
 });

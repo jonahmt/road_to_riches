@@ -697,6 +697,11 @@ h3 {
   pointer-events: none;
 }
 
+.boon-icon,
+.take-a-break-icon {
+  pointer-events: none;
+}
+
 .suit-icon-label {
   fill: #f7f7f2;
   font-family:

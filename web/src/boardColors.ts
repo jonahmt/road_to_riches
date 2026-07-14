@@ -25,6 +25,16 @@ export const DISTRICT_BORDER_COLORS = [
   "#c66313",
 ] as const;
 
+export const SUIT_COLORS: Readonly<Record<string, string>> = {
+  SPADE: "#56cfff",
+  HEART: "#ff6aae",
+  DIAMOND: "#ffd84d",
+  CLUB: "#74df67",
+};
+
+export const BOON_ICON_COLOR = "#ffb703";
+export const TAKE_A_BREAK_ICON_COLOR = "#ffe8a3";
+
 export const UNOWNED_MINIMAP_SHOP_COLOR = "#70747d";
 
 export function getMinimapShopColor(ownerId: number | null): string {

@@ -9,10 +9,13 @@ import {
   useState,
 } from "react";
 import {
+  BOON_ICON_COLOR,
   DISTRICT_BORDER_COLORS,
   DISTRICT_COLORS,
   getMinimapShopColor,
   PLAYER_COLORS,
+  SUIT_COLORS,
+  TAKE_A_BREAK_ICON_COLOR,
 } from "./boardColors";
 import { getPathKeyActions, getWasdResponseMap, type WasdResponseMap } from "./controls";
 import { formatGold, netWorth, readableType } from "./format";
@@ -51,12 +54,6 @@ import { type DiceState, type PresentationState, useGameClient } from "./useGame
 
 const DEFAULT_URI = "ws://localhost:8765";
 
-const SUIT_COLORS: Record<string, string> = {
-  SPADE: "#56cfff",
-  HEART: "#ff6aae",
-  DIAMOND: "#ffd84d",
-  CLUB: "#74df67",
-};
 const SUIT_ORDER = ["SPADE", "HEART", "DIAMOND", "CLUB"];
 const RENT_MULTIPLIERS: Record<string, number> = {
   "1:1": 1,
@@ -405,6 +402,12 @@ function getMinimapSquareFill(square: SquareInfo): string {
   }
   if (square.type === "BANK") {
     return "#ffd166";
+  }
+  if (square.type === "BOON") {
+    return BOON_ICON_COLOR;
+  }
+  if (square.type === "TAKE_A_BREAK") {
+    return TAKE_A_BREAK_ICON_COLOR;
   }
   if (square.suit) {
     return getSuitColor(square.suit);
@@ -1650,6 +1653,8 @@ function BoardPanel({
             const shouldRenderSuitIcon = isSuitIconSquare(square);
             const shouldRenderBankIcon = isBankIconSquare(square);
             const shouldRenderVentureIcon = isVentureIconSquare(square);
+            const shouldRenderBoonIcon = isBoonIconSquare(square);
+            const shouldRenderTakeABreakIcon = isTakeABreakIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
@@ -1657,6 +1662,8 @@ function BoardPanel({
               !shouldRenderSuitIcon &&
               !shouldRenderBankIcon &&
               !shouldRenderVentureIcon &&
+              !shouldRenderBoonIcon &&
+              !shouldRenderTakeABreakIcon &&
               !shouldRenderShopTile;
             const squareStyle = {
               ...(isStockPriceFocus
@@ -1713,6 +1720,10 @@ function BoardPanel({
                   <BankIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderVentureIcon ? (
                   <VentureIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderBoonIcon ? (
+                  <BoonIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderTakeABreakIcon ? (
+                  <TakeABreakIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
                   <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
                 ) : (
@@ -1740,9 +1751,14 @@ function BoardPanel({
                   ry="0.32"
                   strokeWidth={BOARD_TILE_STROKE_WIDTH}
                   style={{
-                    stroke: shouldRenderSuitIcon || shouldRenderBankIcon || shouldRenderVentureIcon
-                      ? "#f7f7f2"
-                      : getDistrictBorderColor(square.property_district),
+                    stroke:
+                      shouldRenderSuitIcon ||
+                      shouldRenderBankIcon ||
+                      shouldRenderVentureIcon ||
+                      shouldRenderBoonIcon ||
+                      shouldRenderTakeABreakIcon
+                        ? "#f7f7f2"
+                        : getDistrictBorderColor(square.property_district),
                   }}
                 />
                 {isSelected && (
@@ -2027,6 +2043,14 @@ function isVentureIconSquare(square: SquareInfo): boolean {
   return square.type === "VENTURE";
 }
 
+function isBoonIconSquare(square: SquareInfo): boolean {
+  return square.type === "BOON";
+}
+
+function isTakeABreakIconSquare(square: SquareInfo): boolean {
+  return square.type === "TAKE_A_BREAK";
+}
+
 function rentMultiplier(numOwned: number, numTotal: number): number {
   if (numOwned <= 0) {
     return 0;
@@ -2291,6 +2315,45 @@ function VentureIcon({ x, y }: { x: number; y: number }) {
       </text>
       <g transform={`translate(${x} ${y + 0.34}) scale(0.02025) translate(-50 -51)`}>
         <VentureShape />
+      </g>
+    </g>
+  );
+}
+
+function BoonShape({ fill = BOON_ICON_COLOR }: { fill?: string }) {
+  return (
+    <path
+      fill={fill}
+      d="M50 6 61.2 35.4 92.7 37 68.1 56.6 76.4 87 50 69.6 23.6 87 31.9 56.6 7.3 37 38.8 35.4Z"
+    />
+  );
+}
+
+function BoonIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="boon-icon" aria-hidden="true">
+      <g transform={`translate(${x} ${y}) scale(0.028) translate(-50 -46.5)`}>
+        <BoonShape />
+      </g>
+    </g>
+  );
+}
+
+function TakeABreakShape({ fill = TAKE_A_BREAK_ICON_COLOR }: { fill?: string }) {
+  return (
+    <path
+      fill={fill}
+      fillRule="evenodd"
+      d="M50 8A42 42 0 1 1 50 92A42 42 0 1 1 50 8ZM64 3A33 33 0 1 1 64 69A33 33 0 1 1 64 3Z"
+    />
+  );
+}
+
+function TakeABreakIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="take-a-break-icon" aria-hidden="true">
+      <g transform={`translate(${x} ${y}) scale(0.028) translate(-50 -50)`}>
+        <TakeABreakShape />
       </g>
     </g>
   );
