@@ -209,6 +209,11 @@ mapping. Future location backgrounds, tile art, movement animation, and
 sprite/3D character layers should sit behind or above this board scene rather
 than replacing the protocol model.
 
+Every SVG-based square uses the shared fitted uppercase label at the top of its
+tile, with its primary icon centered in the remaining space below. Describing a
+square as showing "just" one icon excludes secondary imagery; it does not remove
+this label hierarchy.
+
 Board tiles use the same coordinate contract as board JSON. A square centered at
 `[x, y]` renders as a 4 by 4 board-unit tile, from `x - 2` to `x + 2` and
 `y - 2` to `y + 2`. The browser renderer preserves a uniform scale for both axes
@@ -256,11 +261,11 @@ circular dot, is centered in the space below the label with comfortable inset
 from the tile border and no secondary imagery.
 
 The boon square uses selected candidate 01 "Classic": one clean five-point star
-on the standard dark tile with a white border. Its warm amber-gold is deliberately
-distinct from the lighter diamond suit yellow. The take-a-break square uses
-selected candidate 03 "Full": one pale-yellow crescent moon in the same
-presentation. Neither tile includes a text label or secondary imagery, and both
-silhouettes are centered within the full tile.
+below a fitted `BOON` label on the standard dark tile with a white border. Its
+warm amber-gold is deliberately distinct from the lighter diamond suit yellow.
+The take-a-break square uses selected candidate 03 "Full": one pale-yellow,
+single-path crescent moon below a fitted `TAKE A BREAK` label in the same
+presentation. Neither tile includes secondary imagery.
 
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch

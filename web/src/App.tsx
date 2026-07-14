@@ -2229,6 +2229,24 @@ function SuitShape({
   );
 }
 
+function SquareIconLabel({
+  className = "",
+  label,
+  x,
+  y,
+}: {
+  className?: string;
+  label: string;
+  x: number;
+  y: number;
+}) {
+  return (
+    <text className={`square-icon-label ${className}`.trim()} x={x} y={y - 1.22}>
+      {label}
+    </text>
+  );
+}
+
 function SuitIcon({
   suit,
   squareType,
@@ -2244,9 +2262,7 @@ function SuitIcon({
 
   return (
     <g className={`suit-icon ${isChangeOfSuit ? "change-of-suit" : "standard-suit"}`} aria-hidden="true">
-      <text className="suit-icon-label" x={x} y={y - 1.22}>
-        {suitLabel(suit)}
-      </text>
+      <SquareIconLabel label={suitLabel(suit)} x={x} y={y} />
       <g transform={`translate(${x} ${y + (isChangeOfSuit ? -0.08 : 0.28)})`}>
         <SuitShape suit={suit} scale={isChangeOfSuit ? 0.62 : 0.72} />
       </g>
@@ -2281,9 +2297,7 @@ function BankShape({ fill = "#ffd166" }: { fill?: string }) {
 function BankIcon({ x, y }: { x: number; y: number }) {
   return (
     <g className="bank-icon" aria-hidden="true">
-      <text className="suit-icon-label" x={x} y={y - 1.22}>
-        BANK
-      </text>
+      <SquareIconLabel label="BANK" x={x} y={y} />
       <g transform={`translate(${x} ${y + 0.35}) scale(0.0235) translate(-50 -52.5)`}>
         <BankShape />
       </g>
@@ -2310,9 +2324,7 @@ function VentureShape({ fill = "#ff6aae" }: { fill?: string }) {
 function VentureIcon({ x, y }: { x: number; y: number }) {
   return (
     <g className="venture-icon" aria-hidden="true">
-      <text className="suit-icon-label" x={x} y={y - 1.22}>
-        VENTURE
-      </text>
+      <SquareIconLabel label="VENTURE" x={x} y={y} />
       <g transform={`translate(${x} ${y + 0.34}) scale(0.02025) translate(-50 -51)`}>
         <VentureShape />
       </g>
@@ -2332,7 +2344,8 @@ function BoonShape({ fill = BOON_ICON_COLOR }: { fill?: string }) {
 function BoonIcon({ x, y }: { x: number; y: number }) {
   return (
     <g className="boon-icon" aria-hidden="true">
-      <g transform={`translate(${x} ${y}) scale(0.028) translate(-50 -46.5)`}>
+      <SquareIconLabel label="BOON" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.42}) scale(0.024) translate(-50 -46.5)`}>
         <BoonShape />
       </g>
     </g>
@@ -2343,8 +2356,7 @@ function TakeABreakShape({ fill = TAKE_A_BREAK_ICON_COLOR }: { fill?: string }) 
   return (
     <path
       fill={fill}
-      fillRule="evenodd"
-      d="M50 8A42 42 0 1 1 50 92A42 42 0 1 1 50 8ZM64 3A33 33 0 1 1 64 69A33 33 0 1 1 64 3Z"
+      d="M65 8A42 42 0 1 0 92 75A34 34 0 0 1 65 8Z"
     />
   );
 }
@@ -2352,7 +2364,8 @@ function TakeABreakShape({ fill = TAKE_A_BREAK_ICON_COLOR }: { fill?: string }) 
 function TakeABreakIcon({ x, y }: { x: number; y: number }) {
   return (
     <g className="take-a-break-icon" aria-hidden="true">
-      <g transform={`translate(${x} ${y}) scale(0.028) translate(-50 -50)`}>
+      <SquareIconLabel className="take-a-break-icon-label" label="TAKE A BREAK" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.44}) scale(0.024) translate(-50 -50)`}>
         <TakeABreakShape />
       </g>
     </g>
