@@ -249,6 +249,12 @@ pink on the standard dark tile. The full mark, including its clearly separated
 circular dot, is centered in the space below the label with comfortable inset
 from the tile border and no secondary imagery.
 
+The boon square should show only one yellow five-point star on the standard dark
+tile with a white border. The take-a-break square should show only one pale-yellow
+crescent moon in the same presentation. Neither tile should include a text label
+or secondary imagery. Their exact star and moon silhouettes remain pending visual
+selection.
+
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
 to match the side column, so WASD input, prompt transitions, square details, and
