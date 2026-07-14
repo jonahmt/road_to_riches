@@ -267,13 +267,23 @@ The take-a-break square uses selected candidate 03 "Full": one pale-yellow,
 single-path crescent moon below a fitted `TAKE A BREAK` label in the same
 presentation. Neither tile includes secondary imagery.
 
-The roll-on square should use a fitted `ROLL ON` label above one clean die seen
-from a corner, with its top, left, and right faces visible. The cannon square
-should use a fitted `CANNON` label above one simple, immediately recognizable
-cannon silhouette. The arcade square should use a fitted `ARCADE` label above
-exactly three fireworks that differ in color and visible size. Five candidate
-directions for each of these three square types are retained as mockups; their
-final silhouettes and colors remain pending visual selection.
+The roll-on square uses selected candidate 01 "Mono": a fitted `ROLL ON` label
+above one clean die seen from a corner. Its silhouette is a true isometric cube:
+three equal projected rhombus faces forming a hexagon, with one, two, and three
+pips on the top, left, and right faces respectively. Pip centers use the same
+affine projection as their containing face rather than hand-tuned screen
+coordinates. The top face is off-white and the side faces are two neutral greys,
+with dark pips and edges on the standard dark tile with a white border.
+
+The cannon square uses selected candidate 01 "Classic": a fitted `CANNON` label
+above one simple cannon reduced to a green barrel, grey muzzle and carriage, and
+two yellow wheels with dark hubs. It uses the standard dark tile with a white
+border and no secondary imagery.
+
+The arcade square uses selected candidate 03 "Confetti": a fitted `ARCADE`
+label above exactly three dotted fireworks that differ in color and visible
+size. The large firework is sky blue, the medium firework is pink, and the small
+firework is amber yellow, all on the standard dark tile with a white border.
 
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch

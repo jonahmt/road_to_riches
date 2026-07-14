@@ -409,6 +409,15 @@ function getMinimapSquareFill(square: SquareInfo): string {
   if (square.type === "TAKE_A_BREAK") {
     return TAKE_A_BREAK_ICON_COLOR;
   }
+  if (square.type === "ROLL_ON") {
+    return "#d5d9da";
+  }
+  if (square.type === "CANNON") {
+    return "#62ad68";
+  }
+  if (square.type === "ARCADE") {
+    return "#ff5aa5";
+  }
   if (square.suit) {
     return getSuitColor(square.suit);
   }
@@ -1655,6 +1664,9 @@ function BoardPanel({
             const shouldRenderVentureIcon = isVentureIconSquare(square);
             const shouldRenderBoonIcon = isBoonIconSquare(square);
             const shouldRenderTakeABreakIcon = isTakeABreakIconSquare(square);
+            const shouldRenderArcadeIcon = isArcadeIconSquare(square);
+            const shouldRenderRollOnIcon = isRollOnIconSquare(square);
+            const shouldRenderCannonIcon = isCannonIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
@@ -1664,6 +1676,9 @@ function BoardPanel({
               !shouldRenderVentureIcon &&
               !shouldRenderBoonIcon &&
               !shouldRenderTakeABreakIcon &&
+              !shouldRenderArcadeIcon &&
+              !shouldRenderRollOnIcon &&
+              !shouldRenderCannonIcon &&
               !shouldRenderShopTile;
             const squareStyle = {
               ...(isStockPriceFocus
@@ -1724,6 +1739,12 @@ function BoardPanel({
                   <BoonIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderTakeABreakIcon ? (
                   <TakeABreakIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderArcadeIcon ? (
+                  <ArcadeIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderRollOnIcon ? (
+                  <RollOnIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderCannonIcon ? (
+                  <CannonIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
                   <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
                 ) : (
@@ -1756,7 +1777,10 @@ function BoardPanel({
                       shouldRenderBankIcon ||
                       shouldRenderVentureIcon ||
                       shouldRenderBoonIcon ||
-                      shouldRenderTakeABreakIcon
+                      shouldRenderTakeABreakIcon ||
+                      shouldRenderArcadeIcon ||
+                      shouldRenderRollOnIcon ||
+                      shouldRenderCannonIcon
                         ? "#f7f7f2"
                         : getDistrictBorderColor(square.property_district),
                   }}
@@ -2049,6 +2073,18 @@ function isBoonIconSquare(square: SquareInfo): boolean {
 
 function isTakeABreakIconSquare(square: SquareInfo): boolean {
   return square.type === "TAKE_A_BREAK";
+}
+
+function isArcadeIconSquare(square: SquareInfo): boolean {
+  return square.type === "ARCADE";
+}
+
+function isRollOnIconSquare(square: SquareInfo): boolean {
+  return square.type === "ROLL_ON";
+}
+
+function isCannonIconSquare(square: SquareInfo): boolean {
+  return square.type === "CANNON";
 }
 
 function rentMultiplier(numOwned: number, numTotal: number): number {
@@ -2367,6 +2403,124 @@ function TakeABreakIcon({ x, y }: { x: number; y: number }) {
       <SquareIconLabel className="take-a-break-icon-label" label="TAKE A BREAK" x={x} y={y} />
       <g transform={`translate(${x} ${y + 0.44}) scale(0.024) translate(-50 -50)`}>
         <TakeABreakShape />
+      </g>
+    </g>
+  );
+}
+
+function RollOnShape() {
+  return (
+    <g className="roll-on-icon-shape">
+      <polygon points="50,6 90,29 50,52 10,29" fill="#f7f7f2" />
+      <polygon points="10,29 50,52 50,98 10,75" fill="#d5d9da" />
+      <polygon points="50,52 90,29 90,75 50,98" fill="#b8bec0" />
+      <g fill="#080a0e">
+        <g transform="matrix(40 23 -40 23 50 6)">
+          <circle cx=".5" cy=".5" r=".082" />
+        </g>
+        <g transform="matrix(40 23 0 46 10 29)">
+          <circle cx=".28" cy=".25" r=".075" />
+          <circle cx=".72" cy=".75" r=".075" />
+        </g>
+        <g transform="matrix(40 -23 0 46 50 52)">
+          <circle cx=".25" cy=".24" r=".075" />
+          <circle cx=".5" cy=".5" r=".075" />
+          <circle cx=".75" cy=".76" r=".075" />
+        </g>
+      </g>
+      <path
+        d="M50 6 90 29v46L50 98 10 75V29L50 6Z M10 29l40 23 40-23M50 52v46"
+        fill="none"
+        stroke="#080a0e"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </g>
+  );
+}
+
+function RollOnIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="roll-on-icon" aria-hidden="true">
+      <SquareIconLabel label="ROLL ON" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.4}) scale(0.022) translate(-50 -52)`}>
+        <RollOnShape />
+      </g>
+    </g>
+  );
+}
+
+function CannonShape() {
+  return (
+    <g className="cannon-icon-shape">
+      <g transform="rotate(-15 60 38)">
+        <rect x="22" y="26" width="70" height="25" rx="12" fill="#62ad68" />
+        <rect x="86" y="23" width="12" height="31" rx="4" fill="#c9ced0" />
+      </g>
+      <path d="M43 54h39l10 20H33Z" fill="#aeb5b7" />
+      <circle cx="42" cy="76" r="13" fill="#f2c94c" />
+      <circle cx="83" cy="76" r="13" fill="#f2c94c" />
+      <circle cx="42" cy="76" r="5" fill="#080a0e" />
+      <circle cx="83" cy="76" r="5" fill="#080a0e" />
+    </g>
+  );
+}
+
+function CannonIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="cannon-icon" aria-hidden="true">
+      <SquareIconLabel label="CANNON" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.43}) scale(0.022) translate(-60 -50)`}>
+        <CannonShape />
+      </g>
+    </g>
+  );
+}
+
+function DottedFireworkShape({ color }: { color: string }) {
+  return (
+    <g color={color}>
+      <g fill="currentColor">
+        <circle r="8" />
+        <circle cx="0" cy="-40" r="5" />
+        <circle cx="28" cy="-28" r="5" />
+        <circle cx="40" cy="0" r="5" />
+        <circle cx="28" cy="28" r="5" />
+        <circle cx="0" cy="40" r="5" />
+        <circle cx="-28" cy="28" r="5" />
+        <circle cx="-40" cy="0" r="5" />
+        <circle cx="-28" cy="-28" r="5" />
+      </g>
+      <g fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round">
+        <path d="M0-24V-15M17-17l-7 7M24 0h-9M17 17l-7-7M0 24v-9M-17 17l7-7M-24 0h9M-17-17l7 7" />
+      </g>
+    </g>
+  );
+}
+
+function ArcadeShape() {
+  return (
+    <g className="arcade-icon-shape">
+      <g transform="translate(27 47) scale(0.58)">
+        <DottedFireworkShape color="#58c8ff" />
+      </g>
+      <g transform="translate(67 63) scale(0.52)">
+        <DottedFireworkShape color="#ff5aa5" />
+      </g>
+      <g transform="translate(80 29) scale(0.33)">
+        <DottedFireworkShape color="#ffb703" />
+      </g>
+    </g>
+  );
+}
+
+function ArcadeIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="arcade-icon" aria-hidden="true">
+      <SquareIconLabel label="ARCADE" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.43}) scale(0.026) translate(-50 -50)`}>
+        <ArcadeShape />
       </g>
     </g>
   );

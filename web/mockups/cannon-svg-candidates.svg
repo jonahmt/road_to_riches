@@ -1,124 +1,87 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
-  <title>Road to Riches cannon SVG candidates</title>
-  <desc>Five clean cannon icon candidates previewed on production-style CANNON board tiles.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="1360" viewBox="0 0 1360 1360">
+  <title>Road to Riches simple cannon candidates</title>
+  <desc>Ten stripped-back labeled cannon board tiles using green, grey, and yellow.</desc>
 
   <defs>
-    <symbol id="cannon-01-classic" viewBox="0 0 100 100">
-      <g transform="rotate(-17 50 42)">
-        <circle cx="27" cy="39" r="12" fill="#d97706"/>
-        <path fill="#ffb703" d="M27 29h51l7 5v16l-7 5H27Z"/>
-        <path fill="#ffe08a" d="M38 33h36v5H38Z" opacity=".72"/>
-        <rect x="78" y="27" width="10" height="30" rx="3" fill="#c75b16"/>
-      </g>
-      <path fill="#d97706" d="m37 50 30 11-5 10-31-12Z"/>
-      <path fill="#c75b16" d="M26 64h48l6 9H20Z"/>
-      <circle cx="32" cy="76" r="12" fill="#ffb703"/>
-      <circle cx="68" cy="76" r="12" fill="#ffb703"/>
-      <circle cx="32" cy="76" r="5" fill="#8f3d10"/>
-      <circle cx="68" cy="76" r="5" fill="#8f3d10"/>
+    <symbol id="cannon-01" viewBox="0 0 120 100">
+      <g transform="rotate(-15 60 38)"><rect x="22" y="26" width="70" height="25" rx="12" fill="#62ad68"/><rect x="86" y="23" width="12" height="31" rx="4" fill="#c9ced0"/></g>
+      <path d="M43 54h39l10 20H33Z" fill="#aeb5b7"/>
+      <circle cx="42" cy="76" r="13" fill="#f2c94c"/><circle cx="83" cy="76" r="13" fill="#f2c94c"/>
+      <circle cx="42" cy="76" r="5" fill="#080a0e"/><circle cx="83" cy="76" r="5" fill="#080a0e"/>
     </symbol>
-
-    <symbol id="cannon-02-low-slung" viewBox="0 0 100 100">
-      <g transform="rotate(-8 50 40)">
-        <circle cx="22" cy="41" r="11" fill="#c75b16"/>
-        <path fill="#ffb703" d="M21 31h59l8 5v12l-8 5H21Z"/>
-        <rect x="80" y="28" width="9" height="28" rx="2.5" fill="#d97706"/>
-        <path fill="#ffe08a" d="M34 34h41v4H34Z" opacity=".7"/>
-      </g>
-      <path fill="#d97706" d="M31 52h41l-6 15H36Z"/>
-      <path fill="#c75b16" d="M23 65h55v8H23Z"/>
-      <circle cx="31" cy="74" r="10" fill="#ffb703"/>
-      <circle cx="69" cy="74" r="10" fill="#ffb703"/>
-      <circle cx="31" cy="74" r="4" fill="#8f3d10"/>
-      <circle cx="69" cy="74" r="4" fill="#8f3d10"/>
+    <symbol id="cannon-02" viewBox="0 0 120 100">
+      <g transform="rotate(-12 59 37)"><rect x="20" y="27" width="74" height="22" rx="11" fill="#c9ced0"/><rect x="88" y="24" width="11" height="28" rx="4" fill="#f2c94c"/></g>
+      <path d="M48 52h29l10 22H38Z" fill="#62ad68"/>
+      <circle cx="62" cy="74" r="19" fill="#62ad68"/><circle cx="62" cy="74" r="7" fill="#f2c94c"/>
     </symbol>
-
-    <symbol id="cannon-03-big-wheel" viewBox="0 0 100 100">
-      <g transform="rotate(-13 51 37)">
-        <circle cx="25" cy="37" r="12" fill="#d97706"/>
-        <path fill="#ffb703" d="M24 27h55l7 5v14l-7 5H24Z"/>
-        <rect x="78" y="24" width="11" height="30" rx="3" fill="#c75b16"/>
-      </g>
-      <path fill="#c75b16" d="M43 47h15l9 20H34Z"/>
-      <path fill="#d97706" d="M20 63h61v8H20Z"/>
-      <circle cx="32" cy="73" r="17" fill="#ffb703"/>
-      <circle cx="68" cy="73" r="17" fill="#ffb703"/>
-      <circle cx="32" cy="73" r="10" fill="#8f3d10"/>
-      <circle cx="68" cy="73" r="10" fill="#8f3d10"/>
-      <circle cx="32" cy="73" r="4" fill="#ffe08a"/>
-      <circle cx="68" cy="73" r="4" fill="#ffe08a"/>
+    <symbol id="cannon-03" viewBox="0 0 120 100">
+      <g transform="rotate(-17 60 36)"><rect x="25" y="24" width="67" height="25" rx="5" fill="#f2c94c"/><rect x="87" y="20" width="12" height="33" rx="4" fill="#62ad68"/></g>
+      <path d="M45 51h35l7 22H38Z" fill="#c9ced0"/>
+      <circle cx="43" cy="75" r="12" fill="#62ad68"/><circle cx="82" cy="75" r="12" fill="#62ad68"/>
     </symbol>
-
-    <symbol id="cannon-04-bold-silhouette" viewBox="0 0 100 100">
-      <g transform="rotate(-20 51 38)">
-        <circle cx="27" cy="39" r="13" fill="#ffb703"/>
-        <path fill="#ffb703" d="M26 27h54l8 5v16l-8 5H26Z"/>
-        <rect x="78" y="24" width="12" height="32" rx="3" fill="#ffb703"/>
-      </g>
-      <path fill="#ffb703" d="m39 48 17 4 15 17H29Z"/>
-      <path fill="#ffb703" d="M18 65h64v9H18Z"/>
-      <circle cx="31" cy="75" r="14" fill="#ffb703"/>
-      <circle cx="69" cy="75" r="14" fill="#ffb703"/>
-      <circle cx="31" cy="75" r="6" fill="#8f3d10"/>
-      <circle cx="69" cy="75" r="6" fill="#8f3d10"/>
+    <symbol id="cannon-04" viewBox="0 0 120 100">
+      <g fill="#62ad68"><g transform="rotate(-14 60 38)"><rect x="18" y="27" width="77" height="24" rx="12"/><rect x="89" y="23" width="12" height="32" rx="4"/></g><path d="M42 52h42l9 24H33Z"/><circle cx="42" cy="76" r="14"/><circle cx="84" cy="76" r="14"/></g>
+      <circle cx="42" cy="76" r="5" fill="#f2c94c"/><circle cx="84" cy="76" r="5" fill="#f2c94c"/>
     </symbol>
-
-    <symbol id="cannon-05-field" viewBox="0 0 100 100">
-      <g transform="rotate(-27 49 38)">
-        <circle cx="27" cy="39" r="10" fill="#c75b16"/>
-        <path fill="#ffb703" d="M26 30h52l8 4v13l-8 4H26Z"/>
-        <path fill="#ffe08a" d="M39 33h35v4H39Z" opacity=".72"/>
-        <rect x="78" y="27" width="10" height="27" rx="2.5" fill="#d97706"/>
-      </g>
-      <path fill="#d97706" d="M44 45h13l8 20H36Z"/>
-      <path fill="#c75b16" d="m27 64 53 3-2 8-56-3Z"/>
-      <path fill="#d97706" d="m27 70-12 13h10l15-12Zm48 1 12 12H77L63 72Z"/>
-      <circle cx="36" cy="69" r="11" fill="#ffb703"/>
-      <circle cx="65" cy="69" r="11" fill="#ffb703"/>
-      <circle cx="36" cy="69" r="4.5" fill="#8f3d10"/>
-      <circle cx="65" cy="69" r="4.5" fill="#8f3d10"/>
+    <symbol id="cannon-05" viewBox="0 0 120 100">
+      <rect x="18" y="35" width="76" height="22" rx="11" fill="#c9ced0"/><rect x="88" y="31" width="12" height="30" rx="4" fill="#f2c94c"/>
+      <rect x="34" y="56" width="55" height="12" rx="5" fill="#62ad68"/>
+      <circle cx="41" cy="75" r="11" fill="#62ad68"/><circle cx="82" cy="75" r="11" fill="#62ad68"/>
     </symbol>
-
-    <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">
-      <feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#000" flood-opacity=".3"/>
-    </filter>
+    <symbol id="cannon-06" viewBox="0 0 120 100">
+      <g transform="rotate(-22 60 36)"><rect x="26" y="24" width="65" height="24" rx="12" fill="#62ad68"/><rect x="85" y="21" width="12" height="30" rx="4" fill="#c9ced0"/></g>
+      <path d="M51 48h25l9 24H40Z" fill="#f2c94c"/>
+      <circle cx="62" cy="73" r="18" fill="#c9ced0"/><circle cx="62" cy="73" r="7" fill="#62ad68"/>
+    </symbol>
+    <symbol id="cannon-07" viewBox="0 0 120 100">
+      <g transform="rotate(-10 60 40)"><rect x="25" y="29" width="67" height="22" rx="10" fill="#c9ced0"/><rect x="87" y="26" width="11" height="28" rx="4" fill="#62ad68"/></g>
+      <rect x="35" y="53" width="52" height="14" rx="4" fill="#62ad68"/>
+      <circle cx="43" cy="74" r="12" fill="#f2c94c"/><circle cx="80" cy="74" r="12" fill="#f2c94c"/>
+    </symbol>
+    <symbol id="cannon-08" viewBox="0 0 120 100">
+      <g transform="rotate(-18 60 35)"><rect x="23" y="24" width="70" height="22" rx="11" fill="#62ad68"/><rect x="87" y="21" width="12" height="28" rx="4" fill="#f2c94c"/></g>
+      <path d="M60 47 91 76H30Z" fill="#c9ced0"/>
+      <circle cx="61" cy="70" r="15" fill="#f2c94c"/><circle cx="61" cy="70" r="6" fill="#62ad68"/>
+    </symbol>
+    <symbol id="cannon-09" viewBox="0 0 120 100">
+      <g transform="rotate(-15 60 37)"><rect x="22" y="25" width="71" height="25" rx="12" fill="#f2c94c"/><rect x="87" y="22" width="12" height="31" rx="4" fill="#c9ced0"/></g>
+      <path d="M43 53h39l8 20H35Z" fill="#62ad68"/>
+      <circle cx="43" cy="75" r="13" fill="#62ad68"/><circle cx="82" cy="75" r="13" fill="#62ad68"/>
+      <circle cx="43" cy="75" r="5" fill="#c9ced0"/><circle cx="82" cy="75" r="5" fill="#c9ced0"/>
+    </symbol>
+    <symbol id="cannon-10" viewBox="0 0 120 100">
+      <g transform="rotate(-20 58 35)"><rect x="23" y="25" width="69" height="23" rx="11" fill="#c9ced0"/><rect x="86" y="22" width="12" height="29" rx="4" fill="#f2c94c"/></g>
+      <path d="M48 50h27l9 19H39Z" fill="#62ad68"/>
+      <circle cx="61" cy="71" r="18" fill="#62ad68"/><circle cx="61" cy="71" r="7" fill="#f2c94c"/>
+    </symbol>
   </defs>
 
-  <rect width="1000" height="1000" fill="#171b24"/>
-  <text x="50" y="62" fill="#f7f7f2" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="31" font-weight="800" letter-spacing="1.2">CANNON DIRECTIONS</text>
-  <text x="950" y="60" fill="#9da5b4" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="15" text-anchor="end">SIMPLE • BOLD • WARM METAL</text>
+  <rect width="1360" height="1360" fill="#171b24"/>
+  <text x="36" y="49" fill="#f7f7f2" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="28" font-weight="850" letter-spacing="1.2">CANNON • STRIPPED BACK</text>
+  <text x="1324" y="48" fill="#9da5b4" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" letter-spacing="1" text-anchor="end">GREEN / GREY / YELLOW</text>
 
   <g font-family="Inter,ui-sans-serif,system-ui,sans-serif">
-    <g transform="translate(85 105)">
-      <rect width="250" height="250" rx="22" fill="#080a0e" stroke="#f7f7f2" stroke-width="6" filter="url(#tile-shadow)"/>
-      <text x="125" y="50" fill="#f7f7f2" font-size="25" font-weight="850" letter-spacing="1.1" text-anchor="middle">CANNON</text>
-      <use href="#cannon-01-classic" x="45" y="67" width="160" height="160"/>
-      <text x="125" y="288" fill="#f7f7f2" font-size="17" font-weight="800" letter-spacing=".7" text-anchor="middle">01  CLASSIC</text>
-    </g>
-    <g transform="translate(375 105)">
-      <rect width="250" height="250" rx="22" fill="#080a0e" stroke="#f7f7f2" stroke-width="6" filter="url(#tile-shadow)"/>
-      <text x="125" y="50" fill="#f7f7f2" font-size="25" font-weight="850" letter-spacing="1.1" text-anchor="middle">CANNON</text>
-      <use href="#cannon-02-low-slung" x="45" y="67" width="160" height="160"/>
-      <text x="125" y="288" fill="#f7f7f2" font-size="17" font-weight="800" letter-spacing=".7" text-anchor="middle">02  LOW-SLUNG</text>
-    </g>
-    <g transform="translate(665 105)">
-      <rect width="250" height="250" rx="22" fill="#080a0e" stroke="#f7f7f2" stroke-width="6" filter="url(#tile-shadow)"/>
-      <text x="125" y="50" fill="#f7f7f2" font-size="25" font-weight="850" letter-spacing="1.1" text-anchor="middle">CANNON</text>
-      <use href="#cannon-03-big-wheel" x="45" y="67" width="160" height="160"/>
-      <text x="125" y="288" fill="#f7f7f2" font-size="17" font-weight="800" letter-spacing=".7" text-anchor="middle">03  BIG WHEEL</text>
-    </g>
+    <g transform="translate(30 90)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-01" x="43" y="75" width="134" height="112"/></g>
+    <g transform="translate(300 90)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-02" x="43" y="75" width="134" height="112"/></g>
+    <g transform="translate(570 90)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-03" x="43" y="75" width="134" height="112"/></g>
+    <g transform="translate(840 90)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-04" x="43" y="75" width="134" height="112"/></g>
+    <g transform="translate(1110 90)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-05" x="43" y="75" width="134" height="112"/></g>
+    <g transform="translate(30 750)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-06" x="43" y="75" width="134" height="112"/></g>
+    <g transform="translate(300 750)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-07" x="43" y="75" width="134" height="112"/></g>
+    <g transform="translate(570 750)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-08" x="43" y="75" width="134" height="112"/></g>
+    <g transform="translate(840 750)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-09" x="43" y="75" width="134" height="112"/></g>
+    <g transform="translate(1110 750)"><rect width="220" height="220" rx="20" fill="#080a0e" stroke="#f7f7f2" stroke-width="6"/><text x="110" y="43" fill="#f7f7f2" font-size="23" font-weight="900" text-anchor="middle">CANNON</text><use href="#cannon-10" x="43" y="75" width="134" height="112"/></g>
+  </g>
 
-    <g transform="translate(230 540)">
-      <rect width="250" height="250" rx="22" fill="#080a0e" stroke="#f7f7f2" stroke-width="6" filter="url(#tile-shadow)"/>
-      <text x="125" y="50" fill="#f7f7f2" font-size="25" font-weight="850" letter-spacing="1.1" text-anchor="middle">CANNON</text>
-      <use href="#cannon-04-bold-silhouette" x="45" y="67" width="160" height="160"/>
-      <text x="125" y="288" fill="#f7f7f2" font-size="17" font-weight="800" letter-spacing=".7" text-anchor="middle">04  BOLD</text>
-    </g>
-    <g transform="translate(520 540)">
-      <rect width="250" height="250" rx="22" fill="#080a0e" stroke="#f7f7f2" stroke-width="6" filter="url(#tile-shadow)"/>
-      <text x="125" y="50" fill="#f7f7f2" font-size="25" font-weight="850" letter-spacing="1.1" text-anchor="middle">CANNON</text>
-      <use href="#cannon-05-field" x="45" y="67" width="160" height="160"/>
-      <text x="125" y="288" fill="#f7f7f2" font-size="17" font-weight="800" letter-spacing=".7" text-anchor="middle">05  FIELD</text>
-    </g>
+  <g fill="#f7f7f2" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="16" font-weight="800" text-anchor="middle">
+    <text x="140" y="345">01  CLASSIC</text><text x="410" y="345">02  SINGLE WHEEL</text>
+    <text x="680" y="345">03  GOLD BARREL</text><text x="950" y="345">04  GREEN SILHOUETTE</text>
+    <text x="1220" y="345">05  LOW</text>
+    <text x="140" y="1005">06  TALL</text><text x="410" y="1005">07  COMPACT</text>
+    <text x="680" y="1005">08  FIELD</text><text x="950" y="1005">09  TOY</text>
+    <text x="1220" y="1005">10  MINIMAL</text>
+  </g>
+  <g font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="800" text-anchor="middle">
+    <text x="585" y="1160" fill="#62ad68">GREEN</text><text x="680" y="1160" fill="#c9ced0">GREY</text><text x="770" y="1160" fill="#f2c94c">YELLOW</text>
   </g>
 </svg>

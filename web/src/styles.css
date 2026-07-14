@@ -698,7 +698,10 @@ h3 {
 }
 
 .boon-icon,
-.take-a-break-icon {
+.take-a-break-icon,
+.arcade-icon,
+.roll-on-icon,
+.cannon-icon {
   pointer-events: none;
 }
 
