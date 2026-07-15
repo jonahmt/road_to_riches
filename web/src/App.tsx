@@ -1665,6 +1665,7 @@ function BoardPanel({
             const shouldRenderCannonIcon = isCannonIconSquare(square);
             const shouldRenderBackstreetIcon = isBackstreetIconSquare(square);
             const shouldRenderDoorwayIcon = isDoorwayIconSquare(square);
+            const shouldRenderSwitchIcon = isSwitchIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
@@ -1680,6 +1681,7 @@ function BoardPanel({
               !shouldRenderCannonIcon &&
               !shouldRenderBackstreetIcon &&
               !shouldRenderDoorwayIcon &&
+              !shouldRenderSwitchIcon &&
               !shouldRenderShopTile;
             const squareStyle = {
               ...(isStockPriceFocus
@@ -1752,6 +1754,8 @@ function BoardPanel({
                   <BackstreetIcon square={square} x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderDoorwayIcon ? (
                   <DoorwayIcon square={square} x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderSwitchIcon ? (
+                  <SwitchIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
                   <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
                 ) : (
@@ -1790,7 +1794,8 @@ function BoardPanel({
                       shouldRenderRollOnIcon ||
                       shouldRenderCannonIcon ||
                       shouldRenderBackstreetIcon ||
-                      shouldRenderDoorwayIcon
+                      shouldRenderDoorwayIcon ||
+                      shouldRenderSwitchIcon
                         ? "#f7f7f2"
                         : getDistrictBorderColor(square.property_district),
                   }}
@@ -2127,6 +2132,10 @@ function isDoorwayIconSquare(square: SquareInfo): boolean {
   return square.type === "DOORWAY";
 }
 
+function isSwitchIconSquare(square: SquareInfo): boolean {
+  return square.type === "SWITCH";
+}
+
 function isMinimapIconSquare(square: SquareInfo): boolean {
   return (
     isSuitIconSquare(square) ||
@@ -2139,7 +2148,8 @@ function isMinimapIconSquare(square: SquareInfo): boolean {
     isRollOnIconSquare(square) ||
     isCannonIconSquare(square) ||
     isBackstreetIconSquare(square) ||
-    isDoorwayIconSquare(square)
+    isDoorwayIconSquare(square) ||
+    isSwitchIconSquare(square)
   );
 }
 
@@ -2222,6 +2232,13 @@ function MinimapSquareIcon({ square, x, y }: { square: SquareInfo; x: number; y:
     return (
       <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.026) translate(-50 -50)`} aria-hidden="true">
         <DoorwayShape color={getDoorwayColor(square)} />
+      </g>
+    );
+  }
+  if (isSwitchIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.03) translate(-50 -50)`} aria-hidden="true">
+        <SwitchShape />
       </g>
     );
   }
@@ -2764,6 +2781,27 @@ function DoorwayIcon({ square, x, y }: { square: SquareInfo; x: number; y: numbe
       <SquareIconLabel label="DOORWAY" x={x} y={y} />
       <g transform={`translate(${x} ${y + 0.36}) scale(0.024) translate(-50 -50)`}>
         <DoorwayShape color={getDoorwayColor(square)} />
+      </g>
+    </g>
+  );
+}
+
+function SwitchShape() {
+  return (
+    <g className="switch-icon-shape">
+      <circle cx="50" cy="50" r="42" fill="#aeb5b7" />
+      <circle cx="50" cy="50" r="36.75" fill="#080a0e" />
+      <circle cx="50" cy="50" r="34.6" fill="#ffd84d" />
+    </g>
+  );
+}
+
+function SwitchIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="switch-icon" aria-hidden="true">
+      <SquareIconLabel label="SWITCH" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.42}) scale(0.0255) translate(-50 -50)`}>
+        <SwitchShape />
       </g>
     </g>
   );

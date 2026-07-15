@@ -318,6 +318,13 @@ by default, with an optional per-square six-digit hex override in
 `custom_vars.doorway_color`. The arch itself remains white regardless of that
 setting.
 
+The switch square uses selected refinement candidate 03 "Fine": a fitted
+`SWITCH` label above one flat circular button. The button has a medium-grey outer
+rim, a thin black separator, and a solid yellow face, matching the candidate's
+3.5-pixel separator proportion. It uses the standard black special-tile
+background and white border with no secondary imagery. The minimap reuses the
+same label-free button shape.
+
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
 to match the side column, so WASD input, prompt transitions, square details, and
