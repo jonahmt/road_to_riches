@@ -2572,7 +2572,7 @@ function BackstreetIcon({ square, x, y }: { square: SquareInfo; x: number; y: nu
   return (
     <g className="backstreet-icon" aria-hidden="true">
       <SquareIconLabel className="backstreet-icon-label" label="BACKSTREET" x={x} y={y} />
-      <g transform={`translate(${x} ${y + 0.43}) scale(0.025)`}>
+      <g transform={`translate(${x} ${y + 0.36}) scale(0.0215)`}>
         <BackstreetShape color={getBackstreetColor(square)} />
       </g>
     </g>

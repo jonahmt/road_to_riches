@@ -288,7 +288,9 @@ firework is amber yellow, all on the standard dark tile with a white border.
 The backstreet square uses refinement candidate 02 "Thick Stroke": a fitted
 `BACKSTREET` label above eight clearly separated, thick curved arms with rounded
 ends and an open center, closer to a bent firework or whirlpool than filled
-pinwheel wedges. The tile uses the standard dark background and white border.
+pinwheel wedges. The icon is centered below the label at a reduced scale with a
+comfortable inset from the bottom border. The tile uses the standard dark
+background and white border.
 Its icon color defaults unconditionally to sky blue (`#56cfff`); district,
 ownership, and destination do not change that fallback. A board may explicitly
 override an individual square with a six-digit hex string in
