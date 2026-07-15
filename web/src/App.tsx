@@ -1666,6 +1666,7 @@ function BoardPanel({
             const shouldRenderBackstreetIcon = isBackstreetIconSquare(square);
             const shouldRenderDoorwayIcon = isDoorwayIconSquare(square);
             const shouldRenderSwitchIcon = isSwitchIconSquare(square);
+            const shouldRenderSuitYourselfIcon = isSuitYourselfIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
@@ -1682,6 +1683,7 @@ function BoardPanel({
               !shouldRenderBackstreetIcon &&
               !shouldRenderDoorwayIcon &&
               !shouldRenderSwitchIcon &&
+              !shouldRenderSuitYourselfIcon &&
               !shouldRenderShopTile;
             const squareStyle = {
               ...(isStockPriceFocus
@@ -1756,6 +1758,8 @@ function BoardPanel({
                   <DoorwayIcon square={square} x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderSwitchIcon ? (
                   <SwitchIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderSuitYourselfIcon ? (
+                  <SuitYourselfIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
                   <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
                 ) : (
@@ -1795,7 +1799,8 @@ function BoardPanel({
                       shouldRenderCannonIcon ||
                       shouldRenderBackstreetIcon ||
                       shouldRenderDoorwayIcon ||
-                      shouldRenderSwitchIcon
+                      shouldRenderSwitchIcon ||
+                      shouldRenderSuitYourselfIcon
                         ? "#f7f7f2"
                         : getDistrictBorderColor(square.property_district),
                   }}
@@ -2136,6 +2141,10 @@ function isSwitchIconSquare(square: SquareInfo): boolean {
   return square.type === "SWITCH";
 }
 
+function isSuitYourselfIconSquare(square: SquareInfo): boolean {
+  return square.type === "SUIT_YOURSELF";
+}
+
 function isMinimapIconSquare(square: SquareInfo): boolean {
   return (
     isSuitIconSquare(square) ||
@@ -2149,7 +2158,8 @@ function isMinimapIconSquare(square: SquareInfo): boolean {
     isCannonIconSquare(square) ||
     isBackstreetIconSquare(square) ||
     isDoorwayIconSquare(square) ||
-    isSwitchIconSquare(square)
+    isSwitchIconSquare(square) ||
+    isSuitYourselfIconSquare(square)
   );
 }
 
@@ -2239,6 +2249,13 @@ function MinimapSquareIcon({ square, x, y }: { square: SquareInfo; x: number; y:
     return (
       <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.03) translate(-50 -50)`} aria-hidden="true">
         <SwitchShape />
+      </g>
+    );
+  }
+  if (isSuitYourselfIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.034) translate(-50 -50)`} aria-hidden="true">
+        <SuitYourselfShape />
       </g>
     );
   }
@@ -2802,6 +2819,40 @@ function SwitchIcon({ x, y }: { x: number; y: number }) {
       <SquareIconLabel label="SWITCH" x={x} y={y} />
       <g transform={`translate(${x} ${y + 0.42}) scale(0.0255) translate(-50 -50)`}>
         <SwitchShape />
+      </g>
+    </g>
+  );
+}
+
+function SuitYourselfShape() {
+  const panels = [
+    { suit: "SPADE", x: 20, y: 20, offsetX: -1.5, offsetY: -1.5 },
+    { suit: "HEART", x: 52, y: 20, offsetX: 1.5, offsetY: -1.5 },
+    { suit: "DIAMOND", x: 20, y: 52, offsetX: -1.5, offsetY: 1.5 },
+    { suit: "CLUB", x: 52, y: 52, offsetX: 1.5, offsetY: 1.5 },
+  ] as const;
+
+  return (
+    <g className="suit-yourself-icon-shape" transform="rotate(-12 50 50)">
+      <rect x="16" y="16" width="68" height="68" rx="5" fill="#f7f7f2" />
+      {panels.map(({ suit, x, y, offsetX, offsetY }) => (
+        <g key={suit} transform={`translate(${offsetX} ${offsetY})`}>
+          <rect x={x} y={y} width="28" height="28" rx="2" fill={SUIT_COLORS[suit]} />
+          <g transform={`translate(${x + 14} ${y + 14})`}>
+            <SuitShape suit={suit} scale={6.7} fill="#f7f7f2" />
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
+
+function SuitYourselfIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="suit-yourself-icon" aria-hidden="true">
+      <SquareIconLabel className="suit-yourself-icon-label" label="SUIT YOURSELF" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.42}) scale(0.029) translate(-50 -50)`}>
+        <SuitYourselfShape />
       </g>
     </g>
   );

@@ -719,7 +719,8 @@ h3 {
 .cannon-icon,
 .backstreet-icon,
 .doorway-icon,
-.switch-icon {
+.switch-icon,
+.suit-yourself-icon {
   pointer-events: none;
 }
 
@@ -743,6 +744,10 @@ h3 {
 
 .backstreet-icon-label {
   font-size: 0.39px;
+}
+
+.suit-yourself-icon-label {
+  font-size: 0.35px;
 }
 
 .suit-icon-shape {

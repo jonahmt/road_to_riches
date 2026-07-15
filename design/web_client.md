@@ -325,6 +325,14 @@ rim, a thin black separator, and a solid yellow face, matching the candidate's
 background and white border with no secondary imagery. The minimap reuses the
 same label-free button shape.
 
+The suit-yourself square uses selected candidate 06 "Offset": a fitted
+`SUIT YOURSELF` label above a slightly counterclockwise-rotated rectangular
+wild card. A white backing holds four colored suit panels in a two-by-two grid;
+the panels shift subtly outward from their shared center. The arrangement is
+spade blue and heart pink above diamond yellow and club green, with white suit
+marks carrying the standard dark outline. It uses the standard black special-
+tile background and white border. The minimap reuses the same label-free card.
+
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
 to match the side column, so WASD input, prompt transitions, square details, and
