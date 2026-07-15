@@ -2420,11 +2420,23 @@ function VentureIcon({ x, y }: { x: number; y: number }) {
   );
 }
 
+const REGULAR_STAR_CENTER = 50;
+const REGULAR_STAR_OUTER_RADIUS = 44;
+const REGULAR_STAR_INNER_RADIUS =
+  REGULAR_STAR_OUTER_RADIUS * (Math.sin(Math.PI / 10) / Math.sin((3 * Math.PI) / 10));
+const REGULAR_STAR_POINTS = Array.from({ length: 10 }, (_, index) => {
+  const angle = -Math.PI / 2 + index * (Math.PI / 5);
+  const radius = index % 2 === 0 ? REGULAR_STAR_OUTER_RADIUS : REGULAR_STAR_INNER_RADIUS;
+  const x = REGULAR_STAR_CENTER + radius * Math.cos(angle);
+  const y = REGULAR_STAR_CENTER + radius * Math.sin(angle);
+  return `${x},${y}`;
+}).join(" ");
+
 function BoonShape({ fill = BOON_ICON_COLOR }: { fill?: string }) {
   return (
-    <path
+    <polygon
       fill={fill}
-      d="M50 6 61.2 35.4 92.7 37 68.1 56.6 76.4 87 50 69.6 23.6 87 31.9 56.6 7.3 37 38.8 35.4Z"
+      points={REGULAR_STAR_POINTS}
     />
   );
 }

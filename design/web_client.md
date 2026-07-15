@@ -260,10 +260,12 @@ pink on the standard dark tile. The full mark, including its clearly separated
 circular dot, is centered in the space below the label with comfortable inset
 from the tile border and no secondary imagery.
 
-The boon square uses selected candidate 01 "Classic": one clean five-point star
-below a fitted `BOON` label on the standard dark tile with a white border. Its
-warm amber-gold is deliberately distinct from the lighter diamond suit yellow.
-The boom square uses that same amber-gold star in front of an identical
+The boon square uses selected candidate 01 "Classic": one mathematically regular
+five-point star below a fitted `BOON` label on the standard dark tile with a white
+border. Its alternating vertices advance in exact 36-degree increments, and its
+pentagram-derived inner radius produces exact 36-degree outer tip angles. Its warm
+amber-gold is deliberately distinct from the lighter diamond suit yellow. The
+boom square uses that same regular amber-gold star in front of an identical
 reddish-orange (`#f05a28`) copy rotated 180 degrees behind it, below a fitted
 `BOOM` label on the same standard tile treatment.
 The take-a-break square uses selected candidate 03 "Full": one pale-yellow,
