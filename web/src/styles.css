@@ -558,9 +558,23 @@ h3 {
   height: 100%;
 }
 
-.board-minimap rect {
+.board-minimap .minimap-square-tile {
   stroke: rgba(5, 7, 10, 0.92);
   stroke-width: 0.16;
+}
+
+.board-minimap .minimap-square.is-non-shop .minimap-square-tile {
+  stroke: #f7f7f2;
+  stroke-width: 0.22;
+}
+
+.board-minimap .minimap-square.is-shop-like .minimap-square-tile {
+  stroke: var(--minimap-district-color, #f7f7f2);
+  stroke-width: 0.22;
+}
+
+.minimap-square-icon {
+  pointer-events: none;
 }
 
 .minimap-player circle {

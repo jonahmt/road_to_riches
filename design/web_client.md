@@ -83,10 +83,18 @@ and camera controls remain lower-left beneath the details. Overlay panels use
 translucent dark surfaces so board state stays visible around them.
 
 A fixed lower-left minimap shows the entire board independently of camera pan
-and zoom. Every board square is represented by a color-coded square using the
-same four-coordinate-unit footprint as a full board tile, so neighboring path
-squares share edges instead of appearing as disconnected dots. Each active
-player is represented by a bordered player-color marker at their
+and zoom. Every board square uses the same four-coordinate-unit footprint as a
+full board tile, so neighboring path squares share edges instead of appearing as
+disconnected dots. Ordinary shops, undeveloped vacant plots, and the checkpoint
+or tax-office properties built on vacant plots all use the same shop-like minimap
+treatment: the existing ownership-based fill with a border in the square's
+district color. Every other square uses a black background and white border. When
+finished production SVG art exists, the tile centers a label-free miniature of
+that same icon; unfinished types retain the black-and-white shell without
+temporary type colors until their art is selected. Minimap tile rectangles are
+inset by half their stroke width so adjacent borders meet edge-to-edge at the
+shared tile boundary without painting over one another. Each active player is
+represented by a bordered player-color marker at their
 authoritative position; the current player receives a stronger ring. Direction
 arrows are intentionally deferred. Unowned minimap shops use one neutral medium
 grey rather than district colors; after purchase, the square switches to its

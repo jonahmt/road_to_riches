@@ -138,6 +138,9 @@ const BOARD_TILE_RADIUS = BOARD_TILE_SIZE / 2;
 const BOARD_TILE_STROKE_WIDTH = 0.24;
 const BOARD_TILE_STROKE_INSET = BOARD_TILE_STROKE_WIDTH / 2;
 const BOARD_TILE_DRAW_SIZE = BOARD_TILE_SIZE - BOARD_TILE_STROKE_WIDTH;
+const MINIMAP_TILE_STROKE_WIDTH = 0.22;
+const MINIMAP_TILE_STROKE_INSET = MINIMAP_TILE_STROKE_WIDTH / 2;
+const MINIMAP_TILE_DRAW_SIZE = BOARD_TILE_SIZE - MINIMAP_TILE_STROKE_WIDTH;
 const BOARD_TILE_SELECTION_INSET = 0.34;
 const BOARD_TILE_SELECTION_STROKE_WIDTH = 0.12;
 const BOARD_TILE_SELECTION_SIZE = BOARD_TILE_SIZE - BOARD_TILE_SELECTION_INSET * 2;
@@ -413,43 +416,10 @@ function getDoorwayColor(square: SquareInfo): string {
 }
 
 function getMinimapSquareFill(square: SquareInfo): string {
-  if (square.type === "SHOP") {
+  if (isMinimapShopLikeSquare(square)) {
     return getMinimapShopColor(square.property_owner);
   }
-  if (square.type === "BANK") {
-    return "#ffd166";
-  }
-  if (square.type === "BOON") {
-    return BOON_ICON_COLOR;
-  }
-  if (square.type === "BOOM") {
-    return BOOM_ICON_COLOR;
-  }
-  if (square.type === "TAKE_A_BREAK") {
-    return TAKE_A_BREAK_ICON_COLOR;
-  }
-  if (square.type === "ROLL_ON") {
-    return "#d5d9da";
-  }
-  if (square.type === "CANNON") {
-    return "#62ad68";
-  }
-  if (square.type === "ARCADE") {
-    return "#ff5aa5";
-  }
-  if (square.type === "BACKSTREET") {
-    return getBackstreetColor(square);
-  }
-  if (square.type === "DOORWAY") {
-    return getDoorwayColor(square);
-  }
-  if (square.suit) {
-    return getSuitColor(square.suit);
-  }
-  if (square.type === "VENTURE") {
-    return "#77dd77";
-  }
-  return "#d8d9dc";
+  return "#080a0e";
 }
 
 function parseResponseInput(value: string): unknown {
@@ -1967,17 +1937,35 @@ function BoardMinimap({ state, bounds }: { state: GameState; bounds: BoardBounds
         role="img"
         aria-label="Miniature board and player locations"
       >
-        {state.board.squares.map((square) => (
-          <rect
-            key={square.id}
-            x={square.position[0] - BOARD_TILE_RADIUS}
-            y={square.position[1] - BOARD_TILE_RADIUS}
-            width={BOARD_TILE_SIZE}
-            height={BOARD_TILE_SIZE}
-            rx="0.24"
-            fill={getMinimapSquareFill(square)}
-          />
-        ))}
+        {state.board.squares.map((square) => {
+          const hasIcon = isMinimapIconSquare(square);
+          const isShopLike = isMinimapShopLikeSquare(square);
+          return (
+            <g
+              key={square.id}
+              className={`minimap-square ${isShopLike ? "is-shop-like" : "is-non-shop"} ${hasIcon ? "has-icon" : ""}`}
+              style={
+                isShopLike
+                  ? ({ "--minimap-district-color": getDistrictColor(square.property_district) } as CSSProperties)
+                  : undefined
+              }
+            >
+              <rect
+                className="minimap-square-tile"
+                data-square-id={square.id}
+                x={square.position[0] - BOARD_TILE_RADIUS + MINIMAP_TILE_STROKE_INSET}
+                y={square.position[1] - BOARD_TILE_RADIUS + MINIMAP_TILE_STROKE_INSET}
+                width={MINIMAP_TILE_DRAW_SIZE}
+                height={MINIMAP_TILE_DRAW_SIZE}
+                rx="0.24"
+                fill={getMinimapSquareFill(square)}
+              />
+              {hasIcon && (
+                <MinimapSquareIcon square={square} x={square.position[0]} y={square.position[1]} />
+              )}
+            </g>
+          );
+        })}
         {state.players
           .filter((player) => !player.bankrupt)
           .map((player) => {
@@ -2137,6 +2125,107 @@ function isBackstreetIconSquare(square: SquareInfo): boolean {
 
 function isDoorwayIconSquare(square: SquareInfo): boolean {
   return square.type === "DOORWAY";
+}
+
+function isMinimapIconSquare(square: SquareInfo): boolean {
+  return (
+    isSuitIconSquare(square) ||
+    isBankIconSquare(square) ||
+    isVentureIconSquare(square) ||
+    isBoonIconSquare(square) ||
+    isBoomIconSquare(square) ||
+    isTakeABreakIconSquare(square) ||
+    isArcadeIconSquare(square) ||
+    isRollOnIconSquare(square) ||
+    isCannonIconSquare(square) ||
+    isBackstreetIconSquare(square) ||
+    isDoorwayIconSquare(square)
+  );
+}
+
+function isMinimapShopLikeSquare(square: SquareInfo): boolean {
+  return ["SHOP", "VACANT_PLOT", "VP_CHECKPOINT", "VP_TAX_OFFICE"].includes(square.type);
+}
+
+function MinimapSquareIcon({ square, x, y }: { square: SquareInfo; x: number; y: number }) {
+  if (isSuitIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y})`} aria-hidden="true">
+        <SuitShape suit={square.suit} scale={1.05} />
+      </g>
+    );
+  }
+  if (isBankIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.027) translate(-50 -52)`} aria-hidden="true">
+        <BankShape />
+      </g>
+    );
+  }
+  if (isVentureIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.026) translate(-50 -51)`} aria-hidden="true">
+        <VentureShape />
+      </g>
+    );
+  }
+  if (isBoonIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.027) translate(-50 -50)`} aria-hidden="true">
+        <BoonShape />
+      </g>
+    );
+  }
+  if (isBoomIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.0255) translate(-50 -50)`} aria-hidden="true">
+        <BoomShape />
+      </g>
+    );
+  }
+  if (isTakeABreakIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.027) translate(-50 -50)`} aria-hidden="true">
+        <TakeABreakShape />
+      </g>
+    );
+  }
+  if (isRollOnIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.024) translate(-50 -52)`} aria-hidden="true">
+        <RollOnShape />
+      </g>
+    );
+  }
+  if (isCannonIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.024) translate(-60 -50)`} aria-hidden="true">
+        <CannonShape />
+      </g>
+    );
+  }
+  if (isArcadeIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.027) translate(-50 -50)`} aria-hidden="true">
+        <ArcadeShape />
+      </g>
+    );
+  }
+  if (isBackstreetIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.022)`} aria-hidden="true">
+        <BackstreetShape color={getBackstreetColor(square)} />
+      </g>
+    );
+  }
+  if (isDoorwayIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.026) translate(-50 -50)`} aria-hidden="true">
+        <DoorwayShape color={getDoorwayColor(square)} />
+      </g>
+    );
+  }
+  return null;
 }
 
 function rentMultiplier(numOwned: number, numTotal: number): number {
