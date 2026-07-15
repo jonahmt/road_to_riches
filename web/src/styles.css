@@ -703,7 +703,8 @@ h3 {
 .arcade-icon,
 .roll-on-icon,
 .cannon-icon,
-.backstreet-icon {
+.backstreet-icon,
+.doorway-icon {
   pointer-events: none;
 }
 

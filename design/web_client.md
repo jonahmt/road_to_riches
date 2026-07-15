@@ -300,6 +300,14 @@ override an individual square with a six-digit hex string in
 `custom_vars.backstreet_color`, allowing differently colored backstreets to
 coexist on the same board.
 
+The doorway square uses a fitted `DOORWAY` label above a closed white pointed
+arch: two curved sides rise to a central point, and a straight bottom edge closes
+the frame. Three miniature selected Backstreet swirls sit fully inside the arch
+in a one-over-two pyramid. All three always share one color: sky blue (`#56cfff`)
+by default, with an optional per-square six-digit hex override in
+`custom_vars.doorway_color`. The arch itself remains white regardless of that
+setting.
+
 The board viewport must not resize in response to prompt/sidebar content during
 normal play. The board panel owns a stable responsive height and does not stretch
 to match the side column, so WASD input, prompt transitions, square details, and

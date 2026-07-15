@@ -405,6 +405,13 @@ function getBackstreetColor(square: SquareInfo): string {
     : DEFAULT_BACKSTREET_COLOR;
 }
 
+function getDoorwayColor(square: SquareInfo): string {
+  const configuredColor = square.custom_vars.doorway_color;
+  return typeof configuredColor === "string" && /^#[0-9a-f]{6}$/i.test(configuredColor)
+    ? configuredColor
+    : DEFAULT_BACKSTREET_COLOR;
+}
+
 function getMinimapSquareFill(square: SquareInfo): string {
   if (square.type === "SHOP") {
     return getMinimapShopColor(square.property_owner);
@@ -432,6 +439,9 @@ function getMinimapSquareFill(square: SquareInfo): string {
   }
   if (square.type === "BACKSTREET") {
     return getBackstreetColor(square);
+  }
+  if (square.type === "DOORWAY") {
+    return getDoorwayColor(square);
   }
   if (square.suit) {
     return getSuitColor(square.suit);
@@ -1684,6 +1694,7 @@ function BoardPanel({
             const shouldRenderRollOnIcon = isRollOnIconSquare(square);
             const shouldRenderCannonIcon = isCannonIconSquare(square);
             const shouldRenderBackstreetIcon = isBackstreetIconSquare(square);
+            const shouldRenderDoorwayIcon = isDoorwayIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
@@ -1698,6 +1709,7 @@ function BoardPanel({
               !shouldRenderRollOnIcon &&
               !shouldRenderCannonIcon &&
               !shouldRenderBackstreetIcon &&
+              !shouldRenderDoorwayIcon &&
               !shouldRenderShopTile;
             const squareStyle = {
               ...(isStockPriceFocus
@@ -1768,6 +1780,8 @@ function BoardPanel({
                   <CannonIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderBackstreetIcon ? (
                   <BackstreetIcon square={square} x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderDoorwayIcon ? (
+                  <DoorwayIcon square={square} x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
                   <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
                 ) : (
@@ -1805,7 +1819,8 @@ function BoardPanel({
                       shouldRenderArcadeIcon ||
                       shouldRenderRollOnIcon ||
                       shouldRenderCannonIcon ||
-                      shouldRenderBackstreetIcon
+                      shouldRenderBackstreetIcon ||
+                      shouldRenderDoorwayIcon
                         ? "#f7f7f2"
                         : getDistrictBorderColor(square.property_district),
                   }}
@@ -2118,6 +2133,10 @@ function isCannonIconSquare(square: SquareInfo): boolean {
 
 function isBackstreetIconSquare(square: SquareInfo): boolean {
   return square.type === "BACKSTREET";
+}
+
+function isDoorwayIconSquare(square: SquareInfo): boolean {
+  return square.type === "DOORWAY";
 }
 
 function rentMultiplier(numOwned: number, numTotal: number): number {
@@ -2609,6 +2628,41 @@ function BackstreetIcon({ square, x, y }: { square: SquareInfo; x: number; y: nu
       <SquareIconLabel className="backstreet-icon-label" label="BACKSTREET" x={x} y={y} />
       <g transform={`translate(${x} ${y + 0.36}) scale(0.01935)`}>
         <BackstreetShape color={getBackstreetColor(square)} />
+      </g>
+    </g>
+  );
+}
+
+function DoorwayShape({ color }: { color: string }) {
+  return (
+    <g className="doorway-icon-shape">
+      <path
+        d="M19 92V54C19 35 31 20 50 9C69 20 81 35 81 54V92Z"
+        fill="none"
+        stroke="#f7f7f2"
+        strokeWidth="7"
+        strokeLinecap="round"
+        strokeLinejoin="miter"
+      />
+      <g transform="translate(50 41) scale(0.15)">
+        <BackstreetShape color={color} />
+      </g>
+      <g transform="translate(37 68) scale(0.15)">
+        <BackstreetShape color={color} />
+      </g>
+      <g transform="translate(63 68) scale(0.15)">
+        <BackstreetShape color={color} />
+      </g>
+    </g>
+  );
+}
+
+function DoorwayIcon({ square, x, y }: { square: SquareInfo; x: number; y: number }) {
+  return (
+    <g className="doorway-icon" aria-hidden="true">
+      <SquareIconLabel label="DOORWAY" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.36}) scale(0.024) translate(-50 -50)`}>
+        <DoorwayShape color={getDoorwayColor(square)} />
       </g>
     </g>
   );
