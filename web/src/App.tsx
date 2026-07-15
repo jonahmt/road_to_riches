@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import {
+  BOOM_ICON_COLOR,
   BOON_ICON_COLOR,
   DISTRICT_BORDER_COLORS,
   DISTRICT_COLORS,
@@ -413,6 +414,9 @@ function getMinimapSquareFill(square: SquareInfo): string {
   }
   if (square.type === "BOON") {
     return BOON_ICON_COLOR;
+  }
+  if (square.type === "BOOM") {
+    return BOOM_ICON_COLOR;
   }
   if (square.type === "TAKE_A_BREAK") {
     return TAKE_A_BREAK_ICON_COLOR;
@@ -1674,6 +1678,7 @@ function BoardPanel({
             const shouldRenderBankIcon = isBankIconSquare(square);
             const shouldRenderVentureIcon = isVentureIconSquare(square);
             const shouldRenderBoonIcon = isBoonIconSquare(square);
+            const shouldRenderBoomIcon = isBoomIconSquare(square);
             const shouldRenderTakeABreakIcon = isTakeABreakIconSquare(square);
             const shouldRenderArcadeIcon = isArcadeIconSquare(square);
             const shouldRenderRollOnIcon = isRollOnIconSquare(square);
@@ -1687,6 +1692,7 @@ function BoardPanel({
               !shouldRenderBankIcon &&
               !shouldRenderVentureIcon &&
               !shouldRenderBoonIcon &&
+              !shouldRenderBoomIcon &&
               !shouldRenderTakeABreakIcon &&
               !shouldRenderArcadeIcon &&
               !shouldRenderRollOnIcon &&
@@ -1750,6 +1756,8 @@ function BoardPanel({
                   <VentureIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderBoonIcon ? (
                   <BoonIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderBoomIcon ? (
+                  <BoomIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderTakeABreakIcon ? (
                   <TakeABreakIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderArcadeIcon ? (
@@ -1792,6 +1800,7 @@ function BoardPanel({
                       shouldRenderBankIcon ||
                       shouldRenderVentureIcon ||
                       shouldRenderBoonIcon ||
+                      shouldRenderBoomIcon ||
                       shouldRenderTakeABreakIcon ||
                       shouldRenderArcadeIcon ||
                       shouldRenderRollOnIcon ||
@@ -2085,6 +2094,10 @@ function isVentureIconSquare(square: SquareInfo): boolean {
 
 function isBoonIconSquare(square: SquareInfo): boolean {
   return square.type === "BOON";
+}
+
+function isBoomIconSquare(square: SquareInfo): boolean {
+  return square.type === "BOOM";
 }
 
 function isTakeABreakIconSquare(square: SquareInfo): boolean {
@@ -2408,6 +2421,28 @@ function BoonIcon({ x, y }: { x: number; y: number }) {
   );
 }
 
+function BoomShape() {
+  return (
+    <g className="boom-icon-shape">
+      <g transform="rotate(180 50 50)">
+        <BoonShape fill={BOOM_ICON_COLOR} />
+      </g>
+      <BoonShape />
+    </g>
+  );
+}
+
+function BoomIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="boom-icon" aria-hidden="true">
+      <SquareIconLabel label="BOOM" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.42}) scale(0.023) translate(-50 -50)`}>
+        <BoomShape />
+      </g>
+    </g>
+  );
+}
+
 function TakeABreakShape({ fill = TAKE_A_BREAK_ICON_COLOR }: { fill?: string }) {
   return (
     <path
@@ -2572,7 +2607,7 @@ function BackstreetIcon({ square, x, y }: { square: SquareInfo; x: number; y: nu
   return (
     <g className="backstreet-icon" aria-hidden="true">
       <SquareIconLabel className="backstreet-icon-label" label="BACKSTREET" x={x} y={y} />
-      <g transform={`translate(${x} ${y + 0.36}) scale(0.0215)`}>
+      <g transform={`translate(${x} ${y + 0.36}) scale(0.01935)`}>
         <BackstreetShape color={getBackstreetColor(square)} />
       </g>
     </g>
