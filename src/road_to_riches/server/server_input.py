@@ -600,14 +600,22 @@ class WebSocketPlayerInput(PlayerInput):
         )
 
     def choose_counter_price(
-        self, state: GameState, player_id: int, original_price: int, log: GameLog
+        self,
+        state: GameState,
+        player_id: int,
+        original_price: int,
+        log: GameLog,
+        offer: dict | None = None,
     ) -> int:
         self._flush_log(log)
+        data: dict = {"original_price": original_price}
+        if offer is not None:
+            data["offer"] = offer
         return self._request_input(
             InputRequest(
                 type=InputRequestType.COUNTER_PRICE,
                 player_id=player_id,
-                data={"original_price": original_price},
+                data=data,
             ),
             state,
         )

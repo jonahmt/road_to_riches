@@ -425,6 +425,19 @@ selection or cancel before submitting. Unrestricted venture/script square
 choices use the same interaction with every square legal, while voluntary shop
 auctions cut out only the player's auctionable shops and allow canceling.
 
+Voluntary Buy Shop negotiation uses the same direct board workflow. Properties
+owned by a non-bankrupt opponent remain clear, while the buyer's properties,
+unowned squares, stale ownership rows, and bankrupt players' holdings are not
+selectable. Confirming a property opens an offer form with its owner, current
+value, district, the buyer's ready cash, and the projected cash difference; the
+client submits the canonical `[owner_id, square_id, positive_price]` response and
+does not impose a client-only affordability ceiling. The responding player then
+receives a contextual deal summary with explicit Accept, Counter, and Reject
+controls. Counter prompts retain the originating offer in their server payload,
+so browser reload/reconnect can reconstruct the same property, participants,
+and terms instead of falling back to a context-free amount field. The backend
+remains authoritative for ownership, price, transfer, and liquidation rules.
+
 The game board has a persistent die overlay in its upper-left corner. It consumes
 the same backend `dice` message as the TUI: the face displays the remaining move
 count, counts down as movement is resolved, and becomes blank at zero, while a

@@ -3413,6 +3413,80 @@ dd {
   font-size: 10px;
 }
 
+.shop-negotiation-widget .investment-summary dd:last-child {
+  color: #ffd166;
+}
+
+.offer-response-widget,
+.counter-offer-widget {
+  display: grid;
+  gap: 12px;
+}
+
+.negotiation-summary {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.negotiation-summary > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.negotiation-summary dd {
+  max-width: 62%;
+  text-align: right;
+}
+
+.offer-response-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.offer-response-actions button {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-height: 62px;
+  padding: 8px;
+}
+
+.offer-response-actions .keycap {
+  width: 22px;
+  min-height: 22px;
+  font-size: 10px;
+}
+
+.offer-response-actions .offer-accept {
+  border-color: rgba(116, 226, 162, 0.66);
+  background: rgba(63, 164, 105, 0.2);
+}
+
+.offer-response-actions .offer-reject {
+  border-color: rgba(255, 125, 125, 0.44);
+}
+
+.counter-offer-widget .investment-amount-input > input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f7f2;
+  font-size: 16px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.counter-offer-actions {
+  display: grid;
+  gap: 7px;
+}
+
 .layout-immersive.is-playing.is-roll-active .action-panel {
   visibility: hidden;
   opacity: 0;

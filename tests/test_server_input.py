@@ -6,6 +6,7 @@ import asyncio
 import json
 import threading
 from collections.abc import Iterator
+from unittest.mock import Mock
 
 import pytest
 
@@ -294,6 +295,33 @@ def test_receive_response_rejects_when_no_player_is_expected(
     assert accepted is False
     assert player_input._response is None
     assert not player_input._response_ready.is_set()
+
+
+def test_counter_price_request_preserves_offer_context(player_input: WebSocketPlayerInput):
+    state = _make_state()
+    offer = {
+        "type": "buy",
+        "buyer_id": 0,
+        "seller_id": 1,
+        "square_id": 7,
+        "price": 200,
+    }
+    player_input._request_input = Mock(return_value=250)
+
+    result = player_input.choose_counter_price(
+        state,
+        player_id=1,
+        original_price=200,
+        log=GameLog(),
+        offer=offer,
+    )
+
+    assert result == 250
+    request, request_state = player_input._request_input.call_args.args
+    assert request_state is state
+    assert request.type == InputRequestType.COUNTER_PRICE
+    assert request.player_id == 1
+    assert request.data == {"original_price": 200, "offer": offer}
 
 
 def test_can_save_game_requires_matching_pre_roll_prompt(

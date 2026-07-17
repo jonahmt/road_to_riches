@@ -45,6 +45,13 @@ import {
   type InvestmentSquareChoice,
 } from "./squareSelection";
 import {
+  buyShopChoices,
+  negotiationOfferFacts,
+  normalizePositiveOfferPrice,
+  type BuyShopChoice,
+  type NegotiationOfferFacts,
+} from "./shopNegotiation";
+import {
   clampStockQuantity,
   defaultStockQuantity,
   districtLabel,
@@ -638,11 +645,14 @@ function App() {
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
   const [confirmedInvestmentSquareId, setConfirmedInvestmentSquareId] = useState<number | null>(null);
+  const [confirmedBuyShopSquareId, setConfirmedBuyShopSquareId] = useState<number | null>(null);
   const [liquidationAssetMode, setLiquidationAssetMode] = useState<LiquidationAssetMode>("choose");
   const ventureRequest =
     clientState.pendingRequest?.type === "CHOOSE_VENTURE_CELL" ? clientState.pendingRequest : null;
   const investmentRequest =
     clientState.pendingRequest?.type === "INVEST" ? clientState.pendingRequest : null;
+  const buyShopRequest =
+    clientState.pendingRequest?.type === "CHOOSE_SHOP_BUY" ? clientState.pendingRequest : null;
   const simpleSquareRequest =
     clientState.pendingRequest &&
     ["CHOOSE_ANY_SQUARE", "CHOOSE_SHOP_AUCTION"].includes(clientState.pendingRequest.type)
@@ -658,6 +668,17 @@ function App() {
   );
   const investmentRequestKey = investmentRequest
     ? `${investmentRequest.player_id}:${investmentChoices.map((choice) => `${choice.squareId}-${choice.maxCapital}`).join("|")}`
+    : "";
+  const availableBuyShopChoices = useMemo(
+    () => buyShopChoices(clientState.gameState, buyShopRequest?.player_id ?? -1),
+    [clientState.gameState, buyShopRequest?.player_id],
+  );
+  const buyShopSquareIds = useMemo(
+    () => new Set(availableBuyShopChoices.map((choice) => choice.squareId)),
+    [availableBuyShopChoices],
+  );
+  const buyShopRequestKey = buyShopRequest
+    ? `${buyShopRequest.player_id}:${availableBuyShopChoices.map((choice) => `${choice.ownerId}-${choice.squareId}-${choice.currentValue}`).join("|")}`
     : "";
   const simpleSquareIds = useMemo(() => {
     if (!simpleSquareRequest) {
@@ -706,6 +727,7 @@ function App() {
   const standardKeyboardRequest =
     ventureRequest ||
     investmentRequest ||
+    buyShopRequest ||
     simpleSquareRequest ||
     liquidationRequest ||
     stockRequest ||
@@ -720,6 +742,13 @@ function App() {
       setSelectedSquareId(null);
     }
   }, [investmentRequestKey]);
+
+  useEffect(() => {
+    setConfirmedBuyShopSquareId(null);
+    if (buyShopRequest) {
+      setSelectedSquareId(null);
+    }
+  }, [buyShopRequestKey]);
 
   useEffect(() => {
     if (simpleSquareRequest) {
@@ -832,6 +861,7 @@ function App() {
               focusDistrictId={activeStockPriceChange?.districtId ?? null}
               temporaryFreeCamera={Boolean(
                 (investmentRequest ||
+                  buyShopRequest ||
                   simpleSquareRequest ||
                   (liquidationRequest && liquidationAssetMode === "shop")) &&
                   !clientState.responsePending,
@@ -846,6 +876,17 @@ function App() {
                         setConfirmedInvestmentSquareId(squareId);
                       },
                     }
+                  : buyShopRequest &&
+                      !clientState.responsePending &&
+                      confirmedBuyShopSquareId === null
+                    ? {
+                        eligibleSquareIds: buyShopSquareIds,
+                        selectedSquareId,
+                        onConfirmSquare: (squareId) => {
+                          setSelectedSquareId(squareId);
+                          setConfirmedBuyShopSquareId(squareId);
+                        },
+                      }
                   : simpleSquareRequest && !clientState.responsePending
                     ? {
                         eligibleSquareIds: simpleSquareIds,
@@ -911,6 +952,20 @@ function App() {
                     onChangeSquare={() => setConfirmedInvestmentSquareId(null)}
                     onSubmit={submitResponse}
                   />
+                ) : buyShopRequest ? (
+                  <BuyShopOfferWidget
+                    request={buyShopRequest}
+                    choices={availableBuyShopChoices}
+                    selectedSquareId={selectedSquareId}
+                    confirmedSquareId={confirmedBuyShopSquareId}
+                    responsePending={clientState.responsePending}
+                    onConfirmSquare={(squareId) => {
+                      setSelectedSquareId(squareId);
+                      setConfirmedBuyShopSquareId(squareId);
+                    }}
+                    onChangeSquare={() => setConfirmedBuyShopSquareId(null)}
+                    onSubmit={submitResponse}
+                  />
                 ) : simpleSquareRequest ? (
                   <SquareChoiceWidget
                     request={simpleSquareRequest}
@@ -927,6 +982,7 @@ function App() {
                 ) : (
                   <PromptPanel
                     request={clientState.pendingRequest}
+                    state={clientState.gameState}
                     onSubmit={submitResponse}
                     connected={clientState.status === "connected"}
                     responsePending={clientState.responsePending}
@@ -4600,13 +4656,346 @@ function InvestmentWidget({
   );
 }
 
+function BuyShopOfferWidget({
+  request,
+  choices,
+  selectedSquareId,
+  confirmedSquareId,
+  responsePending,
+  onConfirmSquare,
+  onChangeSquare,
+  onSubmit,
+}: {
+  request: InputRequest;
+  choices: BuyShopChoice[];
+  selectedSquareId: number | null;
+  confirmedSquareId: number | null;
+  responsePending: boolean;
+  onConfirmSquare: (squareId: number) => void;
+  onChangeSquare: () => void;
+  onSubmit: (value: unknown) => void;
+}) {
+  const selectedChoice = choices.find((choice) => choice.squareId === selectedSquareId) ?? null;
+  const confirmedChoice = choices.find((choice) => choice.squareId === confirmedSquareId) ?? null;
+  const readyCash = asNumber(request.data.cash);
+  const [amount, setAmount] = useState("1");
+  const normalizedAmount = normalizePositiveOfferPrice(Number(amount));
+
+  useEffect(() => {
+    if (confirmedChoice) {
+      setAmount(String(Math.max(1, confirmedChoice.currentValue)));
+    }
+  }, [confirmedChoice?.squareId, confirmedChoice?.currentValue]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape" || responsePending || isTypingTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      if (confirmedChoice) {
+        onChangeSquare();
+      } else {
+        onSubmit(null);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [confirmedChoice, onChangeSquare, onSubmit, responsePending]);
+
+  function submitOffer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!confirmedChoice || normalizedAmount <= 0 || responsePending) {
+      return;
+    }
+    onSubmit([confirmedChoice.ownerId, confirmedChoice.squareId, normalizedAmount]);
+  }
+
+  if (!confirmedChoice) {
+    return (
+      <section className="panel action-panel investment-widget shop-negotiation-widget is-selecting" aria-label="Choose a property to buy">
+        <header className="panel-header prompt-header">
+          <div>
+            <p className="eyebrow">Buy Shop</p>
+            <h2>Choose a Property</h2>
+            <p>Opponent-owned properties stay clear. Click to inspect; double-click to make an offer.</p>
+          </div>
+        </header>
+        {selectedChoice ? (
+          <div className="investment-selected-shop">
+            <span>Owned by Player {selectedChoice.ownerId}</span>
+            <strong>{readableType(selectedChoice.squareType)} #{selectedChoice.squareId}</strong>
+            <small>
+              {formatGold(selectedChoice.currentValue)} current value
+              {selectedChoice.districtId === null ? "" : ` · District ${selectedChoice.districtId}`}
+            </small>
+            <button
+              type="button"
+              disabled={responsePending}
+              onClick={() => onConfirmSquare(selectedChoice.squareId)}
+            >
+              Make an Offer
+            </button>
+          </div>
+        ) : (
+          <p className="investment-selection-hint">
+            {choices.length > 0
+              ? "Pan and zoom freely, then choose one of the untinted properties."
+              : "No opponent-owned properties are available to buy."}
+          </p>
+        )}
+        <button
+          type="button"
+          className="secondary investment-cancel"
+          disabled={responsePending}
+          onClick={() => onSubmit(null)}
+        >
+          Cancel
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      className={`panel action-panel investment-widget shop-negotiation-widget is-amount ${responsePending ? "is-resolving" : ""}`}
+      aria-busy={responsePending}
+    >
+      <header className="panel-header prompt-header">
+        <div>
+          <p className="eyebrow">Buy · {readableType(confirmedChoice.squareType)} #{confirmedChoice.squareId}</p>
+          <h2>Make Your Offer</h2>
+          <p>Player {confirmedChoice.ownerId} can accept, counter, or reject this amount.</p>
+        </div>
+      </header>
+      <form onSubmit={submitOffer}>
+        <dl className="investment-summary">
+          <div>
+            <dt>Current value</dt>
+            <dd>{formatGold(confirmedChoice.currentValue)}</dd>
+          </div>
+          <div>
+            <dt>Ready cash</dt>
+            <dd>{formatGold(readyCash)}</dd>
+          </div>
+          <div>
+            <dt>Cash if accepted</dt>
+            <dd>{formatGold(readyCash - normalizedAmount)}</dd>
+          </div>
+        </dl>
+        <label className="investment-amount-input">
+          Offer price
+          <span>
+            <button
+              type="button"
+              aria-label="Decrease offer"
+              disabled={responsePending || normalizedAmount <= 1}
+              onClick={() => setAmount(String(Math.max(1, normalizedAmount - 1)))}
+            >
+              −
+            </button>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={amount}
+              disabled={responsePending}
+              onChange={(event) => setAmount(event.target.value)}
+              autoFocus
+            />
+            <button
+              type="button"
+              aria-label="Increase offer"
+              disabled={responsePending}
+              onClick={() => setAmount(String(Math.max(1, normalizedAmount + 1)))}
+            >
+              +
+            </button>
+          </span>
+        </label>
+        <div className="investment-amount-actions">
+          <button
+            type="button"
+            className="secondary"
+            disabled={responsePending}
+            onClick={() => setAmount(String(Math.max(1, confirmedChoice.currentValue)))}
+          >
+            Match {formatGold(confirmedChoice.currentValue)}
+          </button>
+          <button type="submit" disabled={responsePending || normalizedAmount <= 0}>
+            {responsePending ? "Sending..." : `Offer ${formatGold(normalizedAmount)}`}
+          </button>
+        </div>
+        <div className="investment-secondary-actions">
+          <button type="button" className="secondary" disabled={responsePending} onClick={onChangeSquare}>
+            Change Property
+          </button>
+          <button type="button" className="secondary" disabled={responsePending} onClick={() => onSubmit(null)}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function OfferResponseWidget({
+  request,
+  state,
+  onSubmit,
+}: {
+  request: InputRequest;
+  state: GameState | null;
+  onSubmit: (value: unknown) => void;
+}) {
+  const facts = negotiationOfferFacts(request.data.offer);
+  return (
+    <div className="offer-response-widget">
+      <NegotiationOfferSummary facts={facts} state={state} />
+      <div className="offer-response-actions">
+        <button type="button" className="offer-accept" onClick={() => onSubmit("accept")}>
+          <span className="keycap">D</span>
+          Accept
+        </button>
+        <button type="button" className="secondary" onClick={() => onSubmit("counter")}>
+          <span className="keycap">S</span>
+          Counter
+        </button>
+        <button type="button" className="secondary offer-reject" onClick={() => onSubmit("reject")}>
+          <span className="keycap">A</span>
+          Reject
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CounterOfferWidget({
+  request,
+  state,
+  onSubmit,
+}: {
+  request: InputRequest;
+  state: GameState | null;
+  onSubmit: (value: unknown) => void;
+}) {
+  const facts = negotiationOfferFacts(request.data.offer);
+  const originalPrice = asNumber(request.data.original_price);
+  const [amount, setAmount] = useState(String(originalPrice));
+  const numericAmount = Number(amount);
+  const isTrade = facts?.type === "trade";
+  const normalizedAmount = Number.isFinite(numericAmount)
+    ? isTrade
+      ? Math.floor(numericAmount)
+      : normalizePositiveOfferPrice(numericAmount)
+    : 0;
+  const valid = Number.isFinite(numericAmount) && (isTrade || normalizedAmount > 0);
+
+  useEffect(() => setAmount(String(originalPrice)), [request, originalPrice]);
+
+  return (
+    <form
+      className="counter-offer-widget"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (valid) {
+          onSubmit(normalizedAmount);
+        }
+      }}
+    >
+      <NegotiationOfferSummary facts={facts} state={state} />
+      <label className="investment-amount-input">
+        {isTrade ? "Counter gold adjustment" : "Counter price"}
+        <input
+          type="number"
+          min={isTrade ? undefined : 1}
+          step="1"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+          autoFocus
+        />
+      </label>
+      <div className="counter-offer-actions">
+        <button type="submit" disabled={!valid}>
+          Send {formatGold(normalizedAmount)}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function NegotiationOfferSummary({
+  facts,
+  state,
+}: {
+  facts: NegotiationOfferFacts | null;
+  state: GameState | null;
+}) {
+  if (!facts) {
+    return <p className="muted">Review the offer before responding.</p>;
+  }
+  if (facts.type === "trade") {
+    return (
+      <dl className="investment-summary negotiation-summary">
+        <div>
+          <dt>Players</dt>
+          <dd>P{facts.proposerId ?? "?"} ↔ P{facts.targetId ?? "?"}</dd>
+        </div>
+        <div>
+          <dt>Offered properties</dt>
+          <dd>{formatSquareList(facts.offerShopIds)}</dd>
+        </div>
+        <div>
+          <dt>Requested properties</dt>
+          <dd>{formatSquareList(facts.requestShopIds)}</dd>
+        </div>
+        <div>
+          <dt>Gold adjustment</dt>
+          <dd>{formatGold(facts.goldOffer ?? 0)}</dd>
+        </div>
+      </dl>
+    );
+  }
+
+  const square = state?.board.squares.find((candidate) => candidate.id === facts.squareId) ?? null;
+  return (
+    <dl className="investment-summary negotiation-summary">
+      <div>
+        <dt>Deal</dt>
+        <dd>P{facts.buyerId ?? "?"} buys from P{facts.sellerId ?? "?"}</dd>
+      </div>
+      <div>
+        <dt>Property</dt>
+        <dd>{square ? readableType(square.type) : "Square"} #{facts.squareId ?? "?"}</dd>
+      </div>
+      {square?.shop_current_value !== null && square?.shop_current_value !== undefined && (
+        <div>
+          <dt>Current value</dt>
+          <dd>{formatGold(square.shop_current_value)}</dd>
+        </div>
+      )}
+      <div>
+        <dt>Offer</dt>
+        <dd>{formatGold(facts.price ?? 0)}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function formatSquareList(squareIds: number[]): string {
+  return squareIds.length > 0 ? squareIds.map((squareId) => `#${squareId}`).join(", ") : "None";
+}
+
 function PromptPanel({
   request,
+  state,
   onSubmit,
   connected,
   responsePending,
 }: {
   request: InputRequest | null;
+  state: GameState | null;
   onSubmit: (value: unknown) => void;
   connected: boolean;
   responsePending: boolean;
@@ -4630,6 +5019,7 @@ function PromptPanel({
       {request ? (
         <PromptControls
           request={request}
+          state={state}
           amount={amount}
           amountNumber={amountNumber}
           onAmountChange={setAmount}
@@ -4670,6 +5060,12 @@ function getPromptTitle(request: InputRequest): string {
   if (request.type === "CHOOSE_VENTURE_CELL") {
     return "Choosing Venture Cell";
   }
+  if (request.type === "ACCEPT_OFFER") {
+    return "Review Offer";
+  }
+  if (request.type === "COUNTER_PRICE") {
+    return "Make a Counteroffer";
+  }
   return readableType(request.type);
 }
 
@@ -4691,17 +5087,25 @@ function getPromptHelp(request: InputRequest): string {
   if (request.type === "CHOOSE_VENTURE_CELL") {
     return "The web client is choosing a random unclaimed venture grid cell.";
   }
+  if (request.type === "ACCEPT_OFFER") {
+    return "Review the complete deal, then accept, counter, or reject it.";
+  }
+  if (request.type === "COUNTER_PRICE") {
+    return "Set the terms you want to send back to the other player.";
+  }
   return `Decision for Player ${request.player_id}.`;
 }
 
 function PromptControls({
   request,
+  state,
   amount,
   amountNumber,
   onAmountChange,
   onSubmit,
 }: {
   request: InputRequest;
+  state: GameState | null;
   amount: string;
   amountNumber: number;
   onAmountChange: (value: string) => void;
@@ -4844,7 +5248,7 @@ function PromptControls({
     );
   }
 
-  if (request.type === "AUCTION_BID" || request.type === "COUNTER_PRICE") {
+  if (request.type === "AUCTION_BID") {
     return (
       <div className="choice-table">
         <AmountInput label="Gold" value={amount} onChange={onAmountChange} />
@@ -4858,8 +5262,12 @@ function PromptControls({
     );
   }
 
+  if (request.type === "COUNTER_PRICE") {
+    return <CounterOfferWidget request={request} state={state} onSubmit={onSubmit} />;
+  }
+
   if (request.type === "ACCEPT_OFFER") {
-    return <KeyActionList actions={getSimpleKeyActions(request)} onSubmit={onSubmit} />;
+    return <OfferResponseWidget request={request} state={state} onSubmit={onSubmit} />;
   }
 
   if (request.type === "CHOOSE_VENTURE_CELL") {

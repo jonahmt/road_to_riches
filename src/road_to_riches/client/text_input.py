@@ -356,7 +356,12 @@ class TextPlayerInput(PlayerInput):
         return "reject"
 
     def choose_counter_price(
-        self, state: GameState, player_id: int, original_price: int, log: GameLog
+        self,
+        state: GameState,
+        player_id: int,
+        original_price: int,
+        log: GameLog,
+        offer: dict | None = None,
     ) -> int:
         self.notify(state, log)
         print(f"  Original price: {original_price}G. Enter counter-offer:")

@@ -283,14 +283,22 @@ class BasicAIPlayerInput(PlayerInput):
         )
 
     def choose_counter_price(
-        self, state: GameState, player_id: int, original_price: int, log: GameLog
+        self,
+        state: GameState,
+        player_id: int,
+        original_price: int,
+        log: GameLog,
+        offer: dict | None = None,
     ) -> int:
+        data: dict = {"original_price": original_price}
+        if offer is not None:
+            data["offer"] = offer
         return int(
             self._decide(
                 state,
                 player_id,
                 InputRequestType.COUNTER_PRICE,
-                {"original_price": original_price},
+                data,
             )
         )
 

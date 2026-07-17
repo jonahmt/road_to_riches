@@ -243,9 +243,14 @@ class PlayerInput(ABC):
 
     @abstractmethod
     def choose_counter_price(
-        self, state: GameState, player_id: int, original_price: int, log: GameLog
+        self,
+        state: GameState,
+        player_id: int,
+        original_price: int,
+        log: GameLog,
+        offer: dict | None = None,
     ) -> int:
-        """Choose a counter-offer price."""
+        """Choose a counter-offer price, with the originating offer when available."""
 
     @abstractmethod
     def choose_renovation(
@@ -1579,7 +1584,7 @@ class GameLoop:
             self.log.log(f"Deal accepted! Square {sq_id} sold for {offer_price}G.")
         elif response == "counter":
             counter_price = self.input.choose_counter_price(
-                self.state, target_pid, offer_price, self.log
+                self.state, target_pid, offer_price, self.log, offer=offer
             )
             self.log.log(f"Player {target_pid} counter-offers at {counter_price}G.")
             offer["price"] = counter_price
@@ -1649,7 +1654,7 @@ class GameLoop:
             self.log.log(f"Deal accepted! Square {sq_id} sold for {asking_price}G.")
         elif response == "counter":
             counter_price = self.input.choose_counter_price(
-                self.state, target_pid, asking_price, self.log
+                self.state, target_pid, asking_price, self.log, offer=offer
             )
             self.log.log(f"Player {target_pid} counter-offers at {counter_price}G.")
             offer["price"] = counter_price
@@ -1732,7 +1737,7 @@ class GameLoop:
             self.log.log("Trade accepted!")
         elif response == "counter":
             counter_gold = self.input.choose_counter_price(
-                self.state, target_pid, gold_offer, self.log
+                self.state, target_pid, gold_offer, self.log, offer=offer
             )
             self.log.log(f"Player {target_pid} counter-offers with gold: {counter_gold}G.")
             offer["gold_offer"] = counter_gold
