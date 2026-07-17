@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1400" viewBox="0 0 1400 1400">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1600" viewBox="0 0 1400 1600">
   <title>Road to Riches architectural stockbroker square SVG candidates</title>
-  <desc>Ten market-green brokerage and exchange building icons previewed on dark Road to Riches board tiles.</desc>
+  <desc>Twenty market-green brokerage and exchange building icons previewed on dark Road to Riches board tiles.</desc>
   <defs>
     <symbol id="stockbroker-01-exchange" viewBox="0 0 100 100">
       <path fill="currentColor" d="M8 34 50 8l42 26v7H8zM13 45h74v14H13z"/>
@@ -51,21 +51,89 @@
       <path fill="currentColor" d="M12 17c8 8 15 11 24 10 4-6 8-9 14-9s10 3 14 9c9 1 16-2 24-10-1 13-7 22-17 27H29C19 39 13 30 12 17zM12 48h76v13H12zM17 65h66v22H17zM9 90h82v7H9z"/>
       <path fill="var(--broker-cutout,#080a0e)" d="m23 57 10-5 10 3 14-6 20 6-2 5-18-5-14 6-10-3-7 4zM23 70h16v17H23zM61 70h16v17H61zM45 72h10v15H45z"/>
     </symbol>
+    <symbol id="stockbroker-11-clock-market" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M35 14 50 5l15 9v18h19l8 10v45H8V42l8-10h19zM5 90h90v7H5z"/>
+      <circle fill="var(--broker-cutout,#080a0e)" cx="50" cy="20" r="8"/>
+      <path fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" d="M50 20v-5m0 5 5 3"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M18 49h18v27H18zM64 49h18v27H64zM43 42h14v45H43z"/>
+      <path fill="currentColor" d="M12 79h76v8H12z"/>
+    </symbol>
+    <symbol id="stockbroker-12-twin-towers" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M10 23h30v64H10zM60 10h30v77H60zM35 48h30v13H35zM6 90h88v7H6z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M17 31h7v10h-7zm10 0h7v10h-7zM17 47h7v10h-7zm10 0h7v10h-7zM17 63h7v16h-7zm10 0h7v16h-7zM67 19h7v10h-7zm10 0h7v10h-7zM67 35h7v10h-7zm10 0h7v10h-7zM67 67h7v20h-7zm10 0h7v20h-7z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="m40 56 8-6 7 3 7-8 4 4-10 11-7-4-6 5z"/>
+    </symbol>
+    <symbol id="stockbroker-13-candlestick-hall" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M8 38 26 15l24 23 24-23 18 23v49H8zM5 90h90v7H5z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M17 47h19v31H17zM64 47h19v31H64zM43 50h14v37H43z"/>
+      <path fill="currentColor" d="M20 58h5v14h-5zM28 52h5v19h-5zM67 53h5v16h-5zM75 57h5v15h-5z"/>
+      <path fill="none" stroke="currentColor" stroke-width="2.5" d="M22.5 53v24M30.5 48v28M69.5 49v25M77.5 52v25"/>
+    </symbol>
+    <symbol id="stockbroker-14-rotunda" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M16 39a34 25 0 0 1 68 0v7H16zM12 50h76v10H12zM17 64h66v23H17zM9 90h82v7H9z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M23 64h10v23H23zM39 64h10v23H39zM55 64h10v23H55zM71 64h6v23h-6z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="m31 42 10-8 8 4 12-11 10 6-3 5-7-4-11 11-9-5-6 6z"/>
+    </symbol>
+    <symbol id="stockbroker-15-stepped-exchange" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M38 10h24v15h12v15h12v47H14V55h12V40h12zM9 90h82v7H9z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M21 63h17v24H21zM43 48h14v39H43zM62 34h17v53H62z"/>
+      <path fill="currentColor" d="m20 58 14-12 11 5 15-16 12 4-2 6-9-3-15 16-11-5-11 10z"/>
+    </symbol>
+    <symbol id="stockbroker-16-glass-exchange" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M18 26 68 8l14 18v61H18zM12 90h76v7H12z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M27 31h12v13H27zM45 25h12v19H45zM63 19h10v25H63zM27 50h12v13H27zM45 50h12v13H45zM63 50h10v13H63zM27 69h12v18H27zM45 69h12v18H45zM63 69h10v18H63z"/>
+      <path fill="currentColor" d="m28 27 12-9 10 3L63 9l9 3-3 5-5-2-13 13-10-3-9 7z"/>
+    </symbol>
+    <symbol id="stockbroker-17-corner-broker" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M9 31 55 12l36 18v57H9zM5 90h90v7H5z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="m17 39 37-14v15L17 53zM61 28l22 8v15l-22-7zM17 66h31v21H17zM61 57h22v30H61z"/>
+      <path fill="currentColor" d="M13 55h42v9H13zM58 47h29v8H58z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="m20 61 9-7 8 3 10-9 5 4-14 12-8-3-7 6z"/>
+    </symbol>
+    <symbol id="stockbroker-18-clearing-house" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M8 35 50 9l42 26v8H8zM13 47h74v40H13zM9 90h82v7H9z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M19 57h17v30H19zM64 57h17v30H64zM42 54h16v33H42z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M50 18c7 5 13 6 13 6 0 10-4 16-13 20-9-4-13-10-13-20 0 0 6-1 13-6z"/>
+      <path fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" d="m43 29 5 5 10-11"/>
+    </symbol>
+    <symbol id="stockbroker-19-market-terminal" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M7 28h86v12H7zM12 44h76v43H12zM8 90h84v7H8z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M18 51h64v13H18zM18 87V74a10 10 0 0 1 20 0v13zM40 87V70a10 10 0 0 1 20 0v17zM62 87V74a10 10 0 0 1 20 0v13z"/>
+      <path fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" d="m24 59 10-5 10 3 13-8 17 5"/>
+      <path fill="currentColor" d="M18 17h64v8H18z"/>
+    </symbol>
+    <symbol id="stockbroker-20-rooftop-ticker" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M15 31h70v56H15zM9 90h82v7H9zM22 13h56v14H22z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M22 39h56v17H22zM23 64h13v23H23zM43 64h14v23H43zM64 64h13v23H64z"/>
+      <path fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" d="m28 50 10-7 10 4 13-9 11 4"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="m61 35 17 3-9 14z"/>
+      <path fill="currentColor" d="M47 5h6v8h-6z"/>
+    </symbol>
     <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#000" flood-opacity=".28"/></filter>
   </defs>
-  <rect width="1400" height="1400" fill="#171b24"/>
+  <rect width="1400" height="1600" fill="#171b24"/>
   <text x="48" y="72" fill="#f7f7f2" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="34" font-weight="800" letter-spacing="1.4">STOCKBROKER BUILDING DIRECTIONS</text>
   <text x="1352" y="69" fill="#9da5b4" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="17" text-anchor="end">ARCHITECTURAL SIBLINGS • TEMPORARY MARKET GREEN</text>
   <g color="#62d6a1" style="--broker-cutout:#080a0e" font-family="Inter,ui-sans-serif,system-ui,sans-serif">
-    <g transform="translate(46 155)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-01-exchange" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">01  EXCHANGE</text></g>
-    <g transform="translate(317 155)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-02-storefront" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">02  STOREFRONT</text></g>
-    <g transform="translate(588 155)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-03-ticker-house" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">03  TICKER HOUSE</text></g>
-    <g transform="translate(859 155)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-04-exchange-tower" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">04  TOWER</text></g>
-    <g transform="translate(1130 155)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-05-brokerage" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">05  BROKERAGE</text></g>
-    <g transform="translate(46 825)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-06-trading-floor" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">06  TRADING FLOOR</text></g>
-    <g transform="translate(317 825)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-07-arcade" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">07  ARCADE</text></g>
-    <g transform="translate(588 825)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-08-ledger-hall" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">08  LEDGER HALL</text></g>
-    <g transform="translate(859 825)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-09-bell-exchange" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">09  BELL EXCHANGE</text></g>
-    <g transform="translate(1130 825)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="41" fill="#f7f7f2" font-size="19" font-weight="800" letter-spacing="2.3" text-anchor="middle">BROKER</text><use href="#stockbroker-10-bull-exchange" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">10  BULL EXCHANGE</text></g>
+    <g transform="translate(46 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-01-exchange" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">01  EXCHANGE</text></g>
+    <g transform="translate(317 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-02-storefront" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">02  STOREFRONT</text></g>
+    <g transform="translate(588 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-03-ticker-house" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">03  TICKER HOUSE</text></g>
+    <g transform="translate(859 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-04-exchange-tower" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">04  TOWER</text></g>
+    <g transform="translate(1130 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-05-brokerage" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">05  BROKERAGE</text></g>
+    <g transform="translate(46 490)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-06-trading-floor" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">06  TRADING FLOOR</text></g>
+    <g transform="translate(317 490)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-07-arcade" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">07  ARCADE</text></g>
+    <g transform="translate(588 490)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-08-ledger-hall" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">08  LEDGER HALL</text></g>
+    <g transform="translate(859 490)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-09-bell-exchange" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">09  BELL EXCHANGE</text></g>
+    <g transform="translate(1130 490)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-10-bull-exchange" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">10  BULL EXCHANGE</text></g>
+    <g transform="translate(46 850)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-11-clock-market" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">11  CLOCK MARKET</text></g>
+    <g transform="translate(317 850)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-12-twin-towers" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">12  TWIN TOWERS</text></g>
+    <g transform="translate(588 850)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-13-candlestick-hall" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">13  CANDLESTICK HALL</text></g>
+    <g transform="translate(859 850)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-14-rotunda" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">14  ROTUNDA</text></g>
+    <g transform="translate(1130 850)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-15-stepped-exchange" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">15  STEPPED EXCHANGE</text></g>
+    <g transform="translate(46 1210)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-16-glass-exchange" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">16  GLASS EXCHANGE</text></g>
+    <g transform="translate(317 1210)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-17-corner-broker" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">17  CORNER BROKER</text></g>
+    <g transform="translate(588 1210)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-18-clearing-house" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="17" font-weight="800" text-anchor="middle">18  CLEARING HOUSE</text></g>
+    <g transform="translate(859 1210)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-19-market-terminal" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">19  MARKET TERMINAL</text></g>
+    <g transform="translate(1130 1210)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-20-rooftop-ticker" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">20  ROOFTOP TICKER</text></g>
   </g>
 </svg>

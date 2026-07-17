@@ -259,7 +259,11 @@ stockbroker should read as an architectural sibling to
 the bank, using a brokerage or exchange building in the same bold one-color
 language, while remaining distinct through its roofline, storefront, ticker,
 signage, windows, or market motif. Its final icon and color remain pending
-visual selection.
+visual selection. The current review sheet contains twenty architectural
+directions: the original ten plus clock-market, twin-tower, candlestick-hall,
+rotunda, stepped-exchange, glass-exchange, corner-broker, clearing-house,
+market-terminal, and rooftop-ticker variants. All candidates use the full
+fitted `STOCKBROKER` label required by the shared SVG tile hierarchy.
 
 The venture square uses a white border and a fitted white `VENTURE` label at the
 top, matching the label hierarchy of the other SVG-based special squares. Below
