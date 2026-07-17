@@ -3,8 +3,12 @@ import test from "node:test";
 
 import {
   buyShopChoices,
+  isCompleteShopExchange,
   negotiationOfferFacts,
   normalizePositiveOfferPrice,
+  propertyChoicesForPlayer,
+  toggleTradeSquare,
+  tradePlayerChoices,
 } from "../src/shopNegotiation.ts";
 import { type GameState, type PlayerState, type SquareInfo } from "../src/protocol.ts";
 
@@ -110,4 +114,60 @@ test("buy offer context is parsed for response screens", () => {
       goldOffer: null,
     },
   );
+});
+
+test("trade choices group live properties by eligible opponent", () => {
+  const gameState = state();
+  gameState.players[2].bankrupt = false;
+
+  assert.deepEqual(tradePlayerChoices(gameState, 0), [
+    {
+      playerId: 1,
+      readyCash: 1_000,
+      properties: [
+        {
+          squareId: 1,
+          ownerId: 1,
+          currentValue: 240,
+          districtId: 2,
+          squareType: "SHOP",
+        },
+      ],
+    },
+    {
+      playerId: 2,
+      readyCash: 1_000,
+      properties: [
+        {
+          squareId: 2,
+          ownerId: 2,
+          currentValue: 300,
+          districtId: 2,
+          squareType: "SHOP",
+        },
+        {
+          squareId: 3,
+          ownerId: 2,
+          currentValue: 400,
+          districtId: 2,
+          squareType: "SHOP",
+        },
+      ],
+    },
+  ]);
+  assert.deepEqual(propertyChoicesForPlayer(gameState, 0).map((choice) => choice.squareId), [0]);
+});
+
+test("trade selection toggles at the two-property limit", () => {
+  assert.deepEqual(toggleTradeSquare([], 7), [7]);
+  assert.deepEqual(toggleTradeSquare([7], 4), [4, 7]);
+  assert.deepEqual(toggleTradeSquare([4, 7], 9), [4, 7]);
+  assert.deepEqual(toggleTradeSquare([4, 7], 4), [7]);
+});
+
+test("shop exchange requires one or two properties from each side", () => {
+  assert.equal(isCompleteShopExchange([1], [2]), true);
+  assert.equal(isCompleteShopExchange([1, 3], [2, 4]), true);
+  assert.equal(isCompleteShopExchange([], [2]), false);
+  assert.equal(isCompleteShopExchange([1], [2, 4, 6]), false);
 });

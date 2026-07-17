@@ -46,10 +46,15 @@ import {
 } from "./squareSelection";
 import {
   buyShopChoices,
+  isCompleteShopExchange,
   negotiationOfferFacts,
   normalizePositiveOfferPrice,
+  propertyChoicesForPlayer,
+  toggleTradeSquare,
+  tradePlayerChoices,
   type BuyShopChoice,
   type NegotiationOfferFacts,
+  type TradePlayerChoice,
 } from "./shopNegotiation";
 import {
   clampStockQuantity,
@@ -192,12 +197,14 @@ interface BoardCamera {
 type BoardCameraMode = "follow" | "free";
 type BoardAnimationCurve = "cubic" | "linear";
 type LiquidationAssetMode = "choose" | "stock" | "shop";
+type TradePhase = "target" | "offer" | "request" | "terms";
 type VentureCellOwner = number | null;
 type VentureCursor = readonly [number, number];
 
 interface BoardSquareSelection {
   eligibleSquareIds: ReadonlySet<number>;
   selectedSquareId: number | null;
+  chosenSquareIds?: ReadonlySet<number>;
   onConfirmSquare: (squareId: number) => void;
 }
 
@@ -647,12 +654,18 @@ function App() {
   const [confirmedInvestmentSquareId, setConfirmedInvestmentSquareId] = useState<number | null>(null);
   const [confirmedBuyShopSquareId, setConfirmedBuyShopSquareId] = useState<number | null>(null);
   const [liquidationAssetMode, setLiquidationAssetMode] = useState<LiquidationAssetMode>("choose");
+  const [tradePhase, setTradePhase] = useState<TradePhase>("target");
+  const [tradeTargetPlayerId, setTradeTargetPlayerId] = useState<number | null>(null);
+  const [tradeOfferSquareIds, setTradeOfferSquareIds] = useState<number[]>([]);
+  const [tradeRequestSquareIds, setTradeRequestSquareIds] = useState<number[]>([]);
   const ventureRequest =
     clientState.pendingRequest?.type === "CHOOSE_VENTURE_CELL" ? clientState.pendingRequest : null;
   const investmentRequest =
     clientState.pendingRequest?.type === "INVEST" ? clientState.pendingRequest : null;
   const buyShopRequest =
     clientState.pendingRequest?.type === "CHOOSE_SHOP_BUY" ? clientState.pendingRequest : null;
+  const tradeRequest =
+    clientState.pendingRequest?.type === "TRADE" ? clientState.pendingRequest : null;
   const simpleSquareRequest =
     clientState.pendingRequest &&
     ["CHOOSE_ANY_SQUARE", "CHOOSE_SHOP_AUCTION"].includes(clientState.pendingRequest.type)
@@ -679,6 +692,33 @@ function App() {
   );
   const buyShopRequestKey = buyShopRequest
     ? `${buyShopRequest.player_id}:${availableBuyShopChoices.map((choice) => `${choice.ownerId}-${choice.squareId}-${choice.currentValue}`).join("|")}`
+    : "";
+  const availableTradePlayers = useMemo(
+    () => tradePlayerChoices(clientState.gameState, tradeRequest?.player_id ?? -1),
+    [clientState.gameState, tradeRequest?.player_id],
+  );
+  const tradeProposerProperties = useMemo(
+    () => propertyChoicesForPlayer(clientState.gameState, tradeRequest?.player_id ?? -1),
+    [clientState.gameState, tradeRequest?.player_id],
+  );
+  const tradeTargetPlayer =
+    availableTradePlayers.find((player) => player.playerId === tradeTargetPlayerId) ?? null;
+  const tradePhaseProperties =
+    tradePhase === "offer"
+      ? tradeProposerProperties
+      : tradePhase === "request"
+        ? (tradeTargetPlayer?.properties ?? [])
+        : [];
+  const tradeEligibleSquareIds = useMemo(
+    () => new Set(tradePhaseProperties.map((choice) => choice.squareId)),
+    [tradePhaseProperties],
+  );
+  const tradeChosenSquareIds = useMemo(
+    () => new Set(tradePhase === "offer" ? tradeOfferSquareIds : tradeRequestSquareIds),
+    [tradeOfferSquareIds, tradePhase, tradeRequestSquareIds],
+  );
+  const tradeRequestKey = tradeRequest
+    ? `${tradeRequest.player_id}:${tradeProposerProperties.map((choice) => choice.squareId).join("-")}:${availableTradePlayers.map((player) => `${player.playerId}-${player.properties.map((choice) => choice.squareId).join(".")}`).join("|")}`
     : "";
   const simpleSquareIds = useMemo(() => {
     if (!simpleSquareRequest) {
@@ -728,6 +768,7 @@ function App() {
     ventureRequest ||
     investmentRequest ||
     buyShopRequest ||
+    tradeRequest ||
     simpleSquareRequest ||
     liquidationRequest ||
     stockRequest ||
@@ -749,6 +790,16 @@ function App() {
       setSelectedSquareId(null);
     }
   }, [buyShopRequestKey]);
+
+  useEffect(() => {
+    setTradePhase("target");
+    setTradeTargetPlayerId(null);
+    setTradeOfferSquareIds([]);
+    setTradeRequestSquareIds([]);
+    if (tradeRequest) {
+      setSelectedSquareId(null);
+    }
+  }, [tradeRequestKey]);
 
   useEffect(() => {
     if (simpleSquareRequest) {
@@ -862,6 +913,7 @@ function App() {
               temporaryFreeCamera={Boolean(
                 (investmentRequest ||
                   buyShopRequest ||
+                  (tradeRequest && ["offer", "request"].includes(tradePhase)) ||
                   simpleSquareRequest ||
                   (liquidationRequest && liquidationAssetMode === "shop")) &&
                   !clientState.responsePending,
@@ -885,6 +937,26 @@ function App() {
                         onConfirmSquare: (squareId) => {
                           setSelectedSquareId(squareId);
                           setConfirmedBuyShopSquareId(squareId);
+                        },
+                      }
+                  : tradeRequest &&
+                      !clientState.responsePending &&
+                      (tradePhase === "offer" || tradePhase === "request")
+                    ? {
+                        eligibleSquareIds: tradeEligibleSquareIds,
+                        selectedSquareId,
+                        chosenSquareIds: tradeChosenSquareIds,
+                        onConfirmSquare: (squareId) => {
+                          setSelectedSquareId(squareId);
+                          if (tradePhase === "offer") {
+                            setTradeOfferSquareIds((current) =>
+                              toggleTradeSquare(current, squareId),
+                            );
+                          } else {
+                            setTradeRequestSquareIds((current) =>
+                              toggleTradeSquare(current, squareId),
+                            );
+                          }
                         },
                       }
                   : simpleSquareRequest && !clientState.responsePending
@@ -964,6 +1036,41 @@ function App() {
                       setConfirmedBuyShopSquareId(squareId);
                     }}
                     onChangeSquare={() => setConfirmedBuyShopSquareId(null)}
+                    onSubmit={submitResponse}
+                  />
+                ) : tradeRequest ? (
+                  <TradeExchangeWidget
+                    request={tradeRequest}
+                    phase={tradePhase}
+                    players={availableTradePlayers}
+                    proposerProperties={tradeProposerProperties}
+                    targetPlayer={tradeTargetPlayer}
+                    selectedSquareId={selectedSquareId}
+                    offeredSquareIds={tradeOfferSquareIds}
+                    requestedSquareIds={tradeRequestSquareIds}
+                    responsePending={clientState.responsePending}
+                    onChooseTarget={(playerId) => {
+                      setTradeTargetPlayerId(playerId);
+                      setTradeOfferSquareIds([]);
+                      setTradeRequestSquareIds([]);
+                      setSelectedSquareId(null);
+                      setTradePhase("offer");
+                    }}
+                    onToggleSquare={(squareId) => {
+                      if (tradePhase === "offer") {
+                        setTradeOfferSquareIds((current) =>
+                          toggleTradeSquare(current, squareId),
+                        );
+                      } else if (tradePhase === "request") {
+                        setTradeRequestSquareIds((current) =>
+                          toggleTradeSquare(current, squareId),
+                        );
+                      }
+                    }}
+                    onPhaseChange={(phase) => {
+                      setSelectedSquareId(null);
+                      setTradePhase(phase);
+                    }}
                     onSubmit={submitResponse}
                   />
                 ) : simpleSquareRequest ? (
@@ -1703,8 +1810,11 @@ function BoardPanel({
           role="img"
         >
           {state.board.squares.map((square) => {
+            const isSelectionChosen = squareSelection?.chosenSquareIds?.has(square.id) === true;
             const isSelected =
-              selectedSquare?.id === square.id || squareSelection?.selectedSquareId === square.id;
+              selectedSquare?.id === square.id ||
+              squareSelection?.selectedSquareId === square.id ||
+              isSelectionChosen;
             const isSelectionEligible =
               squareSelection?.eligibleSquareIds.has(square.id) ?? false;
             const ownerColor =
@@ -1757,7 +1867,7 @@ function BoardPanel({
                 role="button"
                 tabIndex={squareSelectionActive && !isSelectionEligible ? -1 : 0}
                 aria-disabled={squareSelectionActive && !isSelectionEligible}
-                aria-label={`${isSelectionEligible ? "Eligible " : ""}Square ${square.id}: ${displayTypeForSquare(square)}`}
+                aria-label={`${isSelectionChosen ? "Included " : isSelectionEligible ? "Eligible " : ""}Square ${square.id}: ${displayTypeForSquare(square)}`}
                 onClick={() => {
                   if (!squareSelectionActive || isSelectionEligible) {
                     onSelectSquare(square.id);
@@ -1869,7 +1979,7 @@ function BoardPanel({
                 />
                 {isSelected && (
                   <rect
-                    className="board-square-selection"
+                    className={`board-square-selection ${isSelectionChosen ? "is-chosen" : ""}`}
                     x={square.position[0] - BOARD_TILE_RADIUS + BOARD_TILE_SELECTION_INSET}
                     y={square.position[1] - BOARD_TILE_RADIUS + BOARD_TILE_SELECTION_INSET}
                     width={BOARD_TILE_SELECTION_SIZE}
@@ -4840,6 +4950,366 @@ function BuyShopOfferWidget({
   );
 }
 
+function TradeExchangeWidget({
+  request,
+  phase,
+  players,
+  proposerProperties,
+  targetPlayer,
+  selectedSquareId,
+  offeredSquareIds,
+  requestedSquareIds,
+  responsePending,
+  onChooseTarget,
+  onToggleSquare,
+  onPhaseChange,
+  onSubmit,
+}: {
+  request: InputRequest;
+  phase: TradePhase;
+  players: TradePlayerChoice[];
+  proposerProperties: BuyShopChoice[];
+  targetPlayer: TradePlayerChoice | null;
+  selectedSquareId: number | null;
+  offeredSquareIds: number[];
+  requestedSquareIds: number[];
+  responsePending: boolean;
+  onChooseTarget: (playerId: number) => void;
+  onToggleSquare: (squareId: number) => void;
+  onPhaseChange: (phase: TradePhase) => void;
+  onSubmit: (value: unknown) => void;
+}) {
+  const [goldMode, setGoldMode] = useState<"none" | "offer" | "request">("none");
+  const [goldAmount, setGoldAmount] = useState("0");
+  const phaseProperties = phase === "offer" ? proposerProperties : (targetPlayer?.properties ?? []);
+  const chosenSquareIds = phase === "offer" ? offeredSquareIds : requestedSquareIds;
+  const selectedChoice =
+    phaseProperties.find((choice) => choice.squareId === selectedSquareId) ?? null;
+  const offeredChoices = proposerProperties.filter((choice) => offeredSquareIds.includes(choice.squareId));
+  const requestedChoices = (targetPlayer?.properties ?? []).filter((choice) =>
+    requestedSquareIds.includes(choice.squareId),
+  );
+  const normalizedGoldAmount = normalizePositiveOfferPrice(Number(goldAmount));
+  const goldOffer =
+    goldMode === "offer"
+      ? normalizedGoldAmount
+      : goldMode === "request"
+        ? -normalizedGoldAmount
+        : 0;
+  const proposalComplete = isCompleteShopExchange(offeredSquareIds, requestedSquareIds);
+
+  useEffect(() => {
+    if (phase === "target") {
+      setGoldMode("none");
+      setGoldAmount("0");
+    }
+  }, [phase]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape" || responsePending || isTypingTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      if (phase === "target") {
+        onSubmit(null);
+      } else if (phase === "offer") {
+        onPhaseChange("target");
+      } else if (phase === "request") {
+        onPhaseChange("offer");
+      } else {
+        onPhaseChange("request");
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [onPhaseChange, onSubmit, phase, responsePending]);
+
+  if (phase === "target") {
+    return (
+      <section className="panel action-panel investment-widget trade-exchange-widget" aria-label="Choose a shop exchange partner">
+        <header className="panel-header prompt-header">
+          <div>
+            <p className="eyebrow">Shop Exchange · 1 of 4</p>
+            <h2>Choose a Player</h2>
+            <p>Select the player whose properties you want to include in the exchange.</p>
+          </div>
+        </header>
+        <div className="trade-player-options">
+          {players.map((player) => (
+            <button
+              key={player.playerId}
+              type="button"
+              className="secondary"
+              disabled={responsePending}
+              onClick={() => onChooseTarget(player.playerId)}
+            >
+              <strong>Player {player.playerId}</strong>
+              <span>{player.properties.length} properties · {formatGold(player.readyCash)} cash</span>
+            </button>
+          ))}
+        </div>
+        {players.length === 0 && (
+          <p className="investment-selection-hint">No other player has properties available to exchange.</p>
+        )}
+        <button
+          type="button"
+          className="secondary investment-cancel"
+          disabled={responsePending}
+          onClick={() => onSubmit(null)}
+        >
+          Cancel
+        </button>
+      </section>
+    );
+  }
+
+  if (phase === "offer" || phase === "request") {
+    const choosingOwn = phase === "offer";
+    const selectedIsChosen = selectedChoice
+      ? chosenSquareIds.includes(selectedChoice.squareId)
+      : false;
+    const canContinue = chosenSquareIds.length >= 1 && chosenSquareIds.length <= 2;
+    return (
+      <section className="panel action-panel investment-widget trade-exchange-widget is-selecting" aria-label={choosingOwn ? "Choose your offered properties" : "Choose requested properties"}>
+        <header className="panel-header prompt-header">
+          <div>
+            <p className="eyebrow">Shop Exchange · {choosingOwn ? "2" : "3"} of 4</p>
+            <h2>{choosingOwn ? "Choose What You Offer" : `Choose From Player ${targetPlayer?.playerId ?? ""}`}</h2>
+            <p>Select one or two properties. Double-click toggles a property immediately.</p>
+          </div>
+        </header>
+        <TradePropertySelection
+          choices={phaseProperties}
+          chosenSquareIds={chosenSquareIds}
+          onToggleSquare={onToggleSquare}
+        />
+        {selectedChoice && (
+          <div className="investment-selected-shop trade-focused-property">
+            <span>{selectedIsChosen ? "Included in exchange" : "Selected property"}</span>
+            <strong>{readableType(selectedChoice.squareType)} #{selectedChoice.squareId}</strong>
+            <small>
+              {formatGold(selectedChoice.currentValue)} current value
+              {selectedChoice.districtId === null ? "" : ` · District ${selectedChoice.districtId}`}
+            </small>
+            <button
+              type="button"
+              className={selectedIsChosen ? "secondary" : ""}
+              disabled={responsePending || (!selectedIsChosen && chosenSquareIds.length >= 2)}
+              onClick={() => onToggleSquare(selectedChoice.squareId)}
+            >
+              {selectedIsChosen ? "Remove Property" : "Include Property"}
+            </button>
+          </div>
+        )}
+        {!selectedChoice && (
+          <p className="investment-selection-hint">Choose an untinted property on the board.</p>
+        )}
+        <div className="trade-navigation-actions">
+          <button
+            type="button"
+            className="secondary"
+            disabled={responsePending}
+            onClick={() => onPhaseChange(choosingOwn ? "target" : "offer")}
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            disabled={responsePending || !canContinue}
+            onClick={() => onPhaseChange(choosingOwn ? "request" : "terms")}
+          >
+            Continue with {chosenSquareIds.length}
+          </button>
+        </div>
+        <button
+          type="button"
+          className="secondary investment-cancel"
+          disabled={responsePending}
+          onClick={() => onSubmit(null)}
+        >
+          Cancel Exchange
+        </button>
+      </section>
+    );
+  }
+
+  const proposerCash = asNumber(request.data.cash);
+  const targetCash = targetPlayer?.readyCash ?? 0;
+  const goldAmountIsValid = goldMode === "none" || normalizedGoldAmount > 0;
+  return (
+    <section
+      className={`panel action-panel investment-widget trade-exchange-widget is-terms ${responsePending ? "is-resolving" : ""}`}
+      aria-busy={responsePending}
+    >
+      <header className="panel-header prompt-header">
+        <div>
+          <p className="eyebrow">Shop Exchange · 4 of 4</p>
+          <h2>Review Exchange</h2>
+          <p>Set optional gold terms, then send the complete proposal to Player {targetPlayer?.playerId ?? ""}.</p>
+        </div>
+      </header>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!targetPlayer || !proposalComplete || !goldAmountIsValid || responsePending) {
+            return;
+          }
+          onSubmit({
+            target_player_id: targetPlayer.playerId,
+            offer_shops: offeredSquareIds,
+            request_shops: requestedSquareIds,
+            gold_offer: goldOffer,
+          });
+        }}
+      >
+        <TradeProposalSummary
+          proposerId={request.player_id}
+          targetId={targetPlayer?.playerId ?? null}
+          offeredChoices={offeredChoices}
+          requestedChoices={requestedChoices}
+          goldOffer={goldOffer}
+        />
+        <fieldset className="trade-gold-terms">
+          <legend>Gold terms</legend>
+          <div>
+            {(["none", "offer", "request"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={goldMode === mode ? "is-selected" : "secondary"}
+                disabled={responsePending}
+                onClick={() => {
+                  setGoldMode(mode);
+                  if (mode !== "none" && normalizedGoldAmount <= 0) {
+                    setGoldAmount("1");
+                  }
+                }}
+              >
+                {mode === "none" ? "No Gold" : mode === "offer" ? "You Add Gold" : "You Request Gold"}
+              </button>
+            ))}
+          </div>
+          {goldMode !== "none" && (
+            <label className="investment-amount-input">
+              {goldMode === "offer" ? "Gold you give" : "Gold you receive"}
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={goldAmount}
+                disabled={responsePending}
+                onChange={(event) => setGoldAmount(event.target.value)}
+              />
+            </label>
+          )}
+        </fieldset>
+        <dl className="investment-summary trade-cash-preview">
+          <div>
+            <dt>Your cash if accepted</dt>
+            <dd>{formatGold(proposerCash - goldOffer)}</dd>
+          </div>
+          <div>
+            <dt>Player {targetPlayer?.playerId ?? ""} cash if accepted</dt>
+            <dd>{formatGold(targetCash + goldOffer)}</dd>
+          </div>
+        </dl>
+        <div className="trade-navigation-actions">
+          <button
+            type="button"
+            className="secondary"
+            disabled={responsePending}
+            onClick={() => onPhaseChange("request")}
+          >
+            Back
+          </button>
+          <button
+            type="submit"
+            disabled={responsePending || !targetPlayer || !proposalComplete || !goldAmountIsValid}
+          >
+            {responsePending ? "Sending..." : "Send Exchange"}
+          </button>
+        </div>
+        <button
+          type="button"
+          className="secondary investment-cancel"
+          disabled={responsePending}
+          onClick={() => onSubmit(null)}
+        >
+          Cancel Exchange
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function TradePropertySelection({
+  choices,
+  chosenSquareIds,
+  onToggleSquare,
+}: {
+  choices: BuyShopChoice[];
+  chosenSquareIds: number[];
+  onToggleSquare: (squareId: number) => void;
+}) {
+  const chosen = choices.filter((choice) => chosenSquareIds.includes(choice.squareId));
+  if (chosen.length === 0) {
+    return <p className="trade-selection-count">0 of 2 properties included</p>;
+  }
+  return (
+    <div className="trade-property-chips" aria-label={`${chosen.length} of 2 properties included`}>
+      {chosen.map((choice) => (
+        <button
+          key={choice.squareId}
+          type="button"
+          className="secondary"
+          onClick={() => onToggleSquare(choice.squareId)}
+          aria-label={`Remove property ${choice.squareId}`}
+        >
+          #{choice.squareId} · {formatGold(choice.currentValue)} <span aria-hidden="true">×</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TradeProposalSummary({
+  proposerId,
+  targetId,
+  offeredChoices,
+  requestedChoices,
+  goldOffer,
+}: {
+  proposerId: number;
+  targetId: number | null;
+  offeredChoices: BuyShopChoice[];
+  requestedChoices: BuyShopChoice[];
+  goldOffer: number;
+}) {
+  return (
+    <div className="trade-proposal-summary">
+      <section>
+        <span>Player {proposerId} gives</span>
+        <strong>{formatTradeProperties(offeredChoices)}</strong>
+        <small>{goldOffer > 0 ? `+ ${formatGold(goldOffer)}` : "No gold"}</small>
+      </section>
+      <span className="trade-exchange-arrow" aria-hidden="true">⇄</span>
+      <section>
+        <span>Player {targetId ?? "?"} gives</span>
+        <strong>{formatTradeProperties(requestedChoices)}</strong>
+        <small>{goldOffer < 0 ? `+ ${formatGold(-goldOffer)}` : "No gold"}</small>
+      </section>
+    </div>
+  );
+}
+
+function formatTradeProperties(choices: BuyShopChoice[]): string {
+  return choices.length > 0
+    ? choices.map((choice) => `#${choice.squareId} (${formatGold(choice.currentValue)})`).join(", ")
+    : "No properties";
+}
+
 function OfferResponseWidget({
   request,
   state,
@@ -4915,6 +5385,11 @@ function CounterOfferWidget({
           onChange={(event) => setAmount(event.target.value)}
           autoFocus
         />
+        {isTrade && facts && (
+          <small>
+            Positive means Player {facts.proposerId ?? "?"} gives gold to Player {facts.targetId ?? "?"}; negative reverses it.
+          </small>
+        )}
       </label>
       <div className="counter-offer-actions">
         <button type="submit" disabled={!valid}>
@@ -4944,15 +5419,15 @@ function NegotiationOfferSummary({
         </div>
         <div>
           <dt>Offered properties</dt>
-          <dd>{formatSquareList(facts.offerShopIds)}</dd>
+          <dd>{formatSquareList(facts.offerShopIds, state)}</dd>
         </div>
         <div>
           <dt>Requested properties</dt>
-          <dd>{formatSquareList(facts.requestShopIds)}</dd>
+          <dd>{formatSquareList(facts.requestShopIds, state)}</dd>
         </div>
         <div>
-          <dt>Gold adjustment</dt>
-          <dd>{formatGold(facts.goldOffer ?? 0)}</dd>
+          <dt>Gold terms</dt>
+          <dd>{formatTradeGoldTerms(facts)}</dd>
         </div>
       </dl>
     );
@@ -4983,8 +5458,28 @@ function NegotiationOfferSummary({
   );
 }
 
-function formatSquareList(squareIds: number[]): string {
-  return squareIds.length > 0 ? squareIds.map((squareId) => `#${squareId}`).join(", ") : "None";
+function formatSquareList(squareIds: number[], state: GameState | null = null): string {
+  return squareIds.length > 0
+    ? squareIds
+        .map((squareId) => {
+          const value = state?.board.squares.find((square) => square.id === squareId)?.shop_current_value;
+          return value === null || value === undefined
+            ? `#${squareId}`
+            : `#${squareId} (${formatGold(value)})`;
+        })
+        .join(", ")
+    : "None";
+}
+
+function formatTradeGoldTerms(facts: NegotiationOfferFacts): string {
+  const goldOffer = facts.goldOffer ?? 0;
+  if (goldOffer > 0) {
+    return `P${facts.proposerId ?? "?"} gives P${facts.targetId ?? "?"} ${formatGold(goldOffer)}`;
+  }
+  if (goldOffer < 0) {
+    return `P${facts.targetId ?? "?"} gives P${facts.proposerId ?? "?"} ${formatGold(-goldOffer)}`;
+  }
+  return "No gold";
 }
 
 function PromptPanel({

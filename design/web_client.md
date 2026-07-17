@@ -438,6 +438,21 @@ so browser reload/reconnect can reconstruct the same property, participants,
 and terms instead of falling back to a context-free amount field. The backend
 remains authoritative for ownership, price, transfer, and liquidation rules.
 
+The Trade action uses a four-step Shop Exchange builder rather than raw JSON.
+The initiator first chooses a non-bankrupt opponent with exchangeable property,
+then selects one or two of their own properties and one or two of that player's
+properties through the same temporary Free Cam board picker. Included properties
+remain outlined while the player inspects or toggles another square. The review
+step shows both sides of the exchange and lets the initiator choose no gold, add
+gold, or request gold; positive protocol values mean the initiator gives gold,
+while negative values mean the other player gives gold. The browser submits the
+canonical trade object with `target_player_id`, `offer_shops`, `request_shops`,
+and signed `gold_offer`. The recipient reuses the contextual Accept, Counter,
+and Reject flow; exchange summaries show both property lists, their current
+values, and the gold direction, while a counter may modify only the gold term as
+defined by the gameplay rules. Ownership and settlement validation remain
+backend authoritative.
+
 The game board has a persistent die overlay in its upper-left corner. It consumes
 the same backend `dice` message as the TUI: the face displays the remaining move
 count, counts down as movement is resolved, and becomes blank at zero, while a

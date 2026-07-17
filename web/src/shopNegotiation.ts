@@ -11,6 +11,7 @@ interface BuyShopState {
   };
   players: Array<{
     player_id: number;
+    ready_cash: number;
     owned_properties: number[];
     bankrupt: boolean;
   }>;
@@ -22,6 +23,12 @@ export interface BuyShopChoice {
   currentValue: number;
   districtId: number | null;
   squareType: string;
+}
+
+export interface TradePlayerChoice {
+  playerId: number;
+  readyCash: number;
+  properties: BuyShopChoice[];
 }
 
 export interface NegotiationOfferFacts {
@@ -51,21 +58,77 @@ export function buyShopChoices(state: BuyShopState | null, buyerId: number): Buy
         if (!square || square.property_owner !== player.player_id) {
           return [];
         }
-        return [
-          {
-            squareId,
-            ownerId: player.player_id,
-            currentValue: Math.max(
-              0,
-              finiteInteger(square.shop_current_value, finiteInteger(square.shop_base_value)),
-            ),
-            districtId: square.property_district,
-            squareType: square.type,
-          },
-        ];
+        return [propertyChoice(square, player.player_id)];
       }),
     )
     .sort((left, right) => left.squareId - right.squareId);
+}
+
+export function tradePlayerChoices(
+  state: BuyShopState | null,
+  proposerId: number,
+): TradePlayerChoice[] {
+  if (!state) {
+    return [];
+  }
+  return state.players
+    .filter((player) => player.player_id !== proposerId && !player.bankrupt)
+    .map((player) => ({
+      playerId: player.player_id,
+      readyCash: finiteInteger(player.ready_cash),
+      properties: propertyChoicesForPlayer(state, player.player_id),
+    }))
+    .filter((player) => player.properties.length > 0)
+    .sort((left, right) => left.playerId - right.playerId);
+}
+
+export function propertyChoicesForPlayer(
+  state: BuyShopState | null,
+  playerId: number,
+): BuyShopChoice[] {
+  if (!state) {
+    return [];
+  }
+  const player = state.players.find((candidate) => candidate.player_id === playerId);
+  if (!player || player.bankrupt) {
+    return [];
+  }
+  const squaresById = new Map(state.board.squares.map((square) => [square.id, square]));
+  return player.owned_properties
+    .flatMap((squareId) => {
+      const square = squaresById.get(squareId);
+      if (!square || square.property_owner !== playerId) {
+        return [];
+      }
+      return [propertyChoice(square, playerId)];
+    })
+    .sort((left, right) => left.squareId - right.squareId);
+}
+
+export function toggleTradeSquare(
+  selectedSquareIds: readonly number[],
+  squareId: number,
+  maximum = 2,
+): number[] {
+  if (selectedSquareIds.includes(squareId)) {
+    return selectedSquareIds.filter((selectedSquareId) => selectedSquareId !== squareId);
+  }
+  if (selectedSquareIds.length >= maximum) {
+    return [...selectedSquareIds];
+  }
+  return [...selectedSquareIds, squareId].sort((left, right) => left - right);
+}
+
+export function isCompleteShopExchange(
+  offeredSquareIds: readonly number[],
+  requestedSquareIds: readonly number[],
+): boolean {
+  return (
+    offeredSquareIds.length >= 1 &&
+    offeredSquareIds.length <= 2 &&
+    requestedSquareIds.length >= 1 &&
+    requestedSquareIds.length <= 2
+  );
 }
 
 export function normalizePositiveOfferPrice(value: number): number {
@@ -118,4 +181,20 @@ function finiteInteger(value: unknown, fallback = 0): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function propertyChoice(
+  square: BuyShopState["board"]["squares"][number],
+  ownerId: number,
+): BuyShopChoice {
+  return {
+    squareId: square.id,
+    ownerId,
+    currentValue: Math.max(
+      0,
+      finiteInteger(square.shop_current_value, finiteInteger(square.shop_base_value)),
+    ),
+    districtId: square.property_district,
+    squareType: square.type,
+  };
 }

@@ -645,6 +645,10 @@ h3 {
   stroke: #f7f7f2;
 }
 
+.board-square-selection.is-chosen {
+  stroke: #ffd166;
+}
+
 .board-square-border {
   fill: none;
   pointer-events: none;
@@ -3417,6 +3421,157 @@ dd {
   color: #ffd166;
 }
 
+.trade-exchange-widget {
+  width: min(390px, calc(100vw - 32px)) !important;
+}
+
+.trade-player-options {
+  display: grid;
+  gap: 7px;
+}
+
+.trade-player-options button {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.trade-player-options button strong {
+  font-size: 13px;
+}
+
+.trade-player-options button span,
+.trade-selection-count {
+  color: rgba(247, 247, 242, 0.64);
+  font-size: 10px;
+}
+
+.trade-selection-count {
+  margin: 0;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+}
+
+.trade-property-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.trade-property-chips button {
+  min-height: 29px;
+  padding: 5px 8px;
+  font-size: 10px;
+}
+
+.trade-focused-property {
+  margin-bottom: 0;
+}
+
+.trade-navigation-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+  gap: 7px;
+}
+
+.trade-gold-terms {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.trade-gold-terms legend {
+  padding: 0 5px;
+  color: rgba(247, 247, 242, 0.68);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.trade-gold-terms > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.trade-gold-terms > div button {
+  min-height: 42px;
+  padding: 6px;
+  font-size: 9px;
+}
+
+.trade-gold-terms > div button.is-selected {
+  border-color: #ffd166;
+  background: rgba(255, 209, 102, 0.16);
+  color: #fff4cf;
+}
+
+.trade-gold-terms .investment-amount-input > input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f7f2;
+  font-size: 15px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.trade-proposal-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 5px;
+}
+
+.trade-proposal-summary section {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  padding: 9px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.trade-proposal-summary section > span,
+.trade-proposal-summary section > small {
+  color: rgba(247, 247, 242, 0.62);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.trade-proposal-summary section > strong {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.trade-proposal-summary section > small {
+  color: #ffd166;
+}
+
+.trade-exchange-arrow {
+  align-self: center;
+  color: #ffd166;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.trade-cash-preview dd {
+  color: #ffd166;
+}
+
 .offer-response-widget,
 .counter-offer-widget {
   display: grid;
@@ -3480,6 +3635,15 @@ dd {
   font-size: 16px;
   font-weight: 900;
   text-align: center;
+}
+
+.counter-offer-widget .investment-amount-input > small {
+  color: rgba(247, 247, 242, 0.58);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: none;
 }
 
 .counter-offer-actions {
