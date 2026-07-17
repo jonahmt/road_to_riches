@@ -264,6 +264,11 @@ directions: the original ten plus clock-market, twin-tower, candlestick-hall,
 rotunda, stepped-exchange, glass-exchange, corner-broker, clearing-house,
 market-terminal, and rooftop-ticker variants. All candidates use the full
 fitted `STOCKBROKER` label required by the shared SVG tile hierarchy.
+A second focused refinement sheet adds five New York Stock Exchange-inspired
+directions built around broad pediments, dense columns, flags, and monumental
+steps, plus five directions that integrate a bull face into the pediment,
+roofline, portal, crest, or frieze. These remain review-only explorations rather
+than a selected production direction.
 
 The venture square uses a white border and a fitted white `VENTURE` label at the
 top, matching the label hierarchy of the other SVG-based special squares. Below

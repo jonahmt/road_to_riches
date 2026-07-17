@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="800" viewBox="0 0 1400 800">
+  <title>Road to Riches NYSE and bull-facade stockbroker square SVG candidates</title>
+  <desc>Five New York Stock Exchange-inspired facades and five bull-architecture directions previewed on dark Road to Riches board tiles.</desc>
+  <defs>
+    <symbol id="stockbroker-21-grand-portico" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M5 38 50 9l45 29v7H5zM8 49h84v10H8zM8 86h84v6H8zM3 95h94v5H3z"/>
+      <path fill="currentColor" d="M13 58h9v28h-9zM26 58h9v28h-9zM39 58h9v28h-9zM52 58h9v28h-9zM65 58h9v28h-9zM78 58h9v28h-9z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="m31 38 10-8 8 4 13-12 10 6-3 5-7-4-12 12-9-5-6 6z"/>
+    </symbol>
+    <symbol id="stockbroker-22-sculpted-pediment" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M7 39 50 7l43 32v8H7zM11 51h78v9H11zM11 87h78v6H11zM6 96h88v4H6z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="m28 38 9-9 8 5 13-14 14 9-3 5-10-6-13 13-8-5-6 7z"/>
+      <path fill="currentColor" d="M16 59h8v28h-8zM29 59h8v28h-8zM42 59h8v28h-8zM55 59h8v28h-8zM68 59h8v28h-8zM81 59h4v28h-4z"/>
+    </symbol>
+    <symbol id="stockbroker-23-column-wall" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M9 17h82v10H9zM5 31h90v15H5zM9 50h82v37H9zM5 90h90v7H5z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M14 39h72v5H14zM16 55h7v32h-7zM28 55h7v32h-7zM40 55h7v32h-7zM52 55h7v32h-7zM64 55h7v32h-7zM76 55h8v32h-8z"/>
+      <path fill="currentColor" d="M17 37h5v5h-5zM29 37h5v5h-5zM41 37h5v5h-5zM53 37h5v5h-5zM65 37h5v5h-5zM77 37h5v5h-5z"/>
+    </symbol>
+    <symbol id="stockbroker-24-flag-exchange" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M9 38 50 13l41 25v7H9zM12 49h76v10H12zM12 86h76v6H12zM7 95h86v5H7z"/>
+      <path fill="currentColor" d="M17 58h9v28h-9zM31 58h9v28h-9zM45 58h10v28H45zM60 58h9v28h-9zM74 58h9v28h-9zM17 9h3v24h-3zM80 9h3v24h-3zM20 10h15l-5 5 5 5H20zM83 10h-15l5 5-5 5h15z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="m37 39 8-7 7 3 11-9 5 4-15 12-8-4-5 5z"/>
+    </symbol>
+    <symbol id="stockbroker-25-wall-street" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M3 48h18V36L50 13l29 23v12h18v39H3zM8 90h84v5H8zM3 97h94v3H3z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M10 59h11v22H10zM79 59h11v22H79z"/>
+      <path fill="currentColor" d="M25 42h50v9H25zM27 55h8v27h-8zM40 55h8v27h-8zM53 55h8v27h-8zM66 55h8v27h-8zM20 84h60v4H20z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="m38 41 8-7 7 3 9-8 4 4-12 11-8-4-5 5z"/>
+    </symbol>
+    <symbol id="stockbroker-26-bull-pediment" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M6 42 50 8l44 34v8H6zM10 54h80v9H10zM10 87h80v6H10zM5 96h90v4H5z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M27 23c5 6 10 8 16 7 2-5 4-7 7-7s5 2 7 7c6 1 11-1 16-7-1 9-5 15-12 18l-4 9H43l-4-9c-7-3-11-9-12-18zM39 34l6 2-4 4zM61 34l-6 2 4 4zM47 44h6l-3 4z"/>
+      <path fill="currentColor" d="M15 62h9v25h-9zM29 62h9v25h-9zM43 62h14v25H43zM62 62h9v25h-9zM76 62h9v25h-9z"/>
+    </symbol>
+    <symbol id="stockbroker-27-horned-roof" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M7 9c8 11 17 16 29 15 4-7 8-11 14-11s10 4 14 11c12 1 21-4 29-15-1 18-9 30-22 36H29C16 39 8 27 7 9zM12 49h76v12H12zM16 65h68v22H16zM10 90h80v7H10z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M22 70h16v17H22zM62 70h16v17H62zM44 67h12v20H44zM36 31l9 3-6 5zM64 31l-9 3 6 5zM46 40h8l-4 4z"/>
+    </symbol>
+    <symbol id="stockbroker-28-bull-portal" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M12 14h76v73H12zM8 90h84v7H8z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M22 29c7 8 13 11 21 10 2-7 4-10 7-10s5 3 7 10c8 1 14-2 21-10-1 13-6 21-16 26l-5 14H43l-5-14c-10-5-15-13-16-26zM36 45l9 3-6 6zM64 45l-9 3 6 6zM46 57h8l-4 5zM42 70h16v17H42z"/>
+      <path fill="currentColor" d="M18 20h64v6H18zM20 75h16v12H20zM64 75h16v12H64z"/>
+    </symbol>
+    <symbol id="stockbroker-29-bull-crest" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M15 42h70v9H15zM18 55h64v32H18zM12 90h76v7H12z"/>
+      <circle fill="currentColor" cx="50" cy="24" r="22"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M30 13c5 6 10 9 16 8 1-5 2-7 4-7s3 2 4 7c6 1 11-2 16-8-1 10-5 16-13 20l-3 8h-8l-3-8c-8-4-12-10-13-20zM39 26l6 2-4 4zM61 26l-6 2 4 4z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M24 62h11v25H24zM42 62h16v25H42zM65 62h11v25H65z"/>
+    </symbol>
+    <symbol id="stockbroker-30-bull-frieze" viewBox="0 0 100 100">
+      <path fill="currentColor" d="M8 18h84v34H8zM12 56h76v9H12zM12 87h76v6H12zM7 96h86v4H7z"/>
+      <path fill="var(--broker-cutout,#080a0e)" d="M20 25c7 8 14 11 23 10 2-6 4-9 7-9s5 3 7 9c9 1 16-2 23-10-1 12-7 20-17 24l-5 3H42l-5-3c-10-4-16-12-17-24zM36 39l9 2-6 5zM64 39l-9 2 6 5zM46 47h8l-4 4z"/>
+      <path fill="currentColor" d="M17 64h9v23h-9zM31 64h9v23h-9zM45 64h10v23H45zM60 64h9v23h-9zM74 64h9v23h-9z"/>
+    </symbol>
+    <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#000" flood-opacity=".28"/></filter>
+  </defs>
+  <rect width="1400" height="800" fill="#171b24"/>
+  <text x="48" y="72" fill="#f7f7f2" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="34" font-weight="800" letter-spacing="1.4">NYSE + BULL FACADE DIRECTIONS</text>
+  <text x="1352" y="69" fill="#9da5b4" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="17" text-anchor="end">NEOCLASSICAL EXCHANGE • ARCHITECTURAL BULL MOTIFS</text>
+  <g color="#62d6a1" style="--broker-cutout:#080a0e" font-family="Inter,ui-sans-serif,system-ui,sans-serif">
+    <g transform="translate(46 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-21-grand-portico" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">21  GRAND PORTICO</text></g>
+    <g transform="translate(317 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-22-sculpted-pediment" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="15" font-weight="800" text-anchor="middle">22  SCULPTED PEDIMENT</text></g>
+    <g transform="translate(588 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-23-column-wall" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">23  COLUMN WALL</text></g>
+    <g transform="translate(859 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-24-flag-exchange" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">24  FLAG EXCHANGE</text></g>
+    <g transform="translate(1130 130)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-25-wall-street" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">25  WALL STREET</text></g>
+    <g transform="translate(46 475)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-26-bull-pediment" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">26  BULL PEDIMENT</text></g>
+    <g transform="translate(317 475)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-27-horned-roof" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">27  HORNED ROOF</text></g>
+    <g transform="translate(588 475)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-28-bull-portal" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">28  BULL PORTAL</text></g>
+    <g transform="translate(859 475)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-29-bull-crest" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">29  BULL CREST</text></g>
+    <g transform="translate(1130 475)"><rect width="224" height="224" rx="18" fill="#080a0e" stroke="#f7f7f2" stroke-width="5" filter="url(#tile-shadow)"/><text x="112" y="40" fill="#f7f7f2" font-size="14" font-weight="800" letter-spacing="1.5" text-anchor="middle">STOCKBROKER</text><use href="#stockbroker-30-bull-frieze" x="45" y="52" width="134" height="134"/><text x="112" y="263" fill="#f7f7f2" font-size="16" font-weight="800" text-anchor="middle">30  BULL FRIEZE</text></g>
+  </g>
+</svg>
