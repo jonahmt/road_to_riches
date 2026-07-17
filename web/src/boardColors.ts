@@ -35,6 +35,7 @@ export const SUIT_COLORS: Readonly<Record<string, string>> = {
 export const BOON_ICON_COLOR = "#ffb703";
 export const BOOM_ICON_COLOR = "#f05a28";
 export const TAKE_A_BREAK_ICON_COLOR = "#ffe8a3";
+export const STOCKBROKER_ICON_COLOR = "#62d6a1";
 
 export const UNOWNED_MINIMAP_SHOP_COLOR = "#70747d";
 

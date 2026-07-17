@@ -258,8 +258,7 @@ label above this gold silhouette on the standard dark tile background. The
 stockbroker should read as an architectural sibling to
 the bank, using a brokerage or exchange building in the same bold one-color
 language, while remaining distinct through its roofline, storefront, ticker,
-signage, windows, or market motif. Its final icon and color remain pending
-visual selection. The current review sheet contains twenty architectural
+signage, windows, or market motif. The current review sheet contains twenty architectural
 directions: the original ten plus clock-market, twin-tower, candlestick-hall,
 rotunda, stepped-exchange, glass-exchange, corner-broker, clearing-house,
 market-terminal, and rooftop-ticker variants. All candidates use the full
@@ -267,8 +266,12 @@ fitted `STOCKBROKER` label required by the shared SVG tile hierarchy.
 A second focused refinement sheet adds five New York Stock Exchange-inspired
 directions built around broad pediments, dense columns, flags, and monumental
 steps, plus five directions that integrate a bull face into the pediment,
-roofline, portal, crest, or frieze. These remain review-only explorations rather
-than a selected production direction.
+roofline, portal, crest, or frieze. Focused candidate 21 "Grand Portico" is the
+selected production direction: a fitted `STOCKBROKER` label above a broad
+market-green (`#62d6a1`) six-column neoclassical exchange facade. Its triangular
+pediment contains a dark upward market-line cutout, and the facade sits on the
+standard dark tile with a white border. The minimap reuses the same label-free
+facade. All other candidates remain review-only explorations.
 
 The venture square uses a white border and a fitted white `VENTURE` label at the
 top, matching the label hierarchy of the other SVG-based special squares. Below

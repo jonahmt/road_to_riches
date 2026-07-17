@@ -15,6 +15,7 @@ import {
   DISTRICT_COLORS,
   getMinimapShopColor,
   PLAYER_COLORS,
+  STOCKBROKER_ICON_COLOR,
   SUIT_COLORS,
   TAKE_A_BREAK_ICON_COLOR,
 } from "./boardColors";
@@ -1667,6 +1668,7 @@ function BoardPanel({
             const shouldRenderDoorwayIcon = isDoorwayIconSquare(square);
             const shouldRenderSwitchIcon = isSwitchIconSquare(square);
             const shouldRenderSuitYourselfIcon = isSuitYourselfIconSquare(square);
+            const shouldRenderStockbrokerIcon = isStockbrokerIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
@@ -1684,6 +1686,7 @@ function BoardPanel({
               !shouldRenderDoorwayIcon &&
               !shouldRenderSwitchIcon &&
               !shouldRenderSuitYourselfIcon &&
+              !shouldRenderStockbrokerIcon &&
               !shouldRenderShopTile;
             const squareStyle = {
               ...(isStockPriceFocus
@@ -1738,6 +1741,8 @@ function BoardPanel({
                   <SuitIcon suit={square.suit} squareType={square.type} x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderBankIcon ? (
                   <BankIcon x={square.position[0]} y={square.position[1]} />
+                ) : shouldRenderStockbrokerIcon ? (
+                  <StockbrokerIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderVentureIcon ? (
                   <VentureIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderBoonIcon ? (
@@ -1800,7 +1805,8 @@ function BoardPanel({
                       shouldRenderBackstreetIcon ||
                       shouldRenderDoorwayIcon ||
                       shouldRenderSwitchIcon ||
-                      shouldRenderSuitYourselfIcon
+                      shouldRenderSuitYourselfIcon ||
+                      shouldRenderStockbrokerIcon
                         ? "#f7f7f2"
                         : getDistrictBorderColor(square.property_district),
                   }}
@@ -2145,6 +2151,10 @@ function isSuitYourselfIconSquare(square: SquareInfo): boolean {
   return square.type === "SUIT_YOURSELF";
 }
 
+function isStockbrokerIconSquare(square: SquareInfo): boolean {
+  return square.type === "STOCKBROKER";
+}
+
 function isMinimapIconSquare(square: SquareInfo): boolean {
   return (
     isSuitIconSquare(square) ||
@@ -2159,7 +2169,8 @@ function isMinimapIconSquare(square: SquareInfo): boolean {
     isBackstreetIconSquare(square) ||
     isDoorwayIconSquare(square) ||
     isSwitchIconSquare(square) ||
-    isSuitYourselfIconSquare(square)
+    isSuitYourselfIconSquare(square) ||
+    isStockbrokerIconSquare(square)
   );
 }
 
@@ -2179,6 +2190,13 @@ function MinimapSquareIcon({ square, x, y }: { square: SquareInfo; x: number; y:
     return (
       <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.027) translate(-50 -52)`} aria-hidden="true">
         <BankShape />
+      </g>
+    );
+  }
+  if (isStockbrokerIconSquare(square)) {
+    return (
+      <g className="minimap-square-icon" transform={`translate(${x} ${y}) scale(0.027) translate(-50 -52)`} aria-hidden="true">
+        <StockbrokerShape />
       </g>
     );
   }
@@ -2511,6 +2529,27 @@ function BankIcon({ x, y }: { x: number; y: number }) {
       <SquareIconLabel label="BANK" x={x} y={y} />
       <g transform={`translate(${x} ${y + 0.35}) scale(0.0235) translate(-50 -52.5)`}>
         <BankShape />
+      </g>
+    </g>
+  );
+}
+
+function StockbrokerShape({ fill = STOCKBROKER_ICON_COLOR }: { fill?: string }) {
+  return (
+    <g className="stockbroker-icon-shape">
+      <path fill={fill} d="M5 38 50 9l45 29v7H5zM8 49h84v10H8zM8 86h84v6H8zM3 95h94v5H3z" />
+      <path fill={fill} d="M13 58h9v28h-9zM26 58h9v28h-9zM39 58h9v28h-9zM52 58h9v28h-9zM65 58h9v28h-9zM78 58h9v28h-9z" />
+      <path fill="#080a0e" d="m31 38 10-8 8 4 13-12 10 6-3 5-7-4-12 12-9-5-6 6z" />
+    </g>
+  );
+}
+
+function StockbrokerIcon({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="stockbroker-icon" aria-hidden="true">
+      <SquareIconLabel className="stockbroker-icon-label" label="STOCKBROKER" x={x} y={y} />
+      <g transform={`translate(${x} ${y + 0.38}) scale(0.0235) translate(-50 -52)`}>
+        <StockbrokerShape />
       </g>
     </g>
   );

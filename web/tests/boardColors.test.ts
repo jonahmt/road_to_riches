@@ -6,6 +6,7 @@ import {
   DISTRICT_BORDER_COLORS,
   getMinimapShopColor,
   PLAYER_COLORS,
+  STOCKBROKER_ICON_COLOR,
   SUIT_COLORS,
   UNOWNED_MINIMAP_SHOP_COLOR,
 } from "../src/boardColors.ts";
@@ -25,4 +26,9 @@ test("unowned minimap shops use neutral grey while owned shops use player colors
 
 test("boon star color remains distinct from the diamond suit", () => {
   assert.notEqual(BOON_ICON_COLOR.toLowerCase(), SUIT_COLORS.DIAMOND.toLowerCase());
+});
+
+test("stockbroker market green remains distinct from player ownership colors", () => {
+  const playerColors = new Set(PLAYER_COLORS.map((color) => color.toLowerCase()));
+  assert.equal(playerColors.has(STOCKBROKER_ICON_COLOR.toLowerCase()), false);
 });

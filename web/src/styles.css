@@ -707,6 +707,10 @@ h3 {
   pointer-events: none;
 }
 
+.stockbroker-icon {
+  pointer-events: none;
+}
+
 .venture-icon {
   pointer-events: none;
 }
@@ -748,6 +752,10 @@ h3 {
 
 .suit-yourself-icon-label {
   font-size: 0.35px;
+}
+
+.stockbroker-icon-label {
+  font-size: 0.34px;
 }
 
 .suit-icon-shape {
