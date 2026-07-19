@@ -169,20 +169,28 @@ class TestStock:
 class TestPromotion:
     def test_suit_collection(self):
         game, _ = _make_game()
-        CollectSuitEvent(player_id=0, suit=Suit.SPADE.value).execute(game)
+        event = CollectSuitEvent(player_id=0, suit=Suit.SPADE.value)
+        event.execute(game)
         assert game.players[0].suits[Suit.SPADE] == 1
+        assert event.get_result() is True
 
     def test_duplicate_suit_not_added(self):
         game, _ = _make_game()
         CollectSuitEvent(player_id=0, suit=Suit.SPADE.value).execute(game)
-        CollectSuitEvent(player_id=0, suit=Suit.SPADE.value).execute(game)
+        duplicate = CollectSuitEvent(player_id=0, suit=Suit.SPADE.value)
+        duplicate.execute(game)
         assert game.players[0].suits[Suit.SPADE] == 1
+        assert duplicate.get_result() is False
 
     def test_wild_card_stacks(self):
         game, _ = _make_game()
-        CollectSuitEvent(player_id=0, suit=Suit.WILD.value).execute(game)
-        CollectSuitEvent(player_id=0, suit=Suit.WILD.value).execute(game)
+        first = CollectSuitEvent(player_id=0, suit=Suit.WILD.value)
+        second = CollectSuitEvent(player_id=0, suit=Suit.WILD.value)
+        first.execute(game)
+        second.execute(game)
         assert game.players[0].suits[Suit.WILD] == 2
+        assert first.get_result() is True
+        assert second.get_result() is True
 
     def test_promotion_bonus(self):
         game, _ = _make_game()

@@ -198,6 +198,18 @@ its established suit color; a missing suit keeps its position as a faint neutral
 placeholder. Suit ownership changes therefore never cause the other icons to
 shift, and the full owned/missing state is exposed as an accessible label.
 
+When an authoritative `CollectSuitEvent` actually adds a suit, the backend first
+refreshes the state and then emits a transient `suit_collected` UI notification
+with the player, suit, and source square. The browser lifts the raw, borderless
+suit silhouette from that square, enlarges it briefly at center, then arcs it into
+the matching slot in that player's HUD and pulses the destination. The effect has
+no card, panel, label, ring, or particle treatment. A wild collection uses the
+established Suit Yourself wild symbol and targets the complete suit bank. Duplicate
+standard suits do not replay the effect, reconnect snapshots do not replay it,
+and queued collections play in order without blocking ordinary game input.
+Reduced-motion clients receive the same center confirmation without travel,
+rotation, or destination scaling.
+
 Active Boon and Boom commission statuses appear immediately beside the affected
 player's name in the HUD. Each active commission status contributes one small
 copy of the established regular Boon star: Boon's 20% commission uses the same

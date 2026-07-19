@@ -472,7 +472,7 @@ class GameLoop:
 
         Every event flows through this method. Lifecycle events do I/O and
         enqueue follow-ups. Leaf mutation events log their results. Events
-        with no handler are silently accepted (e.g. CollectSuitEvent).
+        with no handler are silently accepted.
         """
         match event:
             # Lifecycle events (interactive, enqueue follow-ups).
@@ -536,6 +536,19 @@ class GameLoop:
                 )
 
             # Leaf mutation events are otherwise handled by log_message().
+            case CollectSuitEvent() if event.get_result():
+                player = self.state.get_player(event.player_id)
+                # Refresh the HUD before the transient collection effect starts,
+                # then identify the board source for the animation.
+                self.input.notify(self.state, self.log)
+                self.input.notify_ui(
+                    "suit_collected",
+                    {
+                        "player_id": event.player_id,
+                        "suit": event.suit,
+                        "square_id": player.position,
+                    },
+                )
             case PromotionEvent():
                 self._execute_event(
                     PresentationBarrierEvent(
@@ -560,7 +573,7 @@ class GameLoop:
                 pass
         # All other leaf events (BuyShopEvent, InvestInShopEvent, etc.) are
         # handled by the generic log_message() call in the main loop.
-        # Silent leaf events (CollectSuitEvent, RotateSuitEvent,
+        # Silent leaf events (RotateSuitEvent,
         # TransferPropertyEvent, TransferCashEvent, ScriptEvent,
         # CloseShopsEvent, GainCommissionEvent, etc.) return None
         # from log_message() and produce no output.

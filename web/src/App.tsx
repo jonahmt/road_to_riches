@@ -50,6 +50,13 @@ import {
 import { getPromptHelp, getPromptTitle } from "./promptMetadata";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
+  SUIT_COLLECTION_DURATION_MS,
+  suitCollectionFacts,
+  suitCollectionTargetSelector,
+  type CollectedSuit,
+  type SuitCollectionFacts,
+} from "./suitCollectionPresentation";
+import {
   boardSelectionScrimPath,
   clampInvestmentAmount,
   investmentSquareChoices,
@@ -792,6 +799,10 @@ function App() {
       ? clientState.pendingRequest
       : null;
   const activePresentation = clientState.presentations[0] ?? null;
+  const activeSuitCollection =
+    activePresentation?.type === "suit_collected"
+      ? suitCollectionFacts(activePresentation.data, activePresentation.playerId)
+      : null;
   const activeStockPriceChange =
     activePresentation?.type === "stock_price_changed"
       ? stockPriceChangeFacts(activePresentation.data, activePresentation.playerId)
@@ -804,7 +815,8 @@ function App() {
           ).map((delta) => [delta.playerId, delta.amount]),
         )
       : null;
-  const blockingPresentationActive = activePresentation !== null;
+  const blockingPresentationActive =
+    activePresentation !== null && activePresentation.type !== "suit_collected";
   const standardKeyboardRequest =
     ventureRequest ||
     investmentRequest ||
@@ -950,6 +962,7 @@ function App() {
             state={clientState.gameState}
             assignedPlayerId={clientState.playerId}
             cashDeltas={paymentCashDeltas}
+            suitCollection={activeSuitCollection}
           />
           <section className="game-layout">
             <BoardPanel
@@ -1247,12 +1260,20 @@ function App() {
         />
       )}
 
+      {activePresentation?.type === "suit_collected" && (
+        <SuitCollectionEffect
+          presentation={activePresentation}
+          onComplete={() => dismissPresentation(activePresentation.requestId)}
+        />
+      )}
+
       {activePresentation &&
         ![
           "venture_card_revealed",
           "promotion_completed",
           "rent_payment",
           "stock_price_changed",
+          "suit_collected",
         ].includes(activePresentation.type) && (
           <GenericPresentation
             presentation={activePresentation}
@@ -3268,22 +3289,39 @@ function SuitYourselfIcon({ x, y }: { x: number; y: number }) {
   );
 }
 
-function HudSuitSlots({ player }: { player: PlayerState }) {
+function HudSuitSlots({
+  player,
+  collectingSuit,
+}: {
+  player: PlayerState;
+  collectingSuit: CollectedSuit | null;
+}) {
   const ownedSuits = SUIT_ORDER.filter((suit) => (player.suits[suit] ?? 0) > 0);
   const accessibleLabel = SUIT_ORDER.map(
     (suit) => `${readableType(suit)} ${ownedSuits.includes(suit) ? "owned" : "missing"}`,
   ).join(", ");
 
   return (
-    <span className="hud-suit-slots" role="img" aria-label={accessibleLabel}>
+    <span
+      className={`hud-suit-slots ${collectingSuit === "WILD" ? "is-collecting-wild" : ""}`}
+      role="img"
+      aria-label={accessibleLabel}
+      data-hud-player-id={player.player_id}
+      data-hud-suits
+    >
       {SUIT_ORDER.map((suit) => {
         const isOwned = ownedSuits.includes(suit);
+        const isCollecting = collectingSuit === suit;
         return (
           <span
             key={suit}
-            className={`hud-suit-slot ${isOwned ? "owned" : "missing"}`}
+            className={`hud-suit-slot ${isOwned ? "owned" : "missing"} ${
+              isCollecting ? "is-collecting" : ""
+            }`}
             title={`${readableType(suit)}: ${isOwned ? "owned" : "missing"}`}
             aria-hidden="true"
+            data-hud-player-id={player.player_id}
+            data-hud-suit={suit}
           >
             <svg viewBox="-1.5 -1.5 3 3" focusable="false">
               <SuitShape suit={suit} scale={0.92} fill={isOwned ? undefined : "#f7f7f2"} />
@@ -3385,10 +3423,12 @@ function PlayerHud({
   state,
   assignedPlayerId,
   cashDeltas,
+  suitCollection,
 }: {
   state: GameState | null;
   assignedPlayerId: number | null;
   cashDeltas: ReadonlyMap<number, number> | null;
+  suitCollection: SuitCollectionFacts | null;
 }) {
   if (!state) {
     return null;
@@ -3445,7 +3485,14 @@ function PlayerHud({
               <div>
                 <dt>Suits</dt>
                 <dd className="hud-suit-value">
-                  <HudSuitSlots player={player} />
+                  <HudSuitSlots
+                    player={player}
+                    collectingSuit={
+                      suitCollection?.playerId === player.player_id
+                        ? suitCollection.suit
+                        : null
+                    }
+                  />
                 </dd>
               </div>
             </dl>
@@ -4385,6 +4432,98 @@ function VentureCardReveal({
               : `Waiting for Player ${presentation.playerId}...`}
         </small>
       </button>
+    </div>
+  );
+}
+
+interface SuitCollectionGeometry {
+  startX: number;
+  startY: number;
+  centerX: number;
+  centerY: number;
+  targetX: number;
+  targetY: number;
+}
+
+function SuitCollectionEffect({
+  presentation,
+  onComplete,
+}: {
+  presentation: PresentationState;
+  onComplete: () => void;
+}) {
+  const facts = suitCollectionFacts(presentation.data, presentation.playerId);
+  const [geometry, setGeometry] = useState<SuitCollectionGeometry | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  useLayoutEffect(() => {
+    const source = document.querySelector(`[data-square-id="${facts.squareId}"]`);
+    const target = document.querySelector(suitCollectionTargetSelector(facts));
+    const board = document.querySelector(".board-panel");
+    const boardRect = board?.getBoundingClientRect();
+    const sourceRect = source?.getBoundingClientRect();
+    const targetRect = target?.getBoundingClientRect();
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+
+    setGeometry({
+      startX: sourceRect
+        ? sourceRect.left + sourceRect.width / 2
+        : (boardRect?.left ?? 0) + (boardRect?.width ?? window.innerWidth) / 2,
+      startY: sourceRect
+        ? sourceRect.top + sourceRect.height / 2
+        : (boardRect?.top ?? 0) + (boardRect?.height ?? window.innerHeight) / 2,
+      centerX,
+      centerY,
+      targetX: targetRect ? targetRect.left + targetRect.width / 2 : centerX,
+      targetY: targetRect ? targetRect.top + targetRect.height / 2 : centerY,
+    });
+  }, [facts.playerId, facts.squareId, facts.suit]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      onCompleteRef.current();
+    }, SUIT_COLLECTION_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [presentation.requestId]);
+
+  const label = facts.suit === "WILD" ? "Wild Suit" : readableType(facts.suit);
+  const style = geometry
+    ? ({
+        "--suit-collection-color":
+          facts.suit === "WILD" ? "#f7f7f2" : getSuitColor(facts.suit),
+        "--suit-start-x": `${geometry.startX}px`,
+        "--suit-start-y": `${geometry.startY}px`,
+        "--suit-center-x": `${geometry.centerX}px`,
+        "--suit-center-y": `${geometry.centerY}px`,
+        "--suit-target-x": `${geometry.targetX}px`,
+        "--suit-target-y": `${geometry.targetY}px`,
+      } as CSSProperties)
+    : undefined;
+
+  return (
+    <div
+      className={`suit-collection-effect ${geometry ? "is-ready" : ""} ${facts.suit === "WILD" ? "is-wild" : ""}`}
+      role="status"
+      aria-live="polite"
+      aria-label={`Player ${facts.playerId} collected ${label}`}
+    >
+      <div className="suit-collection-token" style={style} aria-hidden="true">
+        {facts.suit === "WILD" ? (
+          <svg
+            className="suit-collection-icon is-wild"
+            viewBox="0 0 100 100"
+            focusable="false"
+          >
+            <SuitYourselfShape />
+          </svg>
+        ) : (
+          <svg className="suit-collection-icon" viewBox="-1.5 -1.5 3 3" focusable="false">
+            <SuitShape suit={facts.suit} scale={0.92} />
+          </svg>
+        )}
+      </div>
     </div>
   );
 }

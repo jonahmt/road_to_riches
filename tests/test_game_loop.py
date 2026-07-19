@@ -18,6 +18,7 @@ from road_to_riches.events.game_events import (
     BuyShopEvent,
     BuyStockEvent,
     BuyVacantPlotEvent,
+    CollectSuitEvent,
     ForcedBuyoutEvent,
     InvestInShopEvent,
     PayRentEvent,
@@ -51,6 +52,7 @@ from road_to_riches.events.turn_events import (
 )
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
+from road_to_riches.models.suit import Suit
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -514,6 +516,33 @@ class TestMoveEvent:
         assert loop.state.players[0].position == 1
         assert any("Moved to square 1" in m for m in loop.log.messages)
         loop.input.notify_dice.assert_called_with(3, 2)
+
+
+class TestCollectSuitPresentation:
+    def test_new_suit_refreshes_state_then_emits_animation_facts(self):
+        loop = _make_loop()
+        event = CollectSuitEvent(player_id=0, suit="SPADE")
+        loop.pipeline.enqueue(event)
+        processed = loop.pipeline.process_next(loop.state)
+        loop._dispatch(processed)
+
+        assert loop.state.players[0].suits[Suit.SPADE] == 1
+        loop.input.notify.assert_called_once_with(loop.state, loop.log)
+        loop.input.notify_ui.assert_called_once_with(
+            "suit_collected",
+            {"player_id": 0, "suit": "SPADE", "square_id": 0},
+        )
+
+    def test_duplicate_standard_suit_does_not_replay_animation(self):
+        loop = _make_loop()
+        loop.state.players[0].suits[Suit.SPADE] = 1
+        event = CollectSuitEvent(player_id=0, suit="SPADE")
+        loop.pipeline.enqueue(event)
+        processed = loop.pipeline.process_next(loop.state)
+        loop._dispatch(processed)
+
+        loop.input.notify.assert_not_called()
+        loop.input.notify_ui.assert_not_called()
 
 
 class TestUndo:

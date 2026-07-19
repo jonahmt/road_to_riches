@@ -496,6 +496,13 @@ backlog. The reconnect dice message is static so it restores the current face
 and remaining movement without replaying an animation; temporary event dice are
 not persisted in this snapshot.
 
+Successful suit collection is also surfaced as an ephemeral `suit_collected`
+UI notification after the authoritative state refresh. Its payload identifies
+the player, collected suit, and current square so graphical clients can connect
+the board source to the HUD destination. Standard-suit duplicates emit nothing,
+while every wild-suit increment emits once. The notification is presentation
+state only and is intentionally absent from reconnect snapshots.
+
 Hosted games expose ordinary AI response pacing through `--ai-delay`. The
 default is 0.3375 seconds per AI response, including each path-selection step.
 This is 35% longer than the earlier 0.25-second pacing. Presentation barriers

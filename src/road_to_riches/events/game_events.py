@@ -286,14 +286,20 @@ class CollectSuitEvent(GameEvent):
 
     player_id: int
     suit: str  # serialized as string for event system
+    _collected: bool = False
 
     def execute(self, state: GameState) -> None:
         player = state.get_player(self.player_id)
         suit_enum = Suit(self.suit)
         if suit_enum == Suit.WILD:
             player.suits[suit_enum] = player.suits.get(suit_enum, 0) + 1
+            self._collected = True
         elif player.suits.get(suit_enum, 0) == 0:
             player.suits[suit_enum] = 1
+            self._collected = True
+
+    def get_result(self) -> bool:
+        return self._collected
 
 
 @register_event
