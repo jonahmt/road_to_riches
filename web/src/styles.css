@@ -3421,6 +3421,14 @@ dd {
   color: #ffd166;
 }
 
+.sell-shop-summary {
+  margin-bottom: 0;
+}
+
+.sell-shop-widget .investment-summary dd:last-child {
+  color: #ffd166;
+}
+
 .trade-exchange-widget {
   width: min(390px, calc(100vw - 32px)) !important;
 }

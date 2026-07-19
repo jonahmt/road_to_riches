@@ -47,12 +47,15 @@ import {
 import {
   buyShopChoices,
   isCompleteShopExchange,
+  negotiationPlayerChoices,
   negotiationOfferFacts,
   normalizePositiveOfferPrice,
   propertyChoicesForPlayer,
+  sellShopChoices,
   toggleTradeSquare,
   tradePlayerChoices,
   type BuyShopChoice,
+  type NegotiationPlayerChoice,
   type NegotiationOfferFacts,
   type TradePlayerChoice,
 } from "./shopNegotiation";
@@ -653,6 +656,7 @@ function App() {
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
   const [confirmedInvestmentSquareId, setConfirmedInvestmentSquareId] = useState<number | null>(null);
   const [confirmedBuyShopSquareId, setConfirmedBuyShopSquareId] = useState<number | null>(null);
+  const [confirmedSellShopSquareId, setConfirmedSellShopSquareId] = useState<number | null>(null);
   const [liquidationAssetMode, setLiquidationAssetMode] = useState<LiquidationAssetMode>("choose");
   const [tradePhase, setTradePhase] = useState<TradePhase>("target");
   const [tradeTargetPlayerId, setTradeTargetPlayerId] = useState<number | null>(null);
@@ -664,6 +668,8 @@ function App() {
     clientState.pendingRequest?.type === "INVEST" ? clientState.pendingRequest : null;
   const buyShopRequest =
     clientState.pendingRequest?.type === "CHOOSE_SHOP_BUY" ? clientState.pendingRequest : null;
+  const sellShopRequest =
+    clientState.pendingRequest?.type === "CHOOSE_SHOP_SELL" ? clientState.pendingRequest : null;
   const tradeRequest =
     clientState.pendingRequest?.type === "TRADE" ? clientState.pendingRequest : null;
   const simpleSquareRequest =
@@ -692,6 +698,26 @@ function App() {
   );
   const buyShopRequestKey = buyShopRequest
     ? `${buyShopRequest.player_id}:${availableBuyShopChoices.map((choice) => `${choice.ownerId}-${choice.squareId}-${choice.currentValue}`).join("|")}`
+    : "";
+  const availableSellShopChoices = useMemo(
+    () =>
+      sellShopChoices(
+        clientState.gameState,
+        sellShopRequest?.player_id ?? -1,
+        sellShopRequest?.data.shops,
+      ),
+    [clientState.gameState, sellShopRequest],
+  );
+  const sellShopSquareIds = useMemo(
+    () => new Set(availableSellShopChoices.map((choice) => choice.squareId)),
+    [availableSellShopChoices],
+  );
+  const availableSellTargets = useMemo(
+    () => negotiationPlayerChoices(clientState.gameState, sellShopRequest?.player_id ?? -1),
+    [clientState.gameState, sellShopRequest?.player_id],
+  );
+  const sellShopRequestKey = sellShopRequest
+    ? `${sellShopRequest.player_id}:${availableSellShopChoices.map((choice) => `${choice.squareId}-${choice.currentValue}`).join("|")}:${availableSellTargets.map((player) => player.playerId).join("-")}`
     : "";
   const availableTradePlayers = useMemo(
     () => tradePlayerChoices(clientState.gameState, tradeRequest?.player_id ?? -1),
@@ -768,6 +794,7 @@ function App() {
     ventureRequest ||
     investmentRequest ||
     buyShopRequest ||
+    sellShopRequest ||
     tradeRequest ||
     simpleSquareRequest ||
     liquidationRequest ||
@@ -790,6 +817,13 @@ function App() {
       setSelectedSquareId(null);
     }
   }, [buyShopRequestKey]);
+
+  useEffect(() => {
+    setConfirmedSellShopSquareId(null);
+    if (sellShopRequest) {
+      setSelectedSquareId(null);
+    }
+  }, [sellShopRequestKey]);
 
   useEffect(() => {
     setTradePhase("target");
@@ -913,6 +947,7 @@ function App() {
               temporaryFreeCamera={Boolean(
                 (investmentRequest ||
                   buyShopRequest ||
+                  sellShopRequest ||
                   (tradeRequest && ["offer", "request"].includes(tradePhase)) ||
                   simpleSquareRequest ||
                   (liquidationRequest && liquidationAssetMode === "shop")) &&
@@ -937,6 +972,17 @@ function App() {
                         onConfirmSquare: (squareId) => {
                           setSelectedSquareId(squareId);
                           setConfirmedBuyShopSquareId(squareId);
+                        },
+                      }
+                  : sellShopRequest &&
+                      !clientState.responsePending &&
+                      confirmedSellShopSquareId === null
+                    ? {
+                        eligibleSquareIds: sellShopSquareIds,
+                        selectedSquareId,
+                        onConfirmSquare: (squareId) => {
+                          setSelectedSquareId(squareId);
+                          setConfirmedSellShopSquareId(squareId);
                         },
                       }
                   : tradeRequest &&
@@ -1036,6 +1082,21 @@ function App() {
                       setConfirmedBuyShopSquareId(squareId);
                     }}
                     onChangeSquare={() => setConfirmedBuyShopSquareId(null)}
+                    onSubmit={submitResponse}
+                  />
+                ) : sellShopRequest ? (
+                  <SellShopOfferWidget
+                    request={sellShopRequest}
+                    choices={availableSellShopChoices}
+                    targets={availableSellTargets}
+                    selectedSquareId={selectedSquareId}
+                    confirmedSquareId={confirmedSellShopSquareId}
+                    responsePending={clientState.responsePending}
+                    onConfirmSquare={(squareId) => {
+                      setSelectedSquareId(squareId);
+                      setConfirmedSellShopSquareId(squareId);
+                    }}
+                    onChangeSquare={() => setConfirmedSellShopSquareId(null)}
                     onSubmit={submitResponse}
                   />
                 ) : tradeRequest ? (
@@ -4940,6 +5001,249 @@ function BuyShopOfferWidget({
         <div className="investment-secondary-actions">
           <button type="button" className="secondary" disabled={responsePending} onClick={onChangeSquare}>
             Change Property
+          </button>
+          <button type="button" className="secondary" disabled={responsePending} onClick={() => onSubmit(null)}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function SellShopOfferWidget({
+  request,
+  choices,
+  targets,
+  selectedSquareId,
+  confirmedSquareId,
+  responsePending,
+  onConfirmSquare,
+  onChangeSquare,
+  onSubmit,
+}: {
+  request: InputRequest;
+  choices: BuyShopChoice[];
+  targets: NegotiationPlayerChoice[];
+  selectedSquareId: number | null;
+  confirmedSquareId: number | null;
+  responsePending: boolean;
+  onConfirmSquare: (squareId: number) => void;
+  onChangeSquare: () => void;
+  onSubmit: (value: unknown) => void;
+}) {
+  const selectedChoice = choices.find((choice) => choice.squareId === selectedSquareId) ?? null;
+  const confirmedChoice = choices.find((choice) => choice.squareId === confirmedSquareId) ?? null;
+  const [targetPlayerId, setTargetPlayerId] = useState<number | null>(null);
+  const targetPlayer = targets.find((player) => player.playerId === targetPlayerId) ?? null;
+  const [amount, setAmount] = useState("1");
+  const normalizedAmount = normalizePositiveOfferPrice(Number(amount));
+
+  useEffect(() => {
+    setTargetPlayerId(null);
+    if (confirmedChoice) {
+      setAmount(String(Math.max(1, confirmedChoice.currentValue)));
+    }
+  }, [confirmedChoice?.squareId, confirmedChoice?.currentValue]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape" || responsePending || isTypingTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      if (!confirmedChoice) {
+        onSubmit(null);
+      } else if (targetPlayer) {
+        setTargetPlayerId(null);
+      } else {
+        onChangeSquare();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [confirmedChoice, onChangeSquare, onSubmit, responsePending, targetPlayer]);
+
+  if (!confirmedChoice) {
+    return (
+      <section className="panel action-panel investment-widget sell-shop-widget is-selecting" aria-label="Choose a property to sell">
+        <header className="panel-header prompt-header">
+          <div>
+            <p className="eyebrow">Sell Shop · 1 of 3</p>
+            <h2>Choose Your Property</h2>
+            <p>Your sellable properties stay clear. Click to inspect; double-click to continue.</p>
+          </div>
+        </header>
+        {selectedChoice ? (
+          <div className="investment-selected-shop">
+            <span>Selected property</span>
+            <strong>{readableType(selectedChoice.squareType)} #{selectedChoice.squareId}</strong>
+            <small>
+              {formatGold(selectedChoice.currentValue)} current value
+              {selectedChoice.districtId === null ? "" : ` · District ${selectedChoice.districtId}`}
+            </small>
+            <button
+              type="button"
+              disabled={responsePending}
+              onClick={() => onConfirmSquare(selectedChoice.squareId)}
+            >
+              Sell This Property
+            </button>
+          </div>
+        ) : (
+          <p className="investment-selection-hint">
+            {choices.length > 0
+              ? "Pan and zoom freely, then choose one of the untinted properties."
+              : "You have no properties available to sell."}
+          </p>
+        )}
+        <button
+          type="button"
+          className="secondary investment-cancel"
+          disabled={responsePending}
+          onClick={() => onSubmit(null)}
+        >
+          Cancel
+        </button>
+      </section>
+    );
+  }
+
+  if (!targetPlayer) {
+    return (
+      <section className="panel action-panel investment-widget sell-shop-widget" aria-label="Choose a buyer">
+        <header className="panel-header prompt-header">
+          <div>
+            <p className="eyebrow">Sell Shop · 2 of 3</p>
+            <h2>Choose a Buyer</h2>
+            <p>Choose who should receive {readableType(confirmedChoice.squareType)} #{confirmedChoice.squareId} if they accept.</p>
+          </div>
+        </header>
+        <div className="investment-selected-shop sell-shop-summary">
+          <span>Property for sale</span>
+          <strong>{readableType(confirmedChoice.squareType)} #{confirmedChoice.squareId}</strong>
+          <small>{formatGold(confirmedChoice.currentValue)} current value</small>
+        </div>
+        <div className="trade-player-options">
+          {targets.map((player) => (
+            <button
+              key={player.playerId}
+              type="button"
+              className="secondary"
+              disabled={responsePending}
+              onClick={() => setTargetPlayerId(player.playerId)}
+            >
+              <strong>Player {player.playerId}</strong>
+              <span>{formatGold(player.readyCash)} ready cash</span>
+            </button>
+          ))}
+        </div>
+        {targets.length === 0 && (
+          <p className="investment-selection-hint">No other non-bankrupt player is available.</p>
+        )}
+        <div className="investment-secondary-actions">
+          <button type="button" className="secondary" disabled={responsePending} onClick={onChangeSquare}>
+            Change Property
+          </button>
+          <button type="button" className="secondary" disabled={responsePending} onClick={() => onSubmit(null)}>
+            Cancel
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  function submitSaleOffer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!confirmedChoice || !targetPlayer || normalizedAmount <= 0 || responsePending) {
+      return;
+    }
+    onSubmit([targetPlayer.playerId, confirmedChoice.squareId, normalizedAmount]);
+  }
+
+  return (
+    <section
+      className={`panel action-panel investment-widget sell-shop-widget is-amount ${responsePending ? "is-resolving" : ""}`}
+      aria-busy={responsePending}
+    >
+      <header className="panel-header prompt-header">
+        <div>
+          <p className="eyebrow">Sell Shop · 3 of 3</p>
+          <h2>Set Asking Price</h2>
+          <p>Player {targetPlayer.playerId} can accept, counter, or reject these terms.</p>
+        </div>
+      </header>
+      <form onSubmit={submitSaleOffer}>
+        <dl className="investment-summary">
+          <div>
+            <dt>Property</dt>
+            <dd>{readableType(confirmedChoice.squareType)} #{confirmedChoice.squareId}</dd>
+          </div>
+          <div>
+            <dt>Current value</dt>
+            <dd>{formatGold(confirmedChoice.currentValue)}</dd>
+          </div>
+          <div>
+            <dt>Buyer ready cash</dt>
+            <dd>{formatGold(targetPlayer.readyCash)}</dd>
+          </div>
+          <div>
+            <dt>Buyer cash if accepted</dt>
+            <dd>{formatGold(targetPlayer.readyCash - normalizedAmount)}</dd>
+          </div>
+        </dl>
+        <label className="investment-amount-input">
+          Asking price
+          <span>
+            <button
+              type="button"
+              aria-label="Decrease asking price"
+              disabled={responsePending || normalizedAmount <= 1}
+              onClick={() => setAmount(String(Math.max(1, normalizedAmount - 1)))}
+            >
+              −
+            </button>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={amount}
+              disabled={responsePending}
+              onChange={(event) => setAmount(event.target.value)}
+              autoFocus
+            />
+            <button
+              type="button"
+              aria-label="Increase asking price"
+              disabled={responsePending}
+              onClick={() => setAmount(String(Math.max(1, normalizedAmount + 1)))}
+            >
+              +
+            </button>
+          </span>
+        </label>
+        <div className="investment-amount-actions">
+          <button
+            type="button"
+            className="secondary"
+            disabled={responsePending}
+            onClick={() => setAmount(String(Math.max(1, confirmedChoice.currentValue)))}
+          >
+            Match {formatGold(confirmedChoice.currentValue)}
+          </button>
+          <button type="submit" disabled={responsePending || normalizedAmount <= 0}>
+            {responsePending ? "Sending..." : `Ask ${formatGold(normalizedAmount)}`}
+          </button>
+        </div>
+        <div className="investment-secondary-actions">
+          <button
+            type="button"
+            className="secondary"
+            disabled={responsePending}
+            onClick={() => setTargetPlayerId(null)}
+          >
+            Change Buyer
           </button>
           <button type="button" className="secondary" disabled={responsePending} onClick={() => onSubmit(null)}>
             Cancel

@@ -438,6 +438,16 @@ so browser reload/reconnect can reconstruct the same property, participants,
 and terms instead of falling back to a context-free amount field. The backend
 remains authoritative for ownership, price, transfer, and liquidation rules.
 
+Voluntary Sell Shop negotiation mirrors the Buy flow in reverse. The seller
+first chooses one of the prompt-authorized properties through temporary Free
+Cam, then chooses any eligible non-bankrupt buyer and sets a positive asking
+price. The review form shows the property's current value and the buyer's
+projected ready cash without imposing a client-only affordability ceiling. It
+submits the canonical `[buyer_id, square_id, asking_price]` response, after
+which the buyer uses the same contextual Accept, Counter, and Reject flow. The
+server remains authoritative for live ownership, price, transfer, and any
+resulting liquidation.
+
 The Trade action uses a four-step Shop Exchange builder rather than raw JSON.
 The initiator first chooses a non-bankrupt opponent with exchangeable property,
 then selects one or two of their own properties and one or two of that player's

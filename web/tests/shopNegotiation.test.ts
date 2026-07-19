@@ -4,9 +4,11 @@ import test from "node:test";
 import {
   buyShopChoices,
   isCompleteShopExchange,
+  negotiationPlayerChoices,
   negotiationOfferFacts,
   normalizePositiveOfferPrice,
   propertyChoicesForPlayer,
+  sellShopChoices,
   toggleTradeSquare,
   tradePlayerChoices,
 } from "../src/shopNegotiation.ts";
@@ -170,4 +172,28 @@ test("shop exchange requires one or two properties from each side", () => {
   assert.equal(isCompleteShopExchange([1, 3], [2, 4]), true);
   assert.equal(isCompleteShopExchange([], [2]), false);
   assert.equal(isCompleteShopExchange([1], [2, 4, 6]), false);
+});
+
+test("sell shop choices respect prompt eligibility and live ownership", () => {
+  const gameState = state();
+  gameState.players[0].owned_properties.push(1); // stale row: actually owned by P1
+
+  assert.deepEqual(
+    sellShopChoices(gameState, 0, [{ square_id: 0 }, { square_id: 1 }, { square_id: 999 }]),
+    [
+      {
+        squareId: 0,
+        ownerId: 0,
+        currentValue: 100,
+        districtId: 2,
+        squareType: "SHOP",
+      },
+    ],
+  );
+});
+
+test("negotiation targets exclude the active and bankrupt players", () => {
+  assert.deepEqual(negotiationPlayerChoices(state(), 0), [
+    { playerId: 1, readyCash: 1_000 },
+  ]);
 });

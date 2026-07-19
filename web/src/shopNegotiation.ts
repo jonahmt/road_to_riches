@@ -31,6 +31,11 @@ export interface TradePlayerChoice {
   properties: BuyShopChoice[];
 }
 
+export interface NegotiationPlayerChoice {
+  playerId: number;
+  readyCash: number;
+}
+
 export interface NegotiationOfferFacts {
   type: "buy" | "sell" | "trade";
   buyerId: number | null;
@@ -80,6 +85,43 @@ export function tradePlayerChoices(
     }))
     .filter((player) => player.properties.length > 0)
     .sort((left, right) => left.playerId - right.playerId);
+}
+
+export function negotiationPlayerChoices(
+  state: BuyShopState | null,
+  activePlayerId: number,
+): NegotiationPlayerChoice[] {
+  if (!state) {
+    return [];
+  }
+  return state.players
+    .filter((player) => player.player_id !== activePlayerId && !player.bankrupt)
+    .map((player) => ({
+      playerId: player.player_id,
+      readyCash: finiteInteger(player.ready_cash),
+    }))
+    .sort((left, right) => left.playerId - right.playerId);
+}
+
+export function sellShopChoices(
+  state: BuyShopState | null,
+  sellerId: number,
+  promptShops: unknown,
+): BuyShopChoice[] {
+  const promptSquareIds = new Set(
+    Array.isArray(promptShops)
+      ? promptShops.flatMap((entry) => {
+          if (!isRecord(entry)) {
+            return [];
+          }
+          const squareId = optionalInteger(entry.square_id);
+          return squareId === null ? [] : [squareId];
+        })
+      : [],
+  );
+  return propertyChoicesForPlayer(state, sellerId).filter((choice) =>
+    promptSquareIds.has(choice.squareId),
+  );
 }
 
 export function propertyChoicesForPlayer(
