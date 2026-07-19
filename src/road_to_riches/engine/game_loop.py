@@ -58,7 +58,6 @@ from road_to_riches.events.script_commands import (
 from road_to_riches.events.script_runner import load_script_generator
 from road_to_riches.events.turn_events import (
     AdvanceTurnEvent,
-    BankruptcyCheckEvent,
     EndTurnEvent,
     GameOverCheckEvent,
     InitAuctionEvent,
@@ -80,9 +79,7 @@ from road_to_riches.events.turn_events import (
     RollAgainEvent,
     RollEvent,
     RollForEventEvent,
-    StockFluctuationEvent,
     StopActionEvent,
-    TickStatusesEvent,
     TurnEvent,
     VentureCardEvent,
     WillMoveEvent,
@@ -470,93 +467,90 @@ class GameLoop:
         enqueue follow-ups. Leaf mutation events log their results. Events
         with no handler are silently accepted (e.g. CollectSuitEvent).
         """
-        # --- Lifecycle events (interactive, enqueue follow-ups) ---
-        if isinstance(event, TurnEvent):
-            self._handle_turn(event)
-        elif isinstance(event, RollEvent):
-            self._handle_roll(event)
-        elif isinstance(event, WillMoveEvent):
-            self._handle_will_move(event)
-        elif isinstance(event, MoveEvent):
-            self._handle_move(event)
-        elif isinstance(event, PassActionEvent):
-            self._handle_pass_action(event)
-        elif isinstance(event, StopActionEvent):
-            self._handle_stop_action(event)
-        elif isinstance(event, EndTurnEvent):
-            pass  # follow-ups returned by execute()
-        elif isinstance(event, LiquidationPhaseEvent):
-            self._handle_liquidation_phase(event.player_id)
-        elif isinstance(event, BankruptcyCheckEvent):
-            pass  # follow-ups returned by execute(), logging by log_message()
-        elif isinstance(event, StockFluctuationEvent):
-            pass  # logging by log_message()
-        elif isinstance(event, TickStatusesEvent):
-            pass  # fully handled by execute()
-        elif isinstance(event, GameOverCheckEvent):
-            self._handle_game_over_check(event)
-        elif isinstance(event, AdvanceTurnEvent):
-            self.input.notify(self.state, self.log)  # flush logs before next turn
-        # --- Init events (interactive, enqueue mutations) ---
-        elif isinstance(event, InitBuyShopEvent):
-            self._handle_init_buy_shop(event)
-        elif isinstance(event, InitBuyVacantPlotEvent):
-            self._handle_init_buy_vacant_plot(event)
-        elif isinstance(event, InitForcedBuyoutEvent):
-            self._handle_init_forced_buyout(event)
-        elif isinstance(event, InitInvestEvent):
-            self._handle_init_invest(event)
-        elif isinstance(event, InitBuyStockEvent):
-            self._handle_init_buy_stock(event)
-        elif isinstance(event, InitSellStockEvent):
-            self._handle_init_sell_stock(event)
-        elif isinstance(event, InitAuctionEvent):
-            self._handle_auction(event)
-        elif isinstance(event, InitBuyShopOfferEvent):
-            self._handle_buy_negotiation(event)
-        elif isinstance(event, InitSellShopOfferEvent):
-            self._handle_sell_negotiation(event)
-        elif isinstance(event, InitTradeShopEvent):
-            self._handle_trade(event)
-        elif isinstance(event, InitRenovateEvent):
-            self._handle_init_renovate(event)
-        elif isinstance(event, InitCannonEvent):
-            self._handle_init_cannon(event)
-        elif isinstance(event, VentureCardEvent):
-            self._handle_venture_card_event(event)
-        elif isinstance(event, RollAgainEvent):
-            self._handle_roll_again(event)
-        elif isinstance(event, PresentationBarrierEvent):
-            self.input.present(
-                self.state,
-                PresentationRequest(
-                    request_id=event.request_id,
-                    presentation_type=event.presentation_type,
-                    player_id=event.player_id,
-                    data=event.data,
-                ),
-            )
-        # --- Leaf mutation events: handled by log_message() ---
-        elif isinstance(event, PromotionEvent):
-            self._execute_event(
-                PresentationBarrierEvent(
-                    player_id=event.player_id,
-                    presentation_type="promotion_completed",
-                    data=event.presentation_data(),
+        match event:
+            # Lifecycle events (interactive, enqueue follow-ups).
+            case TurnEvent():
+                self._handle_turn(event)
+            case RollEvent():
+                self._handle_roll(event)
+            case WillMoveEvent():
+                self._handle_will_move(event)
+            case MoveEvent():
+                self._handle_move(event)
+            case PassActionEvent():
+                self._handle_pass_action(event)
+            case StopActionEvent():
+                self._handle_stop_action(event)
+            case LiquidationPhaseEvent():
+                self._handle_liquidation_phase(event.player_id)
+            case GameOverCheckEvent():
+                self._handle_game_over_check(event)
+            case AdvanceTurnEvent():
+                self.input.notify(self.state, self.log)  # flush logs before next turn
+
+            # Init events (interactive, enqueue mutations).
+            case InitBuyShopEvent():
+                self._handle_init_buy_shop(event)
+            case InitBuyVacantPlotEvent():
+                self._handle_init_buy_vacant_plot(event)
+            case InitForcedBuyoutEvent():
+                self._handle_init_forced_buyout(event)
+            case InitInvestEvent():
+                self._handle_init_invest(event)
+            case InitBuyStockEvent():
+                self._handle_init_buy_stock(event)
+            case InitSellStockEvent():
+                self._handle_init_sell_stock(event)
+            case InitAuctionEvent():
+                self._handle_auction(event)
+            case InitBuyShopOfferEvent():
+                self._handle_buy_negotiation(event)
+            case InitSellShopOfferEvent():
+                self._handle_sell_negotiation(event)
+            case InitTradeShopEvent():
+                self._handle_trade(event)
+            case InitRenovateEvent():
+                self._handle_init_renovate(event)
+            case InitCannonEvent():
+                self._handle_init_cannon(event)
+            case VentureCardEvent():
+                self._handle_venture_card_event(event)
+            case RollAgainEvent():
+                self._handle_roll_again(event)
+            case PresentationBarrierEvent():
+                self.input.present(
+                    self.state,
+                    PresentationRequest(
+                        request_id=event.request_id,
+                        presentation_type=event.presentation_type,
+                        player_id=event.player_id,
+                        data=event.data,
+                    ),
                 )
-            )
-        elif isinstance(event, PayRentEvent) and event.get_result() > 0:
-            self._execute_event(
-                PresentationBarrierEvent(
-                    player_id=event.payer_id,
-                    presentation_type="rent_payment",
-                    data=event.presentation_data(),
+
+            # Leaf mutation events are otherwise handled by log_message().
+            case PromotionEvent():
+                self._execute_event(
+                    PresentationBarrierEvent(
+                        player_id=event.player_id,
+                        presentation_type="promotion_completed",
+                        data=event.presentation_data(),
+                    )
                 )
-            )
-        elif isinstance(event, VictoryEvent):
-            # Control flow: must set game_over on the loop instance
-            self.game_over = True
-            self.winner = event.player_id
+            case PayRentEvent() if event.get_result() > 0:
+                self._execute_event(
+                    PresentationBarrierEvent(
+                        player_id=event.payer_id,
+                        presentation_type="rent_payment",
+                        data=event.presentation_data(),
+                    )
+                )
+            case VictoryEvent():
+                # Control flow: must set game_over on the loop instance.
+                self.game_over = True
+                self.winner = event.player_id
+            case _:
+                pass
         # All other leaf events (BuyShopEvent, InvestInShopEvent, etc.) are
         # handled by the generic log_message() call in the main loop.
         # Silent leaf events (CollectSuitEvent, RotateSuitEvent,

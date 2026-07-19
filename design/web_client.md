@@ -210,6 +210,9 @@ The web client treats the Python backend as the source of truth.
   assignment, game id, logs, dice state, pending prompt, and ordered presentation
   queue.
 * `web/src/App.tsx` renders the application shell and prompt controls.
+* `web/src/promptMetadata.ts` owns prompt titles and help text as pure,
+  independently tested protocol-to-copy mapping. New prompt types should add
+  specialized copy there instead of extending the application shell.
 * `web/src/styles.css` owns the first visual system.
 
 `boards/all_square_types.json` is the canonical visual showcase fixture for the

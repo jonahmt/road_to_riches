@@ -79,8 +79,8 @@ class PayRentEvent(GameEvent):
     owner_id: int
     square_id: int
     _rent_amount: int = 0
-    _dividends: list = None  # type: ignore[assignment]  # populated after execute
-    _commissions: list = None  # type: ignore[assignment]  # populated after execute
+    _dividends: list[tuple[int, int]] = field(default_factory=list, init=False)
+    _commissions: list[tuple[int, int, int]] = field(default_factory=list, init=False)
     _district_id: int | None = None
 
     def execute(self, state: GameState) -> None:

@@ -197,6 +197,14 @@ Events in the game will be managed by a central queue. Each turn, the player sta
 
 All boards will have the basic player events, where they get a “TURN(player id)” added at the start of their turn. Some boards will add board specific events if for example something needs to happen every other turn. (P2) Also, cameo characters are easy to add as they just get added into the queue like a normal player, such as “CAMEO\_TURN(cameo\_id)”.
 
+The game loop routes executed events through one structural pattern-match in
+`GameLoop._dispatch`. Cases are grouped by lifecycle events, interactive init
+events, and leaf events that create presentation barriers. Unmatched leaf
+events deliberately fall through to the shared logging and stock-price
+presentation paths. Keeping this router declarative makes event additions easy
+to audit while preserving each concrete event class as the owner of state
+mutation and serialization.
+
 ## Sample Turn
 
 Here is a sample turn, and the event queue that will populate and contract. This showcases the server side of things, throughout, the non-current player clients will have the events broadcast to them from the server so they can follow along. Let the player id be 0\.
@@ -497,6 +505,12 @@ session host may force-start with `start_game` plus `game_id`; the server
 converts unclaimed human slots into AI slots and then reuses the normal
 AI-spawn/readiness path. The legacy `start_game` message without `game_id`
 remains a no-op for local launcher compatibility.
+
+Completed non-default sessions stay available while any client remains bound,
+so final messages can drain normally. After the final connection leaves, the
+session manager retires the session and its connection indexes, releasing the
+game state, event history, player input, and process bookkeeping. The default
+launcher session is exempt because its lifetime is owned by the server process.
 
 ### Target Multi-Game Architecture
 

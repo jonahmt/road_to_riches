@@ -247,6 +247,22 @@ class ServerSessionManager:
     def sessions_for_connection(self, ws: Any) -> set[str]:
         return set(self._connections.get(ws, set()))
 
+    def has_connections(self, session_id: str) -> bool:
+        """Return whether any live socket is still bound to a session."""
+        return any(session_id in session_ids for session_ids in self._connections.values())
+
+    def remove_session(self, session_id: str) -> GameSession:
+        """Forget a session and remove any stale connection bindings to it."""
+        session = self.require(session_id)
+        del self._sessions[session_id]
+        for ws, session_ids in list(self._connections.items()):
+            session_ids.discard(session_id)
+            if not session_ids:
+                del self._connections[ws]
+        if self.default_session_id == session_id:
+            self.default_session_id = None
+        return session
+
     @property
     def sessions(self) -> dict[str, GameSession]:
         return dict(self._sessions)

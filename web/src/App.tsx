@@ -35,6 +35,7 @@ import {
   type LiquidationShopChoice,
 } from "./liquidationSelection";
 import { rentPaymentCashDeltas, rentPaymentFacts } from "./paymentPresentation";
+import { getPromptHelp, getPromptTitle } from "./promptMetadata";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
   boardSelectionScrimPath,
@@ -5833,73 +5834,6 @@ function PromptPanel({
       )}
     </section>
   );
-}
-
-function getPromptTitle(request: InputRequest): string {
-  if (request.type === "PRE_ROLL") {
-    return "Choose Your Move";
-  }
-  if (request.type === "CHOOSE_PATH") {
-    return "Choose a Path";
-  }
-  if (request.type === "CONFIRM_STOP") {
-    return "Stop on This Square?";
-  }
-  if (request.type === "BUY_SHOP") {
-    return "Buy This Shop?";
-  }
-  if (request.type === "BUY_STOCK") {
-    return "Buy Stock";
-  }
-  if (request.type === "SELL_STOCK") {
-    return "Sell Stock";
-  }
-  if (request.type === "INVEST") {
-    return "Invest in a Shop";
-  }
-  if (request.type === "CHOOSE_VENTURE_CELL") {
-    return "Choosing Venture Cell";
-  }
-  if (request.type === "ACCEPT_OFFER") {
-    return "Review Offer";
-  }
-  if (request.type === "COUNTER_PRICE") {
-    return "Make a Counteroffer";
-  }
-  if (request.type === "SCRIPT_DECISION") {
-    return "Make a Choice";
-  }
-  return readableType(request.type);
-}
-
-function getPromptHelp(request: InputRequest): string {
-  if (request.type === "PRE_ROLL") {
-    return "Take any pre-roll actions, or roll the die to start moving.";
-  }
-  if (request.type === "CHOOSE_PATH") {
-    return "Pick where your piece should move next.";
-  }
-  if (request.type === "CONFIRM_STOP") {
-    return request.data.can_undo === true
-      ? "Choose Stop Here to end your move, or undo the last step."
-      : "Choose Stop Here to end your move on this square.";
-  }
-  if (request.type === "BUY_STOCK" || request.type === "SELL_STOCK") {
-    return "Set a quantity, then choose a district.";
-  }
-  if (request.type === "CHOOSE_VENTURE_CELL") {
-    return "The web client is choosing a random unclaimed venture grid cell.";
-  }
-  if (request.type === "ACCEPT_OFFER") {
-    return "Review the complete deal, then accept, counter, or reject it.";
-  }
-  if (request.type === "COUNTER_PRICE") {
-    return "Set the terms you want to send back to the other player.";
-  }
-  if (request.type === "SCRIPT_DECISION") {
-    return String(request.data.prompt ?? "Choose how this event should resolve.");
-  }
-  return `Decision for Player ${request.player_id}.`;
 }
 
 function PromptControls({

@@ -49,6 +49,34 @@ def test_manager_rejects_unknown_sessions():
         manager.resolve_message_session({"msg": "input_response", "game_id": "missing"})
 
 
+def test_manager_removes_session_and_its_connection_bindings():
+    manager = ServerSessionManager()
+    manager.create_session(_settings(), session_id="alpha", make_default=True)
+    manager.create_session(_settings(), session_id="beta")
+    ws = object()
+    manager.bind_connection(ws, "alpha")
+    manager.bind_connection(ws, "beta")
+
+    removed = manager.remove_session("beta")
+
+    assert removed.session_id == "beta"
+    assert manager.sessions_for_connection(ws) == {"alpha"}
+    assert manager.get("beta") is None
+    assert manager.default_session_id == "alpha"
+
+
+def test_manager_reports_connections_per_session():
+    manager = ServerSessionManager()
+    manager.create_session(_settings(), session_id="alpha")
+    ws = object()
+
+    assert manager.has_connections("alpha") is False
+    manager.bind_connection(ws, "alpha")
+    assert manager.has_connections("alpha") is True
+    manager.unbind_connection(ws, "alpha")
+    assert manager.has_connections("alpha") is False
+
+
 def test_session_assigns_humans_and_updates_player_input():
     manager = ServerSessionManager()
     session = manager.create_session(_settings(players=2, humans=1), session_id="game")

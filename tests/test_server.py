@@ -579,6 +579,34 @@ def test_create_game_rejects_non_string_board():
     asyncio.run(scenario())
 
 
+def test_finished_lobby_session_retires_after_its_last_connection_leaves():
+    async def scenario() -> None:
+        server = _server_without_default()
+        server._loop = asyncio.get_running_loop()
+        ws = FakeWebSocket()
+
+        await server._handle_create_game(
+            ws,
+            msg_create_game({"board": "boards/test_board.json", "humans": 2, "ai": 0}),
+            host="localhost",
+            port=8765,
+        )
+        game_id = _messages(ws)[0]["game_id"]
+        session = server._sessions.require(game_id)
+        session.finished = True
+
+        server._retire_finished_session(session)
+        assert server._sessions.get(game_id) is session
+
+        session.remove_connection(ws)
+        server._sessions.unbind_connection(ws, game_id)
+        server._retire_finished_session(session)
+
+        assert server._sessions.get(game_id) is None
+
+    asyncio.run(scenario())
+
+
 def test_lobby_discovery_lists_public_unfinished_sessions_only():
     async def scenario() -> None:
         server = _server_without_default()

@@ -268,6 +268,16 @@ class GameServer:
                 pids = session.remove_connection(ws)
                 self._sessions.unbind_connection(ws, session_id)
                 logger.info("Client removed from %s (players %s)", session_id, pids)
+                self._retire_finished_session(session)
+
+    def _retire_finished_session(self, session: GameSession) -> None:
+        """Release completed lobby sessions after their final client leaves."""
+        if session is self._default_session or not session.finished:
+            return
+        if self._sessions.has_connections(session.session_id):
+            return
+        self._sessions.remove_session(session.session_id)
+        logger.info("Retired finished game session %s", session.session_id)
 
     async def _assign_human(self, session: GameSession, ws: ServerConnection) -> int:
         """Assign the next available human player_id to a WebSocket client."""
