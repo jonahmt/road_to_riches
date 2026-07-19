@@ -200,10 +200,11 @@ shift, and the full owned/missing state is exposed as an accessible label.
 
 Active Boon and Boom commission statuses appear immediately beside the affected
 player's name in the HUD. Each active commission status contributes one small
-copy of the established regular Boon star: Boon's 20% commission is white,
-while Boom's 50% commission uses the selected reddish-orange Boom color. The
-indicator is derived only from authoritative player statuses, exposes the
-effect percentage and remaining duration to assistive technology, supports
+copy of the established regular Boon star: Boon's 20% commission uses the same
+yellow as the Boon board icon, while Boom's 50% commission uses the selected
+reddish-orange Boom color. The indicator is derived only from authoritative
+player statuses, exposes the effect percentage and remaining duration to
+assistive technology, supports
 stacked effects without merging them, and disappears when its status expires.
 
 Normal board movement in the browser is controlled with WASD rather than by

@@ -35,7 +35,10 @@ import {
   type LiquidationShopChoice,
 } from "./liquidationSelection";
 import { rentPaymentCashDeltas, rentPaymentFacts } from "./paymentPresentation";
-import { commissionStatusIndicators } from "./playerStatusPresentation";
+import {
+  commissionIndicatorColor,
+  commissionStatusIndicators,
+} from "./playerStatusPresentation";
 import { getPromptHelp, getPromptTitle } from "./promptMetadata";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
@@ -3264,7 +3267,7 @@ function PlayerCommissionIndicators({
           aria-hidden="true"
           focusable="false"
         >
-          <BoonShape fill={indicator.kind === "boom" ? BOOM_ICON_COLOR : "#f7f7f2"} />
+          <BoonShape fill={commissionIndicatorColor(indicator.kind)} />
         </svg>
       ))}
     </span>

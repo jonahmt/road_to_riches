@@ -1,4 +1,5 @@
 import { type PlayerStatus } from "./protocol.ts";
+import { BOOM_ICON_COLOR, BOON_ICON_COLOR } from "./boardColors.ts";
 
 const COMMISSION_STATUS = "commission";
 const BOOM_COMMISSION_PERCENT = 50;
@@ -9,6 +10,10 @@ export interface CommissionStatusIndicator {
   kind: CommissionIndicatorKind;
   percent: number;
   remainingTurns: number;
+}
+
+export function commissionIndicatorColor(kind: CommissionIndicatorKind): string {
+  return kind === "boom" ? BOOM_ICON_COLOR : BOON_ICON_COLOR;
 }
 
 export function commissionStatusIndicators(

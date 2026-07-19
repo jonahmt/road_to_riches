@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { commissionStatusIndicators } from "../src/playerStatusPresentation.ts";
+import { BOOM_ICON_COLOR, BOON_ICON_COLOR } from "../src/boardColors.ts";
+import {
+  commissionIndicatorColor,
+  commissionStatusIndicators,
+} from "../src/playerStatusPresentation.ts";
 
 test("non-commission statuses do not create HUD stars", () => {
   assert.deepEqual(
@@ -10,7 +14,7 @@ test("non-commission statuses do not create HUD stars", () => {
   );
 });
 
-test("Boon and Boom commissions map to white and orange star kinds", () => {
+test("Boon and Boom commissions map to their status star kinds", () => {
   assert.deepEqual(
     commissionStatusIndicators([
       { type: "commission", modifier: 20, remaining_turns: 3 },
@@ -21,6 +25,11 @@ test("Boon and Boom commissions map to white and orange star kinds", () => {
       { kind: "boom", percent: 50, remainingTurns: 2 },
     ],
   );
+});
+
+test("HUD commission stars reuse the established Boon and Boom icon colors", () => {
+  assert.equal(commissionIndicatorColor("boon"), BOON_ICON_COLOR);
+  assert.equal(commissionIndicatorColor("boom"), BOOM_ICON_COLOR);
 });
 
 test("stacked commission statuses retain one indicator per active effect", () => {
