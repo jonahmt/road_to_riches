@@ -198,6 +198,14 @@ its established suit color; a missing suit keeps its position as a faint neutral
 placeholder. Suit ownership changes therefore never cause the other icons to
 shift, and the full owned/missing state is exposed as an accessible label.
 
+Active Boon and Boom commission statuses appear immediately beside the affected
+player's name in the HUD. Each active commission status contributes one small
+copy of the established regular Boon star: Boon's 20% commission is white,
+while Boom's 50% commission uses the selected reddish-orange Boom color. The
+indicator is derived only from authoritative player statuses, exposes the
+effect percentage and remaining duration to assistive technology, supports
+stacked effects without merging them, and disappears when its status expires.
+
 Normal board movement in the browser is controlled with WASD rather than by
 selecting path buttons in the side panel. The backend still owns all movement
 validation and sends the same `CHOOSE_PATH` / `CONFIRM_STOP` prompts; the web

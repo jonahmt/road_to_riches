@@ -308,10 +308,35 @@ h3 {
   gap: 8px;
 }
 
-.hud-player-title div {
+.hud-player-title > div {
   min-width: 0;
   display: grid;
   gap: 2px;
+}
+
+.hud-player-name-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hud-player-name-row strong {
+  min-width: 0;
+}
+
+.player-commission-indicators {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.player-commission-star {
+  width: 14px;
+  height: 14px;
+  overflow: visible;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.72));
 }
 
 .hud-player-title strong {
@@ -320,7 +345,7 @@ h3 {
   white-space: nowrap;
 }
 
-.hud-player-title span:last-child {
+.hud-player-title > div > span:last-child {
   color: rgba(247, 247, 242, 0.6);
   font-size: 12px;
   font-weight: 700;
@@ -3145,7 +3170,7 @@ dd {
   font-size: 13px;
 }
 
-.layout-immersive.is-playing .hud-player-title span:last-child {
+.layout-immersive.is-playing .hud-player-title > div > span:last-child {
   font-size: 9px;
   text-transform: uppercase;
 }

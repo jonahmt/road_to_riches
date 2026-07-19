@@ -35,6 +35,7 @@ import {
   type LiquidationShopChoice,
 } from "./liquidationSelection";
 import { rentPaymentCashDeltas, rentPaymentFacts } from "./paymentPresentation";
+import { commissionStatusIndicators } from "./playerStatusPresentation";
 import { getPromptHelp, getPromptTitle } from "./promptMetadata";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
@@ -3236,6 +3237,40 @@ function displayTypeForSquare(square: SquareInfo): string {
   return readableType(square.type);
 }
 
+function PlayerCommissionIndicators({
+  statuses,
+}: {
+  statuses: PlayerState["statuses"];
+}) {
+  const indicators = commissionStatusIndicators(statuses);
+  if (indicators.length === 0) {
+    return null;
+  }
+
+  const accessibleLabel = indicators
+    .map(
+      (indicator) =>
+        `${indicator.kind === "boom" ? "Boom" : "Boon"} ${indicator.percent}% commission, ${indicator.remainingTurns} ${indicator.remainingTurns === 1 ? "turn" : "turns"} remaining`,
+    )
+    .join("; ");
+
+  return (
+    <span className="player-commission-indicators" role="img" aria-label={accessibleLabel}>
+      {indicators.map((indicator, index) => (
+        <svg
+          key={`${indicator.kind}:${indicator.remainingTurns}:${index}`}
+          className={`player-commission-star is-${indicator.kind}`}
+          viewBox="0 0 100 100"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <BoonShape fill={indicator.kind === "boom" ? BOOM_ICON_COLOR : "#f7f7f2"} />
+        </svg>
+      ))}
+    </span>
+  );
+}
+
 function PlayerHud({
   state,
   assignedPlayerId,
@@ -3277,7 +3312,10 @@ function PlayerHud({
                 {player.player_id}
               </span>
               <div>
-                <strong>Player {player.player_id}</strong>
+                <div className="hud-player-name-row">
+                  <strong>Player {player.player_id}</strong>
+                  <PlayerCommissionIndicators statuses={player.statuses} />
+                </div>
                 <span>{isAssigned ? "You" : isCurrent ? "Turn" : `Square #${player.position}`}</span>
               </div>
             </div>
