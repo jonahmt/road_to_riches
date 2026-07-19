@@ -112,6 +112,15 @@ tile border is a thicker final paint layer above its labels, icons, and rent bar
 the inset selection outline is the only layer above it. District borders use a
 dedicated darker palette that never duplicates any player ownership color.
 
+An owned shop with an authoritative `closed` status reuses the Take a Break
+crescent in the otherwise empty upper portion of its tile and pairs it with the
+largest remaining status duration plus a singular/plural turn label. The shop
+stays visually owned, but its rent amount changes from white to neutral grey to
+show that landing there will not pay rent. If closed statuses overlap, the
+longest remaining duration is displayed because the shop reopens only after
+every closed status expires. The minimap keeps its compact ownership treatment
+without adding this status badge.
+
 The retired Classic layout, its header toggle, persisted layout preference, and
 URL override are not part of the client. The action panel occupies the
 upper-right before a roll and

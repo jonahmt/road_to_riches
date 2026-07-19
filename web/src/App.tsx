@@ -46,6 +46,7 @@ import {
   type InvestmentSquareChoice,
 } from "./squareSelection";
 import { scriptDecisionOptions } from "./scriptDecision";
+import { closedShopTurns } from "./shopStatusPresentation";
 import {
   buyShopChoices,
   isCompleteShopExchange,
@@ -1899,6 +1900,11 @@ function BoardPanel({
             const shouldRenderSuitYourselfIcon = isSuitYourselfIconSquare(square);
             const shouldRenderStockbrokerIcon = isStockbrokerIconSquare(square);
             const shouldRenderShopTile = isShopSquare(square);
+            const closedTurns = shouldRenderShopTile ? closedShopTurns(square.statuses) : null;
+            const closedShopLabel =
+              closedTurns === null
+                ? ""
+                : `, closed for ${closedTurns} more ${closedTurns === 1 ? "turn" : "turns"}`;
             const isStockPriceFocus =
               shouldRenderShopTile && square.property_district === focusDistrictId;
             const shouldRenderDefaultText =
@@ -1930,7 +1936,7 @@ function BoardPanel({
                 role="button"
                 tabIndex={squareSelectionActive && !isSelectionEligible ? -1 : 0}
                 aria-disabled={squareSelectionActive && !isSelectionEligible}
-                aria-label={`${isSelectionChosen ? "Included " : isSelectionEligible ? "Eligible " : ""}Square ${square.id}: ${displayTypeForSquare(square)}`}
+                aria-label={`${isSelectionChosen ? "Included " : isSelectionEligible ? "Eligible " : ""}Square ${square.id}: ${displayTypeForSquare(square)}${closedShopLabel}`}
                 onClick={() => {
                   if (!squareSelectionActive || isSelectionEligible) {
                     onSelectSquare(square.id);
@@ -1995,7 +2001,13 @@ function BoardPanel({
                 ) : shouldRenderSuitYourselfIcon ? (
                   <SuitYourselfIcon x={square.position[0]} y={square.position[1]} />
                 ) : shouldRenderShopTile ? (
-                  <ShopTile square={square} state={state} x={square.position[0]} y={square.position[1]} />
+                  <ShopTile
+                    square={square}
+                    state={state}
+                    x={square.position[0]}
+                    y={square.position[1]}
+                    closedTurns={closedTurns}
+                  />
                 ) : (
                   <text
                     className="square-type"
@@ -2584,11 +2596,13 @@ function ShopTile({
   state,
   x,
   y,
+  closedTurns,
 }: {
   square: SquareInfo;
   state: GameState;
   x: number;
   y: number;
+  closedTurns: number | null;
 }) {
   const value = square.shop_current_value ?? square.shop_base_value;
   const rent = currentShopRent(state, square);
@@ -2623,8 +2637,25 @@ function ShopTile({
 
   return (
     <g className="shop-tile shop-tile-owned" aria-hidden="true">
+      {closedTurns !== null && (
+        <g className="closed-shop-indicator">
+          <g transform={`translate(${x - 0.42} ${y - 0.72}) scale(0.014) translate(-50 -50)`}>
+            <TakeABreakShape />
+          </g>
+          <text className="closed-shop-turn-count" x={x + 0.56} y={y - 0.86}>
+            {closedTurns}
+          </text>
+          <text className="closed-shop-turn-label" x={x + 0.56} y={y - 0.28}>
+            {closedTurns === 1 ? "TURN" : "TURNS"}
+          </text>
+        </g>
+      )}
       <path className="shop-tile-rent-bar" d={rentBarPath} />
-      <text className="shop-tile-price" x={x} y={y + 1.17}>
+      <text
+        className={`shop-tile-price shop-tile-rent ${closedTurns === null ? "" : "is-closed"}`}
+        x={x}
+        y={y + 1.17}
+      >
         {rawGold(rent)}G
       </text>
     </g>

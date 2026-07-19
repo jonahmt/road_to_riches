@@ -697,6 +697,23 @@ h3 {
   font-weight: 950;
 }
 
+.shop-tile-rent.is-closed {
+  fill: #8f9698;
+}
+
+.closed-shop-turn-count {
+  fill: #f7f7f2;
+  font-size: 0.78px;
+  font-weight: 950;
+}
+
+.closed-shop-turn-label {
+  fill: rgba(247, 247, 242, 0.72);
+  font-size: 0.3px;
+  font-weight: 850;
+  letter-spacing: 0.04px;
+}
+
 .shop-tile-rent-bar {
   fill: rgba(3, 4, 7, 0.94);
   stroke: rgba(255, 255, 255, 0.16);
