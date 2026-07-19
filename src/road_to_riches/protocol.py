@@ -14,6 +14,8 @@ from enum import Enum
 from typing import Any
 
 PLAYER_CONTROL_REPLACED_CLOSE_CODE = 4001
+SLOW_CLIENT_CLOSE_CODE = 4002
+SLOW_CLIENT_CLOSE_REASON = "Connection too slow; reconnect to resume."
 
 
 class InputRequestType(str, Enum):

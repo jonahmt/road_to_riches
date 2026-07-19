@@ -14,7 +14,13 @@ from road_to_riches.board import load_board
 from road_to_riches.engine.game_loop import GameLog
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
-from road_to_riches.protocol import InputRequest, InputRequestType, PresentationRequest
+from road_to_riches.protocol import (
+    SLOW_CLIENT_CLOSE_CODE,
+    SLOW_CLIENT_CLOSE_REASON,
+    InputRequest,
+    InputRequestType,
+    PresentationRequest,
+)
 from road_to_riches.server.server_input import WebSocketPlayerInput
 
 
@@ -37,7 +43,37 @@ class SlowRecordingWebSocket:
         self.active_sends -= 1
 
 
-async def _wait_for_sent(ws: SlowRecordingWebSocket, count: int) -> None:
+class RecordingWebSocket:
+    def __init__(self) -> None:
+        self.sent: list[str] = []
+
+    async def send(self, raw: str) -> None:
+        self.sent.append(raw)
+
+
+class BlockingWebSocket:
+    def __init__(self) -> None:
+        self.sent: list[str] = []
+        self.send_started = threading.Event()
+        self.release_send = threading.Event()
+        self.closed = threading.Event()
+        self.close_calls: list[tuple[int, str]] = []
+
+    async def send(self, raw: str) -> None:
+        self.send_started.set()
+        while not self.release_send.is_set():
+            await asyncio.sleep(0.001)
+        self.sent.append(raw)
+
+    async def close(self, *, code: int, reason: str) -> None:
+        self.close_calls.append((code, reason))
+        self.closed.set()
+        self.release_send.set()
+
+
+async def _wait_for_sent(
+    ws: SlowRecordingWebSocket | RecordingWebSocket | BlockingWebSocket, count: int
+) -> None:
     for _ in range(100):
         if len(ws.sent) >= count:
             return
@@ -85,6 +121,60 @@ def test_broadcast_sends_to_each_websocket_in_order_without_overlap():
     finally:
         loop.call_soon_threadsafe(loop.stop)
         thread.join()
+        loop.close()
+
+
+def test_slow_client_is_disconnected_when_its_bounded_queue_overflows():
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever)
+    thread.start()
+    try:
+        player_input = WebSocketPlayerInput(loop, max_outbound_messages=2)
+        slow = BlockingWebSocket()
+        healthy = RecordingWebSocket()
+        player_input.set_client_for_player(0, slow)
+        player_input.set_client_for_player(1, healthy)
+
+        player_input._broadcast({"msg": "log", "text": "first"})
+        assert slow.send_started.wait(timeout=2)
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(healthy, 1), loop).result(timeout=2)
+
+        player_input._broadcast({"msg": "log", "text": "second"})
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(healthy, 2), loop).result(timeout=2)
+
+        player_input._broadcast({"msg": "log", "text": "third"})
+        assert slow.closed.wait(timeout=2)
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(healthy, 3), loop).result(timeout=2)
+
+        player_input._broadcast({"msg": "log", "text": "fourth"})
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(healthy, 4), loop).result(timeout=2)
+        asyncio.run_coroutine_threadsafe(_wait_for_sent(slow, 1), loop).result(timeout=2)
+
+        assert slow.close_calls == [(SLOW_CLIENT_CLOSE_CODE, SLOW_CLIENT_CLOSE_REASON)]
+        assert [json.loads(raw)["text"] for raw in slow.sent] == ["first"]
+        assert [json.loads(raw)["text"] for raw in healthy.sent] == [
+            "first",
+            "second",
+            "third",
+            "fourth",
+        ]
+        assert player_input._send_queues[slow].qsize() == 0
+
+        player_input.remove_client_for_player(0)
+        player_input.remove_client_for_player(1)
+        asyncio.run_coroutine_threadsafe(asyncio.sleep(0.05), loop).result(timeout=2)
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join()
+        loop.close()
+
+
+def test_outbound_queue_limit_must_be_positive():
+    loop = asyncio.new_event_loop()
+    try:
+        with pytest.raises(ValueError, match="max_outbound_messages"):
+            WebSocketPlayerInput(loop, max_outbound_messages=0)
+    finally:
         loop.close()
 
 

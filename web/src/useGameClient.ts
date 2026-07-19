@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   PLAYER_CONTROL_REPLACED_CLOSE_CODE,
   playerControlReplacementReason,
+  slowClientCloseReason,
 } from "./connectionClose";
 import { type GameState, type InputRequest, decode, encode } from "./protocol";
 import {
@@ -377,6 +378,8 @@ export function useGameClient(defaultUri: string) {
           return;
         }
         const replacementReason = playerControlReplacementReason(event.code, event.reason);
+        const slowClientReason = slowClientCloseReason(event.code, event.reason);
+        const closeReason = replacementReason ?? slowClientReason;
         socketRef.current = null;
         playerIdRef.current = null;
         gameIdRef.current = null;
@@ -393,12 +396,14 @@ export function useGameClient(defaultUri: string) {
           presentations: [],
           gameOverWinner: undefined,
           responsePending: false,
-          error: replacementReason ?? current.error,
+          error: closeReason ?? current.error,
           logs: appendLog(
             current.logs,
             replacementReason
               ? `Control moved: ${replacementReason}`
-              : "Disconnected from server",
+              : slowClientReason
+                ? `Disconnected: ${slowClientReason}`
+                : "Disconnected from server",
           ),
         }));
       });

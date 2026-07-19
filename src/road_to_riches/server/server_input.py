@@ -16,6 +16,8 @@ from road_to_riches.engine.game_loop import GameLog, PlayerInput
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.serialize import game_state_to_dict
 from road_to_riches.protocol import (
+    SLOW_CLIENT_CLOSE_CODE,
+    SLOW_CLIENT_CLOSE_REASON,
     InputRequest,
     InputRequestType,
     PresentationRequest,
@@ -33,6 +35,8 @@ from road_to_riches.protocol import (
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_MAX_OUTBOUND_MESSAGES = 128
+
 
 class WebSocketPlayerInput(PlayerInput):
     """PlayerInput that routes requests to specific player clients.
@@ -42,14 +46,27 @@ class WebSocketPlayerInput(PlayerInput):
     until the correct client responds.
     """
 
-    def __init__(self, loop: asyncio.AbstractEventLoop, game_id: str | None = None) -> None:
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        game_id: str | None = None,
+        *,
+        max_outbound_messages: int = DEFAULT_MAX_OUTBOUND_MESSAGES,
+    ) -> None:
+        if max_outbound_messages < 1:
+            raise ValueError("max_outbound_messages must be at least 1")
         self._loop = loop
         self._game_id = game_id
+        self._max_outbound_messages = max_outbound_messages
         self._player_ws: dict[int, Any] = {}  # player_id -> WebSocket
         self._ws_players: dict[int, list[int]] = {}  # ws id -> list of player_ids
         self._all_ws: list[Any] = []  # all connected WebSockets (for broadcast)
-        self._send_queues: dict[Any, asyncio.Queue[str | None]] = {}
+        self._send_queues: dict[Any, asyncio.Queue[str]] = {}
         self._send_tasks: dict[Any, asyncio.Task] = {}
+        self._send_backlog: dict[Any, int] = {}
+        self._send_lock = threading.Lock()
+        self._overflowed_ws: set[Any] = set()
+        self._slow_close_tasks: set[asyncio.Task[None]] = set()
         self._response: Any = None
         self._response_ready = threading.Event()
         self._expecting_player: int | None = None  # which player_id we're waiting for
@@ -193,8 +210,21 @@ class WebSocketPlayerInput(PlayerInput):
     def _send_raw(self, ws: Any, raw: str) -> None:
         """Queue one websocket message on that connection's ordered sender."""
         self._ensure_sender(ws)
-        queue = self._send_queues.get(ws)
-        if queue is None:
+        if not self._loop.is_running():
+            return
+
+        with self._send_lock:
+            if ws in self._overflowed_ws or ws not in self._send_backlog:
+                return
+            if self._send_backlog[ws] >= self._max_outbound_messages:
+                self._overflowed_ws.add(ws)
+                overflowed = True
+            else:
+                self._send_backlog[ws] += 1
+                overflowed = False
+
+        if overflowed:
+            self._schedule_outbound_overflow(ws)
             return
 
         try:
@@ -203,16 +233,19 @@ class WebSocketPlayerInput(PlayerInput):
             running_loop = None
 
         if running_loop is self._loop:
-            queue.put_nowait(raw)
+            self._enqueue_reserved(ws, raw)
             return
 
-        if self._loop.is_running():
-            self._loop.call_soon_threadsafe(queue.put_nowait, raw)
+        self._loop.call_soon_threadsafe(self._enqueue_reserved, ws, raw)
 
     def _ensure_sender(self, ws: Any) -> None:
         """Start the per-websocket sender task if it does not exist yet."""
-        if ws not in self._send_queues:
-            self._send_queues[ws] = asyncio.Queue()
+        with self._send_lock:
+            if ws not in self._send_queues:
+                self._send_queues[ws] = asyncio.Queue(
+                    maxsize=self._max_outbound_messages,
+                )
+                self._send_backlog[ws] = 0
 
         if ws in self._send_tasks or not self._loop.is_running():
             return
@@ -234,20 +267,83 @@ class WebSocketPlayerInput(PlayerInput):
         else:
             self._loop.call_soon_threadsafe(start)
 
-    async def _send_loop(self, ws: Any, queue: asyncio.Queue[str | None]) -> None:
+    def _enqueue_reserved(self, ws: Any, raw: str) -> None:
+        """Move a previously reserved message into its asyncio send queue."""
+        queue = self._send_queues.get(ws)
+        with self._send_lock:
+            overflowed = ws in self._overflowed_ws
+        if queue is None or overflowed:
+            self._release_outbound_slot(ws)
+            return
+
+        try:
+            queue.put_nowait(raw)
+        except asyncio.QueueFull:
+            self._release_outbound_slot(ws)
+            with self._send_lock:
+                first_overflow = ws not in self._overflowed_ws
+                self._overflowed_ws.add(ws)
+            if first_overflow:
+                self._schedule_outbound_overflow(ws)
+
+    def _release_outbound_slot(self, ws: Any) -> None:
+        with self._send_lock:
+            backlog = self._send_backlog.get(ws)
+            if backlog is not None and backlog > 0:
+                self._send_backlog[ws] = backlog - 1
+
+    def _schedule_outbound_overflow(self, ws: Any) -> None:
+        def handle() -> None:
+            queue = self._send_queues.get(ws)
+            if queue is not None:
+                while True:
+                    try:
+                        queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        break
+                    else:
+                        queue.task_done()
+                        self._release_outbound_slot(ws)
+
+            logger.warning(
+                "Closing slow websocket after %d buffered outbound messages",
+                self._max_outbound_messages,
+            )
+            task = self._loop.create_task(self._close_slow_client(ws))
+            self._slow_close_tasks.add(task)
+            task.add_done_callback(self._slow_close_tasks.discard)
+
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop is self._loop:
+            handle()
+        else:
+            self._loop.call_soon_threadsafe(handle)
+
+    async def _close_slow_client(self, ws: Any) -> None:
+        try:
+            await ws.close(
+                code=SLOW_CLIENT_CLOSE_CODE,
+                reason=SLOW_CLIENT_CLOSE_REASON,
+            )
+        except Exception:
+            logger.exception("Failed to close slow websocket client")
+
+    async def _send_loop(self, ws: Any, queue: asyncio.Queue[str]) -> None:
         """Send queued messages sequentially so one client observes engine order."""
         while True:
             raw = await queue.get()
-            if raw is None:
-                queue.task_done()
-                return
             try:
                 await ws.send(raw)
             except Exception:
                 logger.exception("Failed to send websocket message")
-                queue.task_done()
                 return
-            queue.task_done()
+            finally:
+                queue.task_done()
+                self._release_outbound_slot(ws)
 
     async def wait_for_client_messages(self, ws: Any) -> None:
         """Wait until all messages already queued for one client are sent."""
@@ -259,10 +355,24 @@ class WebSocketPlayerInput(PlayerInput):
         """Stop and forget the sender task for a disconnected websocket."""
         queue = self._send_queues.pop(ws, None)
         task = self._send_tasks.pop(ws, None)
-        if queue is not None and self._loop.is_running():
-            self._loop.call_soon_threadsafe(queue.put_nowait, None)
-        if task is not None and task.done():
-            task.result()
+        with self._send_lock:
+            self._send_backlog.pop(ws, None)
+            self._overflowed_ws.discard(ws)
+
+        def stop() -> None:
+            if queue is not None:
+                while True:
+                    try:
+                        queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        break
+                    else:
+                        queue.task_done()
+            if task is not None and not task.done():
+                task.cancel()
+
+        if self._loop.is_running():
+            self._loop.call_soon_threadsafe(stop)
 
     def _send_state(self, state: GameState) -> None:
         """Send full game state to all clients."""

@@ -483,6 +483,17 @@ socket with code `4001`. Other rejected responses keep the connection open and
 are followed by the current authoritative snapshot so a legitimate client can
 recover its active prompt.
 
+Each registered WebSocket has a strictly ordered outbound sender with a hard
+limit of 128 reserved or queued messages. The reservation is made before a
+game-thread send is handed to the asyncio loop, so the loop's thread-safe
+callback queue cannot become an unbounded second buffer. If a connection
+exceeds the limit, the server discards that connection's stale backlog and
+closes only that socket with application code `4002`; the game and other
+clients continue normally. The client surfaces a reconnect instruction, and a
+reconnected player receives the authoritative state plus any active dice,
+input request, and presentation barrier instead of replaying the discarded
+backlog.
+
 Hosted games expose ordinary AI response pacing through `--ai-delay`. The
 default is 0.3375 seconds per AI response, including each path-selection step.
 This is 35% longer than the earlier 0.25-second pacing. Presentation barriers
