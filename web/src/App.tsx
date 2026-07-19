@@ -44,6 +44,7 @@ import {
   squareIdsFromOptions,
   type InvestmentSquareChoice,
 } from "./squareSelection";
+import { scriptDecisionOptions } from "./scriptDecision";
 import {
   buyShopChoices,
   isCompleteShopExchange,
@@ -5865,6 +5866,9 @@ function getPromptTitle(request: InputRequest): string {
   if (request.type === "COUNTER_PRICE") {
     return "Make a Counteroffer";
   }
+  if (request.type === "SCRIPT_DECISION") {
+    return "Make a Choice";
+  }
   return readableType(request.type);
 }
 
@@ -5891,6 +5895,9 @@ function getPromptHelp(request: InputRequest): string {
   }
   if (request.type === "COUNTER_PRICE") {
     return "Set the terms you want to send back to the other player.";
+  }
+  if (request.type === "SCRIPT_DECISION") {
+    return String(request.data.prompt ?? "Choose how this event should resolve.");
   }
   return `Decision for Player ${request.player_id}.`;
 }
@@ -6067,6 +6074,26 @@ function PromptControls({
 
   if (request.type === "ACCEPT_OFFER") {
     return <OfferResponseWidget request={request} state={state} onSubmit={onSubmit} />;
+  }
+
+  if (request.type === "SCRIPT_DECISION") {
+    const options = scriptDecisionOptions(request.data.options);
+    return (
+      <div className="script-decision-options" role="group" aria-label="Event choices">
+        {options.map((option, index) => (
+          <button
+            key={`${index}:${option.label}`}
+            type="button"
+            onClick={() => onSubmit(option.value)}
+          >
+            <span>{option.label}</span>
+          </button>
+        ))}
+        {options.length === 0 && (
+          <p className="muted">This event did not provide any choices.</p>
+        )}
+      </div>
+    );
   }
 
   if (request.type === "CHOOSE_VENTURE_CELL") {

@@ -3659,6 +3659,32 @@ dd {
   gap: 7px;
 }
 
+.script-decision-options {
+  display: grid;
+  gap: 8px;
+}
+
+.script-decision-options button {
+  min-height: 48px;
+  border-color: rgba(255, 255, 255, 0.24);
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.075);
+  color: #f7f7f2;
+  text-align: left;
+}
+
+.script-decision-options button:hover,
+.script-decision-options button:focus-visible {
+  border-color: #ffd166;
+  background: rgba(255, 209, 102, 0.12);
+}
+
+.script-decision-options button span {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .layout-immersive.is-playing.is-roll-active .action-panel {
   visibility: hidden;
   opacity: 0;

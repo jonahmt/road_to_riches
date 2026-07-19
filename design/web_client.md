@@ -170,6 +170,15 @@ sequence; timing is presentation-only and never sent by the backend.
 The overlay uses a translucent shade without backdrop blur, so the reframed and
 highlighted district remains legible behind the card.
 
+Venture-card scripts can pause on a generic `SCRIPT_DECISION` prompt containing
+a player-facing question and an ordered mapping of labels to arbitrary
+JSON-compatible response values. The browser renders those labels as compact
+choice cards and submits the selected value unchanged, allowing the script
+generator to resume and branch without exposing protocol JSON or requiring the
+Tools panel. Empty or malformed option payloads remain visible as an invalid
+event state rather than inventing a response. `CHOOSE_ANY_SQUARE` remains a
+separate direct-board workflow for script decisions that require a location.
+
 The player-facing log is deliberately reduced to a single latest-event ticker.
 The full backend/presentation log remains available in Tools for debugging and
 review, but it should not be treated as the main game UI.
