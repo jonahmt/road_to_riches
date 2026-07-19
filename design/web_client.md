@@ -493,15 +493,22 @@ values, and the gold direction, while a counter may modify only the gold term as
 defined by the gameplay rules. Ownership and settlement validation remain
 backend authoritative.
 
-The game board has a persistent die overlay in its upper-left corner. It consumes
-the same backend `dice` message as the TUI: the face displays the remaining move
-count, counts down as movement is resolved, and becomes blank at zero, while a
-label beneath the face preserves the original roll for the duration of the turn.
-The overlay remains mounted before the first roll with an empty face so dice
-updates do not shift the board layout.
-The server retains the latest dice update for the active game and includes it
-when replaying a state snapshot and pending prompt to a reconnecting browser,
-so a reload during movement restores both the original roll and remaining count.
+The game board presents authoritative rolls as a reusable physical 3D die. A
+new movement roll tumbles in the center of the board, reveals the backend result,
+then travels to its upper-left movement position. There its face displays the
+remaining move count, counts down without replaying the animation as movement is
+resolved, and becomes blank at zero, while the label preserves the original roll
+for the duration of the turn. A non-movement roll requested by an event uses the
+same center tumble and authoritative reveal, holds the result briefly, and then
+fades away instead of occupying the movement position. Reduced-motion clients
+keep the reveal and placement semantics without the cube tumble or travel.
+
+The backend `dice` message identifies whether a roll is for `movement` or an
+`event` and whether that message starts a new animation. Remaining-move updates
+are static. The server retains only the latest movement dice update for the
+active game and includes it without animation when replaying a state snapshot
+and pending prompt to a reconnecting browser, so a reload during movement
+restores both the original roll and remaining count without replaying the roll.
 
 `CHOOSE_VENTURE_CELL` opens a shared 8x8 Venture Grid overlay. It initializes on
 the first unclaimed square and supports

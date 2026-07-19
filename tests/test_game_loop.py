@@ -387,7 +387,12 @@ class TestRollEvent:
 
         assert processed.get_result() == 4
         assert any("rolls a 4" in m for m in loop.log.messages)
-        loop.input.notify_dice.assert_called_with(4, 4)
+        loop.input.notify_dice.assert_called_with(
+            4,
+            4,
+            purpose="movement",
+            animate=True,
+        )
 
         # Follow-up WillMoveEvent should be in the queue
         ev = loop.pipeline.process_next(loop.state)

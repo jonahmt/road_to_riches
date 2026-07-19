@@ -446,11 +446,12 @@ h3 {
 }
 
 .board-dice {
+  --die-size: 54px;
   position: absolute;
   top: 34px;
   left: 34px;
   z-index: 2;
-  width: 74px;
+  width: calc(var(--die-size) + 20px);
   display: grid;
   justify-items: center;
   gap: 6px;
@@ -461,25 +462,102 @@ h3 {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(12px);
   pointer-events: none;
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+  transform-origin: center;
+  transition:
+    top 360ms cubic-bezier(0.22, 0.84, 0.28, 1),
+    left 360ms cubic-bezier(0.22, 0.84, 0.28, 1),
+    width 360ms cubic-bezier(0.22, 0.84, 0.28, 1),
+    padding 360ms cubic-bezier(0.22, 0.84, 0.28, 1),
+    transform 360ms cubic-bezier(0.22, 0.84, 0.28, 1),
+    opacity 240ms ease;
 }
 
-.board-die-face {
-  width: 54px;
-  aspect-ratio: 1;
+.board-dice.is-rolling,
+.board-dice.is-event-hold,
+.board-dice.is-event-fading {
+  --die-size: 112px;
+  top: 50%;
+  left: 50%;
+  z-index: 30;
+  width: calc(var(--die-size) + 36px);
+  padding: 18px 18px 14px;
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.board-dice.is-event-fading {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.82);
+}
+
+.physical-die-stage {
+  width: var(--die-size);
+  height: var(--die-size);
+  perspective: calc(var(--die-size) * 5.5);
+}
+
+.physical-die-cube {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform: var(--die-final-transform);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.board-dice.is-rolling .physical-die-cube {
+  animation: physical-die-tumble 760ms cubic-bezier(0.18, 0.78, 0.24, 1) both;
+}
+
+.physical-die-face {
+  position: absolute;
+  inset: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
   place-items: center;
-  border: 2px solid #f7f7f2;
-  border-radius: 9px;
-  background: rgba(247, 247, 242, 0.06);
+  border: max(1px, calc(var(--die-size) * 0.025)) solid rgba(20, 22, 26, 0.72);
+  border-radius: calc(var(--die-size) * 0.17);
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.96), transparent 42%),
+    #e9e8df;
+  box-shadow:
+    inset 0 0 calc(var(--die-size) * 0.16) rgba(0, 0, 0, 0.13),
+    0 0 1px rgba(255, 255, 255, 0.82);
+  backface-visibility: hidden;
 }
 
-.board-die-pip {
-  width: 8px;
-  height: 8px;
+.physical-die-face.is-front {
+  transform: rotateY(0deg) translateZ(calc(var(--die-size) / 2));
+}
+
+.physical-die-face.is-back {
+  transform: rotateY(180deg) translateZ(calc(var(--die-size) / 2));
+}
+
+.physical-die-face.is-right {
+  transform: rotateY(90deg) translateZ(calc(var(--die-size) / 2));
+}
+
+.physical-die-face.is-left {
+  transform: rotateY(-90deg) translateZ(calc(var(--die-size) / 2));
+}
+
+.physical-die-face.is-top {
+  transform: rotateX(90deg) translateZ(calc(var(--die-size) / 2));
+}
+
+.physical-die-face.is-bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--die-size) / 2));
+}
+
+.physical-die-pip {
+  width: calc(var(--die-size) * 0.145);
+  height: calc(var(--die-size) * 0.145);
   border-radius: 999px;
-  background: #f7f7f2;
+  background: #17191d;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.58);
   opacity: 0;
   transform: scale(0.45);
   transition:
@@ -487,7 +565,7 @@ h3 {
     transform 100ms ease;
 }
 
-.board-die-pip.is-visible {
+.physical-die-pip.is-visible {
   opacity: 1;
   transform: scale(1);
 }
@@ -503,6 +581,24 @@ h3 {
 
 .board-die-roll.is-empty {
   visibility: hidden;
+}
+
+@keyframes physical-die-tumble {
+  0% {
+    transform: rotateX(-28deg) rotateY(24deg) rotateZ(-9deg) scale(0.8);
+  }
+  24% {
+    transform: rotateX(202deg) rotateY(-174deg) rotateZ(58deg) scale(1.08);
+  }
+  52% {
+    transform: rotateX(428deg) rotateY(318deg) rotateZ(-42deg) scale(0.96);
+  }
+  78% {
+    transform: rotateX(662deg) rotateY(-508deg) rotateZ(22deg) scale(1.04);
+  }
+  100% {
+    transform: var(--die-final-transform) scale(1);
+  }
 }
 
 .board-camera-controls {
@@ -2487,6 +2583,13 @@ dd {
     animation: none;
   }
 
+  .board-dice,
+  .physical-die-cube,
+  .physical-die-pip {
+    animation: none !important;
+    transition: none !important;
+  }
+
   .board-square-group.stock-price-focus .board-square-tile {
     filter:
       brightness(1.28)
@@ -2958,19 +3061,20 @@ dd {
   }
 
   .board-dice {
+    --die-size: 44px;
     top: 30px;
     left: 30px;
-    width: 62px;
     padding: 7px 7px 6px;
   }
 
-  .board-die-face {
-    width: 44px;
-  }
-
-  .board-die-pip {
-    width: 7px;
-    height: 7px;
+  .board-dice.is-rolling,
+  .board-dice.is-event-hold,
+  .board-dice.is-event-fading {
+    --die-size: 92px;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--die-size) + 30px);
+    padding: 15px 15px 12px;
   }
 
   .board-camera-controls {
@@ -3759,6 +3863,7 @@ dd {
 }
 
 .layout-immersive.is-playing .board-dice {
+  --die-size: 116px;
   top: 16px;
   right: auto;
   left: 16px;
@@ -3771,15 +3876,14 @@ dd {
   background: rgba(7, 9, 13, 0.92);
 }
 
-.layout-immersive.is-playing .board-die-face {
-  width: 116px;
-  border-width: 4px;
-  border-radius: 18px;
-}
-
-.layout-immersive.is-playing .board-die-pip {
-  width: 16px;
-  height: 16px;
+.layout-immersive.is-playing .board-dice.is-rolling,
+.layout-immersive.is-playing .board-dice.is-event-hold,
+.layout-immersive.is-playing .board-dice.is-event-fading {
+  --die-size: min(18vw, 148px);
+  top: 50%;
+  left: 50%;
+  width: calc(var(--die-size) + 44px);
+  padding: 22px 22px 18px;
 }
 
 .layout-immersive.is-playing .board-die-roll {
@@ -3886,6 +3990,7 @@ dd {
   }
 
   .layout-immersive.is-playing .board-dice {
+    --die-size: 88px;
     top: 8px;
     right: auto;
     left: 8px;
@@ -3895,15 +4000,14 @@ dd {
     padding: 14px 14px 12px;
   }
 
-  .layout-immersive.is-playing .board-die-face {
-    width: 88px;
-    border-width: 3px;
-    border-radius: 14px;
-  }
-
-  .layout-immersive.is-playing .board-die-pip {
-    width: 12px;
-    height: 12px;
+  .layout-immersive.is-playing .board-dice.is-rolling,
+  .layout-immersive.is-playing .board-dice.is-event-hold,
+  .layout-immersive.is-playing .board-dice.is-event-fading {
+    --die-size: min(30vw, 112px);
+    top: 50%;
+    left: 50%;
+    width: calc(var(--die-size) + 34px);
+    padding: 17px 17px 14px;
   }
 
   .layout-immersive.is-playing .board-die-roll {

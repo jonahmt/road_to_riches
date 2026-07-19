@@ -97,6 +97,23 @@ def test_round_trip_dice():
     assert decode(encode(original)) == original
 
 
+def test_dice_message_describes_presentation_semantics():
+    assert msg_dice(4, 2) == {
+        "msg": "dice",
+        "value": 4,
+        "remaining": 2,
+        "purpose": "movement",
+        "animate": False,
+    }
+    assert msg_dice(3, 0, purpose="event", animate=True) == {
+        "msg": "dice",
+        "value": 3,
+        "remaining": 0,
+        "purpose": "event",
+        "animate": True,
+    }
+
+
 def test_round_trip_game_over():
     original = msg_game_over(1)
     assert decode(encode(original)) == original

@@ -393,7 +393,14 @@ class BasicAIPlayerInput(PlayerInput):
         self.messages.extend(log.messages)
         log.clear()
 
-    def notify_dice(self, value: int, remaining: int) -> None:
+    def notify_dice(
+        self,
+        value: int,
+        remaining: int,
+        *,
+        purpose: str = "movement",
+        animate: bool = False,
+    ) -> None:
         self.dice_updates.append((value, remaining))
 
     def retract_log(self, count: int) -> None:

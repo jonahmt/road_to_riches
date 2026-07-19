@@ -205,6 +205,8 @@ def test_snapshot_to_client_replays_dice_and_pending_prompt():
             "msg": "dice",
             "value": 5,
             "remaining": 3,
+            "purpose": "movement",
+            "animate": False,
             "game_id": "default",
         }
         assert messages[2] == {
@@ -459,9 +461,39 @@ def test_session_player_input_tags_outbound_messages():
                 "data": {"player_id": 0, "card_id": 1, "name": "T", "description": "desc"},
                 "game_id": "game-1",
             },
-            {"msg": "dice", "value": 3, "remaining": 2, "game_id": "game-1"},
+            {
+                "msg": "dice",
+                "value": 3,
+                "remaining": 2,
+                "purpose": "movement",
+                "animate": False,
+                "game_id": "game-1",
+            },
             {"msg": "log_retract", "count": 1, "game_id": "game-1"},
             {"msg": "game_over", "winner": 0, "game_id": "game-1"},
         ]
+    finally:
+        loop.close()
+
+
+def test_event_dice_does_not_replace_reconnect_movement_dice():
+    loop = asyncio.new_event_loop()
+    try:
+        player_input = WebSocketPlayerInput(loop, game_id="game-1")
+        messages = []
+        player_input._broadcast = messages.append  # type: ignore[method-assign]
+
+        player_input.notify_dice(5, 5, purpose="movement", animate=True)
+        player_input.notify_dice(3, 0, purpose="event", animate=True)
+
+        assert player_input._last_dice == (5, 5)
+        assert messages[-1] == {
+            "msg": "dice",
+            "value": 3,
+            "remaining": 0,
+            "purpose": "event",
+            "animate": True,
+            "game_id": "game-1",
+        }
     finally:
         loop.close()

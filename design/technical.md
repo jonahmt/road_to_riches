@@ -292,7 +292,7 @@ The server pops off TRADE\_SHOP(...) and updates the game state accordingly. The
 
 \[ROLL(0)\]
 
-Note that TURN(0) is finally removed from the queue, since after rolling player 0 will not be able to take any more actions (voluntarily). At this point the server pops off the ROLL(0). The server generates a random number from 1-max roll (usually 6). Meanwhile, the client plays the dice roll animation which will land on the number returned from the server. A MOVE event is added to the queue representing that the player is now moving on the board. Let’s say the player rolls a 4\.
+Note that TURN(0) is finally removed from the queue, since after rolling player 0 will not be able to take any more actions (voluntarily). At this point the server pops off the ROLL(0). The server generates a random number from 1-max roll (usually 6). It sends an authoritative `dice` message marked as a newly animated movement roll; the client animation must land on that server result. Later messages that update the remaining movement are marked as static updates and do not replay the roll. Scripted `ROLL_FOR_EVENT` results use the same message with event purpose, so clients can reveal the result temporarily without treating it as movement state. A MOVE event is added to the queue representing that the player is now moving on the board. Let’s say the player rolls a 4\.
 
 \[WILL\_MOVE(0, 4, 4)\]
 
@@ -490,9 +490,11 @@ callback queue cannot become an unbounded second buffer. If a connection
 exceeds the limit, the server discards that connection's stale backlog and
 closes only that socket with application code `4002`; the game and other
 clients continue normally. The client surfaces a reconnect instruction, and a
-reconnected player receives the authoritative state plus any active dice,
+reconnected player receives the authoritative state plus any active movement dice,
 input request, and presentation barrier instead of replaying the discarded
-backlog.
+backlog. The reconnect dice message is static so it restores the current face
+and remaining movement without replaying an animation; temporary event dice are
+not persisted in this snapshot.
 
 Hosted games expose ordinary AI response pacing through `--ai-delay`. The
 default is 0.3375 seconds per AI response, including each path-selection step.

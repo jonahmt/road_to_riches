@@ -388,7 +388,15 @@ class WebSocketPlayerInput(PlayerInput):
             value, remaining = self._last_dice
             self._send_raw(
                 ws,
-                encode(msg_dice(value, remaining, game_id=self._game_id)),
+                encode(
+                    msg_dice(
+                        value,
+                        remaining,
+                        game_id=self._game_id,
+                        purpose="movement",
+                        animate=False,
+                    )
+                ),
             )
         if self._pending_request is not None:
             self._send_raw(
@@ -833,9 +841,25 @@ class WebSocketPlayerInput(PlayerInput):
         self._flush_log(log)
         self._send_state(state)
 
-    def notify_dice(self, value: int, remaining: int) -> None:
-        self._last_dice = (value, remaining)
-        self._broadcast(msg_dice(value, remaining, game_id=self._game_id))
+    def notify_dice(
+        self,
+        value: int,
+        remaining: int,
+        *,
+        purpose: str = "movement",
+        animate: bool = False,
+    ) -> None:
+        if purpose == "movement":
+            self._last_dice = (value, remaining)
+        self._broadcast(
+            msg_dice(
+                value,
+                remaining,
+                game_id=self._game_id,
+                purpose=purpose,
+                animate=animate,
+            )
+        )
 
     def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
         self._broadcast(msg_ui_notification(notification_type, data, game_id=self._game_id))

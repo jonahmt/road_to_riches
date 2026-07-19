@@ -131,7 +131,7 @@ export type ServerMessage =
   | { msg: "ui_notification"; type: string; data?: Record<string, unknown>; game_id?: string }
   | { msg: "presentation_request"; request_id: string; type: string; player_id: number; data?: Record<string, unknown>; game_id?: string }
   | { msg: "presentation_resolved"; request_id: string; game_id?: string }
-  | { msg: "dice"; value: number; remaining: number; game_id?: string }
+  | { msg: "dice"; value: number; remaining: number; purpose?: "movement" | "event"; animate?: boolean; game_id?: string }
   | { msg: "game_over"; winner: number | null; game_id?: string }
   | { msg: "save_result"; success: boolean; path?: string; error?: string; game_id?: string }
   | { msg: "input_rejected"; error: string; ownership_lost: boolean; game_id?: string }

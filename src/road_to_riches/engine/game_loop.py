@@ -313,7 +313,14 @@ class PlayerInput(ABC):
     def notify(self, state: GameState, log: GameLog) -> None:
         """Display accumulated log messages to the player."""
 
-    def notify_dice(self, value: int, remaining: int) -> None:
+    def notify_dice(
+        self,
+        value: int,
+        remaining: int,
+        *,
+        purpose: str = "movement",
+        animate: bool = False,
+    ) -> None:
         """Notify the UI of dice roll / remaining moves. Override if needed."""
 
     def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
@@ -694,7 +701,7 @@ class GameLoop:
         self._current_dice_roll = roll
         forced_tag = " (forced)" if event.forced_roll is not None else ""
         self.log.log(f"Player {player_id} rolls a {roll}!{forced_tag}")
-        self.input.notify_dice(roll, roll)
+        self.input.notify_dice(roll, roll, purpose="movement", animate=True)
         self.input.notify(self.state, self.log)
 
     def _handle_will_move(self, event: WillMoveEvent) -> None:
@@ -1397,7 +1404,7 @@ class GameLoop:
                     cmd.execute(self.state)
                     roll = cmd.get_result()
                     self.log.log(f"Player {cmd.player_id} rolls a {roll}!")
-                    self.input.notify_dice(roll, 0)
+                    self.input.notify_dice(roll, 0, purpose="event", animate=True)
                     self.input.notify(self.state, self.log)
                     result = roll
                 elif isinstance(cmd, GameEvent):

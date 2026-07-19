@@ -138,8 +138,24 @@ def msg_presentation_resolved(request_id: str, game_id: str | None = None) -> di
     )
 
 
-def msg_dice(value: int, remaining: int, game_id: str | None = None) -> dict:
-    return _with_game_id({"msg": "dice", "value": value, "remaining": remaining}, game_id)
+def msg_dice(
+    value: int,
+    remaining: int,
+    game_id: str | None = None,
+    *,
+    purpose: str = "movement",
+    animate: bool = False,
+) -> dict:
+    return _with_game_id(
+        {
+            "msg": "dice",
+            "value": value,
+            "remaining": remaining,
+            "purpose": purpose,
+            "animate": animate,
+        },
+        game_id,
+    )
 
 
 def msg_game_over(winner: int | None, game_id: str | None = None) -> dict:

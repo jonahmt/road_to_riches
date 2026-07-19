@@ -487,7 +487,14 @@ class TuiPlayerInput(PlayerInput):
     def notify(self, state: GameState, log: GameLog) -> None:
         self._flush_log(log)
 
-    def notify_dice(self, value: int, remaining: int) -> None:
+    def notify_dice(
+        self,
+        value: int,
+        remaining: int,
+        *,
+        purpose: str = "movement",
+        animate: bool = False,
+    ) -> None:
         self._notify_dice(value, remaining)
 
     def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:

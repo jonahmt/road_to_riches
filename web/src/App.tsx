@@ -20,6 +20,14 @@ import {
   TAKE_A_BREAK_ICON_COLOR,
 } from "./boardColors";
 import { getPathKeyActions, getWasdResponseMap, type WasdResponseMap } from "./controls";
+import {
+  DICE_ROLL_DURATION_MS,
+  DICE_SETTLE_DURATION_MS,
+  EVENT_DICE_FADE_DURATION_MS,
+  EVENT_DICE_HOLD_DURATION_MS,
+  dieFinalTransform,
+  displayedDiceValue,
+} from "./dicePresentation";
 import { formatGold, netWorth, readableType } from "./format";
 import {
   type GameState,
@@ -2107,7 +2115,7 @@ function BoardPanel({
           </g>
         </svg>
       </div>
-      {showDice && <BoardDice dice={dice} />}
+      <BoardDice dice={dice} showSettled={showDice} />
       <BoardMinimap state={state} bounds={bounds} />
       <div className="board-camera-controls" aria-label="Board zoom controls">
         <button
@@ -2162,27 +2170,126 @@ function BoardPanel({
   );
 }
 
-function BoardDice({ dice }: { dice: DiceState | null }) {
-  const roll = dice?.value ?? 0;
-  const remaining = dice?.remaining ?? 0;
-  const faceValue = remaining > 0 ? remaining : 0;
-  const activePips = new Set(DIE_PIPS[faceValue] ?? DIE_PIPS[0]);
-  const description = roll > 0 ? `Rolled ${roll}; ${remaining} moves remaining` : "No active roll";
+type DicePresentationPhase =
+  | "hidden"
+  | "rolling"
+  | "settling"
+  | "settled"
+  | "event-hold"
+  | "event-fading";
+
+const PHYSICAL_DIE_FACES = [
+  ["front", 1],
+  ["back", 6],
+  ["right", 3],
+  ["left", 4],
+  ["top", 2],
+  ["bottom", 5],
+] as const;
+
+function DieFace({ value, side }: { value: number; side: string }) {
+  const activePips = new Set(DIE_PIPS[value] ?? DIE_PIPS[0]);
+  return (
+    <div className={`physical-die-face is-${side}`}>
+      {Array.from({ length: 9 }, (_, index) => {
+        const position = index + 1;
+        return (
+          <span
+            key={position}
+            className={`physical-die-pip ${activePips.has(position) ? "is-visible" : ""}`}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function BoardDice({ dice, showSettled }: { dice: DiceState | null; showSettled: boolean }) {
+  const [phase, setPhase] = useState<DicePresentationPhase>("hidden");
+  const [presentedRoll, setPresentedRoll] = useState<DiceState | null>(null);
+  const lastAnimationIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!dice || dice.animationId === 0 || dice.animationId === lastAnimationIdRef.current) {
+      return;
+    }
+    lastAnimationIdRef.current = dice.animationId;
+    setPresentedRoll(dice);
+    setPhase("rolling");
+
+    const timers: number[] = [];
+    timers.push(
+      window.setTimeout(() => {
+        setPhase(dice.purpose === "movement" ? "settling" : "event-hold");
+      }, DICE_ROLL_DURATION_MS),
+    );
+
+    if (dice.purpose === "movement") {
+      timers.push(
+        window.setTimeout(() => {
+          setPhase("settled");
+          setPresentedRoll(null);
+        }, DICE_ROLL_DURATION_MS + DICE_SETTLE_DURATION_MS),
+      );
+    } else {
+      timers.push(
+        window.setTimeout(() => {
+          setPhase("event-fading");
+        }, DICE_ROLL_DURATION_MS + EVENT_DICE_HOLD_DURATION_MS),
+      );
+      timers.push(
+        window.setTimeout(() => {
+          setPhase("hidden");
+          setPresentedRoll(null);
+        }, DICE_ROLL_DURATION_MS + EVENT_DICE_HOLD_DURATION_MS + EVENT_DICE_FADE_DURATION_MS),
+      );
+    }
+
+    return () => {
+      for (const timer of timers) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [dice?.animationId]);
+
+  const activeDice = presentedRoll ?? dice;
+  const shouldShowSettledMovement = showSettled && activeDice?.purpose === "movement";
+  const visualPhase = phase === "hidden" && shouldShowSettledMovement ? "settled" : phase;
+  const isAnimated = ["rolling", "settling", "event-hold", "event-fading"].includes(
+    visualPhase,
+  );
+  if (!activeDice || (!shouldShowSettledMovement && !isAnimated)) {
+    return null;
+  }
+
+  const settledMovement = visualPhase === "settled";
+  const faceValue = displayedDiceValue(activeDice, settledMovement);
+  const frontFaceValue = faceValue === 0 || faceValue > 6 ? faceValue : 1;
+  const description =
+    activeDice.purpose === "event"
+      ? `Rolled ${activeDice.value} for event`
+      : `Rolled ${activeDice.value}; ${activeDice.remaining} moves remaining`;
 
   return (
-    <div className="board-dice" role="img" aria-label={description}>
-      <div className="board-die-face" aria-hidden="true">
-        {Array.from({ length: 9 }, (_, index) => {
-          const position = index + 1;
-          return (
-            <span
-              key={position}
-              className={`board-die-pip ${activePips.has(position) ? "is-visible" : ""}`}
-            />
-          );
-        })}
+    <div
+      className={`board-dice is-${visualPhase} is-${activeDice.purpose}`}
+      role="img"
+      aria-label={description}
+      aria-live="polite"
+    >
+      <div className="physical-die-stage" aria-hidden="true">
+        <div
+          className="physical-die-cube"
+          style={{ "--die-final-transform": dieFinalTransform(faceValue) } as CSSProperties}
+        >
+          {PHYSICAL_DIE_FACES.map(([side, value]) => (
+            <DieFace key={side} side={side} value={side === "front" ? frontFaceValue : value} />
+          ))}
+        </div>
       </div>
-      <span className={`board-die-roll ${roll > 0 ? "" : "is-empty"}`}>Roll {roll || "-"}</span>
+      <span className="board-die-roll">
+        {activeDice.purpose === "event" ? "Rolled" : "Roll"} {activeDice.value}
+      </span>
     </div>
   );
 }

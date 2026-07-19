@@ -82,6 +82,13 @@ class TestRunScript:
         loop.run_script(path, player_id=0)
         # Dice is random in [1, max]; just confirm it was added
         assert loop.state.players[0].ready_cash > 1000
+        loop.input.notify_dice.assert_called_once()
+        _, remaining = loop.input.notify_dice.call_args.args
+        assert remaining == 0
+        assert loop.input.notify_dice.call_args.kwargs == {
+            "purpose": "event",
+            "animate": True,
+        }
 
     def test_generator_yields_message(self, tmp_path):
         script = (
@@ -135,6 +142,12 @@ class TestRunScript:
 
         assert loop.state.current_player.player_id == 0
         assert loop.state.players[0].ready_cash == 1120
+        loop.input.notify_dice.assert_called_once_with(
+            3,
+            0,
+            purpose="event",
+            animate=True,
+        )
         assert not any(
             isinstance(entry.event, (AdvanceTurnEvent, TurnEvent))
             for entry in loop.pipeline.history

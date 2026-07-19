@@ -4,6 +4,7 @@ import {
   playerControlReplacementReason,
   slowClientCloseReason,
 } from "./connectionClose";
+import { nextDiceState, type DiceState } from "./dicePresentation";
 import { type GameState, type InputRequest, decode, encode } from "./protocol";
 import {
   dismissNonblockingPresentation,
@@ -14,13 +15,9 @@ import {
 } from "./presentationQueue";
 
 export type { PresentationState } from "./presentationQueue";
+export type { DiceState } from "./dicePresentation";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected";
-
-export interface DiceState {
-  value: number;
-  remaining: number;
-}
 
 export interface GameClientState {
   status: ConnectionStatus;
@@ -305,7 +302,7 @@ export function useGameClient(defaultUri: string) {
             case "dice":
               return {
                 ...current,
-                dice: { value: message.value, remaining: message.remaining },
+                dice: nextDiceState(current.dice, message),
               };
             case "game_over":
               responsePendingRef.current = false;
