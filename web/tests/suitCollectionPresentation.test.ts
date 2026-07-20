@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   suitCollectionFacts,
+  suitCollectionSourceSelector,
   suitCollectionTargetSelector,
 } from "../src/suitCollectionPresentation.ts";
 
@@ -29,5 +30,12 @@ test("standard suits target their slot while wild targets the complete suit bank
   assert.equal(
     suitCollectionTargetSelector({ playerId: 1, suit: "WILD", squareId: 8 }),
     '[data-hud-player-id="1"][data-hud-suits]',
+  );
+});
+
+test("collection starts from the main board tile rather than another square rendering", () => {
+  assert.equal(
+    suitCollectionSourceSelector({ playerId: 1, suit: "SPADE", squareId: 6 }),
+    '.board-square-tile[data-square-id="6"]',
   );
 });

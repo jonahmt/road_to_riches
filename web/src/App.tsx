@@ -52,6 +52,7 @@ import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
   SUIT_COLLECTION_DURATION_MS,
   suitCollectionFacts,
+  suitCollectionSourceSelector,
   suitCollectionTargetSelector,
   type CollectedSuit,
   type SuitCollectionFacts,
@@ -188,6 +189,7 @@ const MIN_BOARD_ZOOM = 0.5;
 const MAX_BOARD_ZOOM = 3;
 const FOLLOW_VISIBLE_TILE_WIDTHS = 6;
 const FOLLOW_CAMERA_ANIMATION_MS = 360;
+const SUIT_COLLECTION_SOURCE_TRACKING_MS = SUIT_COLLECTION_DURATION_MS * 0.65;
 const PLAYER_TOKEN_RADIUS = 0.34;
 const ACTIVE_PLAYER_TOKEN_RADIUS = 0.95;
 const BOARD_ZOOM_STEP = 0.25;
@@ -4439,8 +4441,6 @@ function VentureCardReveal({
 interface SuitCollectionGeometry {
   startX: number;
   startY: number;
-  centerX: number;
-  centerY: number;
   targetX: number;
   targetY: number;
 }
@@ -4458,27 +4458,56 @@ function SuitCollectionEffect({
   onCompleteRef.current = onComplete;
 
   useLayoutEffect(() => {
-    const source = document.querySelector(`[data-square-id="${facts.squareId}"]`);
+    const source = document.querySelector(suitCollectionSourceSelector(facts));
     const target = document.querySelector(suitCollectionTargetSelector(facts));
     const board = document.querySelector(".board-panel");
-    const boardRect = board?.getBoundingClientRect();
-    const sourceRect = source?.getBoundingClientRect();
-    const targetRect = target?.getBoundingClientRect();
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
+    const trackingStartedAt = window.performance.now();
+    let animationFrame: number | null = null;
 
-    setGeometry({
-      startX: sourceRect
-        ? sourceRect.left + sourceRect.width / 2
-        : (boardRect?.left ?? 0) + (boardRect?.width ?? window.innerWidth) / 2,
-      startY: sourceRect
-        ? sourceRect.top + sourceRect.height / 2
-        : (boardRect?.top ?? 0) + (boardRect?.height ?? window.innerHeight) / 2,
-      centerX,
-      centerY,
-      targetX: targetRect ? targetRect.left + targetRect.width / 2 : centerX,
-      targetY: targetRect ? targetRect.top + targetRect.height / 2 : centerY,
-    });
+    function updateGeometry() {
+      const boardRect = board?.getBoundingClientRect();
+      const sourceRect = source?.getBoundingClientRect();
+      const targetRect = target?.getBoundingClientRect();
+      const fallbackX = window.innerWidth / 2;
+      const fallbackY = window.innerHeight / 2;
+      const nextGeometry = {
+        startX: sourceRect
+          ? sourceRect.left + sourceRect.width / 2
+          : (boardRect?.left ?? 0) + (boardRect?.width ?? window.innerWidth) / 2,
+        startY: sourceRect
+          ? sourceRect.top + sourceRect.height / 2
+          : (boardRect?.top ?? 0) + (boardRect?.height ?? window.innerHeight) / 2,
+        targetX: targetRect ? targetRect.left + targetRect.width / 2 : fallbackX,
+        targetY: targetRect ? targetRect.top + targetRect.height / 2 : fallbackY,
+      };
+      setGeometry((previous) => {
+        if (
+          previous &&
+          Math.abs(previous.startX - nextGeometry.startX) < 0.25 &&
+          Math.abs(previous.startY - nextGeometry.startY) < 0.25 &&
+          Math.abs(previous.targetX - nextGeometry.targetX) < 0.25 &&
+          Math.abs(previous.targetY - nextGeometry.targetY) < 0.25
+        ) {
+          return previous;
+        }
+        return nextGeometry;
+      });
+    }
+
+    function followSourceDuringBoardMotion() {
+      updateGeometry();
+      if (window.performance.now() - trackingStartedAt < SUIT_COLLECTION_SOURCE_TRACKING_MS) {
+        animationFrame = window.requestAnimationFrame(followSourceDuringBoardMotion);
+      }
+    }
+
+    updateGeometry();
+    animationFrame = window.requestAnimationFrame(followSourceDuringBoardMotion);
+    return () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+    };
   }, [facts.playerId, facts.squareId, facts.suit]);
 
   useEffect(() => {
@@ -4495,8 +4524,6 @@ function SuitCollectionEffect({
           facts.suit === "WILD" ? "#f7f7f2" : getSuitColor(facts.suit),
         "--suit-start-x": `${geometry.startX}px`,
         "--suit-start-y": `${geometry.startY}px`,
-        "--suit-center-x": `${geometry.centerX}px`,
-        "--suit-center-y": `${geometry.centerY}px`,
         "--suit-target-x": `${geometry.targetX}px`,
         "--suit-target-y": `${geometry.targetY}px`,
       } as CSSProperties)

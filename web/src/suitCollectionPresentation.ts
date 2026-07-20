@@ -32,3 +32,7 @@ export function suitCollectionTargetSelector(facts: SuitCollectionFacts): string
     ? `[data-hud-player-id="${facts.playerId}"][data-hud-suits]`
     : `[data-hud-player-id="${facts.playerId}"][data-hud-suit="${facts.suit}"]`;
 }
+
+export function suitCollectionSourceSelector(facts: SuitCollectionFacts): string {
+  return `.board-square-tile[data-square-id="${facts.squareId}"]`;
+}
