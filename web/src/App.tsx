@@ -974,7 +974,6 @@ function App() {
             state={clientState.gameState}
             assignedPlayerId={clientState.playerId}
             cashDeltas={paymentCashDeltas}
-            rentPayment={activeRentPayment}
             suitCollection={activeSuitCollection}
           />
           <section className="game-layout">
@@ -1221,6 +1220,14 @@ function App() {
             />
           )}
         </>
+      )}
+
+      {activeRentPayment && (
+        <RentCoinBurst
+          key={activePresentation?.requestId}
+          playerId={activeRentPayment.payerId}
+          rentAmount={activeRentPayment.rentAmount}
+        />
       )}
 
       {activePresentation?.type === "venture_card_revealed" && (
@@ -3436,13 +3443,11 @@ function PlayerHud({
   state,
   assignedPlayerId,
   cashDeltas,
-  rentPayment,
   suitCollection,
 }: {
   state: GameState | null;
   assignedPlayerId: number | null;
   cashDeltas: ReadonlyMap<number, number> | null;
-  rentPayment: RentPaymentFacts | null;
   suitCollection: SuitCollectionFacts | null;
 }) {
   if (!state) {
@@ -3473,9 +3478,6 @@ function PlayerHud({
               </span>
             )}
             <div className="hud-player-title">
-              {rentPayment?.payerId === player.player_id && (
-                <RentCoinBurst rentAmount={rentPayment.rentAmount} />
-              )}
               <span className="player-token large" style={{ backgroundColor: getPlayerColor(player.player_id) }}>
                 {player.player_id}
               </span>
@@ -3521,12 +3523,60 @@ function PlayerHud({
   );
 }
 
-function RentCoinBurst({ rentAmount }: { rentAmount: number }) {
+function RentCoinBurst({
+  playerId,
+  rentAmount,
+}: {
+  playerId: number;
+  rentAmount: number;
+}) {
+  const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
+
+  useLayoutEffect(() => {
+    let animationFrame: number | null = null;
+    const measureOrigin = () => {
+      const token = document.querySelector<SVGGElement>(
+        `.player-token-svg[data-player-id="${playerId}"]`,
+      );
+      if (!token) {
+        return;
+      }
+      const bounds = token.getBoundingClientRect();
+      setOrigin({
+        x: bounds.left + bounds.width / 2,
+        y: bounds.top + bounds.height / 2,
+      });
+    };
+    const scheduleMeasurement = () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+      animationFrame = window.requestAnimationFrame(measureOrigin);
+    };
+
+    scheduleMeasurement();
+    window.addEventListener("resize", scheduleMeasurement);
+    return () => {
+      window.removeEventListener("resize", scheduleMeasurement);
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [playerId]);
+
+  if (!origin) {
+    return null;
+  }
+
   const coinCount = rentPaymentCoinCount(rentAmount);
   return (
-    <span className="rent-coin-burst" aria-hidden="true">
+    <span
+      className="rent-coin-burst"
+      style={{ left: `${origin.x}px`, top: `${origin.y}px` }}
+      aria-hidden="true"
+    >
       {Array.from({ length: coinCount }, (_, index) => {
-        const angle = ((200 + ((index * 47 + rentAmount) % 70)) * Math.PI) / 180;
+        const angle = (((index * 137.508 + rentAmount * 17) % 360) * Math.PI) / 180;
         const distance = 70 + ((index * 37 + rentAmount) % 105);
         const x = Math.round(Math.cos(angle) * distance);
         const y = Math.round(Math.sin(angle) * distance);

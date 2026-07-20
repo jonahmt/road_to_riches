@@ -310,17 +310,18 @@ h3 {
 }
 
 .rent-coin-burst {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
+  position: fixed;
+  z-index: 60;
+  width: 0;
+  height: 0;
   overflow: visible;
   pointer-events: none;
 }
 
 .rent-coin {
   position: absolute;
-  top: 50%;
-  left: 13px;
+  top: 0;
+  left: 0;
   width: var(--rent-coin-size);
   height: var(--rent-coin-size);
   border-radius: 50%;

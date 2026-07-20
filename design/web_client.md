@@ -161,7 +161,9 @@ above the backdrop and shows speech-bubble cash deltas: rent is subtracted from
 the payer, added to the owner, and any dividend is added to its recipient. When
 one player receives both rent and a dividend, the HUD combines them into one
 net positive amount. A burst of borderless gold coin circles flies out from the
-payer's HUD token and fades away. The number of circles follows an uncapped
+payer's player token on the board and fades away. The particle layer remains
+above the payment shade so its board-token origin stays legible while the
+presentation is active. The number of circles follows an uncapped
 logarithmic curve based on the final authoritative rent, so increasingly large
 payments keep producing more coins without particle counts growing fast enough
 to stall practical game values. Reduced-motion clients receive one stationary
