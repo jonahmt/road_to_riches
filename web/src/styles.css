@@ -302,10 +302,73 @@ h3 {
 
 .hud-player-title,
 .player-card-title {
+  position: relative;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.rent-coin-burst {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rent-coin {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  width: var(--rent-coin-size);
+  height: var(--rent-coin-size);
+  border-radius: 50%;
+  background: #ffd166;
+  box-shadow:
+    inset -2px -2px 0 rgba(139, 85, 0, 0.28),
+    0 0 9px rgba(255, 209, 102, 0.48);
+  opacity: 0;
+  animation: rent-coin-flight var(--rent-coin-duration) cubic-bezier(0.16, 0.72, 0.28, 1) var(--rent-coin-delay) both;
+  will-change: transform, opacity;
+}
+
+@keyframes rent-coin-flight {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.22);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  58% {
+    opacity: 1;
+    transform: translate(
+      calc(-50% + var(--rent-coin-mid-x)),
+      calc(-50% + var(--rent-coin-mid-y))
+    ) scale(0.92);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(
+      calc(-50% + var(--rent-coin-x)),
+      calc(-50% + var(--rent-coin-y))
+    ) scale(0.42);
+  }
+}
+
+@keyframes rent-coin-reduced {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.65);
+  }
+  28%,
+  62% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .hud-player-title > div {
@@ -2695,6 +2758,14 @@ dd {
   .hud-suit-slot.is-collecting,
   .hud-suit-slots.is-collecting-wild {
     animation: none !important;
+  }
+
+  .rent-coin {
+    animation: rent-coin-reduced 520ms ease-out both !important;
+  }
+
+  .rent-coin:nth-child(n + 2) {
+    display: none;
   }
 
   .board-square-group.stock-price-focus .board-square-tile {

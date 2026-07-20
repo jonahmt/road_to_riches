@@ -17,6 +17,8 @@ export interface PlayerCashDelta {
   amount: number;
 }
 
+export const MIN_RENT_PAYMENT_COINS = 6;
+
 function finiteInteger(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : fallback;
 }
@@ -68,4 +70,15 @@ export function rentPaymentCashDeltas(payment: RentPaymentFacts): PlayerCashDelt
     .filter(([, amount]) => amount !== 0)
     .map(([playerId, amount]) => ({ playerId, amount }))
     .sort((left, right) => left.playerId - right.playerId);
+}
+
+export function rentPaymentCoinCount(rentAmount: number): number {
+  const normalizedAmount = Math.max(0, Math.trunc(rentAmount));
+  if (normalizedAmount === 0) {
+    return 0;
+  }
+  return Math.max(
+    MIN_RENT_PAYMENT_COINS,
+    Math.round(3 + Math.log2(normalizedAmount + 1) * 3),
+  );
 }

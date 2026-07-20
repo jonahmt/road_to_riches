@@ -42,7 +42,12 @@ import {
   liquidationShopChoices,
   type LiquidationShopChoice,
 } from "./liquidationSelection";
-import { rentPaymentCashDeltas, rentPaymentFacts } from "./paymentPresentation";
+import {
+  rentPaymentCashDeltas,
+  rentPaymentCoinCount,
+  rentPaymentFacts,
+  type RentPaymentFacts,
+} from "./paymentPresentation";
 import {
   commissionIndicatorColor,
   commissionStatusIndicators,
@@ -809,12 +814,17 @@ function App() {
     activePresentation?.type === "stock_price_changed"
       ? stockPriceChangeFacts(activePresentation.data, activePresentation.playerId)
       : null;
-  const paymentCashDeltas =
+  const activeRentPayment =
     activePresentation?.type === "rent_payment"
+      ? rentPaymentFacts(activePresentation.data, activePresentation.playerId)
+      : null;
+  const paymentCashDeltas =
+    activeRentPayment
       ? new Map(
-          rentPaymentCashDeltas(
-            rentPaymentFacts(activePresentation.data, activePresentation.playerId),
-          ).map((delta) => [delta.playerId, delta.amount]),
+          rentPaymentCashDeltas(activeRentPayment).map((delta) => [
+            delta.playerId,
+            delta.amount,
+          ]),
         )
       : null;
   const blockingPresentationActive =
@@ -964,6 +974,7 @@ function App() {
             state={clientState.gameState}
             assignedPlayerId={clientState.playerId}
             cashDeltas={paymentCashDeltas}
+            rentPayment={activeRentPayment}
             suitCollection={activeSuitCollection}
           />
           <section className="game-layout">
@@ -3425,11 +3436,13 @@ function PlayerHud({
   state,
   assignedPlayerId,
   cashDeltas,
+  rentPayment,
   suitCollection,
 }: {
   state: GameState | null;
   assignedPlayerId: number | null;
   cashDeltas: ReadonlyMap<number, number> | null;
+  rentPayment: RentPaymentFacts | null;
   suitCollection: SuitCollectionFacts | null;
 }) {
   if (!state) {
@@ -3460,6 +3473,9 @@ function PlayerHud({
               </span>
             )}
             <div className="hud-player-title">
+              {rentPayment?.payerId === player.player_id && (
+                <RentCoinBurst rentAmount={rentPayment.rentAmount} />
+              )}
               <span className="player-token large" style={{ backgroundColor: getPlayerColor(player.player_id) }}>
                 {player.player_id}
               </span>
@@ -3502,6 +3518,42 @@ function PlayerHud({
         );
       })}
     </section>
+  );
+}
+
+function RentCoinBurst({ rentAmount }: { rentAmount: number }) {
+  const coinCount = rentPaymentCoinCount(rentAmount);
+  return (
+    <span className="rent-coin-burst" aria-hidden="true">
+      {Array.from({ length: coinCount }, (_, index) => {
+        const angle = ((200 + ((index * 47 + rentAmount) % 70)) * Math.PI) / 180;
+        const distance = 70 + ((index * 37 + rentAmount) % 105);
+        const x = Math.round(Math.cos(angle) * distance);
+        const y = Math.round(Math.sin(angle) * distance);
+        const midX = Math.round(x * 0.42);
+        const midY = Math.round(y * 0.42 - 26);
+        const size = 10 + ((index * 7 + rentAmount) % 7);
+        const delay = (index % 6) * 34 + Math.floor(index / 6) * 18;
+        const duration = 760 + ((index * 53 + rentAmount) % 280);
+        return (
+          <span
+            key={index}
+            className="rent-coin"
+            style={
+              {
+                "--rent-coin-x": `${x}px`,
+                "--rent-coin-y": `${y}px`,
+                "--rent-coin-mid-x": `${midX}px`,
+                "--rent-coin-mid-y": `${midY}px`,
+                "--rent-coin-size": `${size}px`,
+                "--rent-coin-delay": `${delay}ms`,
+                "--rent-coin-duration": `${duration}ms`,
+              } as CSSProperties
+            }
+          />
+        );
+      })}
+    </span>
   );
 }
 

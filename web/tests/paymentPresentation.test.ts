@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { rentPaymentCashDeltas, rentPaymentFacts } from "../src/paymentPresentation.ts";
+import {
+  MIN_RENT_PAYMENT_COINS,
+  rentPaymentCashDeltas,
+  rentPaymentCoinCount,
+  rentPaymentFacts,
+} from "../src/paymentPresentation.ts";
 
 test("rent payment facts preserve a payment without dividends", () => {
   assert.deepEqual(
@@ -73,5 +78,17 @@ test("payment cash deltas combine rent and dividends for the player HUD", () => 
       { playerId: 1, amount: 29 },
       { playerId: 3, amount: -27 },
     ],
+  );
+});
+
+test("rent coin count grows on an uncapped logarithmic curve", () => {
+  assert.equal(rentPaymentCoinCount(0), 0);
+  assert.equal(rentPaymentCoinCount(1), MIN_RENT_PAYMENT_COINS);
+  assert.equal(rentPaymentCoinCount(30), 18);
+  assert.equal(rentPaymentCoinCount(10_000), 43);
+  assert.equal(rentPaymentCoinCount(1_000_000_000), 93);
+  assert.ok(rentPaymentCoinCount(1_000_000_000) > rentPaymentCoinCount(10_000));
+  assert.ok(
+    rentPaymentCoinCount(Number.MAX_SAFE_INTEGER) > rentPaymentCoinCount(1_000_000_000),
   );
 });
