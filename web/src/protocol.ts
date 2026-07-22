@@ -122,6 +122,27 @@ export interface GameState {
   venture_grid?: unknown;
 }
 
+export type ReportCategory = "bug" | "minor_fix" | "suggestion";
+
+export interface ReportAttachment {
+  filename: string;
+  mime_type: "image/png" | "image/jpeg" | "image/webp";
+  data_base64: string;
+}
+
+export interface SubmitReportMessage {
+  msg: "submit_report";
+  category: ReportCategory;
+  priority: 0 | 1 | 2 | 3;
+  summary: string;
+  description: string;
+  include_game_state: boolean;
+  restart_requested: boolean;
+  attachment?: ReportAttachment;
+  player_id?: number;
+  game_id?: string;
+}
+
 export type ServerMessage =
   | { msg: "assign_player"; player_id: number; game_id?: string }
   | { msg: "state_sync"; state: GameState; game_id?: string }
@@ -134,6 +155,7 @@ export type ServerMessage =
   | { msg: "dice"; value: number; remaining: number; purpose?: "movement" | "event"; animate?: boolean; game_id?: string }
   | { msg: "game_over"; winner: number | null; game_id?: string }
   | { msg: "save_result"; success: boolean; path?: string; error?: string; game_id?: string }
+  | { msg: "report_result"; success: boolean; issue_id?: string; error?: string; game_id?: string }
   | { msg: "input_rejected"; error: string; ownership_lost: boolean; game_id?: string }
   | { msg: "error"; error: string; game_id?: string }
   | { msg: "game_created"; game_id: string; config: Record<string, unknown> }
@@ -150,7 +172,8 @@ export type ClientMessage =
   | { msg: "list_games" }
   | { msg: "join_game"; game_id: string }
   | { msg: "claim_player"; player_id: number; game_id?: string; force?: boolean }
-  | { msg: "create_game"; config: Record<string, unknown> };
+  | { msg: "create_game"; config: Record<string, unknown> }
+  | SubmitReportMessage;
 
 export function stockPrice(stock: StockPrice): number {
   return stock.value_component + stock.fluctuation_component;

@@ -626,6 +626,30 @@ message reports ownership loss, the client performs the same disconnected-state
 cleanup; otherwise it remains connected while the server replays the current
 snapshot and prompt.
 
+## In-Game Development Reports
+
+Connected development games expose a fixed corner control for reporting a bug,
+minor fix, or suggestion without leaving the match. The control uses a custom
+bug-in-a-speech-bubble SVG and an explicit accessible name. It is absent from
+the connection screen and opens a modal above all gameplay presentation. While
+the modal is open, prompt and presentation hotkeys are suppressed so typing a
+report cannot accidentally move, buy, confirm, or dismiss a game interaction.
+
+Every report requires a short summary and description and includes category and
+urgency. Capturing the authoritative current game state is optional and off by
+default. A single PNG, JPEG, or WebP image up to 10 MiB can be dragged into the
+form or selected through the file picker; the client previews it and supports
+removal before submission. Images travel as a validated MIME type, original
+filename, and Base64 body. Restarting development services after a fix is also
+optional and off by default because it may interrupt the current match.
+
+The client sends `submit_report` with the report fields plus its current game
+and player identifiers. It keeps the complete form draft mounted while the
+server processes the request and after any failure. A `report_result` failure is
+shown inline with a retry path; success replaces the form with the newly created
+Beads issue ID. Beads remains the only issue tracker—the browser does not create
+or manage a second status system.
+
 ## Non-Goals for This Pass
 
 * No online hosting or auth.

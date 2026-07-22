@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from types import SimpleNamespace
 
 from road_to_riches import save as save_mod
 from road_to_riches.board import load_board
@@ -9,6 +10,7 @@ from road_to_riches.engine.game_loop import GameConfig
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.player_state import PlayerState
 from road_to_riches.protocol import (
+    InputRequest,
     InputRequestType,
     encode,
     msg_claim_player,
@@ -19,6 +21,7 @@ from road_to_riches.protocol import (
     msg_list_games,
     msg_save_game,
     msg_start_game,
+    msg_submit_report,
 )
 from road_to_riches.server.server import GameServer
 
@@ -98,6 +101,15 @@ class RecordingPlayerInput:
 
     def _send_state(self, state: GameState) -> None:
         self.states.append(state)
+
+
+class RecordingReportService:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def submit(self, payload, **kwargs):
+        self.calls.append({"payload": payload, **kwargs})
+        return SimpleNamespace(issue_id="road_to_riches-rpt1")
 
 
 def test_create_game_creates_distinct_sessions_and_assigns_hosts():
@@ -986,5 +998,149 @@ def test_sync_request_rejects_session_without_running_game():
             "error": "game is not running",
             "game_id": game_id,
         }
+
+    asyncio.run(scenario())
+
+
+def test_submit_report_requires_reporting_to_be_enabled():
+    async def scenario() -> None:
+        report_service = RecordingReportService()
+        server = GameServer(
+            GameConfig(board_path="boards/test_board.json", num_players=1),
+            num_humans=1,
+            reporting_enabled=False,
+            report_service=report_service,  # type: ignore[arg-type]
+        )
+        ws = FakeWebSocket()
+        session = server._default_session
+        assert session is not None
+
+        await server._handle_submit_report(
+            ws,
+            session,
+            msg_submit_report("bug", 2, "Summary", "Description", player_id=0),
+        )
+
+        assert _messages(ws) == [
+            {
+                "msg": "report_result",
+                "success": False,
+                "error": "in-game reporting is disabled on this server",
+                "game_id": "default",
+            }
+        ]
+        assert report_service.calls == []
+
+    asyncio.run(scenario())
+
+
+def test_submit_report_requires_joined_socket_and_owned_player():
+    async def scenario() -> None:
+        report_service = RecordingReportService()
+        server = GameServer(
+            GameConfig(board_path="boards/test_board.json", num_players=1),
+            num_humans=1,
+            report_service=report_service,  # type: ignore[arg-type]
+        )
+        session = server._default_session
+        assert session is not None
+        unjoined = FakeWebSocket()
+
+        await server._handle_submit_report(
+            unjoined,
+            session,
+            msg_submit_report("bug", 2, "Summary", "Description", player_id=0),
+        )
+        assert _messages(unjoined)[0]["error"] == "connection is not joined to this game"
+
+        joined = FakeWebSocket()
+        session.register_player(joined, 0)
+        server._sessions.bind_connection(joined, session.session_id)
+        await server._handle_submit_report(
+            joined,
+            session,
+            msg_submit_report("bug", 2, "Summary", "Description", player_id=1),
+        )
+        assert _messages(joined)[0]["error"] == (
+            "report requires a player controlled by this connection"
+        )
+        assert report_service.calls == []
+
+    asyncio.run(scenario())
+
+
+def test_submit_report_passes_authoritative_optional_context():
+    async def scenario() -> None:
+        report_service = RecordingReportService()
+        server = GameServer(
+            GameConfig(board_path="boards/test_board.json", num_players=1),
+            num_humans=1,
+            report_service=report_service,  # type: ignore[arg-type]
+        )
+        server._loop = asyncio.get_running_loop()
+        session = server._default_session
+        assert session is not None
+        server._prepare_session(session)
+        assert session.player_input is not None
+        ws = FakeWebSocket()
+        session.register_player(ws, 0)
+        server._sessions.bind_connection(ws, session.session_id)
+        session.started = True
+        session.game_loop = SimpleNamespace(
+            state=_make_state(1),
+            log=SimpleNamespace(messages=["unflushed line"]),
+        )
+        session.player_input._pending_request = InputRequest(
+            InputRequestType.PRE_ROLL,
+            player_id=0,
+            data={"cash": 1000},
+        )
+        session.player_input._last_dice = (6, 2)
+        session.player_input._recent_log.extend(["older line"])
+
+        await server._handle_submit_report(
+            ws,
+            session,
+            msg_submit_report(
+                "minor_fix",
+                3,
+                "Move prompt copy",
+                "The wording is confusing.",
+                player_id=0,
+                include_game_state=True,
+                restart_requested=True,
+                game_id="default",
+            ),
+        )
+
+        assert _messages(ws) == [
+            {
+                "msg": "report_result",
+                "success": True,
+                "issue_id": "road_to_riches-rpt1",
+                "game_id": "default",
+            }
+        ]
+        assert len(report_service.calls) == 1
+        call = report_service.calls[0]
+        assert call["game_id"] == "default"
+        assert call["player_id"] == 0
+        assert call["payload"]["restart_requested"] is True
+        context = call["game_context"]
+        assert context["session"] == {
+            "game_id": "default",
+            "reporting_player_id": 0,
+            "started": True,
+            "finished": False,
+        }
+        assert context["config"]["board_path"] == "boards/test_board.json"
+        assert context["state"]["players"][0]["ready_cash"] == 1000
+        assert context["pending_prompt"] == {
+            "type": "PRE_ROLL",
+            "player_id": 0,
+            "data": {"cash": 1000},
+        }
+        assert context["movement_dice"] == {"value": 6, "remaining": 2}
+        assert context["recent_log"] == ["older line", "unflushed line"]
 
     asyncio.run(scenario())

@@ -175,3 +175,22 @@ The game uses a client-server model even for local play. The server is the sourc
 - Use `cp -f`, `mv -f`, `rm -rf` (non-interactive flags) to prevent hangs.
 - Use `HOMEBREW_NO_AUTO_UPDATE=1` for brew commands.
 - When adding unfamiliar dependencies, ask the user first.
+
+## In-Game Report Automation
+
+Normal single-game servers enable the browser report intake by default. Use
+`--no-reporting` to disable it; lobby servers require an explicit `--reporting`.
+See `design/in_game_reporting.md` for the protocol, evidence, concurrency, and
+scheduled-repair design.
+
+The checked-in Codex pieces are:
+
+- `.codex/skills/fix-ingame-reports/` — the scheduled orchestration workflow;
+- `.codex/agents/bugfix-worker.toml` — the isolated per-report worker;
+- `.codex/rules/report-orchestrator.rules` — narrow unattended command rules;
+- `.codex/config.toml` — project multi-agent limits.
+
+The 20-minute schedule is local Codex application state rather than a Git file.
+After cloning onto a different machine, trust the project, restart Codex so the
+project configuration/rules load, and create the local recurring automation
+with the prompt: `Use $fix-ingame-reports to process every ready in-game report.`

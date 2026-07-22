@@ -24,6 +24,7 @@ from websockets.asyncio.server import ServerConnection
 
 from road_to_riches.board.loader import load_board
 from road_to_riches.engine.game_loop import GameConfig, GameLoop
+from road_to_riches.models.serialize import game_state_to_dict
 from road_to_riches.protocol import (
     PLAYER_CONTROL_REPLACED_CLOSE_CODE,
     decode,
@@ -35,9 +36,15 @@ from road_to_riches.protocol import (
     msg_games_list,
     msg_input_rejected,
     msg_joined_game,
+    msg_report_result,
     msg_save_result,
 )
 from road_to_riches.save import save_game
+from road_to_riches.server.reporting import (
+    InGameReportService,
+    ReportPersistenceError,
+    ReportValidationError,
+)
 from road_to_riches.server.server_input import WebSocketPlayerInput
 from road_to_riches.server.session import (
     DEFAULT_AI_DELAY,
@@ -100,10 +107,14 @@ class GameServer:
         create_default_session: bool = True,
         shutdown_when_default_finished: bool = True,
         debug_mode: bool = False,
+        reporting_enabled: bool = True,
+        report_service: InGameReportService | None = None,
     ) -> None:
         self._sessions = ServerSessionManager()
         self._default_session: GameSession | None = None
         self._debug_mode = debug_mode
+        self._reporting_enabled = reporting_enabled
+        self._report_service = report_service
         if create_default_session:
             settings = GameSessionSettings(
                 config=config,
@@ -172,7 +183,18 @@ class GameServer:
                         await self._handle_create_game(ws, msg, host=host, port=port)
                         continue
                     logger.warning("Message references unknown game session: %s", msg)
-                    await ws.send(encode(msg_error("unknown game session", msg.get("game_id"))))
+                    if msg_type == "submit_report":
+                        await ws.send(
+                            encode(
+                                msg_report_result(
+                                    False,
+                                    error="unknown game session",
+                                    game_id=msg.get("game_id"),
+                                )
+                            )
+                        )
+                    else:
+                        await ws.send(encode(msg_error("unknown game session", msg.get("game_id"))))
                     continue
 
                 if msg_type == "create_game":
@@ -253,6 +275,9 @@ class GameServer:
 
                 elif msg_type == "sync_request":
                     await self._handle_sync_request(ws, session)
+
+                elif msg_type == "submit_report":
+                    await self._handle_submit_report(ws, session, msg)
 
                 elif msg_type == "dev_event":
                     await self._handle_dev_event(ws, session, msg)
@@ -566,6 +591,129 @@ class GameServer:
         session.player_input.send_snapshot_to_client(ws, session.game_loop.state)
         await session.player_input.wait_for_client_messages(ws)
 
+    async def _handle_submit_report(
+        self,
+        ws: ServerConnection,
+        session: GameSession,
+        msg: dict,
+    ) -> None:
+        """Persist a development report from a currently joined player socket."""
+        if not self._reporting_enabled:
+            await ws.send(
+                encode(
+                    msg_report_result(
+                        False,
+                        error="in-game reporting is disabled on this server",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        if session.session_id not in self._sessions.sessions_for_connection(ws):
+            await ws.send(
+                encode(
+                    msg_report_result(
+                        False,
+                        error="connection is not joined to this game",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        player_id = msg.get("player_id")
+        if (
+            isinstance(player_id, bool)
+            or not isinstance(player_id, int)
+            or session.player_to_ws.get(player_id) is not ws
+        ):
+            await ws.send(
+                encode(
+                    msg_report_result(
+                        False,
+                        error="report requires a player controlled by this connection",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+
+        include_game_state = msg.get("include_game_state", False)
+        game_context = None
+        if include_game_state is True:
+            if session.game_loop is None or session.player_input is None:
+                await ws.send(
+                    encode(
+                        msg_report_result(
+                            False,
+                            error="game state is unavailable for this report",
+                            game_id=session.session_id,
+                        )
+                    )
+                )
+                return
+            input_context = session.player_input.report_context()
+            recent_log = [
+                *input_context["recent_log"],
+                *session.game_loop.log.messages,
+            ][-100:]
+            input_context["recent_log"] = recent_log
+            game_context = {
+                "captured_at": "submission",
+                "session": {
+                    "game_id": session.session_id,
+                    "reporting_player_id": player_id,
+                    "started": session.started,
+                    "finished": session.finished,
+                },
+                "config": _session_config_payload(session),
+                "state": game_state_to_dict(session.game_loop.state),
+                **input_context,
+            }
+
+        try:
+            if self._report_service is None:
+                self._report_service = InGameReportService()
+            created = await asyncio.to_thread(
+                self._report_service.submit,
+                msg,
+                game_id=session.session_id,
+                player_id=player_id,
+                game_context=game_context,
+            )
+        except (ReportValidationError, ReportPersistenceError) as exc:
+            logger.warning("Could not persist in-game report: %s", exc)
+            await ws.send(
+                encode(
+                    msg_report_result(
+                        False,
+                        error=str(exc),
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        except Exception:
+            logger.exception("Unexpected in-game report failure")
+            await ws.send(
+                encode(
+                    msg_report_result(
+                        False,
+                        error="unexpected report persistence failure",
+                        game_id=session.session_id,
+                    )
+                )
+            )
+            return
+        await ws.send(
+            encode(
+                msg_report_result(
+                    True,
+                    issue_id=created.issue_id,
+                    game_id=session.session_id,
+                )
+            )
+        )
+
     def _check_session_progress(
         self,
         session: GameSession,
@@ -738,6 +886,7 @@ def run_server(
     resume: str | None = None,
     diagnostic_log_path: str | None = None,
     lobby: bool = False,
+    reporting_enabled: bool = True,
 ) -> None:
     """Entry point: start a game server."""
     logging.basicConfig(
@@ -777,5 +926,6 @@ def run_server(
         create_default_session=not lobby,
         shutdown_when_default_finished=not lobby,
         debug_mode=debug,
+        reporting_enabled=reporting_enabled,
     )
     asyncio.run(server.serve(host, port))

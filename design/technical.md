@@ -60,6 +60,45 @@ and for allowing server-side `dev_event` execution. Client-created lobby games
 inherit the server process debug setting; clients cannot enable dev events from
 their `create_game` payload.
 
+In-game issue reporting is separate development tooling. A normal single-game
+server enables it by default for the local browser workflow; `--no-reporting`
+disables it, while lobby servers default it off unless explicitly started with
+`--reporting`. The setting belongs to the server process and cannot be enabled
+by a client. A `submit_report` is accepted only from a socket already joined to
+the addressed game and only when its `player_id` is currently owned by that
+socket. The response is always a `report_result` containing success plus either
+the new Beads issue ID or a retryable error.
+
+The report payload contains a category (`bug`, `minor_fix`, or `suggestion`),
+Beads priority 0-3, summary, description, and optional state/restart/image
+fields. State and restart capture default off. Attachments are optional PNG,
+JPEG, or WebP files, limited to 10 MiB decoded; the backend validates Base64,
+MIME/signature agreement, and replaces the supplied name with a safe basename
+and content-derived extension. The browser cannot choose an output path.
+
+Beads remains the only issue tracker. Intake creates a real issue labeled
+`in-game-report`, `auto-fix`, and its category, with structured metadata that
+records the evidence path, report/session/player IDs, source commit, timestamp,
+and state/restart choices. Immutable supporting evidence lives under
+`artifacts/in_game_reports/<uuid>/`: `report.json`, an optional
+`game_state.json`, and an optional sanitized image. When selected, the state
+file captures the authoritative serialized game state and runtime config,
+session identity, active input/presentation request, movement dice, and the
+latest 100 backend presentation-log lines. No mutable issue status is written
+into this artifact directory.
+
+Report persistence uses the ignored repository-local
+`.beads/dolt-access.lock` for its short Beads mutation/export transaction. The
+scheduled orchestrator uses a separate `.beads/report-orchestrator.lock` for
+its longer whole-run lifecycle. Evidence is first written to a same-filesystem
+temporary directory. Intake creates the issue with `bd create --json`, runs
+`bd backup --force`, atomically refreshes tracked `issues.jsonl` and
+`dependencies.jsonl`, and only then atomically exposes the final evidence
+directory. A failure after issue creation deletes that just-created issue and
+re-exports Beads as transaction rollback; the client receives failure and no
+partial evidence directory remains. Filesystem/Beads work runs off the asyncio
+event loop so report submission does not block unrelated socket traffic.
+
 The diagnostic log is written as JSON Lines by the backend game loop when
 enabled through runtime configuration. It is not saved inside normal save files
 and should record backend events, player input results, presentation messages,

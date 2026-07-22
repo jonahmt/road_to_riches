@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+from collections import deque
 from typing import Any
 
 from road_to_riches.engine.affordability import stock_liquidation_value
@@ -75,6 +76,7 @@ class WebSocketPlayerInput(PlayerInput):
         self._pending_presentation: PresentationRequest | None = None
         self._presentation_ack_ready = threading.Event()
         self._last_dice: tuple[int, int] | None = None
+        self._recent_log: deque[str] = deque(maxlen=100)
 
     def set_client_for_player(self, player_id: int, ws: Any) -> None:
         """Register a WebSocket as the client for a specific player.
@@ -434,8 +436,39 @@ class WebSocketPlayerInput(PlayerInput):
 
     def _flush_log(self, log: GameLog) -> None:
         for msg in log.messages:
+            self._recent_log.append(msg)
             self._broadcast(msg_log(msg, game_id=self._game_id))
         log.clear()
+
+    def report_context(self) -> dict[str, Any]:
+        """Return current presentation/input context for optional bug evidence."""
+        pending_prompt = None
+        if self._pending_request is not None:
+            pending_prompt = {
+                "type": self._pending_request.type.value,
+                "player_id": self._pending_request.player_id,
+                "data": self._pending_request.data,
+            }
+        pending_presentation = None
+        if self._pending_presentation is not None:
+            pending_presentation = {
+                "request_id": self._pending_presentation.request_id,
+                "type": self._pending_presentation.presentation_type,
+                "player_id": self._pending_presentation.player_id,
+                "data": self._pending_presentation.data,
+            }
+        movement_dice = None
+        if self._last_dice is not None:
+            movement_dice = {
+                "value": self._last_dice[0],
+                "remaining": self._last_dice[1],
+            }
+        return {
+            "pending_prompt": pending_prompt,
+            "pending_presentation": pending_presentation,
+            "movement_dice": movement_dice,
+            "recent_log": list(self._recent_log),
+        }
 
     # --- PlayerInput interface ---
 

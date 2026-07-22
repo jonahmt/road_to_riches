@@ -1,0 +1,88 @@
+# Narrow unattended permissions for the in-game report orchestrator. Project rules
+# apply only when this repository is trusted by Codex.
+
+prefix_rule(
+    pattern=["bd", ["ready", "show"]],
+    decision="allow",
+    justification="The report orchestrator must inspect Beads issues without pausing; all mutations use the locked transaction helper.",
+    match=["bd ready --label in-game-report --label auto-fix --limit 0 --json --readonly", "bd show road_to_riches-123 --json"],
+    not_match=["bd update road_to_riches-123 --claim", "bd delete road_to_riches-123"],
+)
+
+prefix_rule(
+    pattern=["venv/bin/python", ".codex/skills/fix-ingame-reports/scripts/orchestration_lock.py", ["acquire", "heartbeat", "release", "status"]],
+    decision="allow",
+    justification="The scheduled repair workflow uses this narrow repository helper to prevent overlapping orchestrators.",
+    match=["venv/bin/python .codex/skills/fix-ingame-reports/scripts/orchestration_lock.py acquire --repo .", "venv/bin/python .codex/skills/fix-ingame-reports/scripts/orchestration_lock.py release --repo . --token abc"],
+)
+
+prefix_rule(
+    pattern=["git", ["reset", "checkout"], ["--hard", "-f"]],
+    decision="forbidden",
+    justification="Use isolated worktrees, ordinary rebases, and fast-forward merges instead of destructive Git recovery.",
+    match=["git reset --hard", "git checkout -f"],
+)
+
+prefix_rule(
+    pattern=["git", "branch", "-D"],
+    decision="forbidden",
+    justification="Delete integrated report branches with the non-forcing -d option only.",
+    match=["git branch -D codex/report-road_to_riches-123"],
+)
+
+prefix_rule(
+    pattern=["git", "push", ["--force", "-f"]],
+    decision="forbidden",
+    justification="The report orchestrator must never force-push.",
+    match=["git push --force origin main"],
+)
+
+prefix_rule(
+    pattern=["git", "push", "origin", "main", ["--force", "-f"]],
+    decision="forbidden",
+    justification="The report orchestrator must never force-push.",
+    match=["git push origin main --force"],
+)
+
+prefix_rule(
+    pattern=["git", ["status", "diff", "log", "rev-parse", "fetch", "add", "commit", "push", "rebase", "merge", "worktree", "branch"]],
+    decision="allow",
+    justification="The orchestrator uses isolated branches and worktrees, verifies diffs, and serializes reviewed integrations.",
+    match=["git status --short", "git worktree list", "git merge --ff-only codex/report-road_to_riches-123"],
+    not_match=["git reset --hard"],
+)
+
+prefix_rule(
+    pattern=["venv/bin/python", "-m", ["pytest", "ruff"]],
+    decision="allow",
+    justification="Python verification is a routine, repository-scoped part of automated report repair.",
+    match=["venv/bin/python -m pytest tests/test_server.py", "venv/bin/python -m ruff check src tests"],
+)
+
+prefix_rule(
+    pattern=["venv/bin/python", "tools/run_pyright.py"],
+    decision="allow",
+    justification="The repository's advisory type check is safe to run unattended.",
+    match=["venv/bin/python tools/run_pyright.py"],
+)
+
+prefix_rule(
+    pattern=["venv/bin/python", ".codex/skills/fix-ingame-reports/scripts/beads_transaction.py"],
+    decision="allow",
+    justification="This repository helper restricts Beads mutations, serializes them with live report intake, and exports tracker state.",
+    match=["venv/bin/python .codex/skills/fix-ingame-reports/scripts/beads_transaction.py --repo . -- bd update road_to_riches-123 --claim"],
+)
+
+prefix_rule(
+    pattern=["pnpm", ["build", "typecheck", "lint"]],
+    decision="allow",
+    justification="Web-client verification is a routine, repository-scoped part of automated report repair.",
+    match=["pnpm build", "pnpm typecheck"],
+)
+
+prefix_rule(
+    pattern=["node", "--test"],
+    decision="allow",
+    justification="The web client uses Node's repository-local test runner.",
+    match=["node --test tests/reportDraft.test.ts"],
+)

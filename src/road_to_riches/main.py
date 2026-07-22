@@ -27,6 +27,7 @@ class ParsedRunConfig:
     diagnostic_log: str | None
     lobby: bool
     debug: bool
+    reporting: bool
     resume: str | None
 
 
@@ -96,6 +97,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Enable debug logging and dev commands",
     )
     parser.add_argument(
+        "--reporting",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Enable local in-game Beads report intake. Defaults on for a normal "
+            "local server and off for lobby/other modes."
+        ),
+    )
+    parser.add_argument(
         "--lobby",
         action="store_true",
         help=(
@@ -132,6 +142,8 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         parser.error("--lobby is only supported in server mode.")
     if args.lobby and args.resume is not None:
         parser.error("--lobby cannot be combined with --resume.")
+    if args.reporting is not None and args.mode != "server":
+        parser.error("--reporting/--no-reporting are only supported in server mode.")
 
     if args.resume is not None and (
         args.board_arg is not None
@@ -171,6 +183,10 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
     if players is None:
         players = DEFAULT_PLAYERS
 
+    reporting = args.reporting
+    if reporting is None:
+        reporting = args.mode == "server" and not args.lobby
+
     return ParsedRunConfig(
         mode=args.mode,
         board=board,
@@ -185,6 +201,7 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         diagnostic_log=args.diagnostic_log,
         lobby=args.lobby,
         debug=args.debug,
+        reporting=reporting,
         resume=args.resume,
     )
 
@@ -215,6 +232,7 @@ def main() -> None:
             host=args.host,
             port=args.port,
             debug=args.debug,
+            reporting_enabled=args.reporting,
             resume=args.resume,
             diagnostic_log_path=args.diagnostic_log,
             lobby=args.lobby,

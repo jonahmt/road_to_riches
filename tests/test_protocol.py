@@ -27,10 +27,12 @@ from road_to_riches.protocol import (
     msg_presentation_ack,
     msg_presentation_request,
     msg_presentation_resolved,
+    msg_report_result,
     msg_save_game,
     msg_save_result,
     msg_start_game,
     msg_state_sync,
+    msg_submit_report,
     msg_sync_request,
     msg_ui_notification,
 )
@@ -127,6 +129,53 @@ def test_round_trip_game_over_none_winner():
 def test_round_trip_state_sync():
     original = msg_state_sync({"players": [{"id": 0, "cash": 1000}]})
     assert decode(encode(original)) == original
+
+
+def test_round_trip_submit_report_and_result():
+    request = msg_submit_report(
+        "bug",
+        1,
+        "Token is misplaced",
+        "The token appears one square behind.",
+        player_id=0,
+        include_game_state=True,
+        restart_requested=False,
+        attachment={
+            "filename": "board.png",
+            "mime_type": "image/png",
+            "data_base64": "data",
+        },
+        game_id="game-1",
+    )
+
+    assert decode(encode(request)) == request
+    assert request == {
+        "msg": "submit_report",
+        "category": "bug",
+        "priority": 1,
+        "summary": "Token is misplaced",
+        "description": "The token appears one square behind.",
+        "include_game_state": True,
+        "restart_requested": False,
+        "player_id": 0,
+        "attachment": {
+            "filename": "board.png",
+            "mime_type": "image/png",
+            "data_base64": "data",
+        },
+        "game_id": "game-1",
+    }
+    assert msg_report_result(True, issue_id="road_to_riches-rpt1", game_id="game-1") == {
+        "msg": "report_result",
+        "success": True,
+        "issue_id": "road_to_riches-rpt1",
+        "game_id": "game-1",
+    }
+    assert msg_report_result(False, error="bad report") == {
+        "msg": "report_result",
+        "success": False,
+        "error": "bad report",
+    }
 
 
 def test_round_trip_input_response():

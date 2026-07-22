@@ -5,7 +5,13 @@ import {
   slowClientCloseReason,
 } from "./connectionClose";
 import { nextDiceState, type DiceState } from "./dicePresentation";
-import { type GameState, type InputRequest, decode, encode } from "./protocol";
+import {
+  type GameState,
+  type InputRequest,
+  type SubmitReportMessage,
+  decode,
+  encode,
+} from "./protocol";
 import {
   dismissNonblockingPresentation,
   enqueuePresentation,
@@ -13,6 +19,12 @@ import {
   resolvePresentation,
   type PresentationState,
 } from "./presentationQueue";
+import {
+  reportResultState,
+  type ReportSubmissionState,
+} from "./reportSubmission";
+
+export type { ReportSubmissionState } from "./reportSubmission";
 
 export type { PresentationState } from "./presentationQueue";
 export type { DiceState } from "./dicePresentation";
@@ -32,6 +44,7 @@ export interface GameClientState {
   gameOverWinner: number | null | undefined;
   responsePending: boolean;
   error: string | null;
+  reportSubmission: ReportSubmissionState;
 }
 
 const MAX_LOGS = 240;
@@ -96,6 +109,7 @@ export function useGameClient(defaultUri: string) {
     gameOverWinner: undefined,
     responsePending: false,
     error: null,
+    reportSubmission: { status: "idle" },
   });
 
   const disconnect = useCallback(() => {
@@ -323,6 +337,17 @@ export function useGameClient(defaultUri: string) {
                     : `Save failed: ${message.error ?? "unknown error"}`,
                 ),
               };
+            case "report_result":
+              return {
+                ...current,
+                reportSubmission: reportResultState(message),
+                logs: appendLog(
+                  current.logs,
+                  message.success && message.issue_id
+                    ? `Created report ${message.issue_id}`
+                    : `Report failed: ${message.error ?? "unknown error"}`,
+                ),
+              };
             case "input_rejected":
               responsePendingRef.current = false;
               return {
@@ -461,6 +486,36 @@ export function useGameClient(defaultUri: string) {
     });
   }, [send]);
 
+  const submitReport = useCallback(
+    (report: Omit<SubmitReportMessage, "msg" | "player_id" | "game_id">) => {
+      setClientState((current) => ({
+        ...current,
+        reportSubmission: { status: "submitting" },
+      }));
+      const sent = send({
+        msg: "submit_report",
+        ...report,
+        player_id: playerIdRef.current ?? undefined,
+        game_id: gameIdRef.current ?? undefined,
+      });
+      if (!sent) {
+        setClientState((current) => ({
+          ...current,
+          reportSubmission: { status: "error", error: "The game server is not connected." },
+        }));
+      }
+      return sent;
+    },
+    [send],
+  );
+
+  const clearReportSubmission = useCallback(() => {
+    setClientState((current) => ({
+      ...current,
+      reportSubmission: { status: "idle" },
+    }));
+  }, []);
+
   const acknowledgePresentation = useCallback((requestId: string) => {
     if (presentationAckPendingRef.current.has(requestId)) {
       return;
@@ -499,6 +554,8 @@ export function useGameClient(defaultUri: string) {
     submitResponse,
     saveGame,
     requestSync,
+    submitReport,
+    clearReportSubmission,
     acknowledgePresentation,
     dismissPresentation,
   };

@@ -202,6 +202,22 @@ def msg_save_result(
     return _with_game_id(msg, game_id)
 
 
+def msg_report_result(
+    success: bool,
+    *,
+    issue_id: str | None = None,
+    error: str | None = None,
+    game_id: str | None = None,
+) -> dict:
+    """Return the outcome of one development report submission."""
+    msg: dict = {"msg": "report_result", "success": success}
+    if issue_id is not None:
+        msg["issue_id"] = issue_id
+    if error is not None:
+        msg["error"] = error
+    return _with_game_id(msg, game_id)
+
+
 def msg_error(error: str, game_id: str | None = None) -> dict:
     return _with_game_id({"msg": "error", "error": error}, game_id)
 
@@ -289,6 +305,35 @@ def msg_save_game(
 
 def msg_sync_request(game_id: str | None = None) -> dict:
     return _with_game_id({"msg": "sync_request"}, game_id)
+
+
+def msg_submit_report(
+    category: str,
+    priority: int,
+    summary: str,
+    description: str,
+    *,
+    player_id: int | None = None,
+    include_game_state: bool = False,
+    restart_requested: bool = False,
+    attachment: dict | None = None,
+    game_id: str | None = None,
+) -> dict:
+    """Build an in-game development report request."""
+    msg: dict = {
+        "msg": "submit_report",
+        "category": category,
+        "priority": priority,
+        "summary": summary,
+        "description": description,
+        "include_game_state": include_game_state,
+        "restart_requested": restart_requested,
+    }
+    if player_id is not None:
+        msg["player_id"] = player_id
+    if attachment is not None:
+        msg["attachment"] = attachment
+    return _with_game_id(msg, game_id)
 
 
 def msg_identify(player_id: int, game_id: str | None = None) -> dict:

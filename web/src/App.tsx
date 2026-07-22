@@ -95,6 +95,7 @@ import {
   projectedStockPrice,
   type StockOverlayMode,
 } from "./stockOverlay";
+import { BugReportControl } from "./BugReportControl";
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
@@ -664,9 +665,14 @@ function useWasdPromptControls(request: InputRequest | null, onSubmit: (value: u
 
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+    isGameplayHotkeySuppressed() ||
+    (target instanceof HTMLElement &&
+      (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)))
   );
+}
+
+function isGameplayHotkeySuppressed(): boolean {
+  return document.body.dataset.gameplayHotkeysSuppressed === "true";
 }
 
 function App() {
@@ -677,11 +683,14 @@ function App() {
     submitResponse,
     saveGame,
     requestSync,
+    submitReport,
+    clearReportSubmission,
     acknowledgePresentation,
     dismissPresentation,
   } = useGameClient(DEFAULT_URI);
   const [uri, setUri] = useState(DEFAULT_URI);
   const [devPanelOpen, setDevPanelOpen] = useState(false);
+  const [reporterOpen, setReporterOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
   const [confirmedInvestmentSquareId, setConfirmedInvestmentSquareId] = useState<number | null>(null);
   const [confirmedBuyShopSquareId, setConfirmedBuyShopSquareId] = useState<number | null>(null);
@@ -841,7 +850,10 @@ function App() {
     blockingPresentationActive
       ? null
       : clientState.pendingRequest;
-  useWasdPromptControls(clientState.responsePending ? null : standardKeyboardRequest, submitResponse);
+  useWasdPromptControls(
+    clientState.responsePending || reporterOpen ? null : standardKeyboardRequest,
+    submitResponse,
+  );
 
   useEffect(() => {
     setConfirmedInvestmentSquareId(null);
@@ -1321,6 +1333,15 @@ function App() {
         onSync={requestSync}
         onSubmitRaw={submitResponse}
       />
+
+      {clientState.status === "connected" && clientState.gameState && (
+        <BugReportControl
+          submission={clientState.reportSubmission}
+          onSubmit={submitReport}
+          onClearSubmission={clearReportSubmission}
+          onOpenChange={setReporterOpen}
+        />
+      )}
 
       {clientState.gameOverWinner !== undefined && (
         <div className="game-over-banner">Game over. Winner: Player {clientState.gameOverWinner ?? "none"}</div>
@@ -4499,6 +4520,9 @@ function VentureCardReveal({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (isGameplayHotkeySuppressed()) {
+        return;
+      }
       if (
         ["Escape", "Enter", " "].includes(event.key) ||
         WASD_KEYS.has(event.key.toLowerCase()) ||
@@ -4671,6 +4695,9 @@ function GenericPresentation({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (isGameplayHotkeySuppressed()) {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       if (canContinue && ["Enter", " "].includes(event.key)) {
@@ -4728,6 +4755,9 @@ function RentPaymentOverlay({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (isGameplayHotkeySuppressed()) {
+        return;
+      }
       if (
         ["Escape", "Enter", " "].includes(event.key) ||
         WASD_KEYS.has(event.key.toLowerCase()) ||
@@ -4836,6 +4866,9 @@ function StockPriceChangeOverlay({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (isGameplayHotkeySuppressed()) {
+        return;
+      }
       if (
         ["Escape", "Enter", " "].includes(event.key) ||
         WASD_KEYS.has(event.key.toLowerCase()) ||
@@ -4939,6 +4972,9 @@ function PromotionCeremony({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (isGameplayHotkeySuppressed()) {
+        return;
+      }
       if (
         ["Escape", "Enter", " "].includes(event.key) ||
         WASD_KEYS.has(event.key.toLowerCase()) ||

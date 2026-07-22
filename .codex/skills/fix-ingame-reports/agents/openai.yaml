@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fix In-Game Reports"
+  short_description: "Repair queued Road to Riches reports"
+  default_prompt: "Use $fix-ingame-reports to process queued in-game reports safely."

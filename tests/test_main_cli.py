@@ -105,6 +105,18 @@ def test_server_lobby_mode_is_allowed():
 
     assert config.mode == "server"
     assert config.lobby is True
+    assert config.reporting is False
+
+
+def test_reporting_defaults_on_for_local_server_and_can_be_disabled():
+    assert parse_run_config(["server"]).reporting is True
+    assert parse_run_config(["server", "--no-reporting"]).reporting is False
+    assert parse_run_config(["server", "--lobby", "--reporting"]).reporting is True
+
+
+def test_reporting_flag_is_rejected_outside_server():
+    with pytest.raises(SystemExit):
+        parse_run_config(["local", "--reporting"])
 
 
 def test_lobby_mode_is_rejected_outside_server():
