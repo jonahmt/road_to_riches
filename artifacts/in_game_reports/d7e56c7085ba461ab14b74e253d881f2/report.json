@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "bug",
+  "description": "When I attach a screenshot and press Create reportm the game crashes. it must be because the size of the attachment, or maybe that its png. because a small jpg didnt crash.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 0,
+  "report_id": "d7e56c7085ba461ab14b74e253d881f2",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "75e279746f9c24301af20669b39bfa303cef9a3b",
+  "submitted_at": "2026-07-24T07:08:40.098239+00:00",
+  "summary": "Game crashes when attaching a screenshot in Development feedback report"
+}

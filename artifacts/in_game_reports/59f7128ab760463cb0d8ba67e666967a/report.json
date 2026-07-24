@@ -1,0 +1,19 @@
+{
+  "attachment": {
+    "filename": "images-4.jpg",
+    "mime_type": "image/jpeg",
+    "size_bytes": 7883
+  },
+  "category": "bug",
+  "description": "test",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 0,
+  "report_id": "59f7128ab760463cb0d8ba67e666967a",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "75e279746f9c24301af20669b39bfa303cef9a3b",
+  "submitted_at": "2026-07-24T07:05:47.687081+00:00",
+  "summary": "Attching screenshot to development feedback crashed game"
+}
