@@ -154,7 +154,7 @@ above the still-visible board. Its primary card shows payer → shop owner, the
 final rent amount, and the shop square. When the backend reports one or more
 stock dividend payouts, a second card appears beneath it with the district and
 one dedicated payout slot per player; players without a payout keep their slot
-and display `0G`. With no dividends, the second card is omitted so routine
+and display `0`. With no dividends, the second card is omitted so routine
 payments stay compact. Payment surfaces use flat translucent fills without
 gradients. While the overlay is active, the normal lower-right player HUD rises
 above the backdrop and shows speech-bubble cash deltas: rent is subtracted from
@@ -253,6 +253,11 @@ The web client treats the Python backend as the source of truth.
   independently tested protocol-to-copy mapping. New prompt types should add
   specialized copy there instead of extending the application shell.
 * `web/src/styles.css` owns the first visual system.
+
+Browser-rendered money amounts use locale-grouped, rounded numeric text without
+a `G` suffix. Semantic labels such as Ready Cash, Rent, Stock price, and Gold
+terms continue to identify what each value means, and this presentation rule
+does not alter the authoritative numeric protocol values.
 
 `boards/all_square_types.json` is the canonical visual showcase fixture for the
 web board. It uses one connected perimeter loop containing exactly one instance

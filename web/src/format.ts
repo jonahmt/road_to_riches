@@ -1,10 +1,10 @@
-import { type GameState, type PlayerState, stockPrice } from "./protocol";
+import { type GameState, type PlayerState, stockPrice } from "./protocol.ts";
 
 export function formatGold(value: number | null | undefined): string {
   if (value === null || value === undefined) {
     return "-";
   }
-  return `${Math.round(value).toLocaleString()}G`;
+  return Math.round(value).toLocaleString();
 }
 
 export function stockValue(state: GameState, player: PlayerState): number {

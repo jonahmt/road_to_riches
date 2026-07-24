@@ -2448,7 +2448,7 @@ function fitLabel(label: string, maxLength: number): string {
 }
 
 function shortGold(value: number): string {
-  return `${Math.round(value)}G`;
+  return formatGold(value);
 }
 
 function formatWasdKey(key: string): string {
@@ -2758,10 +2758,7 @@ function remainingShopCapital(state: GameState, square: SquareInfo): number {
 }
 
 function rawGold(value: number | null | undefined): string {
-  if (value === null || value === undefined) {
-    return "-";
-  }
-  return String(Math.round(value));
+  return formatGold(value);
 }
 
 function ShopTile({
@@ -2784,7 +2781,7 @@ function ShopTile({
     return (
       <g className="shop-tile shop-tile-unowned" aria-hidden="true">
         <text className="shop-tile-price" x={x} y={y}>
-          {rawGold(value)}G
+          {rawGold(value)}
         </text>
       </g>
     );
@@ -2829,7 +2826,7 @@ function ShopTile({
         x={x}
         y={y + 1.17}
       >
-        {rawGold(rent)}G
+        {rawGold(rent)}
       </text>
     </g>
   );
@@ -4898,7 +4895,10 @@ function StockPriceChangeOverlay({
           <h2 id="stock-price-change-title">{title}</h2>
         </header>
 
-        <div className="stock-price-transition" aria-label={`${change.oldPrice}G to ${change.newPrice}G`}>
+        <div
+          className="stock-price-transition"
+          aria-label={`${formatGold(change.oldPrice)} to ${formatGold(change.newPrice)}`}
+        >
           <strong>{formatGold(change.oldPrice)}</strong>
           <span aria-hidden="true">→</span>
           <strong>{formatGold(change.newPrice)}</strong>
