@@ -235,10 +235,11 @@ client maps WASD directions onto the prompt's current square, destination
 positions, and undo position, then submits the ordinary `input_response`.
 Diagonal choices may use two-key chords such as W+A. Clickable prompt controls
 remain as accessibility and fallback affordances, but they are not the primary
-movement interaction. Simple follow-up prompts use the same key-target surface
-where it is unambiguous, such as S to stop, A to undo/decline, and D to confirm.
-The final `CONFIRM_STOP` prompt is always also visible as explicit pointer
-controls; it is never treated as an automatic movement decision.
+movement interaction. Simple non-movement prompts may use the same key-target
+surface where it is unambiguous, such as A to decline and D to confirm. The
+final `CONFIRM_STOP` prompt deliberately ignores WASD input and is always
+resolved through its explicit `Stop Here` or, when available, `Undo Step`
+pointer controls; it is never treated as an automatic movement decision.
 
 ## Architecture
 

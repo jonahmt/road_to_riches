@@ -53,6 +53,7 @@ import {
   commissionStatusIndicators,
 } from "./playerStatusPresentation";
 import { getPromptHelp, getPromptTitle } from "./promptMetadata";
+import { StopConfirmationControls } from "./StopConfirmationControls";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
   SUIT_COLLECTION_DURATION_MS,
@@ -6309,6 +6310,7 @@ function PromptPanel({
           state={state}
           amount={amount}
           amountNumber={amountNumber}
+          responsePending={responsePending}
           onAmountChange={setAmount}
           onSubmit={onSubmit}
         />
@@ -6327,6 +6329,7 @@ function PromptControls({
   state,
   amount,
   amountNumber,
+  responsePending,
   onAmountChange,
   onSubmit,
 }: {
@@ -6334,6 +6337,7 @@ function PromptControls({
   state: GameState | null;
   amount: string;
   amountNumber: number;
+  responsePending: boolean;
   onAmountChange: (value: string) => void;
   onSubmit: (value: unknown) => void;
 }) {
@@ -6369,7 +6373,13 @@ function PromptControls({
   }
 
   if (request.type === "CONFIRM_STOP") {
-    return <StopConfirmationControls request={request} onSubmit={onSubmit} />;
+    return (
+      <StopConfirmationControls
+        request={request}
+        responsePending={responsePending}
+        onSubmit={onSubmit}
+      />
+    );
   }
 
   if (["BUY_SHOP", "FORCED_BUYOUT"].includes(request.type)) {
@@ -6555,41 +6565,6 @@ function KeyActionList({
           </span>
         </button>
       ))}
-    </div>
-  );
-}
-
-function StopConfirmationControls({
-  request,
-  onSubmit,
-}: {
-  request: InputRequest;
-  onSubmit: (value: unknown) => void;
-}) {
-  const squareId = asNumber(request.data.square_id);
-  const actions = getSimpleKeyActions(request).sort((left, right) =>
-    left.value === true ? -1 : right.value === true ? 1 : 0,
-  );
-
-  return (
-    <div className="stop-action-list">
-      {actions.map((action) => {
-        const isStop = action.value === true;
-        return (
-          <button
-            key={`${action.key}:${String(action.value)}`}
-            type="button"
-            className={`stop-action-card ${isStop ? "is-stop" : "secondary is-undo"}`}
-            onClick={() => onSubmit(action.value)}
-          >
-            <span className="keycap">{formatWasdKey(action.key)}</span>
-            <span>
-              <strong>{action.label}</strong>
-              <small>{isStop ? `End your move on Square #${squareId}` : "Return to your previous square"}</small>
-            </span>
-          </button>
-        );
-      })}
     </div>
   );
 }

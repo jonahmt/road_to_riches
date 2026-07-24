@@ -181,25 +181,6 @@ export function getWasdResponseMap(request: InputRequest): WasdResponseMap {
     return { w: "roll" };
   }
 
-  if (request.type === "CONFIRM_STOP") {
-    const mapping: WasdResponseMap = { s: true };
-    if (request.data.can_undo === true) {
-      const currentPosition = asPoint(request.data.current_position);
-      const undoPosition = asPoint(request.data.undo_position);
-      if (currentPosition !== null && undoPosition !== null) {
-        for (const [key] of Object.entries(computeDirectionKeys(currentPosition, [], undoPosition))) {
-          if (key !== "s") {
-            mapping[key] = false;
-          }
-        }
-      }
-      if (!Object.values(mapping).includes(false)) {
-        mapping.a = false;
-      }
-    }
-    return mapping;
-  }
-
   if (request.type === "BUY_SHOP" || request.type === "FORCED_BUYOUT") {
     return { d: true, a: false };
   }
@@ -210,4 +191,3 @@ export function getWasdResponseMap(request: InputRequest): WasdResponseMap {
 
   return {};
 }
-
