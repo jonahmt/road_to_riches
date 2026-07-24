@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "minor_fix",
+  "description": "Just the symbols are enough, no need for the text as well.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 3,
+  "report_id": "6cd45d4dcec44ad39ae43621610c65fe",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "853371438443d6797579b81eb3c51bd460a7d894",
+  "submitted_at": "2026-07-24T07:12:48.891801+00:00",
+  "summary": "In the promotion screen, we dont need the \"Spade Heart Diamond Club\" text"
+}
