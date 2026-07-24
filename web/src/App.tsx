@@ -54,6 +54,7 @@ import {
 } from "./playerStatusPresentation";
 import { getPromptHelp, getPromptTitle } from "./promptMetadata";
 import { StopConfirmationControls } from "./StopConfirmationControls";
+import { getRollPhaseVisibility } from "./rollPhaseVisibility";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
   SUIT_COLLECTION_DURATION_MS,
@@ -907,9 +908,6 @@ function App() {
     ? clientState.gameState.players.find((player) => player.player_id === clientState.playerId) ?? null
     : null;
   const latestEvent = getLatestGameLog(clientState.logs);
-  const movementRequest = ["CHOOSE_PATH", "CONFIRM_STOP"].includes(
-    clientState.pendingRequest?.type ?? "",
-  );
   const stopConfirmationActive = clientState.pendingRequest?.type === "CONFIRM_STOP";
   const rollActionPromptActive = Boolean(
     clientState.pendingRequest &&
@@ -917,11 +915,13 @@ function App() {
         clientState.pendingRequest.type,
       ),
   );
-  const isRollingOrMoving = Boolean(
-    (clientState.dice?.remaining ?? 0) > 0 ||
-      movementRequest ||
-      (clientState.responsePending && clientState.pendingRequest?.type === "PRE_ROLL"),
-  );
+  const rollPhaseVisibility = getRollPhaseVisibility({
+    diceRemaining: clientState.dice?.remaining,
+    pendingRequestType: clientState.pendingRequest?.type,
+    responsePending: clientState.responsePending,
+    toolsOpen: devPanelOpen,
+  });
+  const isRollingOrMoving = rollPhaseVisibility.movementDie;
 
   const selectedSquare = useMemo(() => {
     if (!clientState.gameState || selectedSquareId === null) {
@@ -945,28 +945,30 @@ function App() {
     <main
       className={`app-shell layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
     >
-      <header className="game-header">
-        <div className="brand-lockup">
-          <p className="eyebrow">Road to Riches</p>
-          <h1>{clientState.gameState ? "Local Match" : "Join Local Match"}</h1>
-        </div>
-        {clientState.gameState && (
-          <div className="match-summary" aria-label="Match summary">
-            <span>Target {formatGold(clientState.gameState.board.target_networth)}</span>
-            <span>{currentPlayer ? `Turn P${currentPlayer.player_id}` : "Turn -"}</span>
-            <span>{clientState.dice ? `Die ${clientState.dice.value} / ${clientState.dice.remaining}` : "Die -"}</span>
+      {rollPhaseVisibility.gameHeader && (
+        <header className="game-header">
+          <div className="brand-lockup">
+            <p className="eyebrow">Road to Riches</p>
+            <h1>{clientState.gameState ? "Local Match" : "Join Local Match"}</h1>
           </div>
-        )}
-        <div className="game-header-actions">
-          <button
-            type="button"
-            className="secondary dev-toggle"
-            onClick={() => setDevPanelOpen((open) => !open)}
-          >
-            {devPanelOpen ? "Hide Tools" : "Tools"}
-          </button>
-        </div>
-      </header>
+          {clientState.gameState && (
+            <div className="match-summary" aria-label="Match summary">
+              <span>Target {formatGold(clientState.gameState.board.target_networth)}</span>
+              <span>{currentPlayer ? `Turn P${currentPlayer.player_id}` : "Turn -"}</span>
+              <span>{clientState.dice ? `Die ${clientState.dice.value} / ${clientState.dice.remaining}` : "Die -"}</span>
+            </div>
+          )}
+          <div className="game-header-actions">
+            <button
+              type="button"
+              className="secondary dev-toggle"
+              onClick={() => setDevPanelOpen((open) => !open)}
+            >
+              {devPanelOpen ? "Hide Tools" : "Tools"}
+            </button>
+          </div>
+        </header>
+      )}
 
       {clientState.error && <div className="error-banner">{clientState.error}</div>}
 
@@ -1323,7 +1325,7 @@ function App() {
         )}
 
       <DevPanel
-        open={devPanelOpen}
+        open={rollPhaseVisibility.tools}
         uri={uri}
         status={clientState.status}
         playerId={clientState.playerId}

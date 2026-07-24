@@ -128,14 +128,14 @@ for landing/management prompts, while the die is absent. From roll submission
 through `CHOOSE_PATH`, the action panel becomes hidden and a large die appears
 in the upper-left with its original roll and remaining-move count. Its linear
 dimensions are twice the earlier Immersive die, giving it four times the area.
-The match identity and summary temporarily hide during this phase so the die
-owns that corner without overlap, while the compact Tools control remains
-available beside it. WASD movement remains active while its
-visual path buttons are hidden. When the backend sends `CONFIRM_STOP` at the
-final square, the die remains visible and a dedicated upper-right panel appears
-with explicit `Stop Here` and, when available, `Undo Step` controls. Once the
-roll resolves, the die leaves, the full header returns, and the next contextual
-action returns without moving the board.
+The complete game header, including match identity, summary, and Tools control
+or open Tools drawer, temporarily hides during this phase so the die is the only
+element in its corner. WASD movement remains active while its visual path buttons
+are hidden. When the backend sends `CONFIRM_STOP` at the final square, the die
+remains visible and a dedicated upper-right panel appears with explicit `Stop
+Here` and, when available, `Undo Step` controls. Once the roll resolves, the die
+leaves, the full header and any previously requested Tools drawer return, and
+the next contextual action returns without moving the board.
 
 Passing the bank with all four suits opens a full-screen promotion ceremony.
 The backend emits a blocking `promotion_completed` presentation request

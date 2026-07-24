@@ -3661,31 +3661,6 @@ dd {
     visibility 100ms linear;
 }
 
-.layout-immersive.is-playing.is-roll-active > .game-header {
-  top: 16px;
-  left: 196px;
-  width: auto;
-  min-height: 0;
-  display: block;
-  visibility: visible;
-  border-color: transparent;
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
-  opacity: 1;
-  transform: none;
-  backdrop-filter: none;
-}
-
-.layout-immersive.is-playing.is-roll-active .game-header .brand-lockup,
-.layout-immersive.is-playing.is-roll-active .game-header .match-summary {
-  display: none;
-}
-
-.layout-immersive.is-playing.is-roll-active .game-header-actions {
-  display: flex;
-}
-
 .layout-immersive.is-playing .brand-lockup {
   grid-column: 1;
   grid-row: 1;
@@ -4473,13 +4448,6 @@ dd {
     width: 350px;
   }
 
-  .layout-immersive.is-playing.is-roll-active > .game-header {
-    top: 16px;
-    right: auto;
-    left: 196px;
-    width: auto;
-  }
-
   .layout-immersive.is-playing .turn-panel {
     top: 130px;
     left: 16px;
@@ -4502,13 +4470,6 @@ dd {
     top: 8px;
     right: 8px;
     left: 8px;
-    width: auto;
-  }
-
-  .layout-immersive.is-playing.is-roll-active > .game-header {
-    top: 8px;
-    right: auto;
-    left: 144px;
     width: auto;
   }
 
