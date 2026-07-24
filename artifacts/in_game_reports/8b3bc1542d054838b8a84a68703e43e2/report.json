@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "minor_fix",
+  "description": "There can be some things in the top right, but NOT at the SAME TIME the dice is displayed. when the dice is in the top right, it should be the only thing.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "8b3bc1542d054838b8a84a68703e43e2",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "1f1abe6b9dcd227b7fa74ae1e50b77947a37903f",
+  "submitted_at": "2026-07-24T06:55:00.251712+00:00",
+  "summary": "There should not be a \"local game\" or whatever interface in the top right overlapping the dice."
+}

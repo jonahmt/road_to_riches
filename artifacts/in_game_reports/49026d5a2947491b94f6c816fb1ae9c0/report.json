@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "suggestion",
+  "description": "The G suffix should not be present in any number for now.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "49026d5a2947491b94f6c816fb1ae9c0",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "1f1abe6b9dcd227b7fa74ae1e50b77947a37903f",
+  "submitted_at": "2026-07-24T06:59:12.108138+00:00",
+  "summary": "\"G\" suffix should not be seen almost ever"
+}

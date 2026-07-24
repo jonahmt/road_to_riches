@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "minor_fix",
+  "description": "The dont size in THIS INTERFACT I AM CURRENTLY USING is too small and hard to read. increase it.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "ad6b06477e144b33a1af52193bd76ae5",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "1f1abe6b9dcd227b7fa74ae1e50b77947a37903f",
+  "submitted_at": "2026-07-24T06:53:31.583552+00:00",
+  "summary": "Font size in deelopment feedback tab is too small"
+}

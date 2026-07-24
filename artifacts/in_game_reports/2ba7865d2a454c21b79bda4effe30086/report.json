@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "minor_fix",
+  "description": "The animation seems to only happen the first time i cross the suit. If I cross the suit while ALREADY having that suit, its correct that the animation should not happen. However, if i colelct the suit, then undo my move, then recross the suit, the animation should happen every time the run over it when i previously didnt have the suit, even if it was undone.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "2ba7865d2a454c21b79bda4effe30086",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "1f1abe6b9dcd227b7fa74ae1e50b77947a37903f",
+  "submitted_at": "2026-07-24T06:53:03.982306+00:00",
+  "summary": "Suit \"pop out\" animation does not occur multiple times in one turn"
+}

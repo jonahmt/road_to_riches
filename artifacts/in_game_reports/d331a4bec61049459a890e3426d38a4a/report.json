@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "bug",
+  "description": "The end of turn should be an explicit button press. Seems like there is some hot key behavior which is incorrect. Probably a bug not intentional, so please fix.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "d331a4bec61049459a890e3426d38a4a",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "1f1abe6b9dcd227b7fa74ae1e50b77947a37903f",
+  "submitted_at": "2026-07-24T06:51:23.430933+00:00",
+  "summary": "Pressing wasd keys at the end of roll triggers end of turn"
+}
