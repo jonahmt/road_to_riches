@@ -265,13 +265,37 @@ h3 {
 }
 
 .bug-report-modal {
-  width: min(690px, 100%);
+  width: min(760px, 100%);
   max-height: calc(100dvh - 48px);
   overflow: auto;
   border: 1px solid rgba(255, 209, 102, 0.36);
   border-radius: 14px;
   background: #11151d;
   box-shadow: 0 34px 100px rgba(0, 0, 0, 0.62);
+}
+
+.bug-report-modal .eyebrow {
+  font-size: 13px;
+}
+
+.bug-report-modal h2 {
+  font-size: 22px;
+}
+
+.bug-report-modal label {
+  font-size: 14px;
+}
+
+.bug-report-modal input,
+.bug-report-modal select,
+.bug-report-modal textarea {
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.bug-report-modal button:not(.bug-report-close) {
+  min-height: 42px;
+  font-size: 15px;
 }
 
 .bug-report-form,
@@ -296,13 +320,14 @@ h3 {
 .bug-report-header > div > p:last-child,
 .bug-report-success > p:last-of-type {
   color: rgba(247, 247, 242, 0.68);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
 }
 
 .bug-report-close {
-  width: 38px;
-  flex: 0 0 38px;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
   padding: 0;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
@@ -322,7 +347,7 @@ h3 {
   justify-self: end;
   margin-top: -2px;
   color: rgba(247, 247, 242, 0.44);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .bug-report-options {
@@ -362,12 +387,12 @@ h3 {
 
 .bug-report-checkbox strong {
   color: #f7f7f2;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .bug-report-checkbox small {
   color: rgba(247, 247, 242, 0.58);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
 }
@@ -422,7 +447,7 @@ h3 {
 .bug-report-drop-prompt small,
 .bug-report-preview span {
   color: rgba(247, 247, 242, 0.54);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .bug-report-preview {
@@ -461,7 +486,7 @@ h3 {
   padding: 10px 12px;
   background: rgba(255, 122, 182, 0.08);
   color: #ffd1dc;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.45;
 }

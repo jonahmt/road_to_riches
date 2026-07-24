@@ -655,6 +655,11 @@ shown inline with a retry path; success replaces the form with the newly created
 Beads issue ID. Beads remains the only issue tracker—the browser does not create
 or manage a second status system.
 
+The report modal uses its own comfortably readable typography rather than the
+compact board HUD scale. Labels, fields, controls, helper text, errors, and the
+success state remain legible at the supported 1280×720 viewport, with overflow
+contained inside the modal instead of enlarging unrelated game UI.
+
 ## Non-Goals for This Pass
 
 * No online hosting or auth.
