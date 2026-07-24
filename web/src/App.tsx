@@ -1294,6 +1294,9 @@ function App() {
 
       {activePresentation?.type === "suit_collected" && (
         <SuitCollectionEffect
+          // A queued recollection can follow the previous effect without an
+          // empty render between them. Remount per notification so CSS restarts.
+          key={activePresentation.requestId}
           presentation={activePresentation}
           onComplete={() => dismissPresentation(activePresentation.requestId)}
         />

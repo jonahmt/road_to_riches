@@ -544,6 +544,54 @@ class TestCollectSuitPresentation:
         loop.input.notify.assert_not_called()
         loop.input.notify_ui.assert_not_called()
 
+    def test_undo_then_recross_emits_a_fresh_collection_notification(self):
+        loop = _make_loop()
+        player = loop.state.players[0]
+        player.position = 2
+        player.from_square = 1
+        loop.input.choose_path.side_effect = [3, "undo", 3]
+        loop.pipeline.enqueue(WillMoveEvent(player_id=0, total_roll=2, remaining=2))
+
+        # Cross square 3 and collect its spade.
+        for _ in range(4):
+            event = loop.pipeline.process_next(loop.state)
+            assert event is not None
+            loop._dispatch(event)
+
+        assert player.suits == {Suit.SPADE: 1}
+        assert loop.input.notify_ui.call_count == 1
+
+        # Undo at the next path prompt, restoring the pre-step suit state.
+        event = loop.pipeline.process_next(loop.state)
+        assert isinstance(event, WillMoveEvent)
+        loop._dispatch(event)
+        assert player.position == 2
+        assert player.suits == {}
+
+        # Re-cross the same square. This is a new authoritative collection.
+        for _ in range(4):
+            event = loop.pipeline.process_next(loop.state)
+            assert event is not None
+            loop._dispatch(event)
+
+        assert player.suits == {Suit.SPADE: 1}
+        assert loop.input.notify_ui.call_args_list == [
+            (
+                (
+                    "suit_collected",
+                    {"player_id": 0, "suit": "SPADE", "square_id": 3},
+                ),
+                {},
+            ),
+            (
+                (
+                    "suit_collected",
+                    {"player_id": 0, "suit": "SPADE", "square_id": 3},
+                ),
+                {},
+            ),
+        ]
+
 
 class TestUndo:
     def test_undo_restores_position_and_cash(self):

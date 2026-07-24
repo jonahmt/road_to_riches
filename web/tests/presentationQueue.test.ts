@@ -46,3 +46,30 @@ test("legacy nonblocking presentations can be dismissed locally", () => {
     [],
   );
 });
+
+test("separate suit collections remain distinct when undo makes recollection legitimate", () => {
+  const collected = {
+    ...presentation("notification:1", false),
+    type: "suit_collected",
+    data: { player_id: 0, suit: "SPADE", square_id: 3 },
+  };
+  const recollected = {
+    ...collected,
+    requestId: "notification:2",
+  };
+  const queue = enqueuePresentation(
+    enqueuePresentation([], collected),
+    recollected,
+  );
+
+  assert.deepEqual(queue.map((item) => item.requestId), [
+    "notification:1",
+    "notification:2",
+  ]);
+  assert.deepEqual(
+    dismissNonblockingPresentation(queue, "notification:1").map(
+      (item) => item.requestId,
+    ),
+    ["notification:2"],
+  );
+});
