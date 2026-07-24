@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "bug",
+  "description": "Its really hard to read on smaller screens (laptop). Increase font size.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "e64f718062104854ad1c6ea3f4fc5c8f",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "b1d5339cf2beb2d9cff710bcc23b11795053baf2",
+  "submitted_at": "2026-07-24T07:13:31.260502+00:00",
+  "summary": "Font size in stock screen is too small"
+}
