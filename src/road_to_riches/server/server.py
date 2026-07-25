@@ -41,6 +41,7 @@ from road_to_riches.protocol import (
 )
 from road_to_riches.save import save_game
 from road_to_riches.server.reporting import (
+    MAX_REPORT_MESSAGE_BYTES,
     InGameReportService,
     ReportPersistenceError,
     ReportValidationError,
@@ -860,7 +861,12 @@ class GameServer:
             # For AI clients (or extra connections), they'll identify via message
             await self._handle_client(ws, host=host, port=port)
 
-        async with websockets.serve(handler, host, port):
+        async with websockets.serve(
+            handler,
+            host,
+            port,
+            max_size=MAX_REPORT_MESSAGE_BYTES,
+        ):
             logger.info("Server listening on ws://%s:%d", host, port)
             logger.info("Waiting for %d human client(s)...", self.num_humans)
 

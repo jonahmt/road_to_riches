@@ -82,6 +82,30 @@ def test_validate_report_accepts_supported_image_signatures(
     assert report.attachment.data == data
 
 
+@pytest.mark.parametrize(
+    ("mime_type", "signature"),
+    [
+        ("image/png", b"\x89PNG\r\n\x1a\n"),
+        ("image/jpeg", b"\xff\xd8\xff"),
+        ("image/webp", b"RIFF\x00\x00\x00\x00WEBP"),
+    ],
+)
+def test_validate_report_accepts_supported_images_at_10_mib(mime_type, signature):
+    data = signature + b"x" * (10 * 1024 * 1024 - len(signature))
+    report = validate_report(
+        _valid_payload(
+            attachment={
+                "filename": "boundary-image",
+                "mime_type": mime_type,
+                "data_base64": base64.b64encode(data).decode(),
+            }
+        )
+    )
+
+    assert report.attachment is not None
+    assert len(report.attachment.data) == 10 * 1024 * 1024
+
+
 def test_validate_report_rejects_bad_base64_and_signature():
     with pytest.raises(ReportValidationError, match="base64"):
         validate_report(

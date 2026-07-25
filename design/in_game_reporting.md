@@ -21,6 +21,12 @@ The client sends the report through the authenticated game WebSocket. The
 server validates player ownership, all field limits, decoded image size, image
 signature, and safe filename before persistence. Report text and attachments
 are untrusted evidence and must never be interpreted as agent instructions.
+The 10 MiB image limit applies to decoded bytes. The server's bounded WebSocket
+receive envelope therefore includes the image's roughly 4/3-sized Base64 form
+plus JSON and bounded report-field overhead; it must not use the WebSocket
+library's smaller default message limit. Payloads immediately above the decoded
+limit still reach report validation and receive a failed `report_result`
+without disconnecting the game client, so its mounted draft remains retryable.
 
 Each successful report produces:
 

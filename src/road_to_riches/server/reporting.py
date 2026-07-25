@@ -26,6 +26,11 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+MAX_ATTACHMENT_BASE64_CHARS = ((MAX_ATTACHMENT_BYTES + 2) // 3) * 4
+# A valid report also carries bounded text fields and JSON framing around the
+# Base64 body. Keep the WebSocket envelope bounded while leaving ample room for
+# escaped text, metadata, and filenames at the decoded attachment limit.
+MAX_REPORT_MESSAGE_BYTES = MAX_ATTACHMENT_BASE64_CHARS + 256 * 1024
 MAX_SUMMARY_LENGTH = 200
 MAX_DESCRIPTION_LENGTH = 10_000
 REPORT_CATEGORIES = {
@@ -163,7 +168,7 @@ def _validate_attachment(raw: Any) -> ValidatedAttachment | None:
         raise ReportValidationError("attachment data_base64 must be a string")
 
     # Reject obviously oversized payloads before allocating the decoded buffer.
-    if len(encoded) > ((MAX_ATTACHMENT_BYTES + 2) // 3) * 4 + 8:
+    if len(encoded) > MAX_ATTACHMENT_BASE64_CHARS + 8:
         raise ReportValidationError("attachment exceeds the 10 MiB limit")
     try:
         data = base64.b64decode(encoded, validate=True)
