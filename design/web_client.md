@@ -141,13 +141,15 @@ Passing the bank with all four suits opens a full-screen promotion ceremony.
 The backend emits a blocking `promotion_completed` presentation request
 containing the promoted player, previous and next levels, base salary, level
 bonus, shop value bonus, comeback bonus, total salary, and resulting ready cash.
-The browser renders all four colored suit icons, an animated level transition,
-and the full salary breakdown. The ceremony has no rotating/radiating gold-ray
-layer, and the final total salary is substantially larger than every component
-amount because it is the primary result. Only the promoted player's assigned
-client can continue the ceremony; other clients see a read-only waiting state. The server
-does not process the bank's stock opportunity, continued movement, or any later
-gameplay until the owning client acknowledges the presentation.
+The browser renders all four colored suit icons without visible suit-name
+captions; the grouped icons retain a complete accessible name for screen
+readers. It also renders an animated level transition and the full salary
+breakdown. The ceremony has no rotating/radiating gold-ray layer, and the final
+total salary is substantially larger than every component amount because it is
+the primary result. Only the promoted player's assigned client can continue the
+ceremony; other clients see a read-only waiting state. The server does not
+process the bank's stock opportunity, continued movement, or any later gameplay
+until the owning client acknowledges the presentation.
 
 Paying rent to another player's shop opens a centered blocking payment overlay
 above the still-visible board. Its primary card shows payer → shop owner, the

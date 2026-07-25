@@ -98,6 +98,7 @@ import {
   type StockOverlayMode,
 } from "./stockOverlay";
 import { BugReportControl } from "./BugReportControl";
+import { PromotionSuitRow } from "./PromotionSuitRow";
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
 
 const DEFAULT_URI = "ws://localhost:8765";
@@ -5011,26 +5012,14 @@ function PromotionCeremony({
           <h2 id="promotion-title">{isAssignedPlayer ? "You Promoted!" : `Player ${playerId} Promoted!`}</h2>
         </header>
 
-        <div className="promotion-suits" role="img" aria-label="Spade, Heart, Diamond, and Club complete">
-          {SUIT_ORDER.map((suit, index) => (
-            <span
-              key={suit}
-              className="promotion-suit"
-              style={
-                {
-                  "--promotion-suit-color": getSuitColor(suit),
-                  "--promotion-suit-delay": `${index * 90}ms`,
-                } as CSSProperties
-              }
-              aria-hidden="true"
-            >
-              <svg viewBox="-1.5 -1.5 3 3" focusable="false">
-                <SuitShape suit={suit} scale={0.92} />
-              </svg>
-              <small>{readableType(suit)}</small>
-            </span>
-          ))}
-        </div>
+        <PromotionSuitRow
+          getSuitColor={getSuitColor}
+          renderSuitIcon={(suit) => (
+            <svg viewBox="-1.5 -1.5 3 3" focusable="false">
+              <SuitShape suit={suit} scale={0.92} />
+            </svg>
+          )}
+        />
 
         <div className="promotion-details">
           <section className="promotion-level-card" aria-label={`Level ${previousLevel} to Level ${nextLevel}`}>
