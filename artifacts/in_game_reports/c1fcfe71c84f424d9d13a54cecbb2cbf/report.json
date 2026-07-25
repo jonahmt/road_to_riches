@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "bug",
+  "description": "Dice roll should be a blocking event, requiring the entire animation to play out before the AI (or player) can begin moving.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "c1fcfe71c84f424d9d13a54cecbb2cbf",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "d57e8dd25dd9ede25e058eecd138701311b57d52",
+  "submitted_at": "2026-07-25T04:10:37.147267+00:00",
+  "summary": "Ai starts moving before dice roll"
+}

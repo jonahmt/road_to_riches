@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "bug",
+  "description": "Cannon target interface shoulkd use the general square selection interface, with only the squares that other players are on as the valid targets.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "92199c8c92344d33992909d1a3466cf6",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "d57e8dd25dd9ede25e058eecd138701311b57d52",
+  "submitted_at": "2026-07-25T04:13:37.074102+00:00",
+  "summary": "Cannon target interface"
+}

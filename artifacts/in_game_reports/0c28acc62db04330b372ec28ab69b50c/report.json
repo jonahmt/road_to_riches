@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "bug",
+  "description": "The dice roll there should be one of the \"delayed\" ones where the dice roll happens and THEN control goes to the next player. In fact, there should be a breif pop up saying how much gold I won, that I (or the ai player) has to press continue on, then it can go to the next player / event.",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "0c28acc62db04330b372ec28ab69b50c",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "d57e8dd25dd9ede25e058eecd138701311b57d52",
+  "submitted_at": "2026-07-25T04:08:04.665127+00:00",
+  "summary": "When i pulled the \"lucky roll\" (roll for 40x dice roll gold) card, there was no correct delay"
+}
