@@ -33,6 +33,7 @@ MAX_ATTACHMENT_BASE64_CHARS = ((MAX_ATTACHMENT_BYTES + 2) // 3) * 4
 MAX_REPORT_MESSAGE_BYTES = MAX_ATTACHMENT_BASE64_CHARS + 256 * 1024
 MAX_SUMMARY_LENGTH = 200
 MAX_DESCRIPTION_LENGTH = 10_000
+REPORT_SCHEMA_VERSION = 2
 REPORT_CATEGORIES = {
     "bug": "bug",
     "minor_fix": "task",
@@ -76,7 +77,6 @@ class ValidatedReport:
     summary: str
     description: str
     include_game_state: bool
-    restart_requested: bool
     attachment: ValidatedAttachment | None
 
 
@@ -207,7 +207,6 @@ def validate_report(payload: Mapping[str, Any]) -> ValidatedReport:
             maximum=MAX_DESCRIPTION_LENGTH,
         ),
         include_game_state=_boolean(payload, "include_game_state"),
-        restart_requested=_boolean(payload, "restart_requested"),
         attachment=_validate_attachment(payload.get("attachment")),
     )
 
@@ -219,11 +218,13 @@ class InGameReportService:
         self,
         repo_root: Path | str | None = None,
         *,
+        source_root: Path | str | None = None,
         command_runner: CommandRunner | None = None,
         uuid_factory: Callable[[], Any] = uuid4,
         now_factory: Callable[[], datetime] | None = None,
     ) -> None:
         self.repo_root = Path(repo_root).resolve() if repo_root else find_repo_root()
+        self.source_root = Path(source_root).resolve() if source_root else self.repo_root
         self._command_runner = command_runner or _default_command_runner
         self._uuid_factory = uuid_factory
         self._now_factory = now_factory or (lambda: datetime.now(timezone.utc))
@@ -247,13 +248,16 @@ class InGameReportService:
         evidence_path = reports_root / report_id
         issue_id: str | None = None
         try:
-            source_commit = self._run_checked(["git", "rev-parse", "HEAD"]).stdout.strip()
+            source_commit = self._run_checked(
+                ["git", "rev-parse", "HEAD"],
+                cwd=self.source_root,
+            ).stdout.strip()
             if not source_commit:
                 raise ReportPersistenceError("git did not return the running source commit")
             submitted_at = self._now_factory().astimezone(timezone.utc).isoformat()
             relative_evidence_path = evidence_path.relative_to(self.repo_root).as_posix()
             envelope = {
-                "schema_version": 1,
+                "schema_version": REPORT_SCHEMA_VERSION,
                 "report_id": report_id,
                 "submitted_at": submitted_at,
                 "source_commit": source_commit,
@@ -264,7 +268,6 @@ class InGameReportService:
                 "summary": report.summary,
                 "description": report.description,
                 "include_game_state": report.include_game_state,
-                "restart_requested": report.restart_requested,
                 "attachment": (
                     {
                         "filename": report.attachment.filename,
@@ -283,7 +286,7 @@ class InGameReportService:
 
             metadata = {
                 "in_game_report": {
-                    "schema_version": 1,
+                    "schema_version": REPORT_SCHEMA_VERSION,
                     "report_id": report_id,
                     "evidence_path": relative_evidence_path,
                     "game_id": game_id,
@@ -291,12 +294,9 @@ class InGameReportService:
                     "submitted_at": submitted_at,
                     "source_commit": source_commit,
                     "include_game_state": report.include_game_state,
-                    "restart_requested": report.restart_requested,
                 }
             }
             labels = ["in-game-report", "auto-fix", report.category]
-            if report.restart_requested:
-                labels.append("restart-requested")
             description = (
                 f"{report.description}\n\n"
                 f"In-game report evidence: `{relative_evidence_path}`\n"
@@ -335,9 +335,9 @@ class InGameReportService:
             if temporary_path.exists():
                 shutil.rmtree(temporary_path)
 
-    def _run_checked(self, command: list[str]) -> CommandResult:
+    def _run_checked(self, command: list[str], *, cwd: Path | None = None) -> CommandResult:
         try:
-            result = self._command_runner(command, self.repo_root)
+            result = self._command_runner(command, cwd or self.repo_root)
         except OSError as exc:
             raise ReportPersistenceError(f"could not run {command[0]}: {exc}") from exc
         if result.returncode != 0:

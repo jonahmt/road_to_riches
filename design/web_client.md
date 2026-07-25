@@ -653,8 +653,9 @@ urgency. Capturing the authoritative current game state is optional and off by
 default. A single PNG, JPEG, or WebP image up to 10 MiB can be dragged into the
 form or selected through the file picker; the client previews it and supports
 removal before submission. Images travel as a validated MIME type, original
-filename, and Base64 body. Restarting development services after a fix is also
-optional and off by default because it may interrupt the current match.
+filename, and Base64 body. Validated repair batches and live runtime deployment
+are separate operations, so submitting feedback cannot request an
+interruption.
 
 The client sends `submit_report` with the report fields plus its current game
 and player identifiers. It keeps the complete form draft mounted while the

@@ -315,7 +315,6 @@ def msg_submit_report(
     *,
     player_id: int | None = None,
     include_game_state: bool = False,
-    restart_requested: bool = False,
     attachment: dict | None = None,
     game_id: str | None = None,
 ) -> dict:
@@ -327,7 +326,6 @@ def msg_submit_report(
         "summary": summary,
         "description": description,
         "include_game_state": include_game_state,
-        "restart_requested": restart_requested,
     }
     if player_id is not None:
         msg["player_id"] = player_id

@@ -1108,7 +1108,6 @@ def test_submit_report_passes_authoritative_optional_context():
                 "The wording is confusing.",
                 player_id=0,
                 include_game_state=True,
-                restart_requested=True,
                 game_id="default",
             ),
         )
@@ -1125,7 +1124,7 @@ def test_submit_report_passes_authoritative_optional_context():
         call = report_service.calls[0]
         assert call["game_id"] == "default"
         assert call["player_id"] == 0
-        assert call["payload"]["restart_requested"] is True
+        assert "restart_requested" not in call["payload"]
         context = call["game_context"]
         assert context["session"] == {
             "game_id": "default",

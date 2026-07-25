@@ -1,4 +1,4 @@
-import { type InputRequest } from "./protocol";
+import type { InputRequest } from "./protocol.ts";
 
 export type WasdResponseMap = Record<string, unknown>;
 

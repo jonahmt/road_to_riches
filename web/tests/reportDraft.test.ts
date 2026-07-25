@@ -63,7 +63,6 @@ test("report protocol preserves optional evidence and server result identifiers"
         summary: "Board is stuck",
         description: "The movement prompt never clears.",
         include_game_state: true,
-        restart_requested: false,
         game_id: "default",
       }),
     ),
@@ -74,7 +73,6 @@ test("report protocol preserves optional evidence and server result identifiers"
       summary: "Board is stuck",
       description: "The movement prompt never clears.",
       include_game_state: true,
-      restart_requested: false,
       game_id: "default",
     },
   );

@@ -45,6 +45,7 @@ from road_to_riches.server.reporting import (
     InGameReportService,
     ReportPersistenceError,
     ReportValidationError,
+    find_repo_root,
 )
 from road_to_riches.server.server_input import WebSocketPlayerInput
 from road_to_riches.server.session import (
@@ -893,6 +894,7 @@ def run_server(
     diagnostic_log_path: str | None = None,
     lobby: bool = False,
     reporting_enabled: bool = True,
+    report_repo_root: str | None = None,
 ) -> None:
     """Entry point: start a game server."""
     logging.basicConfig(
@@ -922,6 +924,13 @@ def run_server(
             num_players=num_players,
             diagnostic_log_path=diagnostic_log_path,
         )
+    report_service = None
+    if reporting_enabled and report_repo_root is not None:
+        report_service = InGameReportService(
+            report_repo_root,
+            source_root=find_repo_root(),
+        )
+
     server = GameServer(
         config,
         num_humans=num_humans,
@@ -933,5 +942,6 @@ def run_server(
         shutdown_when_default_finished=not lobby,
         debug_mode=debug,
         reporting_enabled=reporting_enabled,
+        report_service=report_service,
     )
     asyncio.run(server.serve(host, port))

@@ -137,7 +137,6 @@ export interface SubmitReportMessage {
   summary: string;
   description: string;
   include_game_state: boolean;
-  restart_requested: boolean;
   attachment?: ReportAttachment;
   player_id?: number;
   game_id?: string;

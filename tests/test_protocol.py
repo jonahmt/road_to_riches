@@ -139,7 +139,6 @@ def test_round_trip_submit_report_and_result():
         "The token appears one square behind.",
         player_id=0,
         include_game_state=True,
-        restart_requested=False,
         attachment={
             "filename": "board.png",
             "mime_type": "image/png",
@@ -156,7 +155,6 @@ def test_round_trip_submit_report_and_result():
         "summary": "Token is misplaced",
         "description": "The token appears one square behind.",
         "include_game_state": True,
-        "restart_requested": False,
         "player_id": 0,
         "attachment": {
             "filename": "board.png",

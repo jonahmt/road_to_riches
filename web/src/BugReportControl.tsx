@@ -40,7 +40,6 @@ export function BugReportControl({
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
   const [includeGameState, setIncludeGameState] = useState(false);
-  const [restartRequested, setRestartRequested] = useState(false);
   const [attachment, setAttachment] = useState<ReportAttachment | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -91,7 +90,6 @@ export function BugReportControl({
     setSummary("");
     setDescription("");
     setIncludeGameState(false);
-    setRestartRequested(false);
     removeAttachment();
     onClearSubmission();
   }
@@ -153,7 +151,6 @@ export function BugReportControl({
       summary: summary.trim(),
       description: description.trim(),
       include_game_state: includeGameState,
-      restart_requested: restartRequested,
       attachment: attachment ?? undefined,
     });
   }
@@ -275,17 +272,6 @@ export function BugReportControl({
                     <span>
                       <strong>Attach current game state</strong>
                       <small>Includes the authoritative board and turn state for reproduction.</small>
-                    </span>
-                  </label>
-                  <label className="bug-report-checkbox is-warning">
-                    <input
-                      type="checkbox"
-                      checked={restartRequested}
-                      onChange={(event) => setRestartRequested(event.target.checked)}
-                    />
-                    <span>
-                      <strong>Restart development services after the fix</strong>
-                      <small>This can interrupt the current match. Leave it off to restart manually.</small>
                     </span>
                   </label>
                 </div>

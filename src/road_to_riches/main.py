@@ -28,6 +28,7 @@ class ParsedRunConfig:
     lobby: bool
     debug: bool
     reporting: bool
+    report_repo: str | None
     resume: str | None
 
 
@@ -106,6 +107,15 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--report-repo",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Persist in-game reports in PATH while recording this checkout as "
+            "the running source (server mode)."
+        ),
+    )
+    parser.add_argument(
         "--lobby",
         action="store_true",
         help=(
@@ -144,6 +154,8 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         parser.error("--lobby cannot be combined with --resume.")
     if args.reporting is not None and args.mode != "server":
         parser.error("--reporting/--no-reporting are only supported in server mode.")
+    if args.report_repo is not None and args.mode != "server":
+        parser.error("--report-repo is only supported in server mode.")
 
     if args.resume is not None and (
         args.board_arg is not None
@@ -202,6 +214,7 @@ def _resolve_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         lobby=args.lobby,
         debug=args.debug,
         reporting=reporting,
+        report_repo=args.report_repo,
         resume=args.resume,
     )
 
@@ -233,6 +246,7 @@ def main() -> None:
             port=args.port,
             debug=args.debug,
             reporting_enabled=args.reporting,
+            report_repo_root=args.report_repo,
             resume=args.resume,
             diagnostic_log_path=args.diagnostic_log,
             lobby=args.lobby,

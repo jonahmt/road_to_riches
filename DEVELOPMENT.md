@@ -188,9 +188,33 @@ The checked-in Codex pieces are:
 - `.codex/skills/fix-ingame-reports/` — the scheduled orchestration workflow;
 - `.codex/agents/bugfix-worker.toml` — the isolated per-report worker;
 - `.codex/rules/report-orchestrator.rules` — narrow unattended command rules;
+- `tools/validate_report_batch.py` — combined staging-worktree quality gates;
+- `tools/report_staging_runtime.py` — private validation backend/frontend;
+- `tools/promote_report_batch.py` — guarded atomic fast-forward promotion;
+- `tools/managed_game_runtime.py` — commit-pinned live backend/frontend;
 - `.codex/config.toml` — project multi-agent limits.
+
+When scheduled repair is enabled, start playable development games with the
+managed launcher rather than running Vite and the backend from the control
+checkout:
+
+```bash
+venv/bin/python tools/managed_game_runtime.py run \
+  --repo . \
+  --board boards/test_board.json \
+  --humans 1 \
+  --ai 3
+```
+
+It prints the frontend link after both services are ready. The active match
+stays on that deployed commit even when the control checkout advances.
+`venv/bin/python tools/managed_game_runtime.py status --repo .` reports the
+current deployment. Stop the launcher only when the match is finished; the
+repair automation never starts or stops it.
 
 The 20-minute schedule is local Codex application state rather than a Git file.
 After cloning onto a different machine, trust the project, restart Codex so the
 project configuration/rules load, and create the local recurring automation
-with the prompt: `Use $fix-ingame-reports to process every ready in-game report.`
+with the prompt: `Use $fix-ingame-reports to process one fixed batch of ready
+in-game reports.` Keep exactly one dedicated automation thread; the repository
+lifecycle lock makes overlapping triggers successful no-ops.

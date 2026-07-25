@@ -74,6 +74,35 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern=["venv/bin/python", "tools/managed_game_runtime.py", "status"],
+    decision="allow",
+    justification="The repair orchestrator must prove that the active game is pinned outside the mutable control checkout before changing Git.",
+    match=["venv/bin/python tools/managed_game_runtime.py status --repo ."],
+    not_match=["venv/bin/python tools/managed_game_runtime.py run --repo ."],
+)
+
+prefix_rule(
+    pattern=["venv/bin/python", "tools/validate_report_batch.py"],
+    decision="allow",
+    justification="This narrow helper runs the full Python and web quality gates against an isolated batch worktree.",
+    match=["venv/bin/python tools/validate_report_batch.py --repo /tmp/report-batch --control-repo ."],
+)
+
+prefix_rule(
+    pattern=["venv/bin/python", "tools/report_staging_runtime.py"],
+    decision="allow",
+    justification="This narrow helper starts an owned backend/frontend pair on staging-only ports with reporting disabled.",
+    match=["venv/bin/python tools/report_staging_runtime.py --repo /tmp/report-batch --control-repo ."],
+)
+
+prefix_rule(
+    pattern=["venv/bin/python", "tools/promote_report_batch.py"],
+    decision="allow",
+    justification="This helper promotes only a clean validated batch by a normal fast-forward push when remote main still matches the recorded base.",
+    match=["venv/bin/python tools/promote_report_batch.py --repo /tmp/report-batch --expected-main abc123"],
+)
+
+prefix_rule(
     pattern=["pnpm", ["build", "typecheck", "lint"]],
     decision="allow",
     justification="Web-client verification is a routine, repository-scoped part of automated report repair.",

@@ -38,7 +38,6 @@ def _valid_payload(**overrides):
         ({"summary": "x" * 201}, "summary"),
         ({"description": None}, "description"),
         ({"include_game_state": "yes"}, "include_game_state"),
-        ({"restart_requested": 1}, "restart_requested"),
     ],
 )
 def test_validate_report_rejects_invalid_fields(overrides, error):
@@ -50,7 +49,6 @@ def test_validate_report_defaults_optional_flags_off():
     report = validate_report(_valid_payload(category="minor_fix", priority=3))
 
     assert report.include_game_state is False
-    assert report.restart_requested is False
     assert report.attachment is None
 
 
@@ -144,13 +142,25 @@ def test_validate_report_rejects_attachment_over_10_mib():
 
 
 class RecordingRunner:
-    def __init__(self, repo_root: Path, *, create_id: str = "road_to_riches-rpt1") -> None:
+    def __init__(
+        self,
+        repo_root: Path,
+        *,
+        source_root: Path | None = None,
+        create_id: str = "road_to_riches-rpt1",
+    ) -> None:
         self.repo_root = repo_root
+        self.source_root = source_root or repo_root
         self.create_id = create_id
         self.commands: list[list[str]] = []
 
     def __call__(self, command: list[str], cwd: Path):
-        assert cwd == self.repo_root
+        expected_cwd = (
+            self.source_root
+            if command[:3] == ["git", "rev-parse", "HEAD"]
+            else self.repo_root
+        )
+        assert cwd == expected_cwd
         self.commands.append(command)
         if command[:3] == ["git", "rev-parse", "HEAD"]:
             return SimpleNamespace(returncode=0, stdout="abc123\n", stderr="")
@@ -172,7 +182,7 @@ class RecordingRunner:
 
 
 def _repo(tmp_path: Path) -> Path:
-    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git").mkdir(parents=True)
     (tmp_path / ".beads").mkdir()
     return tmp_path
 
@@ -191,7 +201,6 @@ def test_submit_creates_bead_exports_and_immutable_evidence(tmp_path):
     result = service.submit(
         _valid_payload(
             include_game_state=True,
-            restart_requested=True,
             attachment={
                 "filename": "screen shot.png",
                 "mime_type": "image/png",
@@ -206,8 +215,9 @@ def test_submit_creates_bead_exports_and_immutable_evidence(tmp_path):
     assert result.issue_id == "road_to_riches-rpt1"
     assert result.evidence_path.name == "12345678123456781234567812345678"
     report = json.loads((result.evidence_path / "report.json").read_text())
+    assert report["schema_version"] == 2
     assert report["source_commit"] == "abc123"
-    assert report["restart_requested"] is True
+    assert "restart_requested" not in report
     assert report["attachment"]["filename"] == "screen_shot.png"
     assert json.loads((result.evidence_path / "game_state.json").read_text()) == {
         "state": {"current_player_index": 1}
@@ -220,10 +230,29 @@ def test_submit_creates_bead_exports_and_immutable_evidence(tmp_path):
     assert "--type=bug" in create
     assert "--priority=2" in create
     labels = next(value for value in create if value.startswith("--labels="))
-    assert labels == "--labels=in-game-report,auto-fix,bug,restart-requested"
+    assert labels == "--labels=in-game-report,auto-fix,bug"
     metadata_arg = next(value for value in create if value.startswith("--metadata="))
     metadata = json.loads(metadata_arg.removeprefix("--metadata="))
     assert metadata["in_game_report"]["evidence_path"].endswith(result.report_id)
+    assert metadata["in_game_report"]["schema_version"] == 2
+    assert "restart_requested" not in metadata["in_game_report"]
+
+
+def test_submit_records_source_commit_from_running_checkout(tmp_path):
+    repo = _repo(tmp_path / "control")
+    source = _repo(tmp_path / "runtime")
+    runner = RecordingRunner(repo, source_root=source)
+    service = InGameReportService(
+        repo,
+        source_root=source,
+        command_runner=runner,
+        uuid_factory=lambda: UUID("12345678-1234-5678-1234-567812345678"),
+    )
+
+    result = service.submit(_valid_payload(), game_id="default", player_id=0)
+
+    report = json.loads((result.evidence_path / "report.json").read_text())
+    assert report["source_commit"] == "abc123"
 
 
 def test_submit_requires_context_when_state_was_requested(tmp_path):

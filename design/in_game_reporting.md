@@ -14,8 +14,7 @@ to a running game. Category, urgency, summary, and description are required.
 The following are opt-in and default off:
 
 - capture the server's current authoritative game state and recent context;
-- attach one PNG, JPEG, or WebP image by picker or drag-and-drop, up to 10 MiB;
-- request a managed game restart after the fix is integrated.
+- attach one PNG, JPEG, or WebP image by picker or drag-and-drop, up to 10 MiB.
 
 The client sends the report through the authenticated game WebSocket. The
 server validates player ownership, all field limits, decoded image size, image
@@ -39,6 +38,11 @@ Each successful report produces:
 
 Beads is authoritative for workflow state. Evidence directories never contain
 assignment, progress, or completion status.
+
+New evidence uses report schema version 2. It does not contain a restart choice:
+repair integration and live deployment are separate operations. Existing
+version-1 evidence is immutable and may still contain the retired
+`restart_requested` field.
 
 ## Persistence and concurrency
 
@@ -66,14 +70,20 @@ defined by `.codex/agents/bugfix-worker.toml`.
 
 The queue query is unbounded and filtered by both `in-game-report` and
 `auto-fix`, so unrelated ready work cannot hide a report below a default result
-limit. For every ready auto-fix report, the orchestrator:
+limit. Each run snapshots the queue once and selects at most six reports by
+priority and age. Reports arriving after that snapshot wait for the next run.
+For the fixed batch, the orchestrator:
 
-1. commits only the new evidence and tracker exports;
-2. claims the Bead and chooses safe grouping/concurrency;
-3. gives each independent report to a worker in its own branch and worktree;
-4. reviews and tests each returned commit;
-5. rebases and fast-forward merges one fix at a time;
-6. pushes before closing the Bead, then persists and pushes the closure export.
+1. verifies the active game is running from a managed commit-pinned worktree;
+2. commits and pushes only the selected evidence and tracker exports;
+3. claims the selected Beads and chooses safe grouping/concurrency;
+4. gives each independent report to a worker in its own branch and worktree;
+5. integrates accepted worker commits into one batch staging branch;
+6. runs the full Python and web gates against that staging worktree;
+7. starts a reporting-disabled backend on port 18765 and frontend on 15173 from
+   the staging worktree, then browser-tests the combined fixes there;
+8. atomically fast-forwards remote `main` to that exact validated batch head;
+9. records and closes the completed reports in one tracker-export commit.
 
 Before the intake commit, it verifies that the existing Beads JSONL diff is
 owned only by the selected reports. If unrelated tracker mutations are mixed
@@ -84,10 +94,34 @@ number when reports overlap. Workers cannot mutate Beads, main, or remote Git.
 Automatic integration never force-pushes, resets, or overwrites unrelated dirty
 work. Unsafe conflicts remain queued with an actionable note.
 
-A restart request is honored only through a repository-managed launcher or
-supervisor with unambiguous process ownership. The orchestrator never kills an
-arbitrary PID or port. Without such a runtime, it records `restart-pending`
-instead of failing an otherwise valid fix.
+The batch staging branch starts at the intake commit captured for the run.
+Promotion is a single normal fast-forward push and is refused if remote main
+has moved since that capture. A changed base invalidates combined validation;
+the batch must be rebuilt and retested.
+
+## Live runtime isolation
+
+The active backend and frontend run through `tools/managed_game_runtime.py`.
+The launcher creates a detached worktree pinned to one commit and starts both
+services from that worktree. It refuses occupied ports and never terminates
+unowned processes. Its manifest under `.runtime/` records the supervisor,
+deployed commit, worktree, and URLs while it is alive.
+
+The control checkout may advance after a validated repair batch, but the live
+worktree does not. Therefore a Git promotion cannot hot-reload the frontend,
+change lazy-loaded backend source, or restart the match. A promoted commit is
+only an available update; deploying it requires a later, explicit managed
+runtime start after the active game has ended.
+
+The managed backend receives `--report-repo` pointing at the control checkout.
+Report evidence and Beads exports are written there, while `source_commit`
+comes from the pinned runtime worktree. The private staging backend always runs
+with `--no-reporting`, so validation cannot create player-report evidence.
+
+If the managed-runtime status is absent or stale, the scheduled orchestrator
+does not claim reports or change Git. This fail-closed rule is what prevents a
+legacy server launched directly from the mutable control checkout from being
+disturbed.
 
 ## Local scheduling semantics
 

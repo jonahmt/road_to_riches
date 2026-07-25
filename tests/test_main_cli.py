@@ -114,9 +114,20 @@ def test_reporting_defaults_on_for_local_server_and_can_be_disabled():
     assert parse_run_config(["server", "--lobby", "--reporting"]).reporting is True
 
 
+def test_server_accepts_external_report_repository():
+    config = parse_run_config(["server", "--report-repo", "/tmp/report-control"])
+
+    assert config.report_repo == "/tmp/report-control"
+
+
 def test_reporting_flag_is_rejected_outside_server():
     with pytest.raises(SystemExit):
         parse_run_config(["local", "--reporting"])
+
+
+def test_report_repository_is_rejected_outside_server():
+    with pytest.raises(SystemExit):
+        parse_run_config(["local", "--report-repo", "/tmp/report-control"])
 
 
 def test_lobby_mode_is_rejected_outside_server():

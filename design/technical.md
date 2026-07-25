@@ -70,16 +70,16 @@ socket. The response is always a `report_result` containing success plus either
 the new Beads issue ID or a retryable error.
 
 The report payload contains a category (`bug`, `minor_fix`, or `suggestion`),
-Beads priority 0-3, summary, description, and optional state/restart/image
-fields. State and restart capture default off. Attachments are optional PNG,
-JPEG, or WebP files, limited to 10 MiB decoded; the backend validates Base64,
-MIME/signature agreement, and replaces the supplied name with a safe basename
-and content-derived extension. The browser cannot choose an output path.
+Beads priority 0-3, summary, description, and optional state/image fields.
+State capture defaults off. Attachments are optional PNG, JPEG, or WebP files,
+limited to 10 MiB decoded; the backend validates Base64, MIME/signature
+agreement, and replaces the supplied name with a safe basename and
+content-derived extension. The browser cannot choose an output path.
 
 Beads remains the only issue tracker. Intake creates a real issue labeled
 `in-game-report`, `auto-fix`, and its category, with structured metadata that
 records the evidence path, report/session/player IDs, source commit, timestamp,
-and state/restart choices. Immutable supporting evidence lives under
+and state choice. Immutable supporting evidence lives under
 `artifacts/in_game_reports/<uuid>/`: `report.json`, an optional
 `game_state.json`, and an optional sanitized image. When selected, the state
 file captures the authoritative serialized game state and runtime config,
@@ -98,6 +98,11 @@ directory. A failure after issue creation deletes that just-created issue and
 re-exports Beads as transaction rollback; the client receives failure and no
 partial evidence directory remains. Filesystem/Beads work runs off the asyncio
 event loop so report submission does not block unrelated socket traffic.
+
+When `--report-repo PATH` is supplied to a server, persistence targets that
+control checkout while the source commit is resolved from the checkout running
+the server. This supports commit-pinned managed game worktrees without
+misreporting the code version or writing mutable intake into the live runtime.
 
 The diagnostic log is written as JSON Lines by the backend game loop when
 enabled through runtime configuration. It is not saved inside normal save files

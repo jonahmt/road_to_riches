@@ -101,7 +101,7 @@ import { BugReportControl } from "./BugReportControl";
 import { PromotionSuitRow } from "./PromotionSuitRow";
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
 
-const DEFAULT_URI = "ws://localhost:8765";
+const DEFAULT_URI = import.meta.env.VITE_GAME_SERVER_URL ?? "ws://localhost:8765";
 const DEFAULT_BACKSTREET_COLOR = "#56cfff";
 
 const SUIT_ORDER = ["SPADE", "HEART", "DIAMOND", "CLUB"];
