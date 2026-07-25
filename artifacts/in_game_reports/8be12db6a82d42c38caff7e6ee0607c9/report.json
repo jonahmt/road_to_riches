@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "bug",
+  "description": "Before transitioning to the next players turn, the camera should move to the outcome square and show the player there for a brief moment, before going to the next player",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "8be12db6a82d42c38caff7e6ee0607c9",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "ab807d23114697f0399dee43a4ad9b0b4269a72c",
+  "submitted_at": "2026-07-25T04:20:02.288703+00:00",
+  "summary": "Warp square should show the player moving"
+}
