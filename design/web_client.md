@@ -596,6 +596,11 @@ readable at a 1280×720 viewport without increasing the overlay shell, fixed
 sidebar width, district row height, or shop-card column footprint. Stock
 surfaces use flat translucent fills rather than gradients; buy/sell mode is
 communicated with solid header borders and button accents.
+At that viewport, stock table headers use 13px text and district labels and
+values use 16px text. Shop labels and metric names use 13px text, while shop
+owners and metric values use 15px text. Transaction labels and values use at
+least 14px and 16px text respectively (the primary stock-price value is 18px),
+and keyboard hints use 13px text.
 
 When district navigation switches from pointer input to W/S or arrow keys, the
 previously clicked row is blurred and stationary pointer hover is suppressed so

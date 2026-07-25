@@ -1903,7 +1903,7 @@ dd {
 }
 
 .stock-overlay .eyebrow {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .stock-overlay-header > div:first-child > p:last-child {
@@ -1988,7 +1988,7 @@ dd {
   padding: 0 10px 6px;
   background: #080a0f;
   color: rgba(247, 247, 242, 0.66);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 850;
   text-align: center;
   text-transform: uppercase;
@@ -2015,13 +2015,13 @@ dd {
 }
 
 .stock-district-row strong {
-  font-size: 14px;
+  font-size: 16px;
   text-align: left;
 }
 
 .stock-district-row span {
   min-width: 0;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -2100,14 +2100,14 @@ dd {
 
 .stock-shop-owner span {
   color: rgba(247, 247, 242, 0.66);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 850;
   text-transform: uppercase;
 }
 
 .stock-shop-owner strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2126,11 +2126,11 @@ dd {
 
 .stock-shop-card dt {
   color: rgba(247, 247, 242, 0.64);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .stock-shop-card dd {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 850;
 }
 
@@ -2163,7 +2163,7 @@ dd {
 .stock-selection-summary > span,
 .stock-quantity-control > span {
   color: rgba(247, 247, 242, 0.64);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 850;
   text-transform: uppercase;
 }
@@ -2174,7 +2174,7 @@ dd {
 
 .stock-selection-summary p {
   color: rgba(247, 247, 242, 0.72);
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .stock-quantity-control {
@@ -2231,11 +2231,11 @@ dd {
 
 .stock-transaction-math dt {
   color: rgba(247, 247, 242, 0.68);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .stock-transaction-math dd {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   text-align: right;
 }
@@ -2245,7 +2245,7 @@ dd {
 }
 
 .stock-transaction-math > div:first-child dd {
-  font-size: 16px;
+  font-size: 18px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2277,7 +2277,7 @@ dd {
 
 .stock-keyboard-help p {
   color: rgba(247, 247, 242, 0.62);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .stock-keyboard-help strong {
