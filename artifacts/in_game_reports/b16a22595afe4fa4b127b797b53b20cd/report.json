@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "bug",
+  "description": "The cannon is not a skippable event. the Player MUST choose one of the other players squares to launch to",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "b16a22595afe4fa4b127b797b53b20cd",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "06382125d3eb4516cc45285ed9344b77b540c319",
+  "submitted_at": "2026-07-25T04:16:51.481313+00:00",
+  "summary": "Cannon is not skipable"
+}
