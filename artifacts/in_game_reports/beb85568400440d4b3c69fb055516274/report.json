@@ -1,0 +1,15 @@
+{
+  "attachment": null,
+  "category": "bug",
+  "description": "title",
+  "game_id": "default",
+  "include_game_state": false,
+  "player_id": 0,
+  "priority": 2,
+  "report_id": "beb85568400440d4b3c69fb055516274",
+  "restart_requested": false,
+  "schema_version": 1,
+  "source_commit": "682f30b4ab2e63bdb7ec8ec19386307db20a0c93",
+  "submitted_at": "2026-07-25T04:23:37.200428+00:00",
+  "summary": "there does not need to be a Shop value column in the stock ui"
+}
