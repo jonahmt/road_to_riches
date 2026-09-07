@@ -140,6 +140,48 @@ human reading, coordinated legacy-client reconnect, authoritative rent stages,
 queue completion in either order, and AI timing negotiation. The existing large
 Vite chunk warning remains; the change adds no package dependencies.
 
+## Unified screen framing and presentation refinement
+
+The next visual pass rechecked native playback of the reference from 40:27
+through 41:13. The observed pattern is a dark, vertical menu at upper left,
+bright framed receipts centered above the board, large outlined gold amounts,
+colored player strips, and a die toss above the active character. The user
+requested this broader theme and animation refinement on the experimental branch.
+
+`board3d/presentation.css` now owns presentation geometry, typography and entrance
+accents, while `theme.css` retains the board and HUD base theme. The stale payment
+right-padding offset was removed. Payments and stock changes share a centered
+upper-screen receipt layout with readable white backgrounds; the board remains
+visible during transfers. Secondary match/camera chrome recedes during result
+beats. The redundant always-visible turn/status panel is hidden, and ordinary
+square details appear only after explicit inspection.
+
+Pre-roll actions use the reference's dark vertical menu and gold selection strip.
+All existing actions remain separate and keep their response values. Financial
+amounts and negotiation terms use centered, bounded dialogs with larger controls
+and numbers. Final-stop confirmation is centered separately from the docked die.
+The HUD uses larger balances and a colored active-player pointer. Trade's Continue
+control moves into the selection footer, keeping the right property card clear
+of player balances at 720p; free cursor movement and magnetic snapping are intact.
+
+Turn banners are broad white strips with the player's color. Receipt entrances
+settle over 300 ms, amounts have a short emphasis animation, and venture cards
+arrive over 440 ms with a larger title, description and decorative emblem.
+Promotion details and winnings have stronger number hierarchy. The die remains
+camera-facing and uses its existing tumble/read/dock timing, with the toss at
+33% of viewport height and a brief warm result glow. Reduced-motion preferences
+remove the new spatial/scale effects. No server rule, presentation barrier,
+reading hold, movement chaining or suit-collection timing changes in this pass.
+
+Browser review covered actual private-server payment/dividend balances, a full
+AI round, promotion followed by stock buying and price changes, venture card →
+event die → winnings, reconnect, 2D fallback, and reduced motion. Financial dialogs
+were measured for horizontal/vertical centering and viewport bounds at 1280×720
+and 1600×1000. Review corrected die/stop overlap and old compact typography rules.
+The final payment checks verified centering and HUD clearance, and the final
+trade checks verified footer placement. The 770 Python tests, 105 TypeScript
+tests, three SSR rendering tests, type check, production build and Ruff passed.
+
 ## Free square cursor and selection panel
 
 The selection pass follows the supplied Fortune Street Wii video at 43:35.

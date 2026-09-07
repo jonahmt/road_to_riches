@@ -117,10 +117,8 @@ export function SquarePicker({ state, selection, title, confirmLabel, onBack, on
         </div>
       {square && <>
         {facts.note && <p className="square-picker-note">{facts.note}</p>}
-        {!eligible && <p className="square-picker-unavailable">Unavailable for this action</p>}
       </>}
-      <button className="square-picker-confirm" disabled={!eligible || suspended || confirmDisabled} onClick={confirm}>{confirmLabel} <kbd>Enter</kbd></button>
-      {extra}
+      <button className="square-picker-confirm" disabled={!eligible || suspended || confirmDisabled} onClick={confirm}>{square && !eligible ? "Unavailable for this action" : confirmLabel} <kbd>Enter</kbd></button>
     </section>
     <nav className="square-picker-navigation" aria-label="Square selection controls">
       {onBack && <button className="secondary" disabled={suspended} onClick={onBack}><kbd>Esc</kbd> Back</button>}
@@ -129,6 +127,7 @@ export function SquarePicker({ state, selection, title, confirmLabel, onBack, on
         <span>{eligible ? [...selection.eligibleSquareIds].sort((a, b) => a - b).indexOf(square!.id) + 1 : "—"} / {selection.eligibleSquareIds.size}</span>
         <button className="secondary" disabled={suspended || selection.eligibleSquareIds.size < 2} onClick={() => cycle(1)}>Next <kbd>E</kbd></button>
       </div>
+      {extra}
       <span className="square-picker-help"><strong>Hold WASD / arrows</strong> or move the pointer · Snap near a {snapAll ? "square" : "shop"} · Enter to choose</span>
     </nav>
   </div>;

@@ -105,6 +105,7 @@ import { createSquareCursor, type BoardSquareSelection, type SquareCursorControl
 
 import { renderToStaticMarkup } from "react-dom/server";
 import "./board3d/theme.css";
+import "./board3d/presentation.css";
 import type { TileArtwork } from "./board3d/BoardScene";
 import { projectMovementRequest, type BoardProjector } from "./board3d/geometry";
 
@@ -1040,6 +1041,8 @@ function App() {
   return (
     <PresentationMotionContext.Provider value={presentationMotion}>
     <main
+      data-request={clientState.pendingRequest?.type ?? ""}
+      data-inspecting={selectedSquareId !== null}
       data-pacing-type={activePresentation?.type}
       data-pacing-phase={activePresentation?.phase}
       data-pacing-id={activePresentation?.requestId}
@@ -1443,12 +1446,13 @@ function StateChangeResult({ presentation }: { presentation: PresentationState }
   const shop = after.board.squares.find((s, i) => s.property_owner !== before.board.squares[i]?.property_owner
     || s.shop_current_value !== before.board.squares[i]?.shop_current_value);
   const oldShop = shop && before.board.squares.find((s) => s.id === shop.id);
-  const title = shop ? shop.property_owner !== oldShop?.property_owner ? "Shop ownership changed" : "Shop investment"
+  const title = shop ? shop.property_owner !== oldShop?.property_owner ? (shop.property_owner == null ? "Shop sold!" : "Shop acquired!") : "Shop investment"
     : changed.some((p, i) => JSON.stringify(p.owned_stock) !== JSON.stringify(before.players.find((old) => old.player_id === p.player_id)?.owned_stock))
       ? "Stock transaction" : changed.length ? "Cash update" : "Board update";
   return <div className="state-change-result" role="status">
     <strong>{title}</strong>
-    {shop && <span>Square #{shop.id}{shop.shop_current_value !== oldShop?.shop_current_value ? ` · ${formatGold(oldShop?.shop_current_value ?? 0)} → ${formatGold(shop.shop_current_value ?? 0)}` : ""}</span>}
+    {shop && <span>Square #{shop.id}</span>}
+    {shop && shop.shop_current_value !== oldShop?.shop_current_value && <span className="result-value">{formatGold(oldShop?.shop_current_value ?? 0)} → {formatGold(shop.shop_current_value ?? 0)}</span>}
     {changed.map((player) => <span key={player.player_id}>Player {player.player_id}
       {player.ready_cash !== before.players.find((p) => p.player_id === player.player_id)?.ready_cash
         ? ` · ${formatGold(before.players.find((p) => p.player_id === player.player_id)!.ready_cash)} → ${formatGold(player.ready_cash)}` : ""}
@@ -4810,6 +4814,7 @@ function VentureCardReveal({
         onClick={onContinue}
         aria-label={isOwner ? "Continue from Venture Card" : `Waiting for Player ${presentation.playerId}`}
       >
+        <span className="venture-card-emblem" aria-hidden="true">✦</span>
         <span className="venture-card-kicker">Venture Card</span>
         <strong id="venture-card-title">{name}</strong>
         {description && <span className="venture-card-description">{description}</span>}

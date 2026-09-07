@@ -1,0 +1,198 @@
+/* Experimental Wii-inspired presentation. Board decisions, receipts and full-screen
+   ceremonies have explicit placements instead of inheriting sidebar offsets. */
+.theme-tabletop {
+  --receipt-ink: #182633;
+  --receipt-paper: #fffefa;
+  --receipt-frame: #aeb8be;
+  --receipt-shadow: 0 3px 0 #546370, 0 7px 18px #06172866;
+  --presentation-ease: cubic-bezier(.18,.8,.26,1.08);
+}
+.app-shell.theme-tabletop.layout-immersive .turn-panel { display: none; }
+.app-shell.theme-tabletop.layout-immersive:not([data-inspecting="true"]) .square-panel { display: none; }
+.app-shell.theme-tabletop.layout-immersive[data-request=""] .action-panel { display: none; }
+.app-shell.theme-tabletop.layout-immersive .game-header {
+  left: auto; right: 24px; top: 24px; width: 248px; padding: 10px 14px;
+}
+.app-shell.theme-tabletop[data-pacing-type] .game-header { visibility: hidden; }
+.app-shell.theme-tabletop[data-pacing-type]:not([data-pacing-type="piece_moved"]):not([data-pacing-type="dice_rolled"]) .board3d-controls { visibility: hidden; }
+.app-shell.theme-tabletop.layout-immersive .action-panel {
+  left: 28px; right: auto; top: 28px; width: 350px; padding: 18px;
+  max-height: calc(100dvh - 270px); border-radius: 4px;
+  border-width: 2px 0; border-color: #ccd6df;
+  background: linear-gradient(110deg,#061322f5,#10263ce8);
+  box-shadow: 0 5px 12px #00132980; backdrop-filter: none;
+  animation: decision-enter 220ms var(--presentation-ease) both;
+}
+.app-shell.theme-tabletop.layout-immersive .action-panel h2 { font-size: 26px; color: #fff; }
+.app-shell.theme-tabletop.layout-immersive .action-panel .panel-header p:last-child {
+  font-size: 16px; line-height: 1.4; color: #dce8f0;
+}
+.app-shell.theme-tabletop.layout-immersive .action-panel button { font-size: 18px; min-height: 44px; }
+.app-shell.theme-tabletop.layout-immersive.is-playing.is-stop-confirmation .stop-confirmation-panel {
+  left: 50%; top: 7vh; width: min(520px,calc(100vw - 48px)); transform: translateX(-50%);
+}
+.app-shell.theme-tabletop.layout-immersive.is-roll-action-prompt .action-panel { left: 200px; }
+.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .action-panel .action-grid {
+  grid-template-columns: 1fr; gap: 3px;
+}
+.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .action-panel .panel-header { display: none; }
+.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .action-grid button {
+  text-align: left; padding: 8px 16px; border-radius: 0; border: 0;
+  background: transparent; box-shadow: none; color: #fff;
+}
+.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .action-grid button:first-child,
+.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .action-grid button:hover:not(:disabled),
+.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .action-grid button:focus-visible {
+  color: #162839; background: linear-gradient(#fff6b7,#ffd02f 60%,#ffb918);
+  box-shadow: inset 0 0 0 2px #fff2a9, 0 0 10px #ffc52c70;
+}
+/* Amounts and negotiation terms are decisions in their own right. */
+.app-shell.theme-tabletop.layout-immersive .investment-widget:not(.is-selecting) {
+  left: 50%; top: 50%; right: auto; transform: translate(-50%,-50%);
+  width: min(540px,calc(100vw - 48px)) !important; max-height: calc(100dvh - 64px);
+  padding: 24px; border: 3px solid #d7e1e6; border-radius: 12px; z-index: 32;
+  animation: none;
+}
+.app-shell.theme-tabletop.layout-immersive .investment-widget:not(.is-selecting) .panel-header p:last-child { font-size: 15px; }
+.app-shell.theme-tabletop .investment-summary dt, .app-shell.theme-tabletop .investment-amount-input { font-size: 15px; }
+.app-shell.theme-tabletop .investment-summary dd { font-size: 22px; }
+.app-shell.theme-tabletop .trade-proposal-summary :is(strong,span) { font-size: 16px; }
+.app-shell.theme-tabletop .trade-proposal-summary small { font-size: 12px; }
+.app-shell.theme-tabletop.layout-immersive .trade-exchange-widget.is-terms :is(.trade-navigation-actions button,.investment-cancel) { font-size: 16px; min-height: 44px; }
+.app-shell.theme-tabletop.layout-immersive .financial-amount-stepper { grid-template-columns: 54px minmax(0,1fr) 54px; }
+.app-shell.theme-tabletop.layout-immersive .financial-amount-stepper :is(button,input) { min-height: 58px; font-size: 32px; }
+.theme-tabletop:has(.investment-widget:not(.is-selecting)) .board3d-root { filter: brightness(.72); }
+.theme-tabletop:has(.investment-widget:not(.is-selecting)) :is(.square-panel,.game-header,.board3d-controls) { visibility: hidden; }
+.app-shell.theme-tabletop .square-picker-card { max-height: calc(100dvh - 388px); }
+.app-shell.theme-tabletop .square-picker-navigation .square-picker-trade { margin: 0 0 0 auto; }
+.app-shell.theme-tabletop .square-picker-navigation .square-picker-trade p { flex: auto; }
+.app-shell.theme-tabletop .square-picker-navigation:has(.square-picker-trade) .square-picker-help { display: none; }
+
+/* Saturated name strips and large balances, with a pointer identifying the turn. */
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dd { font-size: 19px; letter-spacing: .01em; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dt { font-size: 9px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-title strong { font-size: 15px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card::before { height: 26px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card { min-height: 68px; gap: 3px; background: #09142f; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card.current::after {
+  content: ""; position: absolute; left: -19px; top: 50%; transform: translateY(-50%);
+  width: 15px; height: 24px; background: var(--player-color); clip-path: polygon(0 0,100% 50%,0 100%);
+  filter: drop-shadow(0 0 2px #fff);
+}
+
+/* Receipts stay horizontally centered. Their upper-screen placement leaves
+   the pieces and live balance transfers visible underneath. */
+.app-shell.theme-tabletop :is(.payment-overlay,.stock-price-change-overlay) {
+  padding: clamp(28px,5vh,56px) 24px 24px; place-items: start center;
+  background: transparent; backdrop-filter: none;
+}
+.app-shell.theme-tabletop .payment-stack { width: min(860px,76vw); gap: 10px; }
+.app-shell.theme-tabletop :is(.payment-card,.payment-dividends,.stock-price-change-card) {
+  color: var(--receipt-ink); background: var(--receipt-paper); border: 4px solid var(--receipt-frame);
+  border-radius: 10px; box-shadow: var(--receipt-shadow);
+}
+.app-shell.theme-tabletop .payment-card { padding: 10px 24px 12px; gap: 2px; animation: receipt-enter 300ms var(--presentation-ease) both; }
+.app-shell.theme-tabletop .payment-player { font-size: 25px; color: var(--receipt-ink); gap: 10px; }
+.app-shell.theme-tabletop .payment-player .player-portrait { flex-basis: 44px; width: 44px; height: 48px; }
+.app-shell.theme-tabletop .payment-arrow { font-size: 48px; color: #546270; }
+.app-shell.theme-tabletop .payment-amount {
+  font-size: clamp(58px,6vw,82px); color: #ffe668; font-weight: 900;
+  -webkit-text-stroke: 2px #322b12; paint-order: stroke fill;
+  text-shadow: 0 3px 0 #322b12; animation: receipt-amount 260ms var(--presentation-ease) 180ms both;
+}
+.app-shell.theme-tabletop .payment-context { color: #445869; font-size: 13px; }
+.app-shell.theme-tabletop .payment-dividends { padding: 10px 16px 12px; animation: none; }
+.app-shell.theme-tabletop .payment-dividends header { border-color: #aeb8be; padding-bottom: 7px; }
+.app-shell.theme-tabletop .payment-dividends header span { color: #445869; font-size: 13px; }
+.app-shell.theme-tabletop .payment-dividends h3 { color: #182633; font-size: 20px; }
+.app-shell.theme-tabletop .payment-dividend-grid { padding-top: 8px; }
+.app-shell.theme-tabletop .payment-dividend-grid article { padding: 5px 8px; border-color: #bac8ce; background: #eff3f4; color: #364957; }
+.app-shell.theme-tabletop .payment-dividend-grid article.has-payout { background: #e4f1e6; border-color: #8dc697; }
+.app-shell.theme-tabletop .payment-dividend-grid article > span:nth-child(2) { font-size: 14px; }
+.app-shell.theme-tabletop .payment-dividend-grid article > strong { font-size: 25px; color: #526473; }
+.app-shell.theme-tabletop .payment-dividend-grid article.has-payout > strong { color: #087839; }
+.app-shell.theme-tabletop :is(.payment-continue,.stock-price-continue,.promotion-continue) { min-height: 46px; font-size: 18px; }
+.app-shell.theme-tabletop .stock-price-change-card { width: min(860px,76vw); padding: 18px; gap: 14px; }
+.app-shell.theme-tabletop .stock-price-change-card > header span { color: #445869; font-size: 13px; }
+.app-shell.theme-tabletop .stock-price-change-card > header h2 { font-size: 32px; color: #182633; }
+.app-shell.theme-tabletop .stock-price-transition strong { color: #586873; font-size: 66px; }
+.app-shell.theme-tabletop .stock-price-transition strong:last-child { color: #0d8245; }
+.app-shell.theme-tabletop .stock-price-change-overlay.is-fall .stock-price-transition strong:last-child { color: #b61d46; }
+.app-shell.theme-tabletop .stock-price-transition > span { color: #586873; }
+.app-shell.theme-tabletop .stock-price-impact-grid article { background: #e8eef1; color: #334958; }
+.app-shell.theme-tabletop .stock-price-impact-grid article.has-impact { background: color-mix(in srgb,var(--stock-player-color) 22%,white); }
+.app-shell.theme-tabletop .stock-price-impact-grid article > span:nth-child(2) { font-size: 14px; }
+.app-shell.theme-tabletop .stock-price-impact-grid article > small { color: #465e70; font-size: 11px; }
+.app-shell.theme-tabletop .stock-price-impact-grid article > em { color: #506472; font-size: 22px; }
+.app-shell.theme-tabletop .is-rise .stock-price-impact-grid article.has-impact > em { color: #087839; }
+.app-shell.theme-tabletop .is-fall .stock-price-impact-grid article.has-impact > em { color: #b61d46; }
+
+.app-shell.theme-tabletop .turn-announcement {
+  top: 7vh; width: min(920px,72vw); min-height: 94px; justify-content: center;
+  padding: 12px 24px; border: 3px solid #c2cbd0; border-bottom: 6px solid var(--turn-color);
+  border-radius: 5px; background: #fffef9f5; color: #1a2a36;
+  box-shadow: var(--receipt-shadow); font-size: clamp(28px,3vw,42px);
+}
+.app-shell.theme-tabletop .state-change-result {
+  top: 7vh; width: min(760px,70vw); text-align: center;
+  background: var(--receipt-paper); color: var(--receipt-ink); border-color: var(--receipt-frame);
+  border-radius: 8px; box-shadow: var(--receipt-shadow); font-size: 21px;
+}
+.app-shell.theme-tabletop .state-change-result strong { font-size: 32px; }
+.app-shell.theme-tabletop .state-change-result .result-value { font-size: 34px; font-weight: 900; color: #126b43; }
+.app-shell.theme-tabletop .venture-card-reveal {
+  background: radial-gradient(ellipse at center,#081f3533,#081f3599); backdrop-filter: none;
+}
+.app-shell.theme-tabletop.layout-immersive .venture-card {
+  width: min(640px,85vw); min-height: 370px; padding: 28px 40px; gap: 16px;
+  color: #182633; background: linear-gradient(145deg,#fffefa,#fff4d6);
+  border: 4px solid #dfbd65; border-radius: 14px;
+  box-shadow: 0 0 0 4px #fff9,0 15px 45px #07162888;
+  animation: card-arrive 440ms var(--presentation-ease) both;
+}
+.app-shell.theme-tabletop .venture-card strong { color: #182633; font-size: clamp(34px,4vw,48px); }
+.app-shell.theme-tabletop .venture-card-kicker { color: #71501a; font-size: 15px; }
+.app-shell.theme-tabletop .venture-card-description { color: #304856; font-size: 22px; line-height: 1.5; }
+.app-shell.theme-tabletop .venture-card small { color: #435763; font-size: 14px; opacity: 1; }
+.venture-card-emblem { font-size: 54px; color: #efb32d; line-height: 1; text-shadow: 0 2px 0 #8d6115; }
+.app-shell.theme-tabletop .lucky-roll-player, .app-shell.theme-tabletop .lucky-roll-calculation { color: #3f5869; font-size: 21px; }
+.app-shell.theme-tabletop .lucky-roll-amount { color: #ffe668; font-size: 80px; -webkit-text-stroke: 2px #503b13; paint-order: stroke fill; }
+.app-shell.theme-tabletop .promotion-overlay { background: radial-gradient(ellipse at center,#fce19544,#061728aa); backdrop-filter: none; }
+.app-shell.theme-tabletop .promotion-ceremony { border-width: 4px; }
+.app-shell.theme-tabletop .promotion-salary-card :is(dt,dd) { font-size: 17px; }
+.app-shell.theme-tabletop .promotion-salary-total dd { font-size: 52px; }
+.app-shell.theme-tabletop .promotion-salary-card > p { font-size: 14px; }
+
+/* Lift the toss above the character and accent its existing result hold. */
+.app-shell.theme-tabletop.layout-immersive.is-playing .board-dice:is(.is-rolling,.is-event-hold,.is-event-fading,.is-hidden) { top: 33%; }
+.app-shell.theme-tabletop .board-dice.is-event-hold .physical-die-stage { position: relative; }
+.app-shell.theme-tabletop .board-dice.is-event-hold .physical-die-stage::before {
+  content: ""; position: absolute; inset: -24%; z-index: -1;
+  background: radial-gradient(circle,#fff9aaba 0,#ffde5d55 38%,transparent 68%);
+  animation: die-flash 650ms ease-out both;
+}
+.app-shell.theme-tabletop .board-dice.is-event-hold .solid-die-canvas { animation: receipt-amount 180ms var(--presentation-ease) both; }
+.app-shell.theme-tabletop .board-dice.is-event-hold .board-die-roll { font-size: 21px; color: #fff6c8; }
+@keyframes decision-enter { from { opacity: 0; translate: -16px 0; } to { opacity: 1; translate: 0 0; } }
+@keyframes receipt-enter { from { opacity: 0; transform: translateY(-24px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes receipt-amount { from { transform: scale(.8); } 70% { transform: scale(1.08); } to { transform: scale(1); } }
+@keyframes card-arrive { from { opacity: 0; transform: translateY(28px) rotateY(-20deg) scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes die-flash { from { opacity: 0; transform: scale(.7); } 28% { opacity: 1; } to { opacity: .2; transform: scale(1.15); } }
+@media (max-height: 800px) {
+  .app-shell.theme-tabletop.layout-immersive .hud-player-card { min-height: 63px; }
+  .app-shell.theme-tabletop.layout-immersive .investment-widget:not(.is-selecting) { padding: 18px 22px; }
+  .app-shell.theme-tabletop.layout-immersive .investment-widget .panel-header { margin-bottom: 8px; }
+  .app-shell.theme-tabletop.layout-immersive .investment-widget .financial-amount-stepper :is(button,input) { min-height: 48px; }
+  .app-shell.theme-tabletop .payment-amount { font-size: 64px; }
+  .app-shell.theme-tabletop .stock-price-change-card { gap: 10px; padding: 14px 18px; }
+}
+@media (max-width: 900px) {
+  .app-shell.theme-tabletop.layout-immersive .action-panel { left: 16px; top: 16px; width: 300px; }
+  .app-shell.theme-tabletop .payment-stack, .app-shell.theme-tabletop .stock-price-change-card { width: min(860px,94vw); }
+  .app-shell.theme-tabletop .payment-player { font-size: 20px; }
+  .app-shell.theme-tabletop .payment-route { gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.theme-tabletop :is(.action-panel,.payment-card,.payment-amount,.venture-card,.solid-die-canvas) { animation: none !important; }
+  .app-shell.theme-tabletop .physical-die-stage::before { animation: none !important; opacity: 0; }
+}

@@ -347,11 +347,6 @@
 .app-shell.theme-tabletop .lucky-roll-result small {
   margin-top: 8px; font-size: 12px; color: #ffedb2; opacity: 1;
 }
-@media (min-width: 1100px) {
-  .app-shell.theme-tabletop .payment-overlay {
-    padding-right: calc(var(--tabletop-hud-width) + 150px);
-  }
-}
 @media (max-width: 1099px) {
   .app-shell.theme-tabletop.layout-immersive > .player-hud.has-cash-deltas { z-index: 57; }
 }
