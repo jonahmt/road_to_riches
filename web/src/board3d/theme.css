@@ -177,6 +177,64 @@
 .app-shell.theme-tabletop .stock-mode-sell .stock-overlay-header,
 .app-shell.theme-tabletop .stock-mode-liquidate .stock-overlay-header { background: #423a53; }
 .app-shell.theme-tabletop .stock-transaction-panel { background: #142940; }
+.app-shell.theme-tabletop .investment-selected-shop {
+  border-color: #d3b77366;
+  background: linear-gradient(120deg, #324d67, #213b57);
+  box-shadow: inset 0 1px 0 #ffffff14;
+}
+.app-shell.theme-tabletop .investment-selected-shop > strong { color: #ffe8af; font-size: 18px; }
+.app-shell.theme-tabletop .investment-selected-shop > span,
+.app-shell.theme-tabletop .investment-selected-shop > small { color: #d2e0ec; font-size: 11px; }
+.app-shell.theme-tabletop .investment-summary { gap: 6px; }
+.app-shell.theme-tabletop .investment-summary > div { padding-bottom: 6px; border-color: #c9dce626; }
+.app-shell.theme-tabletop .investment-summary dt { color: #c4d6e4; font-size: 11px; }
+.app-shell.theme-tabletop .investment-summary dd { font-size: 15px; font-variant-numeric: tabular-nums; }
+.app-shell.theme-tabletop .investment-amount-input { color: #e9d9af; font-size: 11px; gap: 6px; }
+.app-shell.theme-tabletop.layout-immersive .financial-amount-stepper {
+  grid-template-columns: 42px minmax(0, 1fr) 42px; gap: 0;
+  border: 1px solid #dfbe73; border-radius: 8px;
+  background: #fff0bb; box-shadow: 0 3px 0 #0b2035;
+}
+.app-shell.theme-tabletop.layout-immersive .financial-amount-stepper:focus-within {
+  outline: 2px solid #fff0ae; outline-offset: 3px;
+}
+.app-shell.theme-tabletop.layout-immersive .financial-amount-stepper button {
+  min-height: 46px; border: 0; border-radius: 0;
+  background: #2b4665; color: #fff1bf; box-shadow: inset 0 1px 0 #ffffff24;
+  font-size: 24px; line-height: 1;
+}
+.app-shell.theme-tabletop.layout-immersive .financial-amount-stepper button:first-child { border-radius: 7px 0 0 7px; }
+.app-shell.theme-tabletop.layout-immersive .financial-amount-stepper button:last-child { border-radius: 0 7px 7px 0; }
+.app-shell.theme-tabletop.layout-immersive :is(.financial-amount-stepper, .investment-amount-input) input {
+  min-height: 46px; border: 0; border-radius: 0; outline: none;
+  background: #fff0bb; color: #203952; font-size: 24px; line-height: 1.1;
+  font-variant-numeric: tabular-nums; appearance: textfield;
+}
+.app-shell.theme-tabletop.layout-immersive :is(.financial-amount-stepper, .investment-amount-input) input:focus { background: #ffe59a; }
+.app-shell.theme-tabletop.layout-immersive :is(.financial-amount-stepper, .investment-amount-input) input::-webkit-inner-spin-button,
+.app-shell.theme-tabletop.layout-immersive :is(.financial-amount-stepper, .investment-amount-input) input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.app-shell.theme-tabletop.layout-immersive .investment-amount-input > input {
+  border: 1px solid #dfbe73; border-radius: 8px;
+}
+.app-shell.theme-tabletop.layout-immersive .investment-amount-input > input:focus-visible {
+  outline: 2px solid #fff0ae; outline-offset: 3px;
+}
+@media (min-width: 901px) and (max-height: 820px) {
+  .app-shell.theme-tabletop.layout-immersive .trade-exchange-widget.is-terms {
+    gap: 8px; max-height: calc(100dvh - 292px);
+  }
+  .app-shell.theme-tabletop .trade-exchange-widget.is-terms .panel-header { margin-bottom: 2px; padding-bottom: 8px; }
+  .app-shell.theme-tabletop .trade-exchange-widget.is-terms form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px;
+  }
+  .app-shell.theme-tabletop .trade-exchange-widget.is-terms form > :is(.trade-proposal-summary, fieldset, dl) { grid-column: 1 / -1; }
+  .app-shell.theme-tabletop .trade-exchange-widget.is-terms .trade-navigation-actions { display: contents; }
+  .app-shell.theme-tabletop .trade-exchange-widget.is-terms :is(.trade-navigation-actions button, .investment-cancel) {
+    min-height: 38px; padding: 6px; font-size: 11px;
+  }
+  .app-shell.theme-tabletop .trade-exchange-widget.is-terms .trade-gold-terms { padding: 8px; gap: 6px; }
+  .app-shell.theme-tabletop .trade-exchange-widget.is-terms .trade-gold-terms > div button { min-height: 36px; }
+}
 .app-shell.theme-tabletop .stock-selection-summary h3,
 .app-shell.theme-tabletop .venture-grid-header h2 { color: #ffe8af; }
 .app-shell.theme-tabletop .stock-player-summary .player-portrait {

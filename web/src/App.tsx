@@ -4598,7 +4598,7 @@ function StockOverlay({
 
             <div className="stock-quantity-control">
               <span>{mode === "buy" ? "Purchase amount" : "Sale amount"}</span>
-              <div>
+              <div className="financial-amount-stepper">
                 <button
                   type="button"
                   aria-label="Decrease stock quantity"
@@ -5442,7 +5442,7 @@ function InvestmentWidget({
         </dl>
         <label className="investment-amount-input">
           Investment amount
-          <span>
+          <span className="financial-amount-stepper">
             <button
               type="button"
               aria-label="Decrease investment"
@@ -5622,7 +5622,7 @@ function BuyShopOfferWidget({
         </dl>
         <label className="investment-amount-input">
           Offer price
-          <span>
+          <span className="financial-amount-stepper">
             <button
               type="button"
               aria-label="Decrease offer"
@@ -5860,7 +5860,7 @@ function SellShopOfferWidget({
         </dl>
         <label className="investment-amount-input">
           Asking price
-          <span>
+          <span className="financial-amount-stepper">
             <button
               type="button"
               aria-label="Decrease asking price"

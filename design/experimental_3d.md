@@ -228,6 +228,21 @@ selected district. The district-color edge remains visible in either state.
 This explicitly overrides the general button theme, which otherwise made all
 rows look selected. Selection and transaction behavior are unchanged.
 
+Stock, investment, and shop-offer number steppers share the
+`financial-amount-stepper` presentation class: one rounded frame, navy end
+buttons, a large cream number field, and a gold focus outline. Number entry
+retains its native input type, keyboard behavior, validation, and existing
+increment/decrement handlers; redundant browser spinner styling is hidden.
+Direct trade/counter amount fields use the same colors and number size. Shop
+summary values are larger, with tabular numerals, and selected-shop cards use
+an inset navy surface. No amount calculations or request payloads change.
+
+On desktop windows at most 820 pixels high, the exchange review uses tighter
+spacing and places Back, Send Exchange, and Cancel Exchange in one row. Its
+height cap leaves an eight-pixel minimum gap above the compact HUD. Longer
+content retains the existing panel scrolling; the regular-height layout keeps
+its original two action rows.
+
 Venture-grid cells likewise use navy for open squares and gold for the selected
 open square. Claimed cells retain their owner's color even under the cursor;
 gold outlines show a potential line bonus without replacing those colors.
@@ -268,6 +283,21 @@ this temporary preview server. This branch can also run against any compatible
 server using the connection form.
 
 ## Verification
+
+The financial-control pass was inspected in real offer, sale, stock, exchange,
+and investment flows. At 1280 by 720, the revised exchange review measured
+425 pixels high with no internal overflow, including the gold field, both cash
+previews, and all three final buttons. The investment panel measured 374 pixels
+at both 1280 by 720 and 1600 by 1000. An isolated browser review exercised stock
+Max and keyboard decrement, a 9,999 shop offer and its negative cash preview,
+sale-price entry, trade gold entry/cancel, and investment keyboard entry plus
+minimum/maximum bounds. Submitting 95 produced authoritative shop value 285
+from 190, cash 1,705 from 1,800, and the stock-price presentation from 12 to 13.
+The 91 browser tests, type check, production build, and Ruff passed; the final
+browser run had no page errors. A fresh attempt to play the reference beyond
+41:35 encountered a YouTube playback error, so this pass follows the established
+dark-menu/gold-selection cues already observed at 40:50 rather than claiming an
+exact reconstruction of the Wii amount-entry screen.
 
 The compact HUD was rendered on populated Trodain views at 1600 by 1000 and
 1280 by 720, including a close view of the bank and neighboring rent plaques.
