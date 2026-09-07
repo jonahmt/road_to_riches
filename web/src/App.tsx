@@ -1,5 +1,7 @@
 import {
   type CSSProperties,
+  lazy,
+  Suspense,
   FormEvent,
   type PointerEvent as ReactPointerEvent,
   useEffect,
@@ -100,6 +102,13 @@ import {
 import { BugReportControl } from "./BugReportControl";
 import { PromotionSuitRow } from "./PromotionSuitRow";
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
+
+import { renderToStaticMarkup } from "react-dom/server";
+import "./board3d/theme.css";
+import type { TileArtwork } from "./board3d/BoardScene";
+import { projectMovementRequest, type BoardProjector } from "./board3d/geometry";
+
+const BoardScene = lazy(() => import("./board3d/BoardScene"));
 
 const DEFAULT_URI = import.meta.env.VITE_GAME_SERVER_URL ?? "ws://localhost:8765";
 const DEFAULT_BACKSTREET_COLOR = "#56cfff";
@@ -570,7 +579,7 @@ function getVentureLinePreview(
   return { bonus, cells: previewCells };
 }
 
-function useWasdPromptControls(request: InputRequest | null, onSubmit: (value: unknown) => void) {
+function useWasdPromptControls(request: InputRequest | null, onSubmit: (value: unknown) => void, projectorRef: { current: BoardProjector | null }) {
   const bufferedKey = useRef("");
   const timeoutId = useRef<number | null>(null);
 
@@ -621,7 +630,7 @@ function useWasdPromptControls(request: InputRequest | null, onSubmit: (value: u
         return;
       }
 
-      const mapping = getWasdResponseMap(request);
+      const mapping = getWasdResponseMap(projectMovementRequest(request, projectorRef.current));
       if (Object.keys(mapping).length === 0) {
         return;
       }
@@ -679,6 +688,7 @@ function isGameplayHotkeySuppressed(): boolean {
 }
 
 function App() {
+  const boardProjector = useRef<BoardProjector | null>(null);
   const {
     clientState,
     connect,
@@ -856,6 +866,7 @@ function App() {
   useWasdPromptControls(
     clientState.responsePending || reporterOpen ? null : standardKeyboardRequest,
     submitResponse,
+    boardProjector,
   );
 
   useEffect(() => {
@@ -944,7 +955,7 @@ function App() {
 
   return (
     <main
-      className={`app-shell layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
+      className={`app-shell theme-tabletop layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
     >
       {rollPhaseVisibility.gameHeader && (
         <header className="game-header">
@@ -994,6 +1005,7 @@ function App() {
           />
           <section className="game-layout">
             <BoardPanel
+              projectorRef={boardProjector}
               state={clientState.gameState}
               assignedPlayerId={clientState.playerId}
               dice={clientState.dice}
@@ -1463,11 +1475,95 @@ function StatusPill({
   );
 }
 
-function BoardPanel({
+type BoardPanelProps = Parameters<typeof SvgBoardPanel>[0] & {
+  dice: DiceState | null;
+  showDice: boolean;
+  projectorRef: { current: BoardProjector | null };
+};
+
+function BoardPanel(props: BoardPanelProps) {
+  const [threeDimensional, setThreeDimensional] = useState(
+    () => new URLSearchParams(window.location.search).get("renderer") !== "2d",
+  );
+  const artwork = useMemo(() => {
+    if (!props.state) return new Map<number, TileArtwork>();
+    return new Map(props.state.board.squares.map((square) => [square.id, boardTileArtwork(square, props.state!)]));
+  }, [props.state]);
+  const bounds = props.state ? getBoardBounds(props.state) : null;
+  return <>
+    {threeDimensional && props.state && bounds ? <section className="board-panel" aria-label="3D game board">
+      <Suspense fallback={<div className="board3d-error" role="status">Loading 3D board…</div>}>
+        <BoardScene projectorRef={props.projectorRef} state={props.state} artwork={artwork} assignedPlayerId={props.assignedPlayerId}
+          selectedSquareId={props.selectedSquare?.id ?? null} focusDistrictId={props.focusDistrictId}
+          temporaryFreeCamera={props.temporaryFreeCamera} selection={props.squareSelection}
+          onSelectSquare={props.onSelectSquare} onFallback={() => setThreeDimensional(false)} />
+      </Suspense>
+      <BoardMinimap state={props.state} bounds={bounds} />
+    </section> : <SvgBoardPanel {...props} />}
+    <BoardDice dice={props.dice} showSettled={props.showDice} />
+    <button className="board-renderer-toggle" onClick={() => setThreeDimensional(!threeDimensional)}>
+      {threeDimensional ? "2D view" : "3D view"}
+    </button>
+  </>;
+}
+
+// Render the existing SVG components into local tile textures. Geometry and game
+// values share the production artwork and formulas rather than a second ruleset.
+function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
+  const shop = isShopSquare(square);
+  let icon = isSuitIconSquare(square) ? <SuitIcon suit={square.suit} squareType={square.type} x={0} y={0} />
+    : isBankIconSquare(square) ? <BankIcon x={0} y={0} />
+    : isStockbrokerIconSquare(square) ? <StockbrokerIcon x={0} y={0} />
+    : isVentureIconSquare(square) ? <VentureIcon x={0} y={0} />
+    : isBoonIconSquare(square) ? <BoonIcon x={0} y={0} />
+    : isBoomIconSquare(square) ? <BoomIcon x={0} y={0} />
+    : isTakeABreakIconSquare(square) ? <TakeABreakIcon x={0} y={0} />
+    : isArcadeIconSquare(square) ? <ArcadeIcon x={0} y={0} />
+    : isRollOnIconSquare(square) ? <RollOnIcon x={0} y={0} />
+    : isCannonIconSquare(square) ? <CannonIcon x={0} y={0} />
+    : isBackstreetIconSquare(square) ? <BackstreetIcon square={square} x={0} y={0} />
+    : isDoorwayIconSquare(square) ? <DoorwayIcon square={square} x={0} y={0} />
+    : isSwitchIconSquare(square) ? <SwitchIcon x={0} y={0} />
+    : isSuitYourselfIconSquare(square) ? <SuitYourselfIcon x={0} y={0} /> : null;
+  const border = isMinimapShopLikeSquare(square) ? getDistrictBorderColor(square.property_district) : "#f7f7f2";
+  const symbol = icon ? renderToStaticMarkup(<svg xmlns="http://www.w3.org/2000/svg">{icon}</svg>) : null;
+  if (square.type === "BANK" || square.type === "STOCKBROKER") {
+    icon = <SquareIconLabel className={square.type === "STOCKBROKER" ? "stockbroker-icon-label" : ""}
+      label={square.type} x={0} y={2.82} />;
+  }
+  const sign = shop && square.property_owner === null ? renderToStaticMarkup(<svg xmlns="http://www.w3.org/2000/svg" width="512" height="256" viewBox="0 0 512 256"><rect width="512" height="256" rx="18" fill="#855431"/><rect x="12" y="12" width="488" height="232" rx="12" fill="#aa784c" stroke="#dfbc7e" strokeWidth="8"/><text x="256" y="163" textAnchor="middle" fontFamily="Arial,sans-serif" fontWeight="900" fontSize="140" fill="#fff7df" stroke="#563820" strokeWidth="3" paintOrder="stroke">{rawGold(square.shop_current_value ?? square.shop_base_value)}</text></svg>) : null;
+  const content = shop ? (sign ? null : <ShopTile square={square} state={state} x={0} y={0} closedTurns={closedShopTurns(square.statuses)} />)
+    : icon ?? <><text className="square-type" x={0} y={-0.5}>{labelForSquare(square)}</text>
+      <text className="square-value" x={0} y={0.4}>{valueLabelForSquare(square, state)}</text></>;
+  const surface = renderToStaticMarkup(<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-2 -2 4 4">
+    <style>{`
+      text {font-family:Arial,sans-serif;text-anchor:middle;dominant-baseline:middle;fill:#f7f7f2;font-weight:900;paint-order:stroke;stroke:#080a0e;stroke-width:.035px}
+      .square-icon-label{font-size:.46px}.stockbroker-icon-label{font-size:.34px}
+      .take-a-break-icon-label,.backstreet-icon-label{font-size:.39px}.suit-yourself-icon-label{font-size:.35px}
+      .square-type{font-size:.48px}.square-value{font-size:.6px}.shop-tile-price{font-size:1.08px}
+      .shop-tile-rent-bar{fill:#030407}.is-closed{fill:#8f9698}
+      .closed-shop-turn-count{font-size:.78px}.closed-shop-turn-label{font-size:.3px}
+      .suit-icon-shape{stroke:#080a0e;stroke-width:.12px;stroke-linejoin:round}
+    `}</style>
+    <defs><pattern id="pavers" width="1" height="0.8" patternUnits="userSpaceOnUse">
+      <path d="M0 0H1V.8H0ZM.5 0V.8" fill="none" stroke={shop ? "#ffffff" : "#36526a"} strokeOpacity={shop ? 0.13 : 0.07} strokeWidth=".035" />
+      <path d="M.03 .06H.46M.55 .06H.96" stroke="#ffffff" strokeOpacity=".18" strokeWidth=".025" />
+    </pattern></defs>
+    <rect x={-2} y={-2} width={4} height={4} fill={shop
+      ? (square.property_owner === null ? "#374761" : getPlayerColor(square.property_owner))
+      : (square.suit ? getSuitColor(square.suit) : "#ebdab0")} />
+    {!shop && <rect x={-2} y={-2} width={4} height={4} fill="#ffffff" opacity=".72" />}
+    <rect x={-2} y={-2} width={4} height={4} fill="url(#pavers)" />
+    <style>{`.square-icon-label,.square-type,.square-value{fill:#263f5b;stroke:#fff9e0;stroke-width:.012px}`}</style>
+    {content}
+    <rect x={-1.9} y={-1.9} width={3.8} height={3.8} rx={0.16} fill="none" stroke={shop ? border : "#fff6d9"} strokeWidth={0.14} />
+  </svg>);
+  return { surface, symbol, sign, border, description: `Square ${square.id}: ${displayTypeForSquare(square)}` };
+}
+
+function SvgBoardPanel({
   state,
   assignedPlayerId,
-  dice,
-  showDice,
   selectedSquare,
   focusDistrictId,
   temporaryFreeCamera,
@@ -1476,8 +1572,6 @@ function BoardPanel({
 }: {
   state: GameState | null;
   assignedPlayerId: number | null;
-  dice: DiceState | null;
-  showDice: boolean;
   selectedSquare: SquareInfo | null;
   focusDistrictId: number | null;
   temporaryFreeCamera: boolean;
@@ -2184,7 +2278,6 @@ function BoardPanel({
           </g>
         </svg>
       </div>
-      <BoardDice dice={dice} showSettled={showDice} />
       <BoardMinimap state={state} bounds={bounds} />
       <div className="board-camera-controls" aria-label="Board zoom controls">
         <button
@@ -3492,7 +3585,7 @@ function PlayerHud({
           <article
             key={player.player_id}
             className={`hud-player-card ${isCurrent ? "current" : ""} ${isAssigned ? "assigned" : ""}`}
-            style={{ borderColor: getPlayerColor(player.player_id) }}
+            style={{ borderColor: getPlayerColor(player.player_id), "--player-color": getPlayerColor(player.player_id) } as CSSProperties}
           >
             {cashDelta !== 0 && (
               <span

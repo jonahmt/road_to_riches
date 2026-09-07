@@ -1,0 +1,18 @@
+.board3d-root { position: absolute; inset: 0; overflow: hidden; }
+.board3d-root canvas { touch-action: none; }
+.board3d-anchors { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.board3d-anchors > span { position: absolute; left: 0; top: 0; display: block; width: 2px; height: 2px; pointer-events: none; }
+.board3d-controls { position: absolute; z-index: 5; left: 16px; bottom: 16px; padding: 9px; max-width: 320px;
+  border: 1px solid #ffffff24; border-radius: 12px; background: #0c1727df; color: #edf4f8; }
+.board3d-camera-row { display: flex; gap: 5px; }
+.board3d-controls button { min-height: 34px; padding: 6px 12px; }
+.board3d-controls p { margin: 7px 2px 0; font-size: 11px; }
+.board3d-controls details { margin-top: 6px; font-size: 12px; }
+.board3d-controls summary { cursor: pointer; }
+.board3d-controls label { display: grid; gap: 4px; margin-top: 8px; }
+.board3d-controls select { max-width: 295px; }
+.board-renderer-toggle { position: fixed; z-index: 15; left: 50%; bottom: 14px; transform: translateX(-50%);
+  background: #0c1727df; border: 1px solid #ffffff30; font-size: 12px; padding: 7px 12px; }
+.board3d-error { position: absolute; z-index: 10; top: 40%; left: 50%; transform: translate(-50%, -50%);
+  display: grid; gap: 12px; border-radius: 12px; padding: 24px; background: #182332; color: white; }
+@media (max-width: 700px) { .board3d-controls { left: 8px; bottom: 8px; } .board-renderer-toggle { left: auto; right: 8px; transform: none; } }

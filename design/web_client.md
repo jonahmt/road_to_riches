@@ -1,5 +1,10 @@
 # Web Client Design
 
+On `codex/3d-experiment`, the [experimental 3D presentation](experimental_3d.md)
+extends this client with a Three.js board and a Fortune Street-inspired theme.
+That document records the branch-specific rendering and visual decisions; the
+gameplay and protocol contracts in this document still apply.
+
 This document records the initial web-client decisions for the first playable
 browser review build. The goal is a clean, functional base UI that connects to a
 local Road to Riches server and can grow into the cozier, more characterful

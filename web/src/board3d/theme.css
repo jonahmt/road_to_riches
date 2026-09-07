@@ -1,0 +1,121 @@
+/* Experimental art direction: warm frames, saturated pieces, navy information panels. */
+.app-shell.theme-tabletop {
+  --tabletop-ink: #162c4e;
+  --tabletop-gold: #e1ba63;
+  --tabletop-cream: #fff3cb;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  color: #fff8e6;
+}
+.app-shell.theme-tabletop.layout-immersive .game-header,
+.app-shell.theme-tabletop.layout-immersive .action-panel,
+.app-shell.theme-tabletop.layout-immersive .turn-panel,
+.app-shell.theme-tabletop.layout-immersive .square-panel,
+.app-shell.theme-tabletop.layout-immersive .board-dice,
+.app-shell.theme-tabletop.layout-immersive .dev-panel,
+.app-shell.theme-tabletop .connect-card {
+  border: 2px solid #e5c478;
+  border-radius: 12px;
+  background: #172e4bed;
+  box-shadow: inset 0 0 0 2px #fff4d324, 0 4px 0 #0d2038a0, 0 8px 20px #14243130;
+  backdrop-filter: blur(6px);
+}
+.app-shell.theme-tabletop.layout-immersive .game-header { width: 300px; padding: 13px 15px; }
+.app-shell.theme-tabletop.layout-immersive .game-header h1 { color: #fff1bc; font-size: 21px; }
+.app-shell.theme-tabletop .eyebrow { color: #efcc7c; letter-spacing: .12em; }
+.app-shell.theme-tabletop.layout-immersive .action-panel { width: 300px; padding: 15px; }
+.app-shell.theme-tabletop.layout-immersive .action-panel h2 { color: #fff1bc; font-size: 20px; }
+.app-shell.theme-tabletop.layout-immersive .action-panel .panel-header { border-bottom: 1px solid #efcc7c55; padding-bottom: 10px; }
+.app-shell.theme-tabletop.layout-immersive .action-panel .action-grid { gap: 7px; }
+.app-shell.theme-tabletop.layout-immersive button {
+  border: 1px solid #e6c679;
+  border-radius: 7px;
+  background: #fff0bb;
+  box-shadow: inset 0 1px 0 #ffffffaa, 0 2px 0 #76512b;
+  color: #213654;
+  font-weight: 800;
+}
+.app-shell.theme-tabletop.layout-immersive button.secondary,
+.app-shell.theme-tabletop.layout-immersive .action-grid button:not(:first-child) {
+  background: #2b4665;
+  color: #fff6da;
+  border-color: #97a9b56b;
+  box-shadow: inset 0 1px 0 #ffffff14, 0 2px 0 #0d2138;
+}
+.app-shell.theme-tabletop.layout-immersive .action-grid button:first-child {
+  background: linear-gradient(#fff1a2, #f1c755);
+  border-color: #fff1b6;
+}
+.app-shell.theme-tabletop.layout-immersive button:hover:not(:disabled) {
+  filter: brightness(1.12);
+  outline: 2px solid #fff1b866;
+  outline-offset: 1px;
+}
+.app-shell.theme-tabletop.layout-immersive button:focus-visible,
+.app-shell.theme-tabletop.layout-immersive select:focus-visible { outline: 3px solid #fff1a2; outline-offset: 3px; }
+.app-shell.theme-tabletop.layout-immersive .turn-panel { width: 340px; padding: 10px 15px; }
+.app-shell.theme-tabletop.layout-immersive .turn-panel h2 { color: #ffe595; }
+.app-shell.theme-tabletop.layout-immersive > .player-hud { width: min(410px, calc(100vw - 32px)); gap: 6px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card {
+  border-width: 2px;
+  border-radius: 11px;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--player-color) 32%, #18304c), #152b4a 50%);
+  box-shadow: inset 0 1px 0 #ffffff55, 0 3px 0 #0d2038aa;
+  padding: 8px 11px;
+}
+.app-shell.theme-tabletop.layout-immersive .hud-player-card.current {
+  box-shadow: inset 0 1px 0 #ffffff77, 0 0 0 2px #fff0aa, 0 4px 12px #06192c77;
+}
+.app-shell.theme-tabletop.layout-immersive .hud-player-card strong { color: #fff8df; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dd { color: #fffdf2; font-size: 15px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dt { color: #d4dfec; }
+.app-shell.theme-tabletop.layout-immersive .player-token.large {
+  box-shadow: inset 0 2px 0 #ffffff99, inset 0 -3px 0 #14253644, 0 0 0 2px #fff1bd;
+}
+.app-shell.theme-tabletop.layout-immersive .square-panel { width: 245px; bottom: 296px; }
+.app-shell.theme-tabletop.layout-immersive .square-panel h2 { color: #ffe9ad; }
+.app-shell.theme-tabletop.layout-immersive .board-minimap {
+  width: 180px; height: 180px; bottom: 104px;
+  background: #152b4bdc; border: 2px solid #e1bf72; box-shadow: 0 4px 0 #0d2038aa;
+}
+.app-shell.theme-tabletop.layout-immersive .board3d-controls {
+  left: 84px; bottom: 16px; z-index: 10; background: #172e4bed; border: 1px solid #dfbf77;
+  box-shadow: inset 0 1px 0 #fff4d333, 0 3px 0 #0d2038aa;
+}
+.app-shell.theme-tabletop.layout-immersive .board-renderer-toggle { color: #fff3c7; background: #172e4bed; }
+.app-shell.theme-tabletop.layout-immersive .board3d-controls label { color: #f4dba0; }
+.app-shell.theme-tabletop.layout-immersive .board3d-controls select { background: #10223b; color: #fff5d4; }
+.app-shell.theme-tabletop .stock-overlay-shell,
+.app-shell.theme-tabletop .venture-grid-panel,
+.app-shell.theme-tabletop .venture-grid-sidebar,
+.app-shell.theme-tabletop .payment-card,
+.app-shell.theme-tabletop .payment-dividends,
+.app-shell.theme-tabletop .stock-price-change-card,
+.app-shell.theme-tabletop .promotion-ceremony {
+  background-color: #172e4b;
+  border-color: #e1bf72;
+  box-shadow: inset 0 0 0 2px #fff4d324, 0 8px 32px #06172b88;
+}
+.app-shell.theme-tabletop.layout-immersive .venture-card {
+  background: radial-gradient(circle at 50% 0%, #edc77738, transparent 60%), #172e4b;
+  color: #fff3cb; border: 2px solid #e1bf72;
+  box-shadow: 0 0 0 5px #f4d48725, 0 12px 36px #06172b88;
+}
+.app-shell.theme-tabletop .stock-overlay-header { background: #233e5b; }
+.app-shell.theme-tabletop .stock-mode-sell .stock-overlay-header,
+.app-shell.theme-tabletop .stock-mode-liquidate .stock-overlay-header { background: #423a53; }
+.app-shell.theme-tabletop .stock-transaction-panel { background: #142940; }
+.app-shell.theme-tabletop .stock-selection-summary h3,
+.app-shell.theme-tabletop .venture-grid-header h2 { color: #ffe8af; }
+@media (max-width: 1350px) {
+  .app-shell.theme-tabletop.layout-immersive .game-header { width: 250px; }
+  .app-shell.theme-tabletop.layout-immersive .turn-panel { width: 290px; }
+  .app-shell.theme-tabletop.layout-immersive .action-panel { width: 270px; }
+  .app-shell.theme-tabletop.layout-immersive > .player-hud { width: 365px; }
+  .app-shell.theme-tabletop.layout-immersive .hud-player-card { padding: 6px 9px; }
+  .app-shell.theme-tabletop.layout-immersive .square-panel { width: 210px; }
+}
+@media (max-width: 700px) {
+  .app-shell.theme-tabletop.layout-immersive .turn-panel { display: none; }
+  .app-shell.theme-tabletop.layout-immersive .board-minimap { width: 110px; height: 110px; }
+  .app-shell.theme-tabletop.layout-immersive .square-panel { bottom: 230px; max-height: 170px; }
+}
