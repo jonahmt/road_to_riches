@@ -4,7 +4,7 @@ import {
   playerControlReplacementReason,
   slowClientCloseReason,
 } from "./connectionClose";
-import { nextDiceState, type DiceState } from "./dicePresentation";
+import { diceForPresentation, nextDiceState, type DiceState } from "./dicePresentation";
 import {
   type GameState,
   type InputRequest,
@@ -294,8 +294,16 @@ export function useGameClient(defaultUri: string) {
               };
             }
             case "presentation_request": {
+              // A barrier follows the completed decision. Retire that prompt so
+              // it cannot reappear between the card, its roll, and its result.
+              responsePendingRef.current = false;
               return {
                 ...current,
+                pendingRequest: null,
+                responsePending: false,
+                dice: message.type === "dice_rolled"
+                  ? diceForPresentation(current.dice, message.request_id, message.data ?? {})
+                  : current.dice,
                 presentations: enqueuePresentation(current.presentations, {
                   requestId: message.request_id,
                   playerId: message.player_id,

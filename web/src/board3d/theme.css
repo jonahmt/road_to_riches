@@ -267,6 +267,24 @@
   text-shadow: 0 3px 0 #76532d88;
 }
 .app-shell.theme-tabletop .promotion-eyebrow { align-self: end; }
+.app-shell.theme-tabletop .venture-card.lucky-roll-result {
+  width: min(420px, 88vw);
+  gap: 12px;
+  padding: 28px 30px 24px;
+}
+.app-shell.theme-tabletop .lucky-roll-player {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  color: #d5e8f4; font-size: 17px;
+}
+.app-shell.theme-tabletop .lucky-roll-player .player-portrait { width: 48px; height: 54px; }
+.app-shell.theme-tabletop .lucky-roll-amount {
+  color: #ffe28b; font-size: clamp(44px, 6vw, 66px); font-weight: 900;
+  line-height: 1.05; text-shadow: 0 3px 0 #694218;
+}
+.app-shell.theme-tabletop .lucky-roll-calculation { color: #c8dbe8; font-size: 17px; }
+.app-shell.theme-tabletop .lucky-roll-result small {
+  margin-top: 8px; font-size: 12px; color: #ffedb2; opacity: 1;
+}
 @media (min-width: 1100px) {
   .app-shell.theme-tabletop .payment-overlay {
     padding-right: calc(var(--tabletop-hud-width) + 150px);

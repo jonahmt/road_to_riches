@@ -87,7 +87,7 @@ class TestRunScript:
         assert remaining == 0
         assert loop.input.notify_dice.call_args.kwargs == {
             "purpose": "event",
-            "animate": True,
+            "animate": False,
         }
 
     def test_generator_yields_message(self, tmp_path):
@@ -146,7 +146,7 @@ class TestRunScript:
             3,
             0,
             purpose="event",
-            animate=True,
+            animate=False,
         )
         assert not any(
             isinstance(entry.event, (AdvanceTurnEvent, TurnEvent))

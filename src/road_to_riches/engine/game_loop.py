@@ -714,8 +714,23 @@ class GameLoop:
         self._current_dice_roll = roll
         forced_tag = " (forced)" if event.forced_roll is not None else ""
         self.log.log(f"Player {player_id} rolls a {roll}!{forced_tag}")
-        self.input.notify_dice(roll, roll, purpose="movement", animate=True)
+        self._present_roll(player_id, roll, purpose="movement")
+
+    def _present_roll(self, player_id: int, roll: int, *, purpose: str) -> None:
+        # The barrier starts the animation and holds the engine at this result.
+        # Publish static countdown state after the barrier so a new result does
+        # not briefly flash in the movement corner before its center tumble.
         self.input.notify(self.state, self.log)
+        self._execute_event(
+            PresentationBarrierEvent(
+                player_id=player_id,
+                presentation_type="dice_rolled",
+                data={"value": roll, "purpose": purpose},
+            )
+        )
+        self.input.notify_dice(
+            roll, roll if purpose == "movement" else 0, purpose=purpose, animate=False
+        )
 
     def _handle_will_move(self, event: WillMoveEvent) -> None:
         """Movement decision point: choose path, confirm stop, or undo."""
@@ -1417,8 +1432,7 @@ class GameLoop:
                     cmd.execute(self.state)
                     roll = cmd.get_result()
                     self.log.log(f"Player {cmd.player_id} rolls a {roll}!")
-                    self.input.notify_dice(roll, 0, purpose="event", animate=True)
-                    self.input.notify(self.state, self.log)
+                    self._present_roll(cmd.player_id, roll, purpose="event")
                     result = roll
                 elif isinstance(cmd, GameEvent):
                     self._execute_event(cmd)

@@ -537,9 +537,19 @@ same center tumble and authoritative reveal, holds the result briefly, and then
 fades away instead of occupying the movement position. Reduced-motion clients
 keep the reveal and placement semantics without the cube tumble or travel.
 
+On the experimental 3D branch, a `dice_rolled` presentation request starts the
+animation and the owner acknowledges its completion (1120ms movement, 2000ms
+event). Its value and purpose also restore a pending roll on reconnect. Repeated
+request IDs do not replay a running roll. The old input prompt is retired when
+a barrier starts. Lucky Roll then shows its winnings in a separate owner-owned
+`lucky_roll_result` panel until Continue; no turn advance can bypass either
+barrier. See `experimental_3d.md` for AI pacing and the branch boundary.
+
 The backend `dice` message identifies whether a roll is for `movement` or an
 `event` and whether that message starts a new animation. Remaining-move updates
-are static. The server retains only the latest movement dice update for the
+are static. The experimental backend sends those static updates after the roll
+barrier, while the browser still accepts animated messages from older servers.
+The server retains only the latest movement dice update for the
 active game and includes it without animation when replaying a state snapshot
 and pending prompt to a reconnecting browser, so a reload during movement
 restores both the original roll and remaining count without replaying the roll.

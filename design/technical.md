@@ -120,6 +120,15 @@ is replayed during reconnect/state synchronization, and stale, duplicate,
 wrong-player, or wrong-socket acknowledgments are ignored. Request and
 acknowledgment records belong in the append-only diagnostic log.
 
+The experimental 3D branch also uses this mechanism for `dice_rolled` (value
+and movement/event purpose) and `lucky_roll_result` (value, multiplier, amount).
+The roll handler synchronously executes its barrier before returning to queued
+movement or resuming a generator script, then sends static dice state. The
+browser acknowledges after its full animation; the terminal acknowledges after
+painting; the AI enforces minimum roll presentation times in its client. Lucky
+Roll's payout is unchanged and is followed by an explicit Continue barrier.
+These sequence changes are isolated with the graphics experiment.
+
 Presentation requests contain semantic game facts only. The backend does not
 send animation durations or client timing instructions; each client owns how it
 renders the checkpoint. Routine movement, logs, and minor feedback remain

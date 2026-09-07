@@ -11,9 +11,14 @@ export function enqueuePresentation(
   queue: PresentationState[],
   presentation: PresentationState,
 ): PresentationState[] {
-  return queue.some((item) => item.requestId === presentation.requestId)
-    ? queue
-    : [...queue, presentation];
+  if (queue.some((item) => item.requestId === presentation.requestId)) return queue;
+  // Fast AI movement can collect several suits before their effects finish.
+  // Those transient effects must not hide a server-paced card or payout, which
+  // could otherwise resolve before ever reaching the front of this queue.
+  const remaining = presentation.requiresAcknowledgment
+    ? queue.filter((item) => item.requiresAcknowledgment || item.type !== "suit_collected")
+    : queue;
+  return [...remaining, presentation];
 }
 
 export function markPresentationAcknowledging(

@@ -5,6 +5,7 @@ import {
   dieFinalTransform,
   displayedDiceValue,
   nextDiceState,
+  diceForPresentation,
 } from "../src/dicePresentation.ts";
 
 test("authoritative roll messages advance animation identity only when requested", () => {
@@ -31,6 +32,19 @@ test("authoritative roll messages advance animation identity only when requested
   assert.equal(moved.animationId, 1);
   assert.equal(eventRoll.animationId, 2);
   assert.equal(eventRoll.purpose, "event");
+});
+
+test("a pending roll barrier restores event dice on reconnect and deduplicates replay", () => {
+  const snapshot = nextDiceState(null, { value: 6, remaining: 0 });
+  const event = diceForPresentation(snapshot, "event-roll", { value: 3, purpose: "event" });
+  assert.equal(event.value, 3);
+  assert.equal(event.purpose, "event");
+  assert.equal(event.animationId, 1);
+  assert.equal(event.presentationId, "event-roll");
+  assert.equal(diceForPresentation(event, "event-roll", { value: 3, purpose: "event" }), event);
+  const nextRoll = diceForPresentation(event, "movement-roll", { value: 3, purpose: "movement" });
+  assert.equal(nextRoll.animationId, 2);
+  assert.equal(nextRoll.remaining, 3);
 });
 
 test("legacy dice messages remain static movement updates", () => {

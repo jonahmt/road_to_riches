@@ -47,6 +47,16 @@ test("legacy nonblocking presentations can be dismissed locally", () => {
   );
 });
 
+test("blocking cards and payouts supersede an AI's pending suit effects", () => {
+  const effects = ["club", "diamond", "spade"].map((requestId) => ({
+    ...presentation(requestId, false), type: "suit_collected",
+  }));
+  const card = presentation("card");
+  assert.deepEqual(enqueuePresentation(effects, card), [card]);
+  const payout = { ...presentation("payout"), type: "lucky_roll_result" };
+  assert.deepEqual(enqueuePresentation([card, ...effects], payout), [card, payout]);
+});
+
 test("separate suit collections remain distinct when undo makes recollection legitimate", () => {
   const collected = {
     ...presentation("notification:1", false),

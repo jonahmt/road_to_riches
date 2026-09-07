@@ -76,6 +76,19 @@ def test_ai_acknowledges_only_its_own_presentation(monkeypatch):
     assert sleeps == [1.0]
 
 
+def test_ai_waits_for_full_dice_sequence_even_with_fast_decisions(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("road_to_riches.ai.basic.client.time.sleep", sleeps.append)
+    ai = BasicAIClient(player_id=1, delay=0, presentation_delay=0)
+    for purpose in ("movement", "event"):
+        ai.presentation_ack_message(
+            purpose, 1, presentation_type="dice_rolled", data={"purpose": purpose}
+        )
+    ai.presentation_delay = 4
+    ai.presentation_ack_message("slow", 1, presentation_type="dice_rolled")
+    assert sleeps == [1.35, 2.25, 4]
+
+
 def test_ai_can_buy_more_than_99_total_stock_in_a_district():
     board = BoardState(
         max_dice_roll=6,

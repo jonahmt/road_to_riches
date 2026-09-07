@@ -1003,6 +1003,11 @@ function App() {
               state={clientState.gameState}
               assignedPlayerId={clientState.playerId}
               dice={clientState.dice}
+              onDiceComplete={clientState.presentations.some((presentation) =>
+                presentation.type === "dice_rolled" &&
+                presentation.requestId === clientState.dice?.presentationId &&
+                presentation.playerId === clientState.playerId)
+                ? acknowledgePresentation : undefined}
               showDice={isRollingOrMoving}
               selectedSquare={selectedSquare}
               focusDistrictId={activeStockPriceChange?.districtId ?? null}
@@ -1320,6 +1325,7 @@ function App() {
           "rent_payment",
           "stock_price_changed",
           "suit_collected",
+          "dice_rolled",
         ].includes(activePresentation.type) && (
           <GenericPresentation
             presentation={activePresentation}
@@ -1473,6 +1479,7 @@ function StatusPill({
 type BoardPanelProps = Parameters<typeof SvgBoardPanel>[0] & {
   dice: DiceState | null;
   showDice: boolean;
+  onDiceComplete?: (requestId: string) => void;
   projectorRef: { current: BoardProjector | null };
   movementRequest: InputRequest | null;
   onMovementChoice: (value: number | "undo") => void;
@@ -1498,7 +1505,7 @@ function BoardPanel(props: BoardPanelProps) {
       </Suspense>
       <BoardMinimap state={props.state} bounds={bounds} />
     </section> : <SvgBoardPanel {...props} />}
-    <BoardDice dice={props.dice} showSettled={props.showDice} threeDimensional={threeDimensional} />
+    <BoardDice dice={props.dice} showSettled={props.showDice} threeDimensional={threeDimensional} onComplete={props.onDiceComplete} />
     <button className="board-renderer-toggle" onClick={() => setThreeDimensional(!threeDimensional)}>
       {threeDimensional ? "2D view" : "3D view"}
     </button>
@@ -2403,19 +2410,20 @@ function DieFace({ value, side }: { value: number; side: string }) {
   );
 }
 
-function BoardDice({ dice, showSettled, threeDimensional }: {
+function BoardDice({ dice, showSettled, threeDimensional, onComplete }: {
   dice: DiceState | null; showSettled: boolean; threeDimensional: boolean;
+  onComplete?: (requestId: string) => void;
 }) {
   const [phase, setPhase] = useState<DicePresentationPhase>("hidden");
   const [presentedRoll, setPresentedRoll] = useState<DiceState | null>(null);
   const [startedAt, setStartedAt] = useState(0);
-  const lastAnimationIdRef = useRef(0);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
-    if (!dice || dice.animationId === 0 || dice.animationId === lastAnimationIdRef.current) {
+    if (!dice || dice.animationId === 0) {
       return;
     }
-    lastAnimationIdRef.current = dice.animationId;
     setPresentedRoll(dice);
     setStartedAt(performance.now());
     setPhase("rolling");
@@ -2432,6 +2440,7 @@ function BoardDice({ dice, showSettled, threeDimensional }: {
         window.setTimeout(() => {
           setPhase("settled");
           setPresentedRoll(null);
+          if (dice.presentationId) onCompleteRef.current?.(dice.presentationId);
         }, DICE_ROLL_DURATION_MS + DICE_SETTLE_DURATION_MS),
       );
     } else {
@@ -2444,6 +2453,7 @@ function BoardDice({ dice, showSettled, threeDimensional }: {
         window.setTimeout(() => {
           setPhase("hidden");
           setPresentedRoll(null);
+          if (dice.presentationId) onCompleteRef.current?.(dice.presentationId);
         }, DICE_ROLL_DURATION_MS + EVENT_DICE_HOLD_DURATION_MS + EVENT_DICE_FADE_DURATION_MS),
       );
     }
@@ -4831,6 +4841,7 @@ function GenericPresentation({
 }) {
   const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
   const canContinue = isOwner && !presentation.acknowledgmentPending;
+  const luckyRoll = presentation.type === "lucky_roll_result";
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -4851,13 +4862,24 @@ function GenericPresentation({
     <div className="venture-card-reveal" role="dialog" aria-modal="true" aria-labelledby="presentation-title">
       <button
         type="button"
-        className="venture-card"
+        className={`venture-card ${luckyRoll ? "lucky-roll-result" : ""}`}
         autoFocus={isOwner}
         disabled={!canContinue}
         onClick={onContinue}
+        aria-label={luckyRoll && isOwner ? "Continue from Lucky Roll winnings" : undefined}
       >
-        <span className="venture-card-kicker">Game Event</span>
-        <strong id="presentation-title">{readableType(presentation.type)}</strong>
+        <span className="venture-card-kicker">{luckyRoll ? "Venture Card · Result" : "Game Event"}</span>
+        <strong id="presentation-title">{luckyRoll ? "Lucky Roll!" : readableType(presentation.type)}</strong>
+        {luckyRoll && <>
+          <span className="lucky-roll-player">
+            <PlayerPortrait color={getPlayerColor(presentation.playerId)} playerId={presentation.playerId} />
+            <span>Player {presentation.playerId} receives</span>
+          </span>
+          <span className="lucky-roll-amount">+{formatGold(Number(presentation.data.amount ?? 0))}</span>
+          <span className="lucky-roll-calculation">
+            Rolled {String(presentation.data.value ?? "?")} × {formatGold(Number(presentation.data.multiplier ?? 40))}
+          </span>
+        </>}
         <small>
           {presentation.acknowledgmentPending
             ? "Continuing..."

@@ -5,6 +5,7 @@ export interface DiceState {
   remaining: number;
   purpose: DicePurpose;
   animationId: number;
+  presentationId?: string;
 }
 
 export interface DiceMessage {
@@ -38,6 +39,25 @@ export function nextDiceState(current: DiceState | null, message: DiceMessage): 
     remaining: message.remaining,
     purpose: message.purpose === "event" ? "event" : "movement",
     animationId: (current?.animationId ?? 0) + (message.animate === true ? 1 : 0),
+  };
+}
+
+export function diceForPresentation(
+  current: DiceState | null,
+  requestId: string,
+  data: Record<string, unknown>,
+): DiceState {
+  if (current?.presentationId === requestId) return current;
+  const value = Number(data.value);
+  const purpose = data.purpose === "event" ? "event" : "movement";
+  return {
+    ...nextDiceState(current, {
+      value: Number.isFinite(value) ? value : 0,
+      remaining: purpose === "movement" && Number.isFinite(value) ? value : 0,
+      purpose,
+      animate: true,
+    }),
+    presentationId: requestId,
   };
 }
 

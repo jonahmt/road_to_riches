@@ -150,9 +150,7 @@ def test_browse_viewport_pixels_fall_back_when_unmeasured():
 def test_tui_player_input_forwards_ui_notifications():
     player_input = TuiPlayerInput()
     notifications: list[tuple[str, dict]] = []
-    player_input.set_ui_notification_callback(
-        lambda kind, data: notifications.append((kind, data))
-    )
+    player_input.set_ui_notification_callback(lambda kind, data: notifications.append((kind, data)))
 
     player_input.notify_ui(
         "venture_card_revealed",
@@ -223,6 +221,43 @@ def test_venture_card_presentation_requires_owner_ack_and_has_no_timer():
 
             app.handle_presentation_resolved(app.PresentationResolved("presentation-1"))
             assert app._current_presentation is None
+
+    asyncio.run(run())
+
+
+def test_terminal_auto_acknowledges_roll_after_paint_but_winnings_require_continue():
+    app = HarnessGameApp(_state())
+    app.player_input = RecordingInput(app)
+
+    async def run() -> None:
+        async with app.run_test() as pilot:
+            roll = PresentationRequest(
+                request_id="roll-1",
+                presentation_type="dice_rolled",
+                player_id=0,
+                data={"value": 3, "purpose": "event"},
+            )
+            app.handle_presentation_ready(app.PresentationReady(roll))
+            await pilot.pause()
+            assert app.submitted == ["roll-1"]
+            app.handle_presentation_resolved(app.PresentationResolved("roll-1"))
+            winnings = PresentationRequest(
+                request_id="winnings-1",
+                presentation_type="lucky_roll_result",
+                player_id=0,
+                data={"value": 3, "multiplier": 40, "amount": 120},
+            )
+            app.handle_presentation_ready(app.PresentationReady(winnings))
+            await pilot.pause()
+            assert app.submitted == ["roll-1"]
+            assert "Press Enter" in app.query_one("#prompt-bar", PromptBar).prompt_text
+            app._acknowledge_current_presentation()
+            assert app.submitted == ["roll-1", "winnings-1"]
+            # A delayed repaint callback must not acknowledge a newer panel.
+            app.handle_presentation_ready(app.PresentationReady(roll))
+            app.handle_presentation_ready(app.PresentationReady(winnings))
+            await pilot.pause()
+            assert app.submitted == ["roll-1", "winnings-1"]
 
     asyncio.run(run())
 

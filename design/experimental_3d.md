@@ -139,8 +139,9 @@ renderer remains available through **2D view**, including a WebGL failure
 fallback. `?renderer=2d` starts with that renderer. Both renderers use the
 experimental interface theme on this branch.
 
-The Python engine, WebSocket messages, board JSON, event acknowledgments, and
-financial calculations are unchanged. Authoritative board coordinates map to
+The board JSON and financial calculations are unchanged. The sequence refinement
+below adds roll and Lucky Roll result barriers through the existing event
+acknowledgment protocol. Authoritative board coordinates map to
 the Three.js X/Z plane; elevation exists only in the renderer. All tiles retain
 the four-unit footprint, including negative and fractional coordinates.
 
@@ -318,12 +319,49 @@ fixture with a longer AI delay verified the stationary event reveal, hold and
 disappearance. All 89 browser tests, type checking, Ruff, and build passed;
 the new tests check camera-facing result geometry and extended/zero pip counts.
 
-The same review reproduced existing timing reports `road_to_riches-j54f` and
-`road_to_riches-t02r`: at the normal AI delay, subsequent play can interrupt an
-event die before its result is fully presented. The visual die pass preserves
-the existing message timing and does not resolve those reports. They remain
-open for the separate sequence/acknowledgment work, including the requested
-Lucky Roll gold-result confirmation.
+The solid-die review reproduced existing timing reports `road_to_riches-j54f`
+and `road_to_riches-t02r`: at the normal AI delay, subsequent play interrupted
+the event die. The experimental sequence refinement now places a `dice_rolled`
+presentation barrier after every movement or scripted event roll. Its data
+contains the authoritative value and purpose; the engine waits for the owner
+before processing movement or sending the result back into a card script.
+The browser acknowledges movement after the 760ms tumble and 360ms settlement,
+and event rolls after the tumble, 1000ms hold, and 240ms fade. Renderer switching,
+reduced motion, and CSS/WebGL fallback share those completion semantics.
+
+Each request ID starts one animation. A reconnect during a pending roll restarts
+that presentation from its authoritative data, including event dice; a reconnect
+after completion still restores static movement count without replaying it.
+Static `dice` updates are sent after the barrier, avoiding a premature corner
+result before the center tumble. The terminal acknowledges after painting its
+text result. The AI client waits at least 1.35s for movement or 2.25s for event
+rolls, retaining longer configured presentation delays. Durations remain client
+policy rather than engine rules or protocol payloads.
+
+Lucky Roll transfers the unchanged 40-times-roll amount after the roll barrier,
+then presents `lucky_roll_result` with value, multiplier, and amount. A navy/gold
+panel shows the recipient portrait and winnings until the owner continues;
+AI owners use their existing readable presentation delay. Starting a barrier
+retires the completed browser input prompt so the old venture grid cannot
+reappear behind its roll or winnings. A blocking presentation also clears pending
+nonblocking suit-collection effects: a fast AI can collect several suits before
+their animations finish, and that backlog must not hide a card or payout until
+after the AI has acknowledged it. Authoritative collected suits remain in the HUD.
+These changes remain experimental; the
+two queued main-branch reports remain open until that workflow integrates them.
+
+The sequence pass was rendered at 1600 by 1000 and 1280 by 720 against a private
+backend with the normal AI delay. Checks covered a human roll, reconnect during
+its pending animation, a full six-step route, a lost die WebGL context, 2D
+reduced-motion event dice, and reconnect while winnings awaited Continue.
+The final browser run asserted that the stale venture grid was absent and that
+the AI's card, full event roll, and owner-only winnings panel were each visible
+before the next turn. This caught and corrected the suit-effect queue backlog.
+The six-result fixture paid 240 to both human and AI, with the human's separate
+40 line bonus preserved. All 762 Python tests and 91 browser tests passed, as did
+the production build, type check, and Ruff; the final browser run had no page
+errors. A focused terminal regression also verifies that a delayed dice repaint
+callback cannot acknowledge a newer winnings panel.
 
 A warm, stationary Trodain view at 1600 by 1000 with device pixel ratio 1 was
 sampled for 120 animation frames in headless Chrome on this machine's Apple M1

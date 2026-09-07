@@ -121,11 +121,20 @@ class BasicAIClient:
         request_id: str,
         owner_player_id: int,
         game_id: str | None = None,
+        *,
+        presentation_type: str | None = None,
+        data: dict | None = None,
     ) -> dict | None:
         """Automatically acknowledge this AI's presentation after readable pacing."""
         if owner_player_id != self.player_id:
             return None
-        time.sleep(self.presentation_delay)
+        delay = self.presentation_delay
+        if presentation_type == "dice_rolled":
+            # Browser rolls take 1.12s for movement and 2s for an event.
+            # Leave a small margin for the observing browser to paint its result.
+            minimum = 2.25 if (data or {}).get("purpose") == "event" else 1.35
+            delay = max(delay, minimum)
+        time.sleep(delay)
         return msg_presentation_ack(request_id, self.player_id, game_id=game_id)
 
 
@@ -572,6 +581,8 @@ async def run(
                     msg["request_id"],
                     msg["player_id"],
                     game_id=msg.get("game_id") or game_id,
+                    presentation_type=msg["type"],
+                    data=msg.get("data", {}),
                 )
                 if acknowledgment is not None:
                     await ws.send(encode(acknowledgment))

@@ -393,7 +393,7 @@ class TestRollEvent:
             4,
             4,
             purpose="movement",
-            animate=True,
+            animate=False,
         )
 
         # Follow-up WillMoveEvent should be in the queue

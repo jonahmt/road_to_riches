@@ -47,6 +47,8 @@ _PLAYER_RE = re.compile(r"\bPlayer (\d)\b")
 _GOLD_RE = re.compile(r"\b(\d+)G\b")
 
 STOCK_MAX_PER_BUY = 99
+
+
 def _stock_fluct_delta(current_price: int) -> int:
     """Fluctuation delta applied when buying/selling >=10 stock in a turn."""
     return current_price // 16 + 1
@@ -418,6 +420,15 @@ class GameApp(App):
         self._reset_input_mode()
         self._clear_command_input()
         self._render_presentation(event.request)
+        if event.request.presentation_type == "dice_rolled" and self._controls_presentation_owner(
+            event.request
+        ):
+            # The terminal has no dice animation; acknowledge after painting.
+            def finish_roll() -> None:
+                if self._current_presentation is event.request:
+                    self._acknowledge_current_presentation()
+
+            self.call_after_refresh(finish_roll)
 
     @on(PresentationResolved)
     def handle_presentation_resolved(self, event: PresentationResolved) -> None:
@@ -446,7 +457,15 @@ class GameApp(App):
         info.clear()
         info.display = True
         data = request.data
-        if request.presentation_type == "venture_card_revealed":
+        if request.presentation_type == "dice_rolled":
+            info.write(f"[bold]Rolled {data.get('value', '?')}[/bold]")
+        elif request.presentation_type == "lucky_roll_result":
+            info.write("[bold gold1]LUCKY ROLL[/bold gold1]")
+            info.write(
+                f"Player {request.player_id} received [bold]+{data.get('amount', 0)}G[/bold]"
+            )
+            info.write(f"{data.get('value', 0)} × {data.get('multiplier', 40)}G")
+        elif request.presentation_type == "venture_card_revealed":
             info.write("[bold gold1]VENTURE CARD[/bold gold1]")
             info.write(f"[bold]{escape(str(data.get('name', 'Venture Card')))}[/bold]")
             description = str(data.get("description", ""))
@@ -454,9 +473,7 @@ class GameApp(App):
                 info.write(escape(description))
         elif request.presentation_type == "promotion_completed":
             info.write(f"[bold gold1]PLAYER {request.player_id} PROMOTED![/bold gold1]")
-            info.write(
-                f"Level {data.get('previous_level', '?')} → {data.get('next_level', '?')}"
-            )
+            info.write(f"Level {data.get('previous_level', '?')} → {data.get('next_level', '?')}")
             info.write(
                 "  |  ".join(
                     [
@@ -473,23 +490,19 @@ class GameApp(App):
             owner_id = data.get("owner_id", "?")
             info.write("[bold gold1]SHOP PAYMENT[/bold gold1]")
             info.write(
-                f"Player {payer_id} → Player {owner_id}: "
-                f"[bold]{data.get('rent_amount', 0)}G[/bold]"
+                f"Player {payer_id} → Player {owner_id}: [bold]{data.get('rent_amount', 0)}G[/bold]"
             )
             dividends = data.get("dividends", [])
             if dividends:
                 info.write(f"District {data.get('district_id', '?')} dividends")
                 for payout in dividends:
                     info.write(
-                        f"  Player {payout.get('player_id', '?')}: "
-                        f"+{payout.get('amount', 0)}G"
+                        f"  Player {payout.get('player_id', '?')}: +{payout.get('amount', 0)}G"
                     )
         elif request.presentation_type == "stock_price_changed":
             old_price = data.get("old_price", 0)
             new_price = data.get("new_price", 0)
-            info.write(
-                f"[bold gold1]DISTRICT {data.get('district_id', '?')} STOCK[/bold gold1]"
-            )
+            info.write(f"[bold gold1]DISTRICT {data.get('district_id', '?')} STOCK[/bold gold1]")
             info.write(f"[bold]{old_price}G → {new_price}G[/bold]")
             for holding in data.get("holdings", []):
                 value_change = holding.get("value_change", 0)
@@ -503,7 +516,9 @@ class GameApp(App):
             info.write(escape(str(data)))
 
         prompt = self.query_one("#prompt-bar", PromptBar)
-        if self._controls_presentation_owner(request):
+        if request.presentation_type == "dice_rolled":
+            prompt.prompt_text = "Rolling..."
+        elif self._controls_presentation_owner(request):
             prompt.prompt_text = "Press Enter or Space to continue"
         else:
             prompt.prompt_text = f"Waiting for Player {request.player_id}..."
