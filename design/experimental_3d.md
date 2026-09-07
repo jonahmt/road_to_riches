@@ -5,6 +5,10 @@ the board, board objects, textures, and overall interface theme together, then
 reviewing the result in the browser. It is not a change to the gameplay rules or
 an adoption of this art direction on the main branch.
 
+The [pacing proposal](presentation_pacing_proposal.md) records the subsequent
+reference-motion review and a proposed coordination redesign. It awaits user
+review and does not describe implemented behavior.
+
 The reference is [Fortune Street on Wii](https://www.youtube.com/watch?v=mdQQH9CjDlE&t=2427s),
 especially the turn beginning at 40:27. The relevant visual ideas are substantial
 board tiles, shop price signs and buildings, bright physical player pieces, an
