@@ -19,6 +19,19 @@ export const DICE_SETTLE_DURATION_MS = 360;
 export const EVENT_DICE_HOLD_DURATION_MS = 1_000;
 export const EVENT_DICE_FADE_DURATION_MS = 240;
 
+export const DIE_PIPS: Record<number, readonly number[]> = {
+  0: [],
+  1: [5],
+  2: [3, 7],
+  3: [3, 5, 7],
+  4: [1, 3, 7, 9],
+  5: [1, 3, 5, 7, 9],
+  6: [1, 3, 4, 6, 7, 9],
+  7: [1, 3, 4, 5, 6, 7, 9],
+  8: [1, 2, 3, 4, 6, 7, 8, 9],
+  9: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+};
+
 export function nextDiceState(current: DiceState | null, message: DiceMessage): DiceState {
   return {
     value: message.value,

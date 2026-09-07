@@ -55,6 +55,32 @@
 .app-shell.theme-tabletop.layout-immersive select:focus-visible { outline: 3px solid #fff1a2; outline-offset: 3px; }
 .app-shell.theme-tabletop.layout-immersive .turn-panel { width: 340px; padding: 10px 15px; }
 .app-shell.theme-tabletop.layout-immersive .turn-panel h2 { color: #ffe595; }
+.app-shell.theme-tabletop.layout-immersive .board-dice.has-solid-die {
+  --die-size: clamp(120px, 12vw, 180px);
+  width: var(--die-size); gap: 0; padding: 0;
+  border: 0; background: transparent; box-shadow: none; backdrop-filter: none;
+}
+.app-shell.theme-tabletop .board-dice.is-hidden { visibility: hidden; }
+.app-shell.theme-tabletop.layout-immersive .board-dice.has-solid-die.is-rolling,
+.app-shell.theme-tabletop.layout-immersive .board-dice.has-solid-die.is-hidden,
+.app-shell.theme-tabletop.layout-immersive .board-dice.has-solid-die.is-event-hold,
+.app-shell.theme-tabletop.layout-immersive .board-dice.has-solid-die.is-event-fading {
+  --die-size: clamp(168px, 23vw, 252px);
+}
+.app-shell.theme-tabletop.layout-immersive .board-dice.has-solid-die.is-hidden {
+  top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1.06); transition: none;
+}
+.app-shell.theme-tabletop .solid-die-canvas {
+  width: 100%; height: 100%; filter: drop-shadow(0 7px 5px #061a2e70);
+}
+/* Keep the whole image in view while the HUD size changes before WebGL resizes. */
+.app-shell.theme-tabletop .solid-die-canvas canvas { width: 100% !important; height: 100% !important; }
+.app-shell.theme-tabletop .solid-die-fallback { width: 100%; height: 100%; transform: scale(.75); }
+.app-shell.theme-tabletop.layout-immersive .board-dice.has-solid-die .board-die-roll {
+  padding: 6px 12px; border: 1px solid #e5c478; border-radius: 6px;
+  background: #172e4bf0; color: #fff1ca; font-size: clamp(13px, 1.15vw, 17px);
+  box-shadow: 0 2px 0 #091e32aa;
+}
 .app-shell.theme-tabletop.layout-immersive > .player-hud { width: min(var(--tabletop-hud-width), calc(100vw - 32px)); gap: 6px; }
 .app-shell.theme-tabletop.layout-immersive .hud-player-card {
   grid-template-columns: minmax(0, 1fr);

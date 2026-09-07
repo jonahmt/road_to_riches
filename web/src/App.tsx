@@ -27,6 +27,7 @@ import {
   DICE_SETTLE_DURATION_MS,
   EVENT_DICE_FADE_DURATION_MS,
   EVENT_DICE_HOLD_DURATION_MS,
+  DIE_PIPS,
   dieFinalTransform,
   displayedDiceValue,
 } from "./dicePresentation";
@@ -110,6 +111,7 @@ import type { TileArtwork } from "./board3d/BoardScene";
 import { projectMovementRequest, type BoardProjector } from "./board3d/geometry";
 
 const BoardScene = lazy(() => import("./board3d/BoardScene"));
+const PhysicalDie = lazy(() => import("./board3d/PhysicalDie"));
 
 const DEFAULT_URI = import.meta.env.VITE_GAME_SERVER_URL ?? "ws://localhost:8765";
 const DEFAULT_BACKSTREET_COLOR = "#56cfff";
@@ -221,18 +223,6 @@ const VENTURE_AXES: ReadonlyArray<readonly [number, number]> = [
   [1, 1],
   [1, -1],
 ];
-const DIE_PIPS: Record<number, readonly number[]> = {
-  0: [],
-  1: [5],
-  2: [3, 7],
-  3: [3, 5, 7],
-  4: [1, 3, 7, 9],
-  5: [1, 3, 5, 7, 9],
-  6: [1, 3, 4, 6, 7, 9],
-  7: [1, 3, 4, 5, 6, 7, 9],
-  8: [1, 2, 3, 4, 6, 7, 8, 9],
-  9: [1, 2, 3, 4, 5, 6, 7, 8, 9],
-};
 
 interface BoardCamera {
   zoom: number;
@@ -1508,7 +1498,7 @@ function BoardPanel(props: BoardPanelProps) {
       </Suspense>
       <BoardMinimap state={props.state} bounds={bounds} />
     </section> : <SvgBoardPanel {...props} />}
-    <BoardDice dice={props.dice} showSettled={props.showDice} />
+    <BoardDice dice={props.dice} showSettled={props.showDice} threeDimensional={threeDimensional} />
     <button className="board-renderer-toggle" onClick={() => setThreeDimensional(!threeDimensional)}>
       {threeDimensional ? "2D view" : "3D view"}
     </button>
@@ -2413,9 +2403,12 @@ function DieFace({ value, side }: { value: number; side: string }) {
   );
 }
 
-function BoardDice({ dice, showSettled }: { dice: DiceState | null; showSettled: boolean }) {
+function BoardDice({ dice, showSettled, threeDimensional }: {
+  dice: DiceState | null; showSettled: boolean; threeDimensional: boolean;
+}) {
   const [phase, setPhase] = useState<DicePresentationPhase>("hidden");
   const [presentedRoll, setPresentedRoll] = useState<DiceState | null>(null);
+  const [startedAt, setStartedAt] = useState(0);
   const lastAnimationIdRef = useRef(0);
 
   useEffect(() => {
@@ -2424,6 +2417,7 @@ function BoardDice({ dice, showSettled }: { dice: DiceState | null; showSettled:
     }
     lastAnimationIdRef.current = dice.animationId;
     setPresentedRoll(dice);
+    setStartedAt(performance.now());
     setPhase("rolling");
 
     const timers: number[] = [];
@@ -2467,37 +2461,42 @@ function BoardDice({ dice, showSettled }: { dice: DiceState | null; showSettled:
   const isAnimated = ["rolling", "settling", "event-hold", "event-fading"].includes(
     visualPhase,
   );
-  if (!activeDice || (!shouldShowSettledMovement && !isAnimated)) {
+  const visible = activeDice !== null && (shouldShowSettledMovement || isAnimated);
+  // Prepare the 3D canvas before the first roll; it renders on demand while idle.
+  if (!visible && !threeDimensional) {
     return null;
   }
 
   const settledMovement = visualPhase === "settled";
-  const faceValue = displayedDiceValue(activeDice, settledMovement);
+  const faceValue = activeDice ? displayedDiceValue(activeDice, settledMovement) : 1;
   const frontFaceValue = faceValue === 0 || faceValue > 6 ? faceValue : 1;
   const description =
-    activeDice.purpose === "event"
+    !activeDice ? "" : activeDice.purpose === "event"
       ? `Rolled ${activeDice.value} for event`
       : `Rolled ${activeDice.value}; ${activeDice.remaining} moves remaining`;
+  const fallback = <div className="physical-die-cube"
+    style={{ "--die-final-transform": dieFinalTransform(faceValue) } as CSSProperties}>
+    {PHYSICAL_DIE_FACES.map(([side, value]) => (
+      <DieFace key={side} side={side} value={side === "front" ? frontFaceValue : value} />
+    ))}
+  </div>;
+  const solidFallback = <div className="solid-die-fallback">{fallback}</div>;
 
   return (
     <div
-      className={`board-dice is-${visualPhase} is-${activeDice.purpose}`}
+      className={`board-dice is-${visible ? visualPhase : "hidden"} is-${activeDice?.purpose ?? "movement"} ${threeDimensional ? "has-solid-die" : ""}`}
       role="img"
       aria-label={description}
       aria-live="polite"
+      aria-hidden={!visible || undefined}
     >
       <div className="physical-die-stage" aria-hidden="true">
-        <div
-          className="physical-die-cube"
-          style={{ "--die-final-transform": dieFinalTransform(faceValue) } as CSSProperties}
-        >
-          {PHYSICAL_DIE_FACES.map(([side, value]) => (
-            <DieFace key={side} side={side} value={side === "front" ? frontFaceValue : value} />
-          ))}
-        </div>
+        {threeDimensional ? <Suspense fallback={solidFallback}>
+          <PhysicalDie value={faceValue} rolling={visualPhase === "rolling"} startedAt={startedAt} fallback={solidFallback} />
+        </Suspense> : fallback}
       </div>
       <span className="board-die-roll">
-        {activeDice.purpose === "event" ? "Rolled" : "Roll"} {activeDice.value}
+        {activeDice?.purpose === "event" ? "Rolled" : "Roll"} {activeDice?.value}
       </span>
     </div>
   );

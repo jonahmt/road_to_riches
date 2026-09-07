@@ -114,6 +114,23 @@ Each suit's projected collection anchor follows the raised token, so the shared
 collection effect starts at the visible object rather than the tile center.
 The 2D renderer and minimap continue to use the original suit artwork.
 
+The die reference at 40:34 shows a continuous white body with dark pips and a
+visible side face, floating without a surrounding panel. `PhysicalDie.tsx`
+applies those details to the shared browser dice presentation: rounded solid
+geometry, a slight display tilt, directional lighting, and a small original-roll
+caption. The authoritative result rotates toward the viewer; opposite standard
+faces total seven. The existing pip patterns also support board rolls of seven
+through nine, and every face becomes blank when movement reaches zero.
+
+The roll phase, original result, remaining count, and timers stay in `BoardDice`
+outside both board renderers. Switching renderers does not restart a roll. The
+small die canvas is prepared invisibly before the first roll and uses on-demand
+rendering while idle or settled. Its fixed orthographic bounds and CSS canvas
+sizing keep the complete die visible while its HUD container changes size.
+Geometry is disposed on unmount. Reduced motion disables the tumble; WebGL
+failure or context loss falls back to the existing CSS cube without taking down
+the board. The 2D view continues to use that cube directly.
+
 ## Renderer and state boundary
 
 The browser uses Three.js 0.185 and React Three Fiber 9.7. `BoardScene.tsx` is a
@@ -289,6 +306,24 @@ an owned cell, and a four-cell line preview. Claiming that line awarded the
 expected 40, then the venture card and AI turns resolved normally. The same
 review observed a change-of-suit updating its raised token and tile artwork.
 All 87 browser tests, type checking, Ruff, and the production build passed.
+
+The solid die was reviewed at 1600 by 1000 and 1280 by 720 using deterministic
+private-server rolls of nine and six. Timed screenshots verified the first
+tumble, result orientation, and travel to the movement position; the initial
+review caught and corrected delayed canvas startup and transient cropping during
+resizing. A nine-step route exercised each countdown face, zero, undo, reload,
+and renderer switching. A forced context loss retained the CSS die and usable
+board, and switching back restored the solid model. A reduced-motion Lucky Roll
+fixture with a longer AI delay verified the stationary event reveal, hold and
+disappearance. All 89 browser tests, type checking, Ruff, and build passed;
+the new tests check camera-facing result geometry and extended/zero pip counts.
+
+The same review reproduced existing timing reports `road_to_riches-j54f` and
+`road_to_riches-t02r`: at the normal AI delay, subsequent play can interrupt an
+event die before its result is fully presented. The visual die pass preserves
+the existing message timing and does not resolve those reports. They remain
+open for the separate sequence/acknowledgment work, including the requested
+Lucky Roll gold-result confirmation.
 
 A warm, stationary Trodain view at 1600 by 1000 with device pixel ratio 1 was
 sampled for 120 animation frames in headless Chrome on this machine's Apple M1
