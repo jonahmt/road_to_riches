@@ -89,6 +89,17 @@ def test_ai_waits_for_full_dice_sequence_even_with_fast_decisions(monkeypatch):
     assert sleeps == [1.35, 2.25, 4]
 
 
+def test_browser_coordinated_ai_uses_readiness_instead_of_sleep(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("road_to_riches.ai.basic.client.time.sleep", sleeps.append)
+    ai = BasicAIClient(player_id=1, delay=10, presentation_delay=10)
+    request = InputRequest(InputRequestType.BUY_STOCK, 1, {"_presentation_paced": True})
+    assert ai.response_message(request)["msg"] == "input_response"
+    assert ai.presentation_ack_message("current", 1, coordinated=True)["request_id"] == "current"
+    assert ai.presentation_ack_message("other", 0, coordinated=True) is None
+    assert sleeps == []
+
+
 def test_ai_can_buy_more_than_99_total_stock_in_a_district():
     board = BoardState(
         max_dice_roll=6,

@@ -105,6 +105,7 @@ class TestPayRentEvent:
             "square_id": 1,
             "district_id": 0,
             "rent_amount": evt.get_result(),
+            "rent_cash": {0: 2000 - evt.get_result(), 1: 2000 + evt.get_result()},
             "dividends": [],
             "commissions": [],
         }

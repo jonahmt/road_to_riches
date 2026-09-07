@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Component, type ErrorInfo, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import {
   type Camera, Group, MeshStandardMaterial, NeutralToneMapping, Object3D, Vector3,
@@ -7,6 +7,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { PLAYER_COLORS } from "../boardColors";
 import { adjacentStepAnimationDuration } from "../cameraTiming";
+import { PresentationMotionContext } from "../usePresentationDirector";
 import type { GameState, InputRequest, SquareInfo } from "../protocol";
 import { boardExtent, boardPoint, canPickSquare, focusPoint, piecePositions, pieceStepPosition, TILE_SIZE, TILE_SURFACE_SIZE, TILE_TOP, type Point3, type BoardProjector } from "./geometry";
 import { ShopModel, ShopRentPlaque, ShopSign } from "./ShopModels";
@@ -203,6 +204,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   command: { id: number; action: string }; controlsRef: { current: OrbitControls | null }; reduced: boolean;
   projectorRef: { current: BoardProjector | null };
 }) {
+  const presentation = useContext(PresentationMotionContext);
   const { camera, gl } = useThree();
   const target = focusPoint(state, focusDistrictId);
   const targetRef = useRef(new Vector3(...target));
@@ -271,6 +273,9 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
       orbit.target.copy(next);
     }
     orbit.update(delta);
+    if (free || orbit.target.distanceTo(targetRef.current) < 0.025) {
+      presentation.complete("camera", presentation.beat?.requestId);
+    }
   });
   return null;
 }
@@ -366,6 +371,7 @@ function SuitToken({ markup, dimmed, reduced, squareId, anchors }: {
 function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlayerId, reduced, anchors }: ReturnType<typeof piecePositions>[number] & {
   assignedPlayerId: number | null; reduced: boolean; anchors: Map<string, HTMLSpanElement>;
 }) {
+  const presentation = useContext(PresentationMotionContext);
   const group = useRef<Group>(null);
   const figure = useRef<Group>(null);
   const initialPosition = useRef(position);
@@ -394,6 +400,9 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
     group.current.scale.setScalar(reduced ? scale : group.current.scale.x +
       (scale - group.current.scale.x) * (1 - Math.exp(-20 * delta)));
     if (figure.current) figure.current.position.y = reduced ? 0 : Math.sin(progress * Math.PI) * 0.18;
+    if (progress >= 1 && presentation.beat?.playerId === player.player_id) {
+      presentation.complete("piece", presentation.beat.requestId);
+    }
     projectAnchor(anchors.get(`player:${player.player_id}`), group.current.position.clone().add(
       new Vector3(0, (1.2 + (figure.current?.position.y ?? 0)) * group.current.scale.y, 0)), camera, size);
   });

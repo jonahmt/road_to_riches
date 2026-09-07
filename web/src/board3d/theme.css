@@ -374,3 +374,49 @@
   .app-shell.theme-tabletop.layout-immersive .board-minimap { width: 110px; height: 110px; }
   .app-shell.theme-tabletop.layout-immersive .square-panel { bottom: 230px; max-height: 170px; }
 }
+
+/* The director owns these transitions; supporting layers share its phase. */
+.turn-announcement,
+.state-change-result {
+  position: fixed;
+  z-index: 45;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: calc(100vw - 40px);
+  padding: 18px 32px;
+  border: 3px solid #e8bc58;
+  border-radius: 18px;
+  background: linear-gradient(150deg, #253458, #101b36);
+  color: #fff2ca;
+  box-shadow: 0 12px 35px #0008, inset 0 0 0 2px #fff1;
+  font-size: clamp(23px, 3vw, 36px);
+  font-weight: 800;
+  pointer-events: none;
+  animation: pacing-announce 250ms ease-out both;
+}
+.turn-announcement .player-portrait { width: 64px; height: 64px; }
+.state-change-result { top: 12%; flex-direction: column; gap: 8px; font-size: 20px; }
+.state-change-result strong { font-size: 26px; }
+.pacing-unrevealed { opacity: 0 !important; visibility: hidden; }
+.payment-dividends, .promotion-salary-card, .stock-price-player-grid {
+  transition: opacity 220ms ease;
+}
+[data-pacing-phase="exit"] :is(.payment-overlay, .promotion-overlay, .stock-price-change-overlay,
+.venture-card-reveal, .generic-presentation, .turn-announcement, .state-change-result),
+[data-pacing-phase="complete"] :is(.payment-overlay, .promotion-overlay, .stock-price-change-overlay,
+.venture-card-reveal, .generic-presentation, .turn-announcement, .state-change-result) {
+  opacity: 0;
+  transition: opacity 250ms ease;
+  pointer-events: none;
+}
+@keyframes pacing-announce {
+  from { opacity: 0; margin-top: 10px; }
+  to { opacity: 1; margin-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .turn-announcement, .state-change-result { animation: none; }
+}

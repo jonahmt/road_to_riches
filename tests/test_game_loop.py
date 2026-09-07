@@ -1589,6 +1589,11 @@ class TestWarpEventVoluntary:
             "square_id": 1,
             "district_id": 0,
             "rent_amount": rent_event.get_result(),
+            "rent_cash": {
+                0: 1500 - rent_event.get_result(),
+                1: 1500 + rent_event.get_result(),
+                2: 1500,
+            },
             "dividends": [
                 {"player_id": 2, "amount": int(rent_event.get_result() * 0.2)}
             ],

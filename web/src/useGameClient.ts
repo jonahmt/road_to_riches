@@ -14,6 +14,7 @@ import {
 } from "./protocol";
 import {
   dismissNonblockingPresentation,
+  completePresentation,
   enqueuePresentation,
   markPresentationAcknowledging,
   resolvePresentation,
@@ -23,6 +24,7 @@ import {
   reportResultState,
   type ReportSubmissionState,
 } from "./reportSubmission";
+import { usePresentationDirector } from "./usePresentationDirector";
 
 export type { ReportSubmissionState } from "./reportSubmission";
 
@@ -96,6 +98,7 @@ export function useGameClient(defaultUri: string) {
   const responsePendingRef = useRef(false);
   const notificationIdRef = useRef(0);
   const presentationAckPendingRef = useRef(new Set<string>());
+  const activePresentationRef = useRef<PresentationState | null>(null);
   const [clientState, setClientState] = useState<GameClientState>({
     status: "disconnected",
     uri: defaultUri,
@@ -253,7 +256,32 @@ export function useGameClient(defaultUri: string) {
                 ...current,
                 gameId: message.game_id ?? current.gameId,
                 gameState: message.state,
+                ...(message.reset_presentation ? { presentations: [], pendingRequest: null, dice: null } : {}),
               };
+            case "presentation_beat":
+              if (document.visibilityState === "hidden") {
+                return { ...current, gameState: message.after, presentations: [], pendingRequest: null };
+              }
+              return {
+                ...current,
+                gameState: message.after,
+                pendingRequest: null,
+                responsePending: false,
+                dice: message.type === "dice_rolled"
+                  ? diceForPresentation(current.dice, message.request_id, message.data) : current.dice,
+                presentations: enqueuePresentation(current.presentations, {
+                  requestId: message.request_id, type: message.type, playerId: message.player_id,
+                  data: message.data, before: message.before, after: message.after,
+                  coordinated: true, revision: message.revision, generation: message.generation,
+                  driverPlayerId: message.driver_player_id,
+                  acknowledgmentPending: presentationAckPendingRef.current.has(message.request_id),
+                  requiresAcknowledgment: message.requires_confirmation,
+                }),
+              };
+            case "presentation_driver":
+              return { ...current, presentations: current.presentations.map((item) =>
+                item.requestId === message.request_id ? { ...item, generation: message.generation,
+                  driverPlayerId: message.driver_player_id } : item) };
             case "input_request": {
               responsePendingRef.current = false;
               const request: InputRequest = {
@@ -294,6 +322,7 @@ export function useGameClient(defaultUri: string) {
               };
             }
             case "presentation_request": {
+              if (message.coordinated) return current;
               // A barrier follows the completed decision. Retire that prompt so
               // it cannot reappear between the card, its roll, and its result.
               responsePendingRef.current = false;
@@ -454,7 +483,7 @@ export function useGameClient(defaultUri: string) {
 
   const submitResponse = useCallback(
     (value: unknown) => {
-      if (responsePendingRef.current) {
+      if (responsePendingRef.current || activePresentationRef.current?.coordinated) {
         return;
       }
       const sent = send({
@@ -553,10 +582,54 @@ export function useGameClient(defaultUri: string) {
     }));
   }, []);
 
+  const finishPresentation = useCallback((requestId: string) => {
+    setClientState((current) => ({ ...current,
+      presentations: completePresentation(current.presentations, requestId) }));
+  }, []);
+  const director = usePresentationDirector(clientState.presentations[0] ?? null,
+    clientState.playerId, finishPresentation, acknowledgePresentation);
+  activePresentationRef.current = director.beat;
+  const confirmPresentation = useCallback((requestId: string) => {
+    const active = activePresentationRef.current;
+    if (active?.requestId !== requestId || (active.coordinated && !active.canContinue)) return;
+    acknowledgePresentation(requestId);
+  }, [acknowledgePresentation]);
+  const readySent = useRef("");
+  useEffect(() => {
+    const beat = clientState.presentations[0];
+    const key = `${connectionIdRef.current}:${beat?.requestId}:${beat?.generation}`;
+    if (beat?.coordinated && beat.localComplete && beat.driverPlayerId === clientState.playerId && readySent.current !== key) {
+      if (send({ msg: "presentation_ready", request_id: beat.requestId, generation: beat.generation!, game_id: gameIdRef.current ?? undefined })) readySent.current = key;
+    }
+  }, [clientState.presentations, clientState.playerId, send]);
+  useEffect(() => {
+    if (clientState.status !== "connected" || clientState.playerId === null) return;
+    let wasHidden = document.visibilityState === "hidden";
+    const report = () => send({ msg: "presentation_client", visible: document.visibilityState !== "hidden", game_id: gameIdRef.current ?? undefined });
+    const visibility = () => {
+      report();
+      if (document.visibilityState === "hidden") {
+        setClientState((current) => ({ ...current, presentations: [], pendingRequest: null }));
+      }
+      if (wasHidden && document.visibilityState !== "hidden") requestSync();
+      wasHidden = document.visibilityState === "hidden";
+    };
+    report();
+    const timer = window.setInterval(report, 2000);
+    document.addEventListener("visibilitychange", visibility);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", visibility); };
+  }, [clientState.status, clientState.playerId, send, requestSync]);
+
   useEffect(() => disconnect, [disconnect]);
 
   return {
-    clientState,
+    clientState: { ...clientState,
+      gameState: director.displayState ?? clientState.gameState,
+      presentations: director.beat ? [director.beat, ...clientState.presentations.slice(1)] : clientState.presentations,
+      pendingRequest: director.beat?.coordinated ? null : clientState.pendingRequest,
+      gameOverWinner: director.beat?.coordinated ? undefined : clientState.gameOverWinner,
+    },
+    presentationMotion: director.motion,
     connect,
     disconnect,
     submitResponse,
@@ -564,7 +637,7 @@ export function useGameClient(defaultUri: string) {
     requestSync,
     submitReport,
     clearReportSubmission,
-    acknowledgePresentation,
+    acknowledgePresentation: confirmPresentation,
     dismissPresentation,
   };
 }

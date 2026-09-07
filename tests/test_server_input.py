@@ -260,6 +260,35 @@ def test_snapshot_to_client_replays_pending_presentation():
         loop.close()
 
 
+def test_paced_reconnect_replays_visual_checkpoint_and_legacy_owner_request():
+    loop = asyncio.new_event_loop()
+    try:
+        player_input = WebSocketPlayerInput(loop, game_id="default")
+        ws = FakeWebSocket()
+        player_input._send_raw = Mock()
+        request = PresentationRequest("pending", "rent_payment", 0, {"rent_amount": 25})
+        player_input._pending_presentation = request
+        player_input.pacer.pending = {
+            "msg": "presentation_beat",
+            "request_id": "pending",
+            "before": {"checkpoint": "before transfer"},
+            "after": {"checkpoint": "after transfer"},
+        }
+        player_input.send_snapshot_to_client(ws, _make_state())
+        messages = [json.loads(call.args[1]) for call in player_input._send_raw.call_args_list]
+        assert [m["msg"] for m in messages] == [
+            "state_sync",
+            "presentation_beat",
+            "presentation_request",
+        ]
+        assert messages[0]["state"] == {"checkpoint": "before transfer"}
+        assert messages[0]["reset_presentation"] is True
+        assert messages[2]["request_id"] == "pending"
+        assert messages[2]["coordinated"] is True
+    finally:
+        loop.close()
+
+
 def test_presentation_blocks_until_owning_socket_acknowledges():
     loop = asyncio.new_event_loop()
     loop_thread = threading.Thread(target=loop.run_forever)

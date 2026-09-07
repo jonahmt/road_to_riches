@@ -7,6 +7,7 @@ Broadcast messages (log, dice, state_sync, game_over) go to all clients.
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import threading
 from collections import deque
@@ -33,6 +34,7 @@ from road_to_riches.protocol import (
     msg_state_sync,
     msg_ui_notification,
 )
+from road_to_riches.server.presentation_pacer import PresentationPacer, state_beat
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +79,9 @@ class WebSocketPlayerInput(PlayerInput):
         self._presentation_ack_ready = threading.Event()
         self._last_dice: tuple[int, int] | None = None
         self._recent_log: deque[str] = deque(maxlen=100)
+        self.pacer = PresentationPacer(self._broadcast, self._player_ws, game_id)
+        self._paced_logs: list[str] = []
+        self._introduced_player: int | None = None
 
     def set_client_for_player(self, player_id: int, ws: Any) -> None:
         """Register a WebSocket as the client for a specific player.
@@ -101,6 +106,7 @@ class WebSocketPlayerInput(PlayerInput):
                 if player_id in pids:
                     pids.remove(player_id)
                 if not pids:
+                    self.pacer.remove(ws)
                     del self._ws_players[ws_id]
                     if ws in self._all_ws:
                         self._all_ws.remove(ws)
@@ -378,13 +384,32 @@ class WebSocketPlayerInput(PlayerInput):
 
     def _send_state(self, state: GameState) -> None:
         """Send full game state to all clients."""
-        self._broadcast(msg_state_sync(game_state_to_dict(state), game_id=self._game_id))
+        after = copy.deepcopy(game_state_to_dict(state))
+        beat = state_beat(self.pacer.published, after) if self.pacer.published else None
+        if self.pacer.enabled and beat:
+            kind, data = beat
+            if kind == "piece_moved":
+                data["remaining"] = self._last_dice[1] if self._last_dice else None
+            if kind == "turn_started":
+                self._introduced_player = data["player_id"]
+            self.pacer.run(after, kind, data, data["player_id"])
+        self.pacer.published = after
+        self._broadcast(msg_state_sync(after, game_id=self._game_id))
+        self._release_paced_logs()
 
     def send_snapshot_to_client(self, ws: Any, state: GameState) -> None:
         """Send current state, dice, and any active prompt to one client."""
+        beat = self.pacer.snapshot()
         self._send_raw(
             ws,
-            encode(msg_state_sync(game_state_to_dict(state), game_id=self._game_id)),
+            encode(
+                {
+                    **msg_state_sync(
+                        beat["before"] if beat else game_state_to_dict(state), game_id=self._game_id
+                    ),
+                    "reset_presentation": True,
+                }
+            ),
         )
         if self._last_dice is not None:
             value, remaining = self._last_dice
@@ -400,6 +425,13 @@ class WebSocketPlayerInput(PlayerInput):
                     )
                 ),
             )
+        if beat:
+            self._send_raw(ws, encode(beat))
+            if self._pending_presentation is not None:
+                legacy = msg_presentation_request(self._pending_presentation, game_id=self._game_id)
+                legacy["coordinated"] = True
+                self._send_raw(ws, encode(legacy))
+            return
         if self._pending_request is not None:
             self._send_raw(
                 ws,
@@ -419,6 +451,15 @@ class WebSocketPlayerInput(PlayerInput):
     def _request_input(self, req: InputRequest, state: GameState) -> Any:
         """Broadcast input request to all clients, accept response only from target player."""
         self._send_state(state)
+        if self.pacer.enabled:
+            req = InputRequest(req.type, req.player_id, {**req.data, "_presentation_paced": True})
+        if (
+            self.pacer.enabled
+            and req.type is InputRequestType.PRE_ROLL
+            and self._introduced_player != req.player_id
+        ):
+            self._introduced_player = req.player_id
+            self.pacer.run(game_state_to_dict(state), "turn_started", {}, req.player_id)
         self._response_ready.clear()
         self._response = None
         self._expecting_player = req.player_id
@@ -436,9 +477,18 @@ class WebSocketPlayerInput(PlayerInput):
 
     def _flush_log(self, log: GameLog) -> None:
         for msg in log.messages:
-            self._recent_log.append(msg)
-            self._broadcast(msg_log(msg, game_id=self._game_id))
+            if self.pacer.enabled:
+                self._paced_logs.append(msg)
+            else:
+                self._recent_log.append(msg)
+                self._broadcast(msg_log(msg, game_id=self._game_id))
         log.clear()
+
+    def _release_paced_logs(self) -> None:
+        for message in self._paced_logs:
+            self._recent_log.append(message)
+            self._broadcast(msg_log(message, game_id=self._game_id))
+        self._paced_logs.clear()
 
     def report_context(self) -> dict[str, Any]:
         """Return current presentation/input context for optional bug evidence."""
@@ -895,12 +945,40 @@ class WebSocketPlayerInput(PlayerInput):
         )
 
     def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
+        if self.pacer.enabled and notification_type == "suit_collected":
+            return  # The authoritative suit delta already completed its visual checkpoint.
         self._broadcast(msg_ui_notification(notification_type, data, game_id=self._game_id))
 
     def present(self, state: GameState, request: PresentationRequest) -> None:
         """Broadcast a presentation and block until its owning socket acknowledges."""
         self._presentation_ack_ready.clear()
         self._pending_presentation = request
+        if self.pacer.enabled:
+            legacy = msg_presentation_request(request, game_id=self._game_id)
+            legacy["coordinated"] = True
+            self._broadcast(legacy)
+            after = copy.deepcopy(game_state_to_dict(state))
+            if request.presentation_type == "stock_price_changed" and self.pacer.published:
+                # An engine event can change several districts at once. Reveal
+                # only this district; later barriers carry their own endpoints.
+                previous = {s["district_id"]: s for s in self.pacer.published["stock"]["stocks"]}
+                district = request.data.get("district_id")
+                after["stock"]["stocks"] = [
+                    s if s["district_id"] == district else previous.get(s["district_id"], s)
+                    for s in after["stock"]["stocks"]
+                ]
+            self.pacer.run(
+                after,
+                request.presentation_type,
+                request.data,
+                request.player_id,
+                request_id=request.request_id,
+                confirmation=self._presentation_ack_ready,
+            )
+            self._pending_presentation = None
+            self._broadcast(msg_state_sync(self.pacer.published, game_id=self._game_id))
+            self._release_paced_logs()
+            return
         self._send_state(state)
         self._broadcast(msg_presentation_request(request, game_id=self._game_id))
         logger.debug(

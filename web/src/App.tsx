@@ -5,6 +5,7 @@ import {
   FormEvent,
   type PointerEvent as ReactPointerEvent,
   useEffect,
+  useContext,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -104,6 +105,8 @@ import {
 import { BugReportControl } from "./BugReportControl";
 import { PromotionSuitRow } from "./PromotionSuitRow";
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
+import { PresentationMotionContext } from "./usePresentationDirector";
+import { PACING } from "./presentationTiming";
 
 import { renderToStaticMarkup } from "react-dom/server";
 import "./board3d/theme.css";
@@ -679,9 +682,22 @@ function isGameplayHotkeySuppressed(): boolean {
 }
 
 function App() {
+  useEffect(() => {
+    const suppressRepeatedConfirm = (event: KeyboardEvent) => {
+      if (!event.repeat || !["Enter", " "].includes(event.key) || isGameplayHotkeySuppressed()) return;
+      const target = event.target;
+      if (target instanceof HTMLTextAreaElement || (target instanceof HTMLElement && target.isContentEditable)
+          || (event.key === " " && target instanceof HTMLInputElement)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    window.addEventListener("keydown", suppressRepeatedConfirm, true);
+    return () => window.removeEventListener("keydown", suppressRepeatedConfirm, true);
+  }, []);
   const boardProjector = useRef<BoardProjector | null>(null);
   const {
     clientState,
+    presentationMotion,
     connect,
     disconnect,
     submitResponse,
@@ -833,7 +849,14 @@ function App() {
       : null;
   const paymentCashDeltas =
     activeRentPayment
-      ? new Map(
+      ? activePresentation?.coordinated && activePresentation.before && activePresentation.after
+        ? (activePresentation.elapsed ?? 0) < PACING.rentTransfer ? null
+          : new Map(activePresentation.after.players.map((player) => {
+            const before = activePresentation.before!.players.find((p) => p.player_id === player.player_id)!.ready_cash;
+            const rentCash = (activePresentation.data.rent_cash as Record<string, number> | undefined)?.[String(player.player_id)] ?? before;
+            return [player.player_id, (activePresentation.elapsed ?? 0) < PACING.dividends ? rentCash - before : player.ready_cash - rentCash];
+          }))
+        : new Map(
           rentPaymentCashDeltas(activeRentPayment).map((delta) => [
             delta.playerId,
             delta.amount,
@@ -946,7 +969,11 @@ function App() {
   }
 
   return (
+    <PresentationMotionContext.Provider value={presentationMotion}>
     <main
+      data-pacing-type={activePresentation?.type}
+      data-pacing-phase={activePresentation?.phase}
+      data-pacing-id={activePresentation?.requestId}
       className={`app-shell theme-tabletop layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
     >
       {rollPhaseVisibility.gameHeader && (
@@ -975,6 +1002,13 @@ function App() {
       )}
 
       {clientState.error && <div className="error-banner">{clientState.error}</div>}
+      {activePresentation?.type === "turn_started" && (
+        <div className="turn-announcement" role="status" style={{ "--turn-color": getPlayerColor(activePresentation.playerId) } as CSSProperties}>
+          <PlayerPortrait color={getPlayerColor(activePresentation.playerId)} playerId={activePresentation.playerId} />
+          <span>{activePresentation.playerId === clientState.playerId ? "Your turn" : `Player ${activePresentation.playerId}'s turn`}</span>
+        </div>
+      )}
+      {activePresentation?.type === "state_changed" && <StateChangeResult presentation={activePresentation} />}
 
       {!clientState.gameState ? (
         <ConnectPanel
@@ -1003,7 +1037,9 @@ function App() {
               state={clientState.gameState}
               assignedPlayerId={clientState.playerId}
               dice={clientState.dice}
-              onDiceComplete={clientState.presentations.some((presentation) =>
+              onDiceComplete={activePresentation?.coordinated
+                ? (id) => presentationMotion.complete("dice", id)
+                : clientState.presentations.some((presentation) =>
                 presentation.type === "dice_rolled" &&
                 presentation.requestId === clientState.dice?.presentationId &&
                 presentation.playerId === clientState.playerId)
@@ -1250,7 +1286,7 @@ function App() {
         </>
       )}
 
-      {activeRentPayment && (
+      {activeRentPayment && (!activePresentation?.coordinated || (activePresentation.elapsed ?? 0) >= PACING.rentTransfer) && (
         <RentCoinBurst
           key={activePresentation?.requestId}
           playerId={activeRentPayment.payerId}
@@ -1314,7 +1350,9 @@ function App() {
           // empty render between them. Remount per notification so CSS restarts.
           key={activePresentation.requestId}
           presentation={activePresentation}
-          onComplete={() => dismissPresentation(activePresentation.requestId)}
+          onComplete={() => activePresentation.coordinated
+            ? presentationMotion.complete("suit", activePresentation.requestId)
+            : dismissPresentation(activePresentation.requestId)}
         />
       )}
 
@@ -1326,6 +1364,7 @@ function App() {
           "stock_price_changed",
           "suit_collected",
           "dice_rolled",
+          "turn_started", "piece_moved", "venture_selected", "state_changed",
         ].includes(activePresentation.type) && (
           <GenericPresentation
             presentation={activePresentation}
@@ -1367,6 +1406,7 @@ function App() {
         <div className="game-over-banner">Game over. Winner: Player {clientState.gameOverWinner ?? "none"}</div>
       )}
     </main>
+    </PresentationMotionContext.Provider>
   );
 }
 
@@ -1382,6 +1422,28 @@ function getLatestGameLog(logs: string[]): string | null {
           !line.startsWith("WebSocket connection error"),
       ) ?? null
   );
+}
+
+function StateChangeResult({ presentation }: { presentation: PresentationState }) {
+  const before = presentation.before, after = presentation.after;
+  if (!before || !after) return null;
+  const changed = after.players.filter((p, i) => p.ready_cash !== before.players[i]?.ready_cash
+    || JSON.stringify(p.owned_stock) !== JSON.stringify(before.players[i]?.owned_stock)
+    || JSON.stringify(p.owned_properties) !== JSON.stringify(before.players[i]?.owned_properties));
+  const shop = after.board.squares.find((s, i) => s.property_owner !== before.board.squares[i]?.property_owner
+    || s.shop_current_value !== before.board.squares[i]?.shop_current_value);
+  const oldShop = shop && before.board.squares.find((s) => s.id === shop.id);
+  const title = shop ? shop.property_owner !== oldShop?.property_owner ? "Shop ownership changed" : "Shop investment"
+    : changed.some((p, i) => JSON.stringify(p.owned_stock) !== JSON.stringify(before.players.find((old) => old.player_id === p.player_id)?.owned_stock))
+      ? "Stock transaction" : changed.length ? "Cash update" : "Board update";
+  return <div className="state-change-result" role="status">
+    <strong>{title}</strong>
+    {shop && <span>Square #{shop.id}{shop.shop_current_value !== oldShop?.shop_current_value ? ` · ${formatGold(oldShop?.shop_current_value ?? 0)} → ${formatGold(shop.shop_current_value ?? 0)}` : ""}</span>}
+    {changed.map((player) => <span key={player.player_id}>Player {player.player_id}
+      {player.ready_cash !== before.players.find((p) => p.player_id === player.player_id)?.ready_cash
+        ? ` · ${formatGold(before.players.find((p) => p.player_id === player.player_id)!.ready_cash)} → ${formatGold(player.ready_cash)}` : ""}
+    </span>)}
+  </div>;
 }
 
 function ConnectPanel({
@@ -1638,6 +1700,22 @@ function SvgBoardPanel({
   const tokenElementsRef = useRef(new Map<number, SVGGElement>());
   const tokenVisualsRef = useRef(new Map<number, BoardTokenVisual>());
   const tokenAnimationFrameRef = useRef<number | null>(null);
+  const presentation = useContext(PresentationMotionContext);
+  useEffect(() => {
+    if (!presentation.beat?.coordinated) return;
+    const id = presentation.beat.requestId;
+    let raf = 0, frames = 0;
+    const check = () => {
+      frames += 1;
+      if (frames > 2) {
+        if (cameraAnimationFrameRef.current === null) presentation.complete("camera", id);
+        if (tokenAnimationFrameRef.current === null) presentation.complete("piece", id);
+      }
+      raf = requestAnimationFrame(check);
+    };
+    raf = requestAnimationFrame(check);
+    return () => cancelAnimationFrame(raf);
+  }, [presentation.beat?.requestId]);
   const temporaryAutoFreeRef = useRef(false);
   const [cameraMode, setCameraMode] = useState<BoardCameraMode>("follow");
   const [isDragging, setIsDragging] = useState(false);
@@ -2425,6 +2503,8 @@ function BoardDice({ dice, showSettled, threeDimensional, onComplete }: {
 
   useEffect(() => {
     if (!dice || dice.animationId === 0) {
+      setPresentedRoll(null);
+      setPhase("hidden");
       return;
     }
     setPresentedRoll(dice);
@@ -2434,17 +2514,18 @@ function BoardDice({ dice, showSettled, threeDimensional, onComplete }: {
     const timers: number[] = [];
     timers.push(
       window.setTimeout(() => {
-        setPhase(dice.purpose === "movement" ? "settling" : "event-hold");
+        setPhase("event-hold");
       }, DICE_ROLL_DURATION_MS),
     );
 
     if (dice.purpose === "movement") {
+      timers.push(window.setTimeout(() => setPhase("settling"), DICE_ROLL_DURATION_MS + EVENT_DICE_HOLD_DURATION_MS));
       timers.push(
         window.setTimeout(() => {
           setPhase("settled");
           setPresentedRoll(null);
           if (dice.presentationId) onCompleteRef.current?.(dice.presentationId);
-        }, DICE_ROLL_DURATION_MS + DICE_SETTLE_DURATION_MS),
+        }, DICE_ROLL_DURATION_MS + EVENT_DICE_HOLD_DURATION_MS + DICE_SETTLE_DURATION_MS),
       );
     } else {
       timers.push(
@@ -2484,7 +2565,7 @@ function BoardDice({ dice, showSettled, threeDimensional, onComplete }: {
   const faceValue = activeDice ? displayedDiceValue(activeDice, settledMovement) : 1;
   const frontFaceValue = faceValue === 0 || faceValue > 6 ? faceValue : 1;
   const description =
-    !activeDice ? "" : activeDice.purpose === "event"
+    visualPhase === "rolling" ? "Rolling the die" : !activeDice ? "" : activeDice.purpose === "event"
       ? `Rolled ${activeDice.value} for event`
       : `Rolled ${activeDice.value}; ${activeDice.remaining} moves remaining`;
   const fallback = <div className="physical-die-cube"
@@ -2509,7 +2590,8 @@ function BoardDice({ dice, showSettled, threeDimensional, onComplete }: {
         </Suspense> : fallback}
       </div>
       <span className="board-die-roll">
-        {activeDice?.purpose === "event" ? "Rolled" : "Roll"} {activeDice?.value}
+        {visualPhase === "rolling" ? "Rolling…"
+          : `${activeDice?.purpose === "event" ? "Rolled" : "Roll"} ${activeDice?.value}`}
       </span>
     </div>
   );
@@ -4692,7 +4774,7 @@ function VentureCardReveal({
   const name = String(presentation.data.name ?? "Venture Card");
   const description = String(presentation.data.description ?? "");
   const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
-  const canContinue = isOwner && !presentation.acknowledgmentPending;
+  const canContinue = isOwner && !presentation.acknowledgmentPending && presentation.canContinue !== false;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -4706,7 +4788,7 @@ function VentureCardReveal({
       ) {
         event.preventDefault();
         event.stopPropagation();
-        if (canContinue && ["Enter", " "].includes(event.key)) {
+        if (canContinue && !event.repeat && ["Enter", " "].includes(event.key)) {
           onContinue();
         }
       }
@@ -4867,7 +4949,7 @@ function GenericPresentation({
   onContinue: () => void;
 }) {
   const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
-  const canContinue = isOwner && !presentation.acknowledgmentPending;
+  const canContinue = isOwner && !presentation.acknowledgmentPending && presentation.canContinue !== false;
   const luckyRoll = presentation.type === "lucky_roll_result";
 
   useEffect(() => {
@@ -4877,7 +4959,7 @@ function GenericPresentation({
       }
       event.preventDefault();
       event.stopPropagation();
-      if (canContinue && ["Enter", " "].includes(event.key)) {
+      if (canContinue && !event.repeat && ["Enter", " "].includes(event.key)) {
         onContinue();
       }
     }
@@ -4937,7 +5019,7 @@ function RentPaymentOverlay({
   const hasDividends = payment.dividends.length > 0;
   const players = state?.players ?? [];
   const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
-  const canContinue = isOwner && !presentation.acknowledgmentPending;
+  const canContinue = isOwner && !presentation.acknowledgmentPending && presentation.canContinue !== false;
   const districtName =
     payment.districtId === null ? "District" : districtLabel(payment.districtId);
 
@@ -4953,7 +5035,7 @@ function RentPaymentOverlay({
       ) {
         event.preventDefault();
         event.stopPropagation();
-        if (canContinue && ["Enter", " "].includes(event.key)) {
+        if (canContinue && !event.repeat && ["Enter", " "].includes(event.key)) {
           onContinue();
         }
       }
@@ -4987,7 +5069,7 @@ function RentPaymentOverlay({
         </div>
 
         {hasDividends && (
-          <section className="payment-dividends" aria-labelledby="payment-dividend-title">
+          <section className={`payment-dividends ${presentation.coordinated && (presentation.elapsed ?? 0) < PACING.dividends ? "pacing-unrevealed" : ""}`} aria-labelledby="payment-dividend-title">
             <header>
               <span>Stock dividends</span>
               <h3 id="payment-dividend-title">{districtName}</h3>
@@ -5049,7 +5131,7 @@ function StockPriceChangeOverlay({
     change.holdings.map((holding) => holding.playerId);
   const isRise = change.delta > 0;
   const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
-  const canContinue = isOwner && !presentation.acknowledgmentPending;
+  const canContinue = isOwner && !presentation.acknowledgmentPending && presentation.canContinue !== false;
   const title = `${districtLabel(change.districtId)} stock price ${isRise ? "rises" : "falls"}!`;
 
   useEffect(() => {
@@ -5064,7 +5146,7 @@ function StockPriceChangeOverlay({
       ) {
         event.preventDefault();
         event.stopPropagation();
-        if (canContinue && ["Enter", " "].includes(event.key)) {
+        if (canContinue && !event.repeat && ["Enter", " "].includes(event.key)) {
           onContinue();
         }
       }
@@ -5095,7 +5177,7 @@ function StockPriceChangeOverlay({
           <strong>{formatGold(change.newPrice)}</strong>
         </div>
 
-        <div className="stock-price-impact-grid" aria-label="Player stock value changes">
+        <div className={`stock-price-impact-grid ${presentation.coordinated && (presentation.elapsed ?? 0) < 1000 ? "pacing-unrevealed" : ""}`} aria-label="Player stock value changes">
           {playerIds.map((playerId) => {
             const holding = impactByPlayer.get(playerId) ?? {
               playerId,
@@ -5153,7 +5235,7 @@ function PromotionCeremony({
   const readyCashAfter = asNumber(presentation.data.ready_cash_after);
   const isAssignedPlayer = playerId === assignedPlayerId;
   const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
-  const canContinue = isOwner && !presentation.acknowledgmentPending;
+  const canContinue = isOwner && !presentation.acknowledgmentPending && presentation.canContinue !== false;
   const salaryRows = [
     ["Base salary", asNumber(presentation.data.base_bonus)],
     ["Level bonus", asNumber(presentation.data.level_bonus)],
@@ -5173,7 +5255,7 @@ function PromotionCeremony({
       ) {
         event.preventDefault();
         event.stopPropagation();
-        if (canContinue && ["Enter", " "].includes(event.key)) {
+        if (canContinue && !event.repeat && ["Enter", " "].includes(event.key)) {
           onContinue();
         }
       }
@@ -5222,7 +5304,7 @@ function PromotionCeremony({
             </div>
           </section>
 
-          <section className="promotion-salary-card" aria-label="Promotion salary breakdown">
+          <section className={`promotion-salary-card ${presentation.coordinated && (presentation.elapsed ?? 0) < 1200 ? "pacing-unrevealed" : ""}`} aria-label="Promotion salary breakdown">
             <span className="promotion-detail-label">Salary Breakdown</span>
             <dl>
               {salaryRows.map(([label, value]) => (

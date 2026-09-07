@@ -144,12 +144,14 @@ export interface SubmitReportMessage {
 
 export type ServerMessage =
   | { msg: "assign_player"; player_id: number; game_id?: string }
-  | { msg: "state_sync"; state: GameState; game_id?: string }
+  | { msg: "state_sync"; state: GameState; game_id?: string; reset_presentation?: boolean }
+  | { msg: "presentation_beat"; request_id: string; revision: number; type: string; player_id: number; data: Record<string, unknown>; before: GameState; after: GameState; requires_confirmation: boolean; generation: number; driver_player_id: number | null; game_id?: string }
+  | { msg: "presentation_driver"; request_id: string; generation: number; driver_player_id: number | null; game_id?: string }
   | { msg: "input_request"; type: InputRequestType; player_id: number; data?: Record<string, unknown>; game_id?: string }
   | { msg: "log"; text: string; game_id?: string }
   | { msg: "log_retract"; count: number; game_id?: string }
   | { msg: "ui_notification"; type: string; data?: Record<string, unknown>; game_id?: string }
-  | { msg: "presentation_request"; request_id: string; type: string; player_id: number; data?: Record<string, unknown>; game_id?: string }
+  | { msg: "presentation_request"; request_id: string; type: string; player_id: number; data?: Record<string, unknown>; game_id?: string; coordinated?: boolean }
   | { msg: "presentation_resolved"; request_id: string; game_id?: string }
   | { msg: "dice"; value: number; remaining: number; purpose?: "movement" | "event"; animate?: boolean; game_id?: string }
   | { msg: "game_over"; winner: number | null; game_id?: string }
@@ -163,6 +165,8 @@ export type ServerMessage =
   | { msg: "game_starting"; game_id: string; summary: Record<string, unknown> };
 
 export type ClientMessage =
+  | { msg: "presentation_client"; visible: boolean; game_id?: string }
+  | { msg: "presentation_ready"; request_id: string; generation: number; game_id?: string }
   | { msg: "input_response"; value: unknown; player_id?: number; game_id?: string }
   | { msg: "presentation_ack"; request_id: string; player_id?: number; game_id?: string }
   | { msg: "save_game"; player_id?: number; save_name?: string; game_id?: string }

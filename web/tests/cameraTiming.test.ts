@@ -7,13 +7,13 @@ import {
   HUMAN_ADJACENT_STEP_ANIMATION_MS,
 } from "../src/cameraTiming.ts";
 
-test("AI adjacent movement is 35 percent slower than local movement", () => {
-  assert.equal(HUMAN_ADJACENT_STEP_ANIMATION_MS, 100);
-  assert.equal(AI_ADJACENT_STEP_ANIMATION_MS, 135);
-  assert.equal(adjacentStepAnimationDuration(1, 0), 135);
-  assert.equal(adjacentStepAnimationDuration(1, null), 135);
+test("human and AI steps share the readable motion profile", () => {
+  assert.equal(HUMAN_ADJACENT_STEP_ANIMATION_MS, 300);
+  assert.equal(AI_ADJACENT_STEP_ANIMATION_MS, 300);
+  assert.equal(adjacentStepAnimationDuration(1, 0), 300);
+  assert.equal(adjacentStepAnimationDuration(1, null), 300);
 });
 
-test("the locally assigned player keeps the fast adjacent movement timing", () => {
-  assert.equal(adjacentStepAnimationDuration(0, 0), 100);
+test("local movement uses the same visible step duration", () => {
+  assert.equal(adjacentStepAnimationDuration(0, 0), 300);
 });

@@ -82,6 +82,7 @@ class PayRentEvent(GameEvent):
     _dividends: list[tuple[int, int]] = field(default_factory=list, init=False)
     _commissions: list[tuple[int, int, int]] = field(default_factory=list, init=False)
     _district_id: int | None = None
+    _rent_cash: dict[int, int] = field(default_factory=dict, init=False)
 
     def execute(self, state: GameState) -> None:
         self._dividends = []
@@ -113,6 +114,8 @@ class PayRentEvent(GameEvent):
                 p.ready_cash += commission
                 self._commissions.append((p.player_id, commission, commission_pct))
 
+        # Capture the actual intermediate endpoint for staged browser presentation.
+        self._rent_cash = {p.player_id: p.ready_cash for p in state.players}
         # Dividends: 20% of rent split among stockholders by weight (paid by bank)
         if rent > 0 and square.property_district is not None:
             self._dividends = _pay_dividends(state, square.property_district, rent)
@@ -128,6 +131,7 @@ class PayRentEvent(GameEvent):
             "square_id": self.square_id,
             "district_id": self._district_id,
             "rent_amount": self._rent_amount,
+            "rent_cash": self._rent_cash,
             "dividends": [
                 {"player_id": player_id, "amount": amount}
                 for player_id, amount in (self._dividends or [])

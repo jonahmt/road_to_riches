@@ -15,9 +15,10 @@ export interface DiceMessage {
   animate?: boolean;
 }
 
-export const DICE_ROLL_DURATION_MS = 760;
-export const DICE_SETTLE_DURATION_MS = 360;
-export const EVENT_DICE_HOLD_DURATION_MS = 1_000;
+import { PACING } from "./presentationTiming.ts";
+export const DICE_ROLL_DURATION_MS = PACING.dieTumble;
+export const DICE_SETTLE_DURATION_MS = PACING.dieDock;
+export const EVENT_DICE_HOLD_DURATION_MS = PACING.dieRead;
 export const EVENT_DICE_FADE_DURATION_MS = 240;
 
 export const DIE_PIPS: Record<number, readonly number[]> = {

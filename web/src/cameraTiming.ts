@@ -1,5 +1,6 @@
-export const HUMAN_ADJACENT_STEP_ANIMATION_MS = 100;
-export const AI_ADJACENT_STEP_ANIMATION_MS = 135;
+import { PACING } from "./presentationTiming.ts";
+export const HUMAN_ADJACENT_STEP_ANIMATION_MS = PACING.step;
+export const AI_ADJACENT_STEP_ANIMATION_MS = PACING.step;
 
 export function adjacentStepAnimationDuration(
   activePlayerId: number,

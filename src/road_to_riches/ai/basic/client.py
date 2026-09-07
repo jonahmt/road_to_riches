@@ -97,7 +97,8 @@ class BasicAIClient:
         if req.player_id != self.player_id:
             return None
 
-        time.sleep(self.delay)
+        if not req.data.get("_presentation_paced"):
+            time.sleep(self.delay)
 
         # Replan route before making path decisions
         if req.type in (InputRequestType.CHOOSE_PATH, InputRequestType.PRE_ROLL):
@@ -124,17 +125,18 @@ class BasicAIClient:
         *,
         presentation_type: str | None = None,
         data: dict | None = None,
+        coordinated: bool = False,
     ) -> dict | None:
-        """Automatically acknowledge this AI's presentation after readable pacing."""
+        """Acknowledge ownership; negotiated browser readiness supplies pacing."""
         if owner_player_id != self.player_id:
             return None
         delay = self.presentation_delay
         if presentation_type == "dice_rolled":
-            # Browser rolls take 1.12s for movement and 2s for an event.
-            # Leave a small margin for the observing browser to paint its result.
+            # Preserve legacy/headless timing when no browser negotiated pacing.
             minimum = 2.25 if (data or {}).get("purpose") == "event" else 1.35
             delay = max(delay, minimum)
-        time.sleep(delay)
+        if not coordinated:
+            time.sleep(delay)
         return msg_presentation_ack(request_id, self.player_id, game_id=game_id)
 
 
@@ -583,6 +585,7 @@ async def run(
                     game_id=msg.get("game_id") or game_id,
                     presentation_type=msg["type"],
                     data=msg.get("data", {}),
+                    coordinated=msg.get("coordinated", False),
                 )
                 if acknowledgment is not None:
                     await ws.send(encode(acknowledgment))

@@ -1,9 +1,14 @@
 # Fortune Street pacing proposal
 
-Status: proposed for user review, 2026-09-07. No pacing implementation is
-authorized by this document. This proposal belongs only to
-`codex/3d-experiment`; the existing behavior remains described in
-`experimental_3d.md`. Beads issue: `road_to_riches-y8sw`.
+Status: approved by the user and implemented on `codex/3d-experiment`,
+2026-09-07. The user requested a recoverable pre-change commit; the pushed
+annotated tag `codex/pre-pacing` preserves `7403c7b`. Planning issue:
+`road_to_riches-y8sw`; implementation issue: `road_to_riches-eht6`.
+
+The approved proposal below records the reference observations, original causes,
+and intended sequence. The implemented timing profile, recovery behavior, and
+validation are documented in [experimental_3d.md](experimental_3d.md#coordinated-turn-pacing).
+This remains an experiment, with no adoption on main.
 
 ## Reference observations
 
@@ -32,7 +37,7 @@ suit collection around a passing/landing step, and balance-counting tails near a
 turn transition. The intended rule is **one foreground action at a time**, with
 explicitly coordinated supporting effects. It is not a blanket ban on overlap.
 
-## Current causes in the experimental implementation
+## Pre-change causes in the experimental implementation
 
 These are source findings, separate from the reference observations:
 
@@ -234,6 +239,6 @@ Acceptance criteria:
   Existing Python/browser regression suites, type checking, Ruff and production
   build pass. Automated success is supplemented by the actual motion review.
 
-The next implementation step requires the user's review of this proposed
-sequence, timing profile and automatic AI progression. No gameplay code or live
-runtime was changed while preparing it.
+The user approved this sequence, timing profile, and automatic AI progression
+after reviewing the proposal. Implementation proceeded after preserving and
+pushing the pre-change checkpoint.

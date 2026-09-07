@@ -261,6 +261,16 @@ class GameServer:
                                 session.game_loop.state,
                             )
 
+                elif msg_type == "presentation_client":
+                    assert session.player_input is not None
+                    session.player_input.pacer.register(ws, msg.get("visible") is True)
+
+                elif msg_type == "presentation_ready":
+                    assert session.player_input is not None
+                    session.player_input.pacer.acknowledge(
+                        ws, msg.get("request_id"), msg.get("generation")
+                    )
+
                 elif msg_type == "presentation_ack":
                     assert session.player_input is not None
                     session.player_input.receive_presentation_ack(

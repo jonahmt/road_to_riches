@@ -1028,7 +1028,7 @@ h3 {
 }
 
 .board-dice.is-rolling .physical-die-cube {
-  animation: physical-die-tumble 760ms cubic-bezier(0.18, 0.78, 0.24, 1) both;
+  animation: physical-die-tumble 1300ms cubic-bezier(0.18, 0.78, 0.24, 1) both;
 }
 
 .physical-die-face {

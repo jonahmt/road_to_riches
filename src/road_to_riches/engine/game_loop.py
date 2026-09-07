@@ -720,7 +720,6 @@ class GameLoop:
         # The barrier starts the animation and holds the engine at this result.
         # Publish static countdown state after the barrier so a new result does
         # not briefly flash in the movement corner before its center tumble.
-        self.input.notify(self.state, self.log)
         self._execute_event(
             PresentationBarrierEvent(
                 player_id=player_id,
@@ -728,6 +727,7 @@ class GameLoop:
                 data={"value": roll, "purpose": purpose},
             )
         )
+        self.input.notify(self.state, self.log)
         self.input.notify_dice(
             roll, roll if purpose == "movement" else 0, purpose=purpose, animate=False
         )

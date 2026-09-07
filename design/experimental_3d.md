@@ -5,9 +5,10 @@ the board, board objects, textures, and overall interface theme together, then
 reviewing the result in the browser. It is not a change to the gameplay rules or
 an adoption of this art direction on the main branch.
 
-The [pacing proposal](presentation_pacing_proposal.md) records the subsequent
-reference-motion review and a proposed coordination redesign. It awaits user
-review and does not describe implemented behavior.
+The [approved pacing proposal](presentation_pacing_proposal.md) records the
+reference-motion review and coordination design. Its implementation is described
+below. The pushed tag `codex/pre-pacing` preserves the complete pre-change state
+at `7403c7b`, including the approved reference proposal.
 
 The reference is [Fortune Street on Wii](https://www.youtube.com/watch?v=mdQQH9CjDlE&t=2427s),
 especially the turn beginning at 40:27. The relevant visual ideas are substantial
@@ -20,6 +21,124 @@ art; the video is a visual reference.
 The approved first playable version is preserved by the pushed annotated tag
 `codex/3d-first-pass` at `69aa138`. Detail refinement continues on the same
 experimental branch, so the tag remains a stable comparison and recovery point.
+
+## Coordinated turn pacing
+
+The browser now presents one foreground action at a time. Supporting movement
+and camera animation run together; result panels finish their reveal, reading
+hold, and exit before the next action becomes available. This is a structural
+interpretation of the inspected Wii sequence, not a claim to reproduce exact
+Wii frame timings. Financial rules, legal choices, undo, and decision ownership
+are unchanged.
+
+`PresentationPacer` in the experimental server emits revisioned
+`presentation_beat` messages with a request ID and authoritative before/after
+snapshots. Existing engine presentation barriers supply named results. Existing
+state-notification boundaries supply turn, piece, suit, venture-selection, and
+otherwise unpresented state-change checkpoints. A change-of-suit tile rotation
+or path bookkeeping alone does not add a foreground pause. No checkpoint is
+inferred from log text. Logs accompanying a mutation are released after its
+presentation; the die result and Lucky Roll amount cannot appear in the ticker
+before their own reveals. The die caption and accessible description also withhold
+the numeric result during its tumble.
+
+`usePresentationDirector` owns the browser lifecycle. `presentationTiming.ts`
+contains the timing profile and presented-state release points. Camera and piece
+renderers, dice, and suit effects report their actual completion. Resolution from
+the server and completion in the browser are separate queue gates. A local
+result cannot disappear because an AI or another client acknowledged early.
+Next decisions and the final game-over banner remain hidden until the current
+presentation drains. Generic transaction results cover ownership changes,
+investment, stock sales, transfers, and liquidation mutations that previously
+only updated the board/HUD.
+
+| Stage | Current normal profile |
+| --- | --- |
+| Turn introduction + camera | 900 ms minimum, then 120 ms release |
+| Ordinary human/AI step | 300 ms with the camera; final arrival adds 400 ms |
+| Die | 1300 ms tumble, 700 ms readable face, 350 ms dock (event dice fade instead), then release |
+| Suit | Existing 1760 ms collection completes before the next foreground action |
+| Rent | Introduce; transfer from 650–1450 ms; dividends from 1650–2350 ms when present |
+| Rent reading | 800 ms before a human can Continue; AI reads for 1400 ms |
+| Stock result | Reveal over 1400 ms, then 800 ms human / 1600 ms AI reading |
+| Promotion | Reveal over 2400 ms, then 900 ms human / 1800 ms AI reading |
+| Venture explanation | 600 ms reveal, then 800 ms human / 2600 ms AI reading |
+| Other transaction results | 1000 ms reveal, then 1400 ms automatic reading |
+| Result exit | Usually 250 ms |
+
+Human reading/choice time after Continue unlocks is unlimited. Readable holds
+remain under reduced motion while spatial movement can be shortened. Free camera
+does not wait for disabled follow motion. Shop expansion uses the shared movement
+duration, so a slower step cannot collide with an expanding shop.
+
+Cash animates between server values. Rent captures an additional authoritative
+cash snapshot after payment and commissions but before dividends; the browser
+never derives that snapshot by reversing a payment. Rent-only HUD deltas and
+later dividend deltas appear separately. Multi-district price events preserve
+unrevealed districts until their corresponding presentation. The engine still
+owns all arithmetic and executes events in its original order.
+
+### Ownership and recovery
+
+A connected assigned browser negotiates `presentation_client` capability and
+reports visibility every two seconds. For human-owned results the server prefers
+that owner's visible browser. For AI results, the lowest-ID eligible browser is
+the render driver. Visual readiness is accepted only from the driver's socket,
+for the current request ID and lease generation. The existing owner-only
+`presentation_ack` gate remains separate. AI skips its guessed decision and
+presentation sleeps only in a negotiated session; legacy/terminal sessions keep
+their existing protocol and timing. Legacy presentation requests are still sent
+for AI/terminal ownership, including reconnects.
+
+A hidden/disconnected driver loses its lease. Another eligible browser can take
+over; with none available, bounded type-specific automatic timings allow AI
+progress. A stalled visible renderer has a 20-second recovery limit. Human-owned
+results never auto-confirm: that limit starts after the human confirms, rather
+than counting time spent reading. Browser motion callbacks also have a bounded
+four-second recovery margin. These are failure recovery limits, not normal pacing.
+
+A reconnect or visible-tab return requests the current checkpoint, clears stale
+queued presentations, and restores a static movement counter plus the active
+beat if one remains. Hidden tabs do not accumulate an animation backlog. Replaying
+a pending reveal does not execute or award the underlying event again. Held
+Enter/Space events cannot confirm the following prompt, and result buttons stay
+disabled until their readable phase. Renderer switching preserves the active
+coordinator; WebGL loss retains the existing explicit “Use 2D view” recovery.
+
+Adding `?pacingTrace` emits `rtr:pacing` browser events and console records for
+request ID, revision, type, phase, and accumulated visible elapsed time. This is
+an optional diagnostic, not a gameplay control.
+
+### Pacing validation
+
+Private, deterministic browser/server runs covered a complete Trodain round with
+one human and three AI players, plus six-step movement/undo, multi-suit collection,
+human and AI venture explanation → event die → winnings, promotion, and stock
+purchase/price effects. The full-round trace asserts each presentation completed
+before the next began. Rendered captures were inspected at 1600×1000 and 1280×720;
+the continuous full-round recording is retained locally at
+`.runtime/reviews/pacing/round.webm` in the main workspace.
+
+The payment fixture transferred 89, then paid dividends 7/5/3, leaving cash
+1718/1894/1803/1800. The six-result Lucky Roll paid 240 to human and AI, preserving
+the separate 40 grid-line bonus. The promotion fixture advanced level 1→2 and
+paid 449 before opening the bank's stock choices. Reconnects during movement dice
+and pending winnings preserved the checkpoint without awarding rewards twice.
+
+A separate deficit fixture displayed rent/dividends to a cash balance of -72
+before exposing liquidation; selling six shares then presented -72→0. Recovery
+checks used 4× CPU throttling, actual loss of both WebGL contexts and the offered
+2D fallback, plus a simulated hidden tab during the human result exit. On return,
+the browser resumed revision 13 directly and completed to the next human turn,
+without replaying revisions accumulated while hidden. No page errors occurred in
+the successful full-round, venture, promotion, or recovery runs.
+
+All 770 Python tests, 96 TypeScript unit tests, and the existing promotion SSR
+test passed, as did Ruff, TypeScript checking, and the production build. Tests
+cover readiness/owner separation, stale driver leases, renderer timeout versus
+human reading, coordinated legacy-client reconnect, authoritative rent stages,
+queue completion in either order, and AI timing negotiation. The existing large
+Vite chunk warning remains; the change adds no package dependencies.
 
 ## Detail refinement
 
@@ -440,6 +559,8 @@ fixture with a longer AI delay verified the stationary event reveal, hold and
 disappearance. All 89 browser tests, type checking, Ruff, and build passed;
 the new tests check camera-facing result geometry and extended/zero pip counts.
 
+The following records the earlier `ab264f8` roll-barrier pass; its guessed AI
+timing and suit-queue clearing are superseded by coordinated turn pacing above.
 The solid-die review reproduced existing timing reports `road_to_riches-j54f`
 and `road_to_riches-t02r`: at the normal AI delay, subsequent play interrupted
 the event die. The experimental sequence refinement now places a `dice_rolled`
