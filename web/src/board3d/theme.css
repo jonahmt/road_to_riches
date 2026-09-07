@@ -420,3 +420,25 @@
 @media (prefers-reduced-motion: reduce) {
   .turn-announcement, .state-change-result { animation: none; }
 }
+
+/* The die is tossed in an arc, then presents a square, camera-facing result. */
+.app-shell.theme-tabletop .board-dice.is-rolling .physical-die-stage {
+  animation: tabletop-die-toss var(--die-roll-duration, 1400ms) linear both;
+}
+.app-shell.theme-tabletop .board-dice.is-rolling .board-die-roll { visibility: hidden; }
+@keyframes tabletop-die-toss {
+  0% { transform: translate(110px, -80px) scale(.88); }
+  32% { transform: translate(80px, -135px) scale(1); }
+  70% { transform: translate(22px, -46px) scale(1); }
+  88% { transform: translate(0, 5px) scale(.98); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+.hud-wild-suit { position: relative; }
+.hud-wild-suit small {
+  position: absolute; right: -4px; bottom: -5px; padding: 0 2px;
+  border-radius: 3px; background: #172e4b; color: #fff3cb;
+  font-size: 9px; line-height: 11px; font-weight: 800;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.theme-tabletop .board-dice.is-rolling .physical-die-stage { animation: none; }
+}

@@ -3,17 +3,17 @@ import type { GameState } from "./protocol";
 
 export const PACING = {
   step: 300, arrival: 400, turn: 900, exit: 250,
-  dieTumble: 1300, dieRead: 700, dieDock: 350,
+  dieTumble: 1400, dieRead: 700, dieDock: 350,
   rentTransfer: 650, rentTransferEnd: 1450, dividends: 1650, dividendsEnd: 2350,
-  suit: 1760,
 } as const;
 
 export function beatTiming(beat: PresentationState) {
   switch (beat.type) {
     case "piece_moved": return { reveal: PACING.step + (beat.data.remaining === 0 ? PACING.arrival : 0), human: 0, auto: 0, exit: 0, motion: ["piece", "camera"] };
     case "turn_started": return { reveal: PACING.turn, human: 0, auto: 0, exit: 120, motion: ["camera"] };
-    case "dice_rolled": return { reveal: 2350, human: 0, auto: 0, exit: 100, motion: ["dice"] };
-    case "suit_collected": return { reveal: PACING.suit, human: 0, auto: 0, exit: 100, motion: ["suit"] };
+    case "dice_rolled": return { reveal: PACING.dieTumble + PACING.dieRead + PACING.dieDock, human: 0, auto: 0, exit: 100, motion: ["dice"] };
+    // Compatibility with an older experimental server: no collection delay.
+    case "suit_collected": return { reveal: 0, human: 0, auto: 0, exit: 0, motion: [] };
     case "venture_selected": return { reveal: 550, human: 0, auto: 0, exit: 100, motion: [] };
     case "rent_payment": return { reveal: Array.isArray(beat.data.dividends) && beat.data.dividends.length ? PACING.dividendsEnd : PACING.rentTransferEnd, human: 800, auto: 1400, exit: PACING.exit, motion: [] };
     case "stock_price_changed": return { reveal: 1400, human: 800, auto: 1600, exit: PACING.exit, motion: ["camera"] };
@@ -37,7 +37,7 @@ export function presentedState(beat: PresentationState, elapsed: number): GameSt
   if (!before || !after) return after;
   if (["piece_moved", "turn_started"].includes(beat.type)) return after;
   if (beat.type === "dice_rolled") return before;
-  if (beat.type === "suit_collected") return elapsed >= 1600 ? after : before;
+  if (beat.type === "suit_collected") return after;
   const release = beat.type === "promotion_completed" ? 900 : beat.type === "stock_price_changed" ? 1000 : 550;
   const result = elapsed >= release ? after : before;
   const rentCash = beat.data.rent_cash as Record<string, number> | undefined;

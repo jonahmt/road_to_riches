@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Euler, Vector3 } from "three";
 import { DIE_PIPS } from "../src/dicePresentation.ts";
-import { DIE_FACES, physicalDieFaceValue, physicalDieRotation } from "../src/board3d/dieGeometry.ts";
+import { DIE_FACES, physicalDieFaceValue, physicalDieRotation, physicalDieSpin } from "../src/board3d/dieGeometry.ts";
 
 test("every authoritative standard result faces the camera on the solid die", () => {
   for (let result = 1; result <= 6; result++) {
@@ -24,5 +24,19 @@ test("countdown zero is blank and extended board rolls retain their authoritativ
     assert.equal(DIE_PIPS[displayed].length, value);
     assert.equal(new Set(DIE_PIPS[displayed]).size, value);
     if (value === 0 || value > 6) assert.deepEqual(physicalDieRotation(value), [0, 0, 0]);
+  }
+});
+
+
+test("the complete toss finishes with every result square to the camera", () => {
+  for (let value = 1; value <= 6; value++) {
+    const face = DIE_FACES.find((candidate) => candidate.value === value)!;
+    for (const progress of [1, 2]) {
+      const rotation = physicalDieSpin(value, progress);
+      const normal = new Vector3(0, 0, 1).applyEuler(new Euler(...face.rotation))
+        .applyEuler(new Euler(...rotation));
+      assert(normal.distanceTo(new Vector3(0, 0, 1)) < 1e-10);
+      assert(Math.abs(rotation[2]) < 1e-10, "no diagonal result face");
+    }
   }
 });

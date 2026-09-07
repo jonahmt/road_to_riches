@@ -8,7 +8,10 @@ annotated tag `codex/pre-pacing` preserves `7403c7b`. Planning issue:
 The approved proposal below records the reference observations, original causes,
 and intended sequence. The implemented timing profile, recovery behavior, and
 validation are documented in [experimental_3d.md](experimental_3d.md#coordinated-turn-pacing).
-This remains an experiment, with no adoption on main.
+This remains an experiment, with no adoption on main. Subsequent user feedback
+explicitly replaced the suit collection wait with an immediate HUD update and
+requested a straight-on die result; see the refinement section in the current
+implementation document. The original reference observations below are retained.
 
 ## Reference observations
 

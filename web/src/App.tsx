@@ -62,14 +62,6 @@ import { PlayerPortrait } from "./board3d/PlayerPortrait";
 import { getRollPhaseVisibility } from "./rollPhaseVisibility";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
-  SUIT_COLLECTION_DURATION_MS,
-  suitCollectionFacts,
-  suitCollectionSourceSelector,
-  suitCollectionTargetSelector,
-  type CollectedSuit,
-  type SuitCollectionFacts,
-} from "./suitCollectionPresentation";
-import {
   boardSelectionScrimPath,
   clampInvestmentAmount,
   investmentSquareChoices,
@@ -213,7 +205,6 @@ const MIN_BOARD_ZOOM = 0.5;
 const MAX_BOARD_ZOOM = 3;
 const FOLLOW_VISIBLE_TILE_WIDTHS = 6;
 const FOLLOW_CAMERA_ANIMATION_MS = 360;
-const SUIT_COLLECTION_SOURCE_TRACKING_MS = SUIT_COLLECTION_DURATION_MS * 0.65;
 const PLAYER_TOKEN_RADIUS = 0.34;
 const ACTIVE_PLAYER_TOKEN_RADIUS = 0.95;
 const BOARD_ZOOM_STEP = 0.25;
@@ -835,10 +826,6 @@ function App() {
       ? clientState.pendingRequest
       : null;
   const activePresentation = clientState.presentations[0] ?? null;
-  const activeSuitCollection =
-    activePresentation?.type === "suit_collected"
-      ? suitCollectionFacts(activePresentation.data, activePresentation.playerId)
-      : null;
   const activeStockPriceChange =
     activePresentation?.type === "stock_price_changed"
       ? stockPriceChangeFacts(activePresentation.data, activePresentation.playerId)
@@ -1027,7 +1014,6 @@ function App() {
             state={clientState.gameState}
             assignedPlayerId={clientState.playerId}
             cashDeltas={paymentCashDeltas}
-            suitCollection={activeSuitCollection}
           />
           <section className="game-layout">
             <BoardPanel
@@ -1341,18 +1327,6 @@ function App() {
               ? acknowledgePresentation(activePresentation.requestId)
               : dismissPresentation(activePresentation.requestId)
           }
-        />
-      )}
-
-      {activePresentation?.type === "suit_collected" && (
-        <SuitCollectionEffect
-          // A queued recollection can follow the previous effect without an
-          // empty render between them. Remount per notification so CSS restarts.
-          key={activePresentation.requestId}
-          presentation={activePresentation}
-          onComplete={() => activePresentation.coordinated
-            ? presentationMotion.complete("suit", activePresentation.requestId)
-            : dismissPresentation(activePresentation.requestId)}
         />
       )}
 
@@ -2579,6 +2553,7 @@ function BoardDice({ dice, showSettled, threeDimensional, onComplete }: {
   return (
     <div
       className={`board-dice is-${visible ? visualPhase : "hidden"} is-${activeDice?.purpose ?? "movement"} ${threeDimensional ? "has-solid-die" : ""}`}
+      style={{ "--die-roll-duration": `${DICE_ROLL_DURATION_MS}ms` } as CSSProperties}
       role="img"
       aria-label={description}
       aria-live="polite"
@@ -3592,21 +3567,16 @@ function SuitYourselfIcon({ x, y }: { x: number; y: number }) {
   );
 }
 
-function HudSuitSlots({
-  player,
-  collectingSuit,
-}: {
-  player: PlayerState;
-  collectingSuit: CollectedSuit | null;
-}) {
+function HudSuitSlots({ player }: { player: PlayerState }) {
   const ownedSuits = SUIT_ORDER.filter((suit) => (player.suits[suit] ?? 0) > 0);
+  const wildCount = player.suits.WILD ?? 0;
   const accessibleLabel = SUIT_ORDER.map(
     (suit) => `${readableType(suit)} ${ownedSuits.includes(suit) ? "owned" : "missing"}`,
-  ).join(", ");
+  ).join(", ") + (wildCount > 0 ? `, Wild suits ${wildCount}` : "");
 
   return (
     <span
-      className={`hud-suit-slots ${collectingSuit === "WILD" ? "is-collecting-wild" : ""}`}
+      className="hud-suit-slots"
       role="img"
       aria-label={accessibleLabel}
       data-hud-player-id={player.player_id}
@@ -3614,13 +3584,10 @@ function HudSuitSlots({
     >
       {SUIT_ORDER.map((suit) => {
         const isOwned = ownedSuits.includes(suit);
-        const isCollecting = collectingSuit === suit;
         return (
           <span
             key={suit}
-            className={`hud-suit-slot ${isOwned ? "owned" : "missing"} ${
-              isCollecting ? "is-collecting" : ""
-            }`}
+            className={`hud-suit-slot ${isOwned ? "owned" : "missing"}`}
             title={`${readableType(suit)}: ${isOwned ? "owned" : "missing"}`}
             aria-hidden="true"
             data-hud-player-id={player.player_id}
@@ -3632,6 +3599,12 @@ function HudSuitSlots({
           </span>
         );
       })}
+      {wildCount > 0 && <span className="hud-suit-slot owned hud-wild-suit"
+        title={`Wild suits: ${wildCount}`} aria-hidden="true"
+        data-hud-player-id={player.player_id} data-hud-suit="WILD">
+        <svg viewBox="0 0 100 100" focusable="false"><SuitYourselfShape /></svg>
+        <small>{wildCount}</small>
+      </span>}
     </span>
   );
 }
@@ -3726,12 +3699,10 @@ function PlayerHud({
   state,
   assignedPlayerId,
   cashDeltas,
-  suitCollection,
 }: {
   state: GameState | null;
   assignedPlayerId: number | null;
   cashDeltas: ReadonlyMap<number, number> | null;
-  suitCollection: SuitCollectionFacts | null;
 }) {
   if (!state) {
     return null;
@@ -3786,14 +3757,7 @@ function PlayerHud({
               <div>
                 <dt>Suits</dt>
                 <dd className="hud-suit-value">
-                  <HudSuitSlots
-                    player={player}
-                    collectingSuit={
-                      suitCollection?.playerId === player.player_id
-                        ? suitCollection.suit
-                        : null
-                    }
-                  />
+                  <HudSuitSlots player={player} />
                 </dd>
               </div>
             </dl>
@@ -4818,123 +4782,6 @@ function VentureCardReveal({
               : `Waiting for Player ${presentation.playerId}...`}
         </small>
       </button>
-    </div>
-  );
-}
-
-interface SuitCollectionGeometry {
-  startX: number;
-  startY: number;
-  targetX: number;
-  targetY: number;
-}
-
-function SuitCollectionEffect({
-  presentation,
-  onComplete,
-}: {
-  presentation: PresentationState;
-  onComplete: () => void;
-}) {
-  const facts = suitCollectionFacts(presentation.data, presentation.playerId);
-  const [geometry, setGeometry] = useState<SuitCollectionGeometry | null>(null);
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
-
-  useLayoutEffect(() => {
-    const source = document.querySelector(suitCollectionSourceSelector(facts));
-    const target = document.querySelector(suitCollectionTargetSelector(facts));
-    const board = document.querySelector(".board-panel");
-    const trackingStartedAt = window.performance.now();
-    let animationFrame: number | null = null;
-
-    function updateGeometry() {
-      const boardRect = board?.getBoundingClientRect();
-      const sourceRect = source?.getBoundingClientRect();
-      const targetRect = target?.getBoundingClientRect();
-      const fallbackX = window.innerWidth / 2;
-      const fallbackY = window.innerHeight / 2;
-      const nextGeometry = {
-        startX: sourceRect
-          ? sourceRect.left + sourceRect.width / 2
-          : (boardRect?.left ?? 0) + (boardRect?.width ?? window.innerWidth) / 2,
-        startY: sourceRect
-          ? sourceRect.top + sourceRect.height / 2
-          : (boardRect?.top ?? 0) + (boardRect?.height ?? window.innerHeight) / 2,
-        targetX: targetRect ? targetRect.left + targetRect.width / 2 : fallbackX,
-        targetY: targetRect ? targetRect.top + targetRect.height / 2 : fallbackY,
-      };
-      setGeometry((previous) => {
-        if (
-          previous &&
-          Math.abs(previous.startX - nextGeometry.startX) < 0.25 &&
-          Math.abs(previous.startY - nextGeometry.startY) < 0.25 &&
-          Math.abs(previous.targetX - nextGeometry.targetX) < 0.25 &&
-          Math.abs(previous.targetY - nextGeometry.targetY) < 0.25
-        ) {
-          return previous;
-        }
-        return nextGeometry;
-      });
-    }
-
-    function followSourceDuringBoardMotion() {
-      updateGeometry();
-      if (window.performance.now() - trackingStartedAt < SUIT_COLLECTION_SOURCE_TRACKING_MS) {
-        animationFrame = window.requestAnimationFrame(followSourceDuringBoardMotion);
-      }
-    }
-
-    updateGeometry();
-    animationFrame = window.requestAnimationFrame(followSourceDuringBoardMotion);
-    return () => {
-      if (animationFrame !== null) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [facts.playerId, facts.squareId, facts.suit]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      onCompleteRef.current();
-    }, SUIT_COLLECTION_DURATION_MS);
-    return () => window.clearTimeout(timer);
-  }, [presentation.requestId]);
-
-  const label = facts.suit === "WILD" ? "Wild Suit" : readableType(facts.suit);
-  const style = geometry
-    ? ({
-        "--suit-collection-color":
-          facts.suit === "WILD" ? "#f7f7f2" : getSuitColor(facts.suit),
-        "--suit-start-x": `${geometry.startX}px`,
-        "--suit-start-y": `${geometry.startY}px`,
-        "--suit-target-x": `${geometry.targetX}px`,
-        "--suit-target-y": `${geometry.targetY}px`,
-      } as CSSProperties)
-    : undefined;
-
-  return (
-    <div
-      className={`suit-collection-effect ${geometry ? "is-ready" : ""} ${facts.suit === "WILD" ? "is-wild" : ""}`}
-      role="status"
-      aria-live="polite"
-      aria-label={`Player ${facts.playerId} collected ${label}`}
-    >
-      <div className="suit-collection-token" style={style} aria-hidden="true">
-        {facts.suit === "WILD" ? (
-          <svg
-            className="suit-collection-icon is-wild"
-            viewBox="0 0 100 100"
-            focusable="false"
-          >
-            <SuitYourselfShape />
-          </svg>
-        ) : (
-          <svg className="suit-collection-icon" viewBox="-1.5 -1.5 3 3" focusable="false">
-            <SuitShape suit={facts.suit} scale={0.92} />
-          </svg>
-        )}
-      </div>
     </div>
   );
 }

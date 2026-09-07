@@ -9,7 +9,7 @@ export const DIE_FACES: Array<{ value: number; position: Point3; rotation: Point
   { value: 5, position: [0, -1.002, 0], rotation: [Math.PI / 2, 0, 0] },
 ];
 
-// Bring the authoritative result toward the viewer before applying the display tilt.
+// Bring the authoritative result directly toward the viewer, with no display tilt.
 // Three.js Y points up, unlike the CSS cube's Y axis.
 export function physicalDieRotation(value: number): Point3 {
   switch (value) {
@@ -20,6 +20,16 @@ export function physicalDieRotation(value: number): Point3 {
     case 6: return [0, Math.PI, 0];
     default: return [0, 0, 0];
   }
+}
+
+export function physicalDieSpin(value: number, progress: number): Point3 {
+  const p = Math.min(1, Math.max(0, progress));
+  const result = physicalDieRotation(value);
+  // A brisk toss followed by a short braking phase, ending square to the camera.
+  const brake = Math.max(0, (p - 0.7) / 0.3);
+  const remaining = p < 0.7 ? 1 - p : 0.3 * (1 - brake) ** 2 * (1 + brake);
+  return [result[0] + remaining * Math.PI * 4,
+    result[1] + remaining * Math.PI * 6, Math.sin(p * Math.PI) * 0.15];
 }
 
 export function physicalDieFaceValue(face: number, displayed: number): number {

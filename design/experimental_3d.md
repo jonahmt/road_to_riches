@@ -34,7 +34,7 @@ are unchanged.
 `PresentationPacer` in the experimental server emits revisioned
 `presentation_beat` messages with a request ID and authoritative before/after
 snapshots. Existing engine presentation barriers supply named results. Existing
-state-notification boundaries supply turn, piece, suit, venture-selection, and
+state-notification boundaries supply turn, piece, venture-selection, and
 otherwise unpresented state-change checkpoints. A change-of-suit tile rotation
 or path bookkeeping alone does not add a foreground pause. No checkpoint is
 inferred from log text. Logs accompanying a mutation are released after its
@@ -44,7 +44,7 @@ the numeric result during its tumble.
 
 `usePresentationDirector` owns the browser lifecycle. `presentationTiming.ts`
 contains the timing profile and presented-state release points. Camera and piece
-renderers, dice, and suit effects report their actual completion. Resolution from
+renderers and dice report their actual completion. Resolution from
 the server and completion in the browser are separate queue gates. A local
 result cannot disappear because an AI or another client acknowledged early.
 Next decisions and the final game-over banner remain hidden until the current
@@ -56,8 +56,8 @@ only updated the board/HUD.
 | --- | --- |
 | Turn introduction + camera | 900 ms minimum, then 120 ms release |
 | Ordinary human/AI step | 300 ms with the camera; final arrival adds 400 ms |
-| Die | 1300 ms tumble, 700 ms readable face, 350 ms dock (event dice fade instead), then release |
-| Suit | Existing 1760 ms collection completes before the next foreground action |
+| Die | 1400 ms toss/spin, 700 ms readable face, 350 ms dock (event dice fade instead), then release |
+| Suit | Immediate HUD update; no collection beat, flight, or extra pause |
 | Rent | Introduce; transfer from 650–1450 ms; dividends from 1650–2350 ms when present |
 | Rent reading | 800 ms before a human can Continue; AI reads for 1400 ms |
 | Stock result | Reveal over 1400 ms, then 800 ms human / 1600 ms AI reading |
@@ -139,6 +139,45 @@ cover readiness/owner separation, stale driver leases, renderer timeout versus
 human reading, coordinated legacy-client reconnect, authoritative rent stages,
 queue completion in either order, and AI timing negotiation. The existing large
 Vite chunk warning remains; the change adds no package dependencies.
+
+## Immediate suits and camera-facing dice refinement
+
+On 2026-09-07 the user approved removing the delay when passing suit squares and
+removing the flying collection token. This supersedes the collection wait in the
+original pacing proposal. `585dc5b` preserves the preceding pacing implementation.
+
+Suit-only state changes (including wild suits, undo, and rotating suit tiles)
+now publish immediately without an additional presentation checkpoint. Collection
+notifications from older servers do not start an effect in the browser; older
+coordinated suit beats release immediately. Standard HUD slots use the new
+authoritative count directly. A collected wild suit appears as a small wild icon
+and count beside them, so removing the flight does not remove its visible feedback.
+The flight overlay, delayed slot pulse, and their unused helpers/styles are removed.
+Normal step animation and the final stop/landing pause remain unchanged.
+
+A fresh browser playback review around [40:28–40:36](https://www.youtube.com/watch?v=mdQQH9CjDlE&t=2428s)
+inspected the die moving in an arc, spinning, and stopping with its six face square
+to the camera. The experimental die follows that structure: a 1400 ms toss with
+a short braking phase, then the existing readable hold and release. Its permanent
+parent tilt is removed. Rounded corners are smaller, the body is white, and the
+pips are darker/larger. Result and countdown faces remain square to the camera
+for both movement and event rolls; zero and extended rolls retain their values.
+
+The shared toss duration drives WebGL and CSS fallback. The outer screen-space
+arc moves the whole die canvas, keeping the toss independent of the board camera.
+Reduced motion omits the arc and spin while preserving the result hold and
+server readiness gate. The caption remains hidden during the toss and the numeric
+result is not announced before the reveal. These are presentation changes only.
+
+Validation used an actual six-step human route, undo/recollection, multiple suits,
+a wild pickup, venture/event dice, and AI rolls at 1600×1000, plus a 1280×720
+reduced-motion CSS fallback run. No collection beat or flying token appeared;
+the first suit's next choice arrived 3 ms after movement resolution. Captures
+verified square-facing six and three results and immediate HUD changes. All
+770 Python tests, 94 TypeScript tests, the promotion SSR test, Ruff, type checking,
+and the production build passed. The successful browser runs had no page errors.
+The motion recording is retained locally in
+`.runtime/reviews/suit-dice-refinement/route.webm` in the main workspace.
 
 ## Detail refinement
 

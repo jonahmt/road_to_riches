@@ -45,3 +45,10 @@ test("ordinary steps have no extra reading hold; arrival has a distinct settle",
   assert(arrival.reveal > step.reveal);
   assert.deepEqual(step.motion, ["piece", "camera"]);
 });
+
+
+test("older suit beats release immediately with no animation or extra hold", () => {
+  const pickup = { ...beat, type: "suit_collected", requiresAcknowledgment: false };
+  assert.equal(presentedState(pickup, 0), after);
+  assert.deepEqual(beatTiming(pickup), { reveal: 0, human: 0, auto: 0, exit: 0, motion: [] });
+});

@@ -132,10 +132,11 @@ def test_authoritative_endpoint_classification_preserves_movement_and_undo():
     assert state_beat(moved, before)[0] == "piece_moved"
     suited = copy.deepcopy(moved)
     suited["players"][0]["suits"] = {"SPADE": 1}
-    assert state_beat(moved, suited) == (
-        "suit_collected",
-        {"player_id": 0, "square_id": 1, "suit": "SPADE"},
-    )
+    assert state_beat(moved, suited) is None
+    suited["players"][0]["suits"]["WILD"] = 1
+    assert state_beat(moved, suited) is None
+    suited["players"][0]["ready_cash"] += 40
+    assert state_beat(moved, suited)[0] == "state_changed"
     assert before["players"][0]["position"] == 0
 
 

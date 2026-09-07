@@ -3,7 +3,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Group, NeutralToneMapping } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { DIE_PIPS, DICE_ROLL_DURATION_MS } from "../dicePresentation";
-import { DIE_FACES, physicalDieFaceValue, physicalDieRotation } from "./dieGeometry";
+import { DIE_FACES, physicalDieFaceValue, physicalDieRotation, physicalDieSpin } from "./dieGeometry";
 
 interface DieProps {
   value: number;
@@ -45,9 +45,7 @@ export default function PhysicalDie(props: DieProps) {
         <ambientLight intensity={1.5} />
         <directionalLight position={[-3, 5, 6]} intensity={2.4} />
         <directionalLight position={[4, -2, -2]} intensity={0.5} color="#8bbdce" />
-        <group rotation={[0.18, -0.28, -0.04]}>
-          <DieMesh value={props.value} rolling={props.rolling && !reduced} startedAt={props.startedAt} />
-        </group>
+        <DieMesh value={props.value} rolling={props.rolling && !reduced} startedAt={props.startedAt} />
       </Canvas>
     </div>
   </DieBoundary>;
@@ -55,27 +53,23 @@ export default function PhysicalDie(props: DieProps) {
 
 function DieMesh({ value, rolling, startedAt }: Omit<DieProps, "fallback">) {
   const group = useRef<Group>(null);
-  const geometry = useMemo(() => new RoundedBoxGeometry(2, 2, 2, 5, 0.16), []);
+  const geometry = useMemo(() => new RoundedBoxGeometry(2, 2, 2, 5, 0.10), []);
   const rotation = physicalDieRotation(value);
   useEffect(() => () => geometry.dispose(), [geometry]);
   useFrame(() => {
     if (!group.current) return;
     const progress = rolling ? Math.min(1, Math.max(0, (performance.now() - startedAt) / DICE_ROLL_DURATION_MS)) : 1;
-    const remaining = Math.pow(1 - progress, 2);
-    group.current.rotation.set(rotation[0] + remaining * Math.PI * 6,
-      rotation[1] + remaining * Math.PI * 8, rotation[2] + remaining * Math.PI * 2);
-    group.current.position.y = Math.sin(progress * Math.PI) * 0.18;
-    group.current.scale.setScalar(0.84 + progress * 0.16);
+    group.current.rotation.set(...physicalDieSpin(value, progress));
   });
   return <group ref={group} rotation={rotation}>
     <mesh geometry={geometry}>
-      <meshStandardMaterial color="#fffdf5" roughness={0.28} metalness={0.03} />
+      <meshStandardMaterial color="#ffffff" roughness={0.35} metalness={0} />
     </mesh>
     {DIE_FACES.map((face) => <group key={face.value} position={face.position} rotation={face.rotation}>
       {(DIE_PIPS[physicalDieFaceValue(face.value, value)] ?? []).map((pip) =>
         <mesh key={pip} position={[((pip - 1) % 3 - 1) * 0.47, (1 - Math.floor((pip - 1) / 3)) * 0.47, 0]}>
-          <circleGeometry args={[0.14, 24]} />
-          <meshStandardMaterial color="#14212c" roughness={0.58} />
+          <circleGeometry args={[0.16, 24]} />
+          <meshStandardMaterial color="#101010" roughness={0.58} />
         </mesh>)}
     </group>)}
   </group>;

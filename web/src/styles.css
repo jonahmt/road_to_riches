@@ -780,7 +780,8 @@ h3 {
 
 .hud-suit-slots {
   display: grid;
-  grid-template-columns: repeat(4, 18px);
+  grid-auto-flow: column;
+  grid-auto-columns: 18px;
   gap: 4px;
   width: max-content;
 }
@@ -807,104 +808,6 @@ h3 {
 
 .hud-suit-slot.missing svg {
   opacity: 0.17;
-}
-
-.hud-suit-slot.is-collecting,
-.hud-suit-slots.is-collecting-wild {
-  animation: hud-suit-collected 420ms cubic-bezier(0.2, 0.86, 0.25, 1.24) 1.28s both;
-}
-
-.suit-collection-effect {
-  position: fixed;
-  inset: 0;
-  z-index: 58;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.suit-collection-token {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 132px;
-  height: 132px;
-  display: grid;
-  place-items: center;
-  opacity: 0;
-  transform-origin: center;
-  will-change: transform, opacity;
-}
-
-.suit-collection-effect.is-ready .suit-collection-token {
-  animation: suit-collection-flight 1.76s cubic-bezier(0.2, 0.72, 0.2, 1) both;
-}
-
-.suit-collection-icon {
-  width: 124px;
-  height: 124px;
-  overflow: visible;
-  filter:
-    drop-shadow(0 0 12px color-mix(in srgb, var(--suit-collection-color) 82%, transparent))
-    drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
-}
-
-.suit-collection-icon.is-wild {
-  width: 128px;
-  height: 128px;
-}
-
-@keyframes suit-collection-flight {
-  0% {
-    opacity: 0;
-    transform: translate3d(var(--suit-start-x), var(--suit-start-y), 0) translate(-50%, -50%) scale(0.2) rotate(-12deg);
-  }
-  13% {
-    opacity: 1;
-    transform: translate3d(var(--suit-start-x), var(--suit-start-y), 0) translate(-50%, -50%) scale(0.48) rotate(-5deg);
-  }
-  43% {
-    opacity: 1;
-    transform: translate3d(var(--suit-start-x), var(--suit-start-y), 0) translate(-50%, -50%) scale(1.08) rotate(2deg);
-  }
-  65% {
-    opacity: 1;
-    transform: translate3d(var(--suit-start-x), var(--suit-start-y), 0) translate(-50%, -50%) scale(1) rotate(0deg);
-  }
-  88% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(var(--suit-target-x), var(--suit-target-y), 0) translate(-50%, -50%) scale(0.12) rotate(8deg);
-  }
-}
-
-@keyframes hud-suit-collected {
-  0% {
-    filter: none;
-    transform: scale(1);
-  }
-  52% {
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.9));
-    transform: scale(1.52);
-  }
-  100% {
-    filter: none;
-    transform: scale(1);
-  }
-}
-
-@keyframes suit-collection-reduced {
-  0%,
-  100% {
-    opacity: 0;
-    transform: translate3d(var(--suit-start-x), var(--suit-start-y), 0) translate(-50%, -50%) scale(1);
-  }
-  12%,
-  82% {
-    opacity: 1;
-    transform: translate3d(var(--suit-start-x), var(--suit-start-y), 0) translate(-50%, -50%) scale(1);
-  }
 }
 
 .game-layout {
@@ -1028,7 +931,7 @@ h3 {
 }
 
 .board-dice.is-rolling .physical-die-cube {
-  animation: physical-die-tumble 1300ms cubic-bezier(0.18, 0.78, 0.24, 1) both;
+  animation: physical-die-tumble var(--die-roll-duration, 1400ms) linear both;
 }
 
 .physical-die-face {
@@ -1106,19 +1009,19 @@ h3 {
 
 @keyframes physical-die-tumble {
   0% {
-    transform: rotateX(-28deg) rotateY(24deg) rotateZ(-9deg) scale(0.8);
+    transform: var(--die-final-transform) rotateX(720deg) rotateY(1080deg);
   }
-  24% {
-    transform: rotateX(202deg) rotateY(-174deg) rotateZ(58deg) scale(1.08);
+  35% {
+    transform: var(--die-final-transform) rotateX(468deg) rotateY(702deg) rotateZ(8deg);
   }
-  52% {
-    transform: rotateX(428deg) rotateY(318deg) rotateZ(-42deg) scale(0.96);
+  70% {
+    transform: var(--die-final-transform) rotateX(216deg) rotateY(324deg) rotateZ(7deg);
   }
-  78% {
-    transform: rotateX(662deg) rotateY(-508deg) rotateZ(22deg) scale(1.04);
+  85% {
+    transform: var(--die-final-transform) rotateX(81deg) rotateY(121.5deg) rotateZ(4deg);
   }
   100% {
-    transform: var(--die-final-transform) scale(1);
+    transform: var(--die-final-transform) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
   }
 }
 
@@ -3102,15 +3005,6 @@ dd {
   .physical-die-pip {
     animation: none !important;
     transition: none !important;
-  }
-
-  .suit-collection-effect.is-ready .suit-collection-token {
-    animation: suit-collection-reduced 1.76s ease both !important;
-  }
-
-  .hud-suit-slot.is-collecting,
-  .hud-suit-slots.is-collecting-wild {
-    animation: none !important;
   }
 
   .rent-coin {

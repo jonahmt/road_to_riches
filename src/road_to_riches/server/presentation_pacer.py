@@ -18,19 +18,11 @@ def state_beat(before: dict, after: dict) -> tuple[str, dict] | None:
     for old, new in zip(before["players"], after["players"], strict=True):
         if old["position"] != new["position"]:
             return "piece_moved", {"player_id": new["player_id"], "square_id": new["position"]}
-        for suit, count in new["suits"].items():
-            if count > old["suits"].get(suit, 0):
-                return "suit_collected", {
-                    "player_id": new["player_id"],
-                    "suit": suit,
-                    "square_id": new["position"],
-                }
-    # A change-of-suit tile rotates after collection. Publish that supporting
-    # change without a second foreground "Board update" pause. Likewise, turn
-    # traversal bookkeeping alone does not deserve a result panel.
+    # Suit pickup is an immediate HUD update, not a foreground presentation.
+    # Tile rotation and path bookkeeping likewise must not delay the route.
     players_changed = any(
-        {k: v for k, v in old.items() if k != "from_square"}
-        != {k: v for k, v in new.items() if k != "from_square"}
+        {k: v for k, v in old.items() if k not in {"from_square", "suits"}}
+        != {k: v for k, v in new.items() if k not in {"from_square", "suits"}}
         for old, new in zip(before["players"], after["players"], strict=True)
     )
 
@@ -159,7 +151,6 @@ class PresentationPacer:
             "piece_moved": 0.75,
             "turn_started": 0.9,
             "venture_selected": 0.6,
-            "suit_collected": 1.9,
             "dice_rolled": 2.7,
         }.get(kind, 4.0)
         while True:

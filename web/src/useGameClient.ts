@@ -307,6 +307,7 @@ export function useGameClient(defaultUri: string) {
                 logs: current.logs.slice(0, Math.max(0, current.logs.length - message.count)),
               };
             case "ui_notification": {
+              if (message.type === "suit_collected") return current;
               notificationIdRef.current += 1;
               const requestId = `notification:${notificationIdRef.current}`;
               return {

@@ -945,8 +945,8 @@ class WebSocketPlayerInput(PlayerInput):
         )
 
     def notify_ui(self, notification_type: str, data: dict[str, Any] | None = None) -> None:
-        if self.pacer.enabled and notification_type == "suit_collected":
-            return  # The authoritative suit delta already completed its visual checkpoint.
+        if notification_type == "suit_collected":
+            return  # Suit counts already arrive with the authoritative state update.
         self._broadcast(msg_ui_notification(notification_type, data, game_id=self._game_id))
 
     def present(self, state: GameState, request: PresentationRequest) -> None:
