@@ -210,6 +210,13 @@ Tile textures and special-square backgrounds are intentionally part of this
 experimental art direction. The minimap keeps the established production icon
 and ownership conventions.
 
+Player cards use a compact colored name band above the financial row. Their
+minimum height is 64 pixels, or 60 pixels on windows at most 820 pixels high,
+with four-pixel gaps. Smaller portrait and padding dimensions reclaim board
+space while retaining the existing text sizes, cash, worth, level, suits,
+commission stars, and position labels. Payment and suit effects continue to
+measure their targets from these live cards; camera framing is unchanged.
+
 The same local player portraits appear in rent transfers, dividend recipients,
 stock ownership summaries, stock-price changes, and promotion ceremonies. Their
 sizes and placement belong to each panel; the HUD's absolute positioning is
@@ -261,6 +268,16 @@ this temporary preview server. This branch can also run against any compatible
 server using the connection form.
 
 ## Verification
+
+The compact HUD was rendered on populated Trodain views at 1600 by 1000 and
+1280 by 720, including a close view of the bank and neighboring rent plaques.
+The four-card stack measured 268 and 252 pixels respectively, reclaiming 54 and
+70 pixels from the previous layout. A real rent payment verified separate,
+aligned cash-delta bubbles at both sizes. A diamond landing verified the suit
+effect and subsequent venture grid; a level-23 player with four suits and two
+commission stars verified the denser card contents. Portraits stayed inside
+their cards and measured stat content did not overflow. The 91 browser tests,
+type check, production build, and Ruff passed without browser page errors.
 
 The renderer was reviewed in Chrome against the actual Python server, using
 Trodain and the all-square-types board. The review included a complete roll,
