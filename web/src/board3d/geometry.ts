@@ -58,9 +58,16 @@ export function piecePositions(state: GameState) {
     const others = state.players.filter((other) => !other.bankrupt &&
       other.position === player.position && other.player_id !== activeId);
     const index = others.findIndex((other) => other.player_id === player.player_id);
+    const sharedWithActive = others.length > 0 && state.players.some((other) =>
+      !other.bankrupt && other.player_id === activeId && other.position === player.position);
+    // A side row keeps the smaller figures clear of the active figure's base.
+    const offsetX = sharedWithActive ? (active ? -0.45 : 1.58)
+      : active ? 0 : (index - (others.length - 1) / 2) * 0.85;
+    const offsetZ = active ? 0.85
+      : sharedWithActive ? 1.35 - (others.length - 1 - index) * 0.82 : 1.35;
     return [{ player, active, position: boardPoint([
-      square.position[0] + (active ? 0 : (index - (others.length - 1) / 2) * 0.85),
-      square.position[1] + (active ? 0.85 : 1.35),
+      square.position[0] + offsetX,
+      square.position[1] + offsetZ,
     ]), scale: active ? 1.22 : 0.48 }];
   });
 }

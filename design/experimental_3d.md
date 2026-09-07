@@ -59,6 +59,18 @@ behavior. The follow camera now uses a 45-degree elevation so faces and shop
 fronts are visible alongside the tile surfaces; reset and return-to-follow use
 the same orientation.
 
+`CivicBuilding.tsx` gives the bank and stockbroker stepped plinths, arched doors,
+column bases and capitals, framed side/rear windows, cornice trim, and shingled
+roofs. The bank has four columns and a clock; the stockbroker retains six columns
+and a rising-market emblem. Both keep the tile label visible in front of the
+building and use the original special-square identity and gameplay behavior.
+
+Crowded-square inspection exposed overlap between an active figure and an
+inactive figure. When they share a tile, the active figure now shifts slightly
+left and inactive figures form a separate row along the right edge. Two to four
+players retain non-overlapping bases inside the original tile footprint. A
+regression test checks those bounds and separation without mutating game state.
+
 ## Renderer and state boundary
 
 The browser uses Three.js 0.185 and React Three Fiber 9.7. `BoardScene.tsx` is a
@@ -155,7 +167,15 @@ when the desktop was locked, using the separate QA backend. Screenshots at
 name/stat contrast, rent payment and cash deltas, and free/follow camera angles.
 The session exercised movement, undo, final stop, rent, AI turn handoffs, and
 reduced-motion mode without browser runtime errors. The browser regression suite
-still passed all 82 tests, along with type checking, Ruff, and production build.
+passed all 83 tests after adding crowded-square coverage, along with type
+checking, Ruff, and production build. The revised bank and stockbroker were also
+reviewed together on the all-square-types board.
+
+A warm, stationary Trodain view at 1600 by 1000 with device pixel ratio 1 was
+sampled for 120 animation frames in headless Chrome on this machine's Apple M1
+Metal renderer. Frame intervals were 16.7 ms median and 16.8 ms at the 95th
+percentile after the civic-building pass. This is a local rendering spot check;
+larger boards, high pixel ratios, and lower-end devices need separate profiling.
 
 Automated coverage in `board3dGeometry.test.ts` protects board coordinates,
 district focus, co-located players, legal selections, and camera-relative input

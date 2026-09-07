@@ -1,7 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import {
-  type BufferGeometry, type Camera, Color, Curve, ExtrudeGeometry, Group, MeshStandardMaterial, NeutralToneMapping, Object3D, Shape,
+  type BufferGeometry, type Camera, Color, Curve, ExtrudeGeometry, Group, MeshStandardMaterial, NeutralToneMapping, Object3D,
   TubeGeometry, Vector3,
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -15,6 +15,7 @@ import { ShopModel, ShopSign } from "./ShopModels";
 import { useTileTexture } from "./textures";
 import { makeTileRim } from "./tileGeometry";
 import { PlayerFigure } from "./PlayerFigure";
+import { CivicBuilding } from "./CivicBuilding";
 import "./board3d.css";
 
 const FOLLOW_CAMERA_OFFSET: Point3 = [0, 24, 24];
@@ -309,36 +310,9 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduc
     {shop && square.property_owner !== null && <ShopModel color={eligible
       ? PLAYER_COLORS[square.property_owner % PLAYER_COLORS.length] : "#46505a"}
       closed={square.statuses.some((status) => status.type === "closed")} />}
-    {bank && <BankModel color={eligible ? (square.type === "BANK" ? "#d2a543" : "#359e78") : "#46505a"}
+    {bank && <CivicBuilding color={eligible ? (square.type === "BANK" ? "#d2a543" : "#359e78") : "#46505a"}
       stockbroker={square.type === "STOCKBROKER"} />}
     {!shop && !bank && artwork.symbol && <SymbolRelief markup={artwork.symbol} dimmed={!eligible} />}
-  </group>;
-}
-
-function BankModel({ color, stockbroker }: { color: string; stockbroker: boolean }) {
-  const roof = useMemo(() => {
-    const triangle = new Shape();
-    triangle.moveTo(-1.4, 0); triangle.lineTo(1.4, 0); triangle.lineTo(0, 0.65); triangle.closePath();
-    return new ExtrudeGeometry(triangle, { depth: 1.8, bevelEnabled: false });
-  }, []);
-  useEffect(() => () => roof.dispose(), [roof]);
-  const columns = stockbroker ? [-1, -0.6, -0.2, 0.2, 0.6, 1] : [-0.93, -0.31, 0.31, 0.93];
-  return <group position={[0, TILE_TOP, -0.55]} scale={0.85}>
-    <mesh position={[0, 0.09, 0.1]} receiveShadow><boxGeometry args={[2.8, 0.18, 2]} /><meshStandardMaterial color="#eee3c8" /></mesh>
-    <mesh position={[0, 0.25, 0]} receiveShadow><boxGeometry args={[2.55, 0.18, 1.75]} /><meshStandardMaterial color={color} /></mesh>
-    <mesh position={[0, 0.9, -0.42]} castShadow><boxGeometry args={[2.15, 1.2, 0.65]} /><meshStandardMaterial color="#e7d9bb" /></mesh>
-    <mesh position={[0, 0.77, -0.08]}><boxGeometry args={[0.6, 0.86, 0.04]} /><meshStandardMaterial color="#294c65" /></mesh>
-    {columns.map((x) => <group key={x} position={[x, 0.95, 0.5]}>
-      <mesh castShadow><cylinderGeometry args={[0.12, 0.15, 1.2, 12]} /><meshStandardMaterial color="#fff2d1" /></mesh>
-      {[-0.56, 0.56].map((y) => <mesh key={y} position={[0, y, 0]} castShadow>
-        <boxGeometry args={[0.32, 0.12, 0.32]} /><meshStandardMaterial color={color} />
-      </mesh>)}
-    </group>)}
-    <mesh position={[0, 1.62, 0]} castShadow><boxGeometry args={[2.8, 0.2, 1.85]} /><meshStandardMaterial color={color} /></mesh>
-    <mesh position={[0, 1.72, -0.9]} geometry={roof} castShadow><meshStandardMaterial color={stockbroker ? "#285e50" : "#35516a"} roughness={0.55} /></mesh>
-    <mesh position={[0, 1.95, 0.92]} rotation={[Math.PI / 2, 0, 0]}>
-      <cylinderGeometry args={[0.17, 0.17, 0.045, 24]} /><meshStandardMaterial color={color} metalness={0.35} roughness={0.35} />
-    </mesh>
   </group>;
 }
 

@@ -35,8 +35,27 @@ test("piece layout follows player identity rather than index and excludes bankru
   const pieces = piecePositions(state);
   assert.deepEqual(pieces.map((piece) => piece.player.player_id), [5, 9, 11]);
   assert.equal(pieces[1].active, true);
-  assert.equal(pieces[1].position[0], 0);
-  assert.notEqual(pieces[0].position[0], pieces[2].position[0]);
+  assert.notDeepEqual(pieces[0].position, pieces[2].position);
+});
+
+test("two to four co-located figures have separate bases inside their authoritative tile", () => {
+  for (const count of [2, 3, 4]) {
+    const state = { board: { squares }, players: Array.from({ length: count }, (_, player_id) =>
+      ({ player_id, position: 4, bankrupt: false })), current_player_index: count - 1 } as GameState;
+    const original = structuredClone(state);
+    const pieces = piecePositions(state);
+    for (let index = 0; index < pieces.length; index++) {
+      const piece = pieces[index];
+      const radius = 0.8 * piece.scale;
+      assert.ok(Math.abs(piece.position[0] - (-4)) + radius <= 2);
+      assert.ok(Math.abs(piece.position[2]) + radius <= 2);
+      for (const other of pieces.slice(index + 1)) {
+        const distance = Math.hypot(piece.position[0] - other.position[0], piece.position[2] - other.position[2]);
+        assert.ok(distance >= radius + 0.8 * other.scale, "figure bases must not overlap");
+      }
+    }
+    assert.deepEqual(state, original);
+  }
 });
 
 test("an empty legal-square set allows no selections while ordinary inspection allows all", () => {
