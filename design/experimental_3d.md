@@ -147,8 +147,19 @@ the four-unit footprint, including negative and fractional coordinates.
 
 `boardTileArtwork` reuses the existing SVG components and shop-price calculations
 as local textures. Shop tiles have district-colored edges, slate paving, and
-wooden price signs until purchase. Owned shops show a colored building and the
-existing rent strip. The bank and stockbroker have procedural columned models.
+wooden price signs until purchase. Owned shops show a colored building and a
+shallow physical rent plaque at its front. The navy enamel face uses bold,
+right-aligned cream numerals, following the clearer reference frame around
+40:46. `ShopRentLabel` fits the complete formatted value to the available width
+and uses the existing `currentShopRent` calculation. Its texture is unlit so
+lighting and roof shadows cannot obscure the financial label.
+
+The closed-shop crescent and longest remaining duration move from underneath
+the 3D house to the plaque's left side, with singular/plural turn text and the
+existing neutral-grey rent treatment. The model retains its grey roof and
+awning while closed. `ShopRentPlaque` owns its rounded geometry and disposes it
+on unmount; the face uses the shared texture lifecycle. The original 2D shop
+artwork and minimap remain unchanged. The bank and stockbroker have procedural columned models.
 Special-square silhouettes are extruded from the approved SVG paths; stroked
 paths become rounded raised lines. Unknown/custom types retain their label and
 value on a raised tile. Shared SVG `currentColor` values are resolved before
@@ -268,6 +279,17 @@ reduced-motion mode without browser runtime errors. The browser regression suite
 passed all 83 tests after adding crowded-square coverage, along with type
 checking, Ruff, and production build. The revised bank and stockbroker were also
 reviewed together on the all-square-types board.
+
+The rent-plaque pass was rendered on a populated Trodain board at 1600 by 1000
+and 1280 by 720. Ordinary rents, a 7,485 rent, a closed shop with 4,304 rent,
+one-turn closure, and overlapping closures displaying three turns were checked
+in follow, close, and panned views. The closure test exposed the former indicator
+being hidden under the building and confirmed it now stays visible on the
+front plaque. Clicking the plaque selected the matching shop; the original
+2D crescent/count layout was checked after switching renderers. All 91 browser
+tests, type checking, Ruff, and the production build passed without browser
+runtime errors. Large values belong only to the private rendering fixture and
+do not change investment limits or game rules.
 
 The event-panel refinement was reviewed against additional video frames at
 40:50 and 41:08. Actual Python-server fixtures exercised a four-suit bank

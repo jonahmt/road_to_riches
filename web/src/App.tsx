@@ -1570,7 +1570,10 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
       </text>
     </svg>,
   ) : null;
-  const content = shop ? (sign ? null : <ShopTile square={square} state={state} x={0} y={0} closedTurns={closedShopTurns(square.statuses)} />)
+  const rentPlaque = shop && square.property_owner !== null ? renderToStaticMarkup(
+    <ShopRentLabel rent={currentShopRent(state, square)} closedTurns={closedShopTurns(square.statuses)} />,
+  ) : null;
+  const content = shop ? null
     : icon ?? <><text className="square-type" x={0} y={-0.5}>{labelForSquare(square)}</text>
       <text className="square-value" x={0} y={0.4}>{valueLabelForSquare(square, state)}</text></>;
   const surface = renderToStaticMarkup(<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-2 -2 4 4">
@@ -1602,7 +1605,7 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
     <rect x={-1.94} y={-1.94} width={3.88} height={3.88} rx={0.1} fill="none"
       stroke={shop ? "#0b2038" : "#cfc6ad"} strokeOpacity=".45" strokeWidth={0.045} />
   </svg>);
-  return { object, uprightSuit, surface, symbol, sign, border, description: `Square ${square.id}: ${displayTypeForSquare(square)}` };
+  return { object, uprightSuit, surface, symbol, sign, rentPlaque, border, description: `Square ${square.id}: ${displayTypeForSquare(square)}` };
 }
 
 function SvgBoardPanel({
@@ -2915,6 +2918,30 @@ function remainingShopCapital(state: GameState, square: SquareInfo): number {
 
 function rawGold(value: number | null | undefined): string {
   return formatGold(value);
+}
+
+function ShopRentLabel({ rent, closedTurns }: { rent: number; closedTurns: number | null }) {
+  const text = rawGold(rent);
+  const closed = closedTurns !== null;
+  const availableWidth = closed ? 275 : 460;
+  return <svg xmlns="http://www.w3.org/2000/svg" width="640" height="200" viewBox="0 0 512 160">
+    <defs><linearGradient id="rent-enamel" x2="0" y2="1">
+      <stop stopColor="#142343" /><stop offset="1" stopColor="#050c24" />
+    </linearGradient></defs>
+    <rect width="512" height="160" rx="9" fill="url(#rent-enamel)" />
+    <path d="M12 8H500" stroke="#61708e" strokeOpacity=".7" strokeWidth="2" />
+    {closed && <g>
+      <g transform="translate(20 29) scale(.63)"><TakeABreakShape /></g>
+      <text x="125" y="76" textAnchor="middle" fontFamily="Arial,sans-serif" fontWeight="900"
+        fontSize={Math.min(56, 115 / String(closedTurns).length)} fill="#ffe5a1">{closedTurns}</text>
+      <text x="107" y="125" textAnchor="middle" fontFamily="Arial,sans-serif" fontWeight="700"
+        fontSize="27" fill="#e7d7b3">{closedTurns === 1 ? "TURN" : "TURNS"}</text>
+      <path d="M195 24V136" stroke="#69768f" strokeWidth="2" />
+    </g>}
+    <text x="486" y="124" textAnchor="end" fontFamily="Arial,sans-serif" fontWeight="900" fontStyle="italic"
+      fontSize={Math.min(148, availableWidth / (0.64 * text.length))}
+      fill={closed ? "#9da7b7" : "#fffaf0"}>{text}</text>
+  </svg>;
 }
 
 function ShopTile({

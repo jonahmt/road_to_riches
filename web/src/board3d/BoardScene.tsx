@@ -9,7 +9,7 @@ import { PLAYER_COLORS } from "../boardColors";
 import { adjacentStepAnimationDuration } from "../cameraTiming";
 import type { GameState, InputRequest, SquareInfo } from "../protocol";
 import { boardExtent, boardPoint, canPickSquare, focusPoint, piecePositions, TILE_SIZE, TILE_SURFACE_SIZE, TILE_TOP, type Point3, type BoardProjector } from "./geometry";
-import { ShopModel, ShopSign } from "./ShopModels";
+import { ShopModel, ShopRentPlaque, ShopSign } from "./ShopModels";
 import { useTileTexture } from "./textures";
 import { makeTileRim } from "./tileGeometry";
 import { PlayerFigure } from "./PlayerFigure";
@@ -28,6 +28,7 @@ export interface TileArtwork {
   surface: string;
   symbol: string | null;
   sign: string | null;
+  rentPlaque: string | null;
   border: string;
   description: string;
 }
@@ -320,6 +321,7 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduc
         </mesh>)}
     </group>}
     {shop && artwork.sign && <ShopSign markup={artwork.sign} dimmed={!eligible} />}
+    {shop && artwork.rentPlaque && <ShopRentPlaque markup={artwork.rentPlaque} dimmed={!eligible} />}
     {shop && square.property_owner !== null && <ShopModel color={eligible
       ? PLAYER_COLORS[square.property_owner % PLAYER_COLORS.length] : "#46505a"}
       closed={square.statuses.some((status) => status.type === "closed")} />}

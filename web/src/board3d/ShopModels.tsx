@@ -1,7 +1,23 @@
 import { useEffect, useMemo } from "react";
 import { Color, DoubleSide, ExtrudeGeometry, Shape } from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { TILE_TOP } from "./geometry";
 import { useAwningTexture, useRoofTexture, useTileTexture } from "./textures";
+
+export function ShopRentPlaque({ markup, dimmed }: { markup: string; dimmed: boolean }) {
+  const texture = useTileTexture(markup);
+  const base = useMemo(() => new RoundedBoxGeometry(3.3, 0.12, 1.08, 2, 0.05), []);
+  useEffect(() => () => base.dispose(), [base]);
+  return <group position={[0, TILE_TOP + 0.045, 1.12]}>
+    <mesh geometry={base} receiveShadow>
+      <meshStandardMaterial color={dimmed ? "#28303a" : "#32415b"} roughness={0.5} metalness={0.12} />
+    </mesh>
+    <mesh position={[0, 0.066, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[3.2, 1]} />
+      <meshBasicMaterial key={texture?.uuid ?? "loading"} map={texture} color={dimmed ? "#566274" : "#ffffff"} toneMapped={false} />
+    </mesh>
+  </group>;
+}
 
 export function ShopSign({ markup, dimmed }: { markup: string; dimmed: boolean }) {
   const texture = useTileTexture(markup);
