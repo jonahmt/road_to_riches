@@ -80,7 +80,7 @@ test("occupied shops keep rent strips, figures and shop models separate through 
         const x = piece.position[0] - shop.position[0], z = piece.position[2] - shop.position[1];
         const radius = piece.baseRadius * piece.scale;
         assert.ok(Math.abs(x) + radius <= 2 && Math.abs(z) + radius <= 2, "bases stay inside the tile");
-        assert.ok(z + radius < 0.58, "no base covers the rent plaque");
+        assert.ok(z + radius < (activeIndex < count ? 1.022 : 0.58), "no base covers the rent plaque");
         const distanceToModel = Math.hypot(Math.max(model.left - x, 0, x - model.right),
           Math.max(model.back - z, 0, z - model.front));
         assert.ok(distanceToModel > radius, "bases stay clear of the house and awning");
@@ -123,21 +123,21 @@ test("inactive shop figures stay put and clear the house throughout arrival and 
   }
 });
 
-test("shop steps pass in front of the miniature house in either direction and keep exact endpoints", () => {
+test("center-to-center shop steps clear the miniature house in either direction", () => {
   const pose = shopModelPose(true);
   for (const direction of [-1, 1]) {
-    const from: [number, number, number] = [-0.9, 0.4, -0.35];
-    const to: [number, number, number] = [from[0] + direction * 4, 0.4, -0.35];
+    const from: [number, number, number] = [0, 0.4, 0];
+    const to: [number, number, number] = [from[0] + direction * 4, 0.4, 0];
     const houseX = (direction === 1 ? 0 : -4) + pose.position[0];
     for (let index = 0; index <= 20; index++) {
-      const point = pieceStepPosition(from, to, index / 20, 1.3);
+      const point = pieceStepPosition(from, to, index / 20);
       const distance = Math.hypot(Math.max(houseX - 1.12 * pose.scale - point[0], 0, point[0] - houseX - 1.12 * pose.scale),
         Math.max(pose.position[2] - 0.99 * pose.scale - point[2], 0, point[2] - (pose.position[2] + 1.24 * pose.scale)));
       assert.ok(distance > 0.65 * 1.22, "the moving base clears the miniature shop");
       assert.ok(point[2] + 0.65 * 1.22 < 2, "the path stays inside the row of tiles");
     }
-    assert.deepEqual(pieceStepPosition(from, to, 0, 1.3), from);
-    const end = pieceStepPosition(from, to, 1, 1.3);
+    assert.deepEqual(pieceStepPosition(from, to, 0), from);
+    const end = pieceStepPosition(from, to, 1);
     assert.ok(end.every((value, index) => Math.abs(value - to[index]!) < 1e-12));
   }
 });
@@ -162,4 +162,17 @@ test("orbiting changes screen-direction keys without changing server response va
   assert.strictEqual(projectMovementRequest(request, null), request);
   const stop: InputRequest = { type: "CONFIRM_STOP", player_id: 9, data: { can_undo: true } };
   assert.strictEqual(projectMovementRequest(stop, ([x, z]) => [-z, x]), stop);
+});
+
+
+test("the active piece is exactly centered on every square, including occupied shops", () => {
+  for (const type of ["SHOP", "BANK", "SUIT", "ARCADE"]) {
+    for (const count of [1, 2, 4, 6]) {
+      const state = { board: { squares: [{ ...squares[1], type, property_owner: 0 }] },
+        players: Array.from({ length: count }, (_, player_id) => ({ player_id, position: 4, bankrupt: false })),
+        current_player_index: 0 } as GameState;
+      assert.deepEqual(piecePositions(state).find((piece) => piece.active)!.position, boardPoint(squares[1].position));
+    }
+  }
+  assert.deepEqual(pieceStepPosition([0, 0.4, 0], [4, 0.4, 4], 0.5), [2, 0.4, 2]);
 });

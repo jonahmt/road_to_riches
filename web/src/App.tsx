@@ -99,6 +99,7 @@ import { PromotionSuitRow } from "./PromotionSuitRow";
 import { type DiceState, type PresentationState, useGameClient } from "./useGameClient";
 import { PresentationMotionContext } from "./usePresentationDirector";
 import { PACING } from "./presentationTiming";
+import { useMovementControls } from "./useMovementControls";
 
 import { renderToStaticMarkup } from "react-dom/server";
 import "./board3d/theme.css";
@@ -866,10 +867,13 @@ function App() {
       : clientState.pendingRequest;
   const keyboardRequest = clientState.responsePending || reporterOpen ? null : standardKeyboardRequest;
   useWasdPromptControls(
-    keyboardRequest,
+    keyboardRequest?.type === "CHOOSE_PATH" ? null : keyboardRequest,
     submitResponse,
     boardProjector,
   );
+  useMovementControls(clientState.pendingRequest, activePresentation, clientState.responsePending,
+    reporterOpen || clientState.status !== "connected" || clientState.error !== null,
+    clientState.playerId, submitResponse, boardProjector);
 
   useEffect(() => {
     setConfirmedInvestmentSquareId(null);
@@ -6474,7 +6478,8 @@ function PromptControls({
   }
 
   if (request.type === "CHOOSE_PATH") {
-    return <KeyActionList actions={getPathKeyActions(request)} onSubmit={onSubmit} />;
+    return <><KeyActionList actions={getPathKeyActions(request)} onSubmit={onSubmit} />
+      <p className="muted">Hold a direction to keep moving, or tap ahead during a jump.</p></>;
   }
 
   if (request.type === "CONFIRM_STOP") {

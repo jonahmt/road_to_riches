@@ -485,7 +485,7 @@ export function useGameClient(defaultUri: string) {
   const submitResponse = useCallback(
     (value: unknown) => {
       if (responsePendingRef.current || activePresentationRef.current?.coordinated) {
-        return;
+        return false;
       }
       const sent = send({
         msg: "input_response",
@@ -494,13 +494,14 @@ export function useGameClient(defaultUri: string) {
         game_id: gameIdRef.current ?? undefined,
       });
       if (!sent) {
-        return;
+        return false;
       }
       responsePendingRef.current = true;
       setClientState((current) => ({
         ...current,
         responsePending: true,
       }));
+      return true;
     },
     [send],
   );

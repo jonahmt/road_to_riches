@@ -6,11 +6,11 @@ import { AI_ADJACENT_STEP_ANIMATION_MS, HUMAN_ADJACENT_STEP_ANIMATION_MS } from 
 import { shopModelPose, TILE_TOP } from "./geometry";
 import { useAwningTexture, useRoofTexture, useTileTexture } from "./textures";
 
-export function ShopRentPlaque({ markup, dimmed }: { markup: string; dimmed: boolean }) {
+export function ShopRentPlaque({ markup, dimmed, activeOccupant }: { markup: string; dimmed: boolean; activeOccupant: boolean }) {
   const texture = useTileTexture(markup);
   const base = useMemo(() => new RoundedBoxGeometry(3.3, 0.12, 1.08, 2, 0.05), []);
   useEffect(() => () => base.dispose(), [base]);
-  return <group position={[0, TILE_TOP + 0.045, 1.12]}>
+  return <group position={[0, TILE_TOP + 0.045, activeOccupant ? 1.4 : 1.12]} scale={[1, 1, activeOccupant ? 0.7 : 1]}>
     <mesh geometry={base} receiveShadow>
       <meshStandardMaterial color={dimmed ? "#28303a" : "#32415b"} roughness={0.5} metalness={0.12} />
     </mesh>

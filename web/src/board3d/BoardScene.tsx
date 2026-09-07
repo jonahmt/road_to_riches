@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Component, type ErrorInfo, type ReactNode, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import {
   type Camera, Group, MeshStandardMaterial, NeutralToneMapping, Object3D, Vector3,
@@ -208,6 +208,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   const { camera, gl } = useThree();
   const target = focusPoint(state, focusDistrictId);
   const targetRef = useRef(new Vector3(...target));
+  const stepCamera = useRef({ from: new Vector3(...target), start: 0, duration: 0 });
   const previousFree = useRef(free);
   const savedDistance = useRef(34);
   const initialized = useRef(false);
@@ -232,7 +233,9 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     initialized.current = true;
     return () => { orbit.dispose(); controlsRef.current = null; projectorRef.current = null; };
   }, [camera, gl, reduced]);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    stepCamera.current = { from: controlsRef.current?.target.clone() ?? targetRef.current.clone(),
+      start: performance.now(), duration: reduced ? 0 : adjacentStepAnimationDuration(-1, null) };
     targetRef.current.set(...target);
   }, [target[0], target[1], target[2]]);
   useEffect(() => {
@@ -268,7 +271,10 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     const orbit = controlsRef.current;
     if (!orbit || !initialized.current) return;
     if (!free) {
-      const next = orbit.target.clone().lerp(targetRef.current, reduced ? 1 : 1 - Math.exp(-delta * 14));
+      const step = stepCamera.current;
+      const next = presentation.beat?.type === "piece_moved"
+        ? step.from.clone().lerp(targetRef.current, step.duration ? Math.min(1, (performance.now() - step.start) / step.duration) : 1)
+        : orbit.target.clone().lerp(targetRef.current, reduced ? 1 : 1 - Math.exp(-delta * 14));
       camera.position.add(next.clone().sub(orbit.target));
       orbit.target.copy(next);
     }
@@ -328,14 +334,18 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, activ
         </mesh>)}
     </group>}
     {shop && artwork.sign && <ShopSign markup={artwork.sign} dimmed={!eligible} />}
-    {shop && artwork.rentPlaque && <ShopRentPlaque markup={artwork.rentPlaque} dimmed={!eligible} />}
+    {shop && artwork.rentPlaque && <ShopRentPlaque markup={artwork.rentPlaque} dimmed={!eligible} activeOccupant={activeOccupant} />}
     {shop && square.property_owner !== null && <ShopModel color={eligible
       ? PLAYER_COLORS[square.property_owner % PLAYER_COLORS.length] : "#46505a"}
       activeOccupant={activeOccupant} reduced={reduced}
       closed={square.statuses.some((status) => status.type === "closed")} />}
-    {bank && <CivicBuilding color={eligible ? (square.type === "BANK" ? "#d2a543" : "#359e78") : "#46505a"}
-      stockbroker={square.type === "STOCKBROKER"} />}
-    {artwork.object && <MechanicalObject kind={artwork.object} dimmed={!eligible} />}
+    {bank && <group position={activeOccupant ? [-0.85, TILE_TOP / 2, -1.25] : [0, 0, 0]} scale={activeOccupant ? 0.5 : 1}>
+      <CivicBuilding color={eligible ? (square.type === "BANK" ? "#d2a543" : "#359e78") : "#46505a"}
+        stockbroker={square.type === "STOCKBROKER"} />
+    </group>}
+    {artwork.object && <group position={activeOccupant ? [-0.85, TILE_TOP / 2, -1.1] : [0, 0, 0]} scale={activeOccupant ? 0.5 : 1}>
+      <MechanicalObject kind={artwork.object} dimmed={!eligible} />
+    </group>}
     {artwork.uprightSuit && <SuitToken markup={artwork.uprightSuit} dimmed={!eligible} reduced={reduced}
       squareId={square.id} anchors={anchors} />}
     {!shop && !bank && !artwork.object && artwork.symbol && <SymbolRelief markup={artwork.symbol} dimmed={!eligible} />}
@@ -378,25 +388,18 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
   const initialScale = useRef(scale);
   const { camera, size } = useThree();
   const destination = useRef(position);
-  const previousSquare = useRef(player.position);
-  const previousBaseRadius = useRef(baseRadius);
-  const transition = useRef({ from: position, start: 0, duration: 0, frontArc: 0 });
+  const transition = useRef({ from: position, start: 0, duration: 0 });
   const color = PLAYER_COLORS[player.player_id % PLAYER_COLORS.length];
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (group.current) transition.current = { from: group.current.position.toArray() as Point3, start: performance.now(),
-      duration: reduced ? 0 : adjacentStepAnimationDuration(player.player_id, assignedPlayerId),
-      frontArc: previousSquare.current !== player.position
-        && (baseRadius === 0.65 || previousBaseRadius.current === 0.65)
-        && Math.abs(position[0] - group.current.position.x) > 0.5 ? 1.3 : 0 };
+      duration: reduced ? 0 : adjacentStepAnimationDuration(player.player_id, assignedPlayerId) };
     destination.current = position;
-    previousSquare.current = player.position;
-    previousBaseRadius.current = baseRadius;
   }, [position[0], position[1], position[2], reduced, assignedPlayerId, player.player_id, player.position, baseRadius]);
   useFrame((_, delta) => {
     if (!group.current) return;
     const motion = transition.current;
     const progress = motion.duration ? Math.min(1, (performance.now() - motion.start) / motion.duration) : 1;
-    group.current.position.set(...pieceStepPosition(motion.from, destination.current, progress, motion.frontArc));
+    group.current.position.set(...pieceStepPosition(motion.from, destination.current, progress));
     group.current.scale.setScalar(reduced ? scale : group.current.scale.x +
       (scale - group.current.scale.x) * (1 - Math.exp(-20 * delta)));
     if (figure.current) figure.current.position.y = reduced ? 0 : Math.sin(progress * Math.PI) * 0.18;

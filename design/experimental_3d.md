@@ -179,6 +179,48 @@ and the production build passed. The successful browser runs had no page errors.
 The motion recording is retained locally in
 `.runtime/reviews/suit-dice-refinement/route.webm` in the main workspace.
 
+## Chained movement and centered jumps
+
+The user approved holding or queuing movement so successive hops flow together,
+and asked for characters to jump between square centers. The prior version is
+preserved at `bd8f12f` on the experimental branch.
+
+`useMovementControls` buffers at most nine explicit WASD presses during an active
+route and tracks held directions independently of operating-system key repeat.
+Directions are resolved against each new server-authored `CHOOSE_PATH` prompt
+using the current camera projection; the client never predicts legal square IDs
+or submits before the current hop barrier clears. Diagonal chords keep the
+existing 180 ms disambiguation window. Holding a direction chains matching legal
+steps and stops when that direction is unavailable; a held direction cannot
+become an undo. An explicit undo clears the preceding queue. Final arrival,
+other prompts/results, reporting, and disconnection clear the movement session.
+Blur or a hidden tab clears held/tapped input, with fresh input usable on return.
+The bank, stock, promotion, venture, and stop decisions remain explicit.
+
+Each 3D hop and its follow camera use the same bounded 300 ms linear traversal.
+The camera no longer waits on an exponential tail after the character lands.
+The server still waits for rendered piece/camera completion and executes every
+pass effect. The final arrival retains its separate 400 ms settle.
+
+The active character's ground position is exactly the authoritative square's
+X/Z center on ordinary, special, shared, and owned-shop tiles. Hops interpolate
+straight between those centers, without the old front-of-shop detour. Inactive
+characters keep their separate side positions. Occupied shops compact into the
+rear-left corner; their rent strip narrows toward the front edge to keep it clear
+of the centered base. Occupied civic/mechanical models likewise leave the center
+open. These are renderer transforms only.
+
+Browser verification at 1600×1000 and 1280×720 exercised held horizontal movement,
+a direction ending at a corner, taps buffered during a hop, undo/retrace, standard
+and wild suit pickup, crowded shops, diagonal choices, blur cancellation and
+fresh input on return, reduced motion, and the 2D renderer. Chained human starts
+were 335–364 ms apart in the private local match, with no separate per-square
+reading pause. Rendered captures confirmed centered endpoints and readable rent
+labels. A separate run preserved the stop/card/event-roll/winnings sequence
+and six AI hops (332–357 ms between starts) before the next turn. The full
+770 Python tests, 100 TypeScript tests, one SSR test, type check,
+Ruff, and production build passed.
+
 ## Detail refinement
 
 Closer inspection of the reference turn at 40:33 showed heavy rounded tile
@@ -228,14 +270,14 @@ and a rising-market emblem. Both keep the tile label visible in front of the
 building and use the original special-square identity and gameplay behavior.
 
 Crowded-square inspection exposed overlap between an active figure and an
-inactive figure. When they share a tile, the active figure now shifts slightly
-left and inactive figures form a separate row along the right edge. Two to four
+inactive figure. The active figure stays centered while inactive figures form
+a separate row along the right edge. Two to four
 players retain non-overlapping bases inside the original tile footprint. A
 regression test checks those bounds and separation without mutating game state.
 
 Owned shops have a more specific occupied-tile arrangement. The active figure
-stands left of center, behind the rent strip, on a base fitted to its feet. The
-shop moves toward the rear at 48% scale while the active player is there; all
+stands at the exact center, behind the narrowed rent strip, on a base fitted
+to its feet. The shop moves to the rear-left corner at 40% scale while the active player is there; all
 of its ownership and closure materials remain visible. Up to three inactive
 figures keep a stable row along its right side behind the rent strip, whether
 the active player is present or elsewhere. The compact footprint and its path
@@ -247,13 +289,11 @@ four-player arrangement retain the previous general layout.
 
 Shop transforms use smoothstep interpolation: 80ms to compact before an
 arriving figure completes its step, and 160ms to expand. Expansion waits until
-the longest existing adjacent step (135ms) has finished, avoiding growth into
+the shared adjacent step (300ms) has finished, avoiding growth into
 the departing figure. A layout effect installs each transition before the
 next rendered frame; a passive effect allowed one frame to apply the new target
-using the preceding transition. A step with horizontal travel into or out of an active owned-shop
-position curves through the front of the tile; pure vertical travel and
-rearrangement within one square retain the ordinary path. The existing 100ms
-human/135ms AI timing and hop are unchanged. Reduced motion applies final poses
+using the preceding transition. Steps now follow straight center-to-center
+paths, with the existing small vertical hop, for both human and AI movement. Reduced motion applies final poses
 immediately. The live figure group remains the payment anchor, and both the
 miniature model and the plaque retain their parent tile's inspection handlers.
 
