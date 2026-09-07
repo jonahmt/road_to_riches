@@ -487,6 +487,25 @@ environment asset set.
 
 ## Camera and interaction
 
+The pre-roll turn menu supports WASD and arrow keys: W/A/up/left select the
+previous action, S/D/down/right select the next, wrapping at either end. Enter
+or Space confirms the highlighted action. Pointer movement and native Tab focus
+update that same gold highlight. The former W-to-roll shortcut is removed, so
+browsing cannot submit a roll. Pending responses disable the menu; text fields
+and the report form retain their own keyboard input. Held confirmation cannot
+carry into the next prompt. Mouse clicks remain available.
+
+A reference camera review compared the turn introduction around 40:46, the
+pre-roll menu around 40:48, and movement around 40:56 in the linked Wii video.
+The introduction has a lower, more character-facing view; the menu and movement
+raise the view to show more of the board's upper faces. Exact Wii pitch degrees
+cannot be established from this footage alone. Our automatic camera currently
+uses the fixed `[0, 24, 24]` offset, a 45-degree elevation, for follow and square
+browsing. Following and district focus translate the camera; square browsing
+widens its distance. These do not reproduce the reference's phase-dependent
+pitch changes. Free Cam allows manual pitch changes. This review documents the
+difference; it does not introduce new automatic camera poses.
+
 - Follow mode tracks the active player or a stock-event district. Adjacent
   movement uses the existing local/AI timing distinction.
 - Free Cam supports orbit, right-drag pan, and scroll zoom. Reset frames the

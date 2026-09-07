@@ -58,6 +58,7 @@ import {
 } from "./playerStatusPresentation";
 import { getPromptHelp, getPromptTitle } from "./promptMetadata";
 import { StopConfirmationControls } from "./StopConfirmationControls";
+import { TurnMenu } from "./TurnMenu";
 import { PlayerPortrait } from "./board3d/PlayerPortrait";
 import { getRollPhaseVisibility } from "./rollPhaseVisibility";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
@@ -6493,28 +6494,7 @@ function PromptControls({
   const data = request.data;
 
   if (request.type === "PRE_ROLL") {
-    return (
-      <div className="action-grid">
-        <button type="button" onClick={() => onSubmit("roll")}>
-          Roll
-        </button>
-        <button type="button" className="secondary" onClick={() => onSubmit("sell_stock")}>
-          Sell Stock
-        </button>
-        <button type="button" className="secondary" onClick={() => onSubmit("buy_shop")}>
-          Buy Shop
-        </button>
-        <button type="button" className="secondary" onClick={() => onSubmit("sell_shop")}>
-          Sell Shop
-        </button>
-        <button type="button" className="secondary" onClick={() => onSubmit("trade")}>
-          Trade
-        </button>
-        <button type="button" className="secondary" onClick={() => onSubmit("auction")}>
-          Auction
-        </button>
-      </div>
-    );
+    return <TurnMenu responsePending={responsePending} onSubmit={onSubmit} />;
   }
 
   if (request.type === "CHOOSE_PATH") {
