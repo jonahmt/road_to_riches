@@ -8,8 +8,10 @@ function request(type: InputRequest["type"], data: Record<string, unknown> = {})
   return { type, player_id: 0, data };
 }
 
-test("pre-roll WASD is reserved for menu navigation, never immediate submission", () => {
-  assert.deepEqual(getWasdResponseMap(request("PRE_ROLL")), {});
+test("menu WASD is reserved for navigation, never immediate submission", () => {
+  for (const type of ["PRE_ROLL", "BUY_SHOP", "FORCED_BUYOUT", "ACCEPT_OFFER", "SCRIPT_DECISION", "AUCTION_BID"] as const) {
+    assert.deepEqual(getWasdResponseMap(request(type)), {});
+  }
 });
 
 test("WASD selects paths and undo destinations during path choice", () => {

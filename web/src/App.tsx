@@ -22,7 +22,7 @@ import {
   SUIT_COLORS,
   TAKE_A_BREAK_ICON_COLOR,
 } from "./boardColors";
-import { getPathKeyActions, getWasdResponseMap, type WasdResponseMap } from "./controls";
+import { getPathKeyActions } from "./controls";
 import {
   DICE_ROLL_DURATION_MS,
   DICE_SETTLE_DURATION_MS,
@@ -59,6 +59,7 @@ import {
 import { getPromptHelp, getPromptTitle } from "./promptMetadata";
 import { StopConfirmationControls } from "./StopConfirmationControls";
 import { TurnMenu } from "./TurnMenu";
+import { UiKeyboardNavigation } from "./KeyboardNavigation";
 import { PlayerPortrait } from "./board3d/PlayerPortrait";
 import { getRollPhaseVisibility } from "./rollPhaseVisibility";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
@@ -108,7 +109,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import "./board3d/theme.css";
 import "./board3d/presentation.css";
 import type { TileArtwork } from "./board3d/BoardScene";
-import { projectMovementRequest, type BoardProjector } from "./board3d/geometry";
+import { type BoardProjector } from "./board3d/geometry";
 
 const BoardScene = lazy(() => import("./board3d/BoardScene"));
 const PhysicalDie = lazy(() => import("./board3d/PhysicalDie"));
@@ -205,7 +206,6 @@ const BOARD_TILE_SELECTION_INSET = 0.34;
 const BOARD_TILE_SELECTION_STROKE_WIDTH = 0.12;
 const BOARD_TILE_SELECTION_SIZE = BOARD_TILE_SIZE - BOARD_TILE_SELECTION_INSET * 2;
 const WASD_KEYS = new Set(["w", "a", "s", "d"]);
-const CHORD_TIMEOUT_MS = 180;
 const MIN_BOARD_ZOOM = 0.5;
 const MAX_BOARD_ZOOM = 3;
 const FOLLOW_VISIBLE_TILE_WIDTHS = 6;
@@ -563,102 +563,6 @@ function getVentureLinePreview(
   return { bonus, cells: previewCells };
 }
 
-function useWasdPromptControls(request: InputRequest | null, onSubmit: (value: unknown) => void, projectorRef: { current: BoardProjector | null }) {
-  const bufferedKey = useRef("");
-  const timeoutId = useRef<number | null>(null);
-
-  useEffect(() => {
-    bufferedKey.current = "";
-    if (timeoutId.current !== null) {
-      window.clearTimeout(timeoutId.current);
-      timeoutId.current = null;
-    }
-  }, [request]);
-
-  useEffect(() => {
-    function clearBuffer() {
-      bufferedKey.current = "";
-      if (timeoutId.current !== null) {
-        window.clearTimeout(timeoutId.current);
-        timeoutId.current = null;
-      }
-    }
-
-    function hasKey(mapping: WasdResponseMap, key: string): boolean {
-      return Object.prototype.hasOwnProperty.call(mapping, key);
-    }
-
-    function submitKey(mapping: WasdResponseMap, key: string): boolean {
-      if (!hasKey(mapping, key)) {
-        return false;
-      }
-      clearBuffer();
-      onSubmit(mapping[key]);
-      return true;
-    }
-
-    function mayCombo(mapping: WasdResponseMap, key: string): boolean {
-      return Object.keys(mapping).some((mappedKey) => mappedKey.length > 1 && mappedKey.includes(key));
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (!request || event.repeat || event.altKey || event.ctrlKey || event.metaKey) {
-        return;
-      }
-      if (isTypingTarget(event.target)) {
-        return;
-      }
-
-      const key = event.key.toLowerCase();
-      if (!WASD_KEYS.has(key)) {
-        return;
-      }
-
-      const mapping = getWasdResponseMap(projectMovementRequest(request, projectorRef.current));
-      if (Object.keys(mapping).length === 0) {
-        return;
-      }
-
-      event.preventDefault();
-      if (timeoutId.current !== null) {
-        window.clearTimeout(timeoutId.current);
-        timeoutId.current = null;
-      }
-
-      if (bufferedKey.current) {
-        const first = bufferedKey.current;
-        bufferedKey.current = "";
-        if (submitKey(mapping, `${first}${key}`) || submitKey(mapping, `${key}${first}`)) {
-          return;
-        }
-        submitKey(mapping, key);
-        return;
-      }
-
-      if (mayCombo(mapping, key)) {
-        bufferedKey.current = key;
-        timeoutId.current = window.setTimeout(() => {
-          const pending = bufferedKey.current;
-          bufferedKey.current = "";
-          timeoutId.current = null;
-          if (pending) {
-            submitKey(mapping, pending);
-          }
-        }, CHORD_TIMEOUT_MS);
-        return;
-      }
-
-      submitKey(mapping, key);
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      clearBuffer();
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [request, onSubmit]);
-}
-
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
     isGameplayHotkeySuppressed() || document.body.dataset.squarePickerActive === "true" ||
@@ -852,26 +756,9 @@ function App() {
       : null;
   const blockingPresentationActive =
     activePresentation !== null && activePresentation.type !== "suit_collected";
-  const standardKeyboardRequest =
-    ventureRequest ||
-    investmentRequest ||
-    buyShopRequest ||
-    sellShopRequest ||
-    tradeRequest ||
-    simpleSquareRequest ||
-    liquidationRequest ||
-    stockRequest ||
-    blockingPresentationActive
-      ? null
-      : clientState.pendingRequest;
-  const keyboardRequest = clientState.responsePending || reporterOpen ? null : standardKeyboardRequest;
-  useWasdPromptControls(
-    keyboardRequest?.type === "CHOOSE_PATH" ? null : keyboardRequest,
-    submitResponse,
-    boardProjector,
-  );
+  const keyboardRequest = clientState.responsePending || reporterOpen || blockingPresentationActive ? null : clientState.pendingRequest;
   useMovementControls(clientState.pendingRequest, activePresentation, clientState.responsePending,
-    reporterOpen || clientState.status !== "connected" || clientState.error !== null,
+    reporterOpen || devPanelOpen || clientState.status !== "connected" || clientState.error !== null,
     clientState.playerId, submitResponse, boardProjector);
 
   useEffect(() => {
@@ -1049,6 +936,7 @@ function App() {
       data-pacing-id={activePresentation?.requestId}
       className={`app-shell theme-tabletop layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""} ${squareSelection ? "is-square-picking" : ""}`}
     >
+      <UiKeyboardNavigation />
       {rollPhaseVisibility.gameHeader && (
         <header className="game-header">
           <div className="brand-lockup">
@@ -1393,6 +1281,7 @@ function App() {
 
       <DevPanel
         open={rollPhaseVisibility.tools}
+        onClose={() => setDevPanelOpen(false)}
         uri={uri}
         status={clientState.status}
         playerId={clientState.playerId}
@@ -2716,47 +2605,6 @@ function formatWasdKey(key: string): string {
     .split("")
     .map((part) => part.toUpperCase())
     .join(" + ");
-}
-
-function keyedActionLabel(request: InputRequest, value: unknown): string {
-  if (request.type === "CONFIRM_STOP" && value === true) {
-    return "Stop Here";
-  }
-  if (request.type === "CONFIRM_STOP" && (value === false || value === "undo")) {
-    return "Undo Step";
-  }
-  if (value === true) {
-    return "Confirm";
-  }
-  if (value === false) {
-    return "Decline";
-  }
-  if (value === "accept") {
-    return "Accept";
-  }
-  if (value === "reject") {
-    return "Reject";
-  }
-  if (value === "counter") {
-    return "Counter";
-  }
-  return "Choose";
-}
-
-function getSimpleKeyActions(request: InputRequest) {
-  return Object.entries(getWasdResponseMap(request))
-    .sort(([leftKey], [rightKey]) => keyedActionSort(leftKey, rightKey))
-    .map(([key, value]) => ({ key, value, label: keyedActionLabel(request, value) }));
-}
-
-function keyedActionSort(leftKey: string, rightKey: string): number {
-  const keyOrder = ["w", "a", "s", "d"];
-  const leftIndex = keyOrder.indexOf(leftKey);
-  const rightIndex = keyOrder.indexOf(rightKey);
-  if (leftIndex === -1 || rightIndex === -1) {
-    return leftKey.localeCompare(rightKey);
-  }
-  return leftIndex - rightIndex;
 }
 
 function groupPlayersBySquare(players: PlayerState[]) {
@@ -4745,6 +4593,7 @@ function StockOverlay({
             <button
               type="button"
               className="stock-confirm-button"
+              data-ui-confirm
               disabled={!canSubmitStock}
               onClick={submitStock}
             >
@@ -6268,15 +6117,15 @@ function OfferResponseWidget({
       <NegotiationOfferSummary facts={facts} state={state} />
       <div className="offer-response-actions">
         <button type="button" className="offer-accept" onClick={() => onSubmit("accept")}>
-          <span className="keycap">D</span>
+
           Accept
         </button>
         <button type="button" className="secondary" onClick={() => onSubmit("counter")}>
-          <span className="keycap">S</span>
+
           Counter
         </button>
         <button type="button" className="secondary offer-reject" onClick={() => onSubmit("reject")}>
-          <span className="keycap">A</span>
+
           Reject
         </button>
       </div>
@@ -6513,7 +6362,10 @@ function PromptControls({
   }
 
   if (["BUY_SHOP", "FORCED_BUYOUT"].includes(request.type)) {
-    return <KeyActionList actions={getSimpleKeyActions(request)} onSubmit={onSubmit} />;
+    return <div className="action-list">
+      <button disabled={responsePending} onClick={() => onSubmit(false)}>Decline</button>
+      <button disabled={responsePending} onClick={() => onSubmit(true)}>Confirm</button>
+    </div>;
   }
 
   if (request.type === "BUY_STOCK") {
@@ -6718,6 +6570,7 @@ function AmountInput({
 
 function DevPanel({
   open,
+  onClose,
   uri,
   status,
   playerId,
@@ -6732,6 +6585,7 @@ function DevPanel({
   onSubmitRaw,
 }: {
   open: boolean;
+  onClose: () => void;
   uri: string;
   status: string;
   playerId: number | null;
@@ -6765,6 +6619,7 @@ function DevPanel({
           <h2>Local Client Controls</h2>
         </div>
         <span className={`connection-dot ${status}`} title={`Connection ${status}`} />
+        <button type="button" className="secondary" data-ui-back onClick={onClose}>Close Tools</button>
       </header>
 
       <form className="dev-connect-form" onSubmit={onConnect}>

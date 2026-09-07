@@ -40,10 +40,6 @@
   text-align: left; padding: 8px 16px; border-radius: 0; border: 0;
   background: transparent; box-shadow: none; color: #fff; outline: none;
 }
-.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .action-grid button.is-selected {
-  color: #162839; background: linear-gradient(#fff6b7,#ffd02f 60%,#ffb918);
-  box-shadow: inset 0 0 0 2px #fff2a9, 0 0 10px #ffc52c70;
-}
 /* Amounts and negotiation terms are decisions in their own right. */
 .app-shell.theme-tabletop.layout-immersive .investment-widget:not(.is-selecting) {
   left: 50%; top: 50%; right: auto; transform: translate(-50%,-50%);

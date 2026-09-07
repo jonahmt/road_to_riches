@@ -177,13 +177,5 @@ export function getWasdResponseMap(request: InputRequest): WasdResponseMap {
     return Object.fromEntries(getPathKeyActions(request).map((action) => [action.key, action.value]));
   }
 
-  if (request.type === "BUY_SHOP" || request.type === "FORCED_BUYOUT") {
-    return { d: true, a: false };
-  }
-
-  if (request.type === "ACCEPT_OFFER") {
-    return { d: "accept", a: "reject", s: "counter" };
-  }
-
   return {};
 }

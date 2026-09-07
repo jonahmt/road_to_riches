@@ -1,0 +1,17 @@
+.app-shell [data-ui-selected="true"] {
+  outline: 3px solid #ffe16a !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 12px #ffcf5680;
+}
+.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .turn-menu button[data-ui-selected="true"] {
+  color: #162839; background: linear-gradient(#fff6b7,#ffd02f 60%,#ffb918);
+  box-shadow: inset 0 0 0 2px #fff2a9, 0 0 10px #ffc52c70;
+  outline: none !important;
+}
+.ui-navigation-help {
+  position: fixed; top: 4px; left: 50%; transform: translateX(-50%);
+  max-width: min(480px, 42vw); z-index: 250; pointer-events: none;
+  padding: 5px 10px; border-radius: 5px; color: #fff8d3; background: #09192ce8;
+  font-size: 11px; line-height: 1.4; text-align: center;
+}
+.ui-navigation-help[hidden] { display: none; }

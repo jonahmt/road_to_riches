@@ -487,13 +487,46 @@ environment asset set.
 
 ## Camera and interaction
 
-The pre-roll turn menu supports WASD and arrow keys: W/A/up/left select the
-previous action, S/D/down/right select the next, wrapping at either end. Enter
-or Space confirms the highlighted action. Pointer movement and native Tab focus
-update that same gold highlight. The former W-to-roll shortcut is removed, so
-browsing cannot submit a roll. Pending responses disable the menu; text fields
-and the report form retain their own keyboard input. Held confirmation cannot
-carry into the next prompt. Mouse clicks remain available.
+Keyboard navigation is shared across the entire browser UI: turn actions,
+stop/undo, buyout and event choices, building/renovation menus, auctions,
+investment, property offers, trade steps, liquidation, result dialogs, connection
+controls, Tools, camera controls, and the report form. WASD and arrows move the
+visible focus using control positions; at an edge they wrap in document order.
+Enter or Space activates only the highlighted control. Mouse hover and native
+Tab focus update the same highlight. The old immediate A/S/D response shortcuts
+are removed from menus, including their key labels. The turn menu uses a gold
+fill; other controls use a gold focus outline without replacing their existing
+selection or transaction styling.
+
+`KeyboardNavigation.tsx` installs `uiKeyboardNavigation.ts` during layout, before
+screen-specific key listeners. It gives the foreground modal, Tools, square
+picker, or current action panel ownership of input. Enabled, visible native
+controls are discovered inside that scope; disabled and resolving controls are
+excluded. A small keyboard-only hint describes the current input mode. Selection
+is refreshed when controls or stages change. Held confirmation cannot carry into
+another prompt, and held directions stop at a new request/stage. Tools and the
+reporter suspend movement input. This changes input presentation, not legal
+choices or protocol responses.
+
+Numeric fields support A/D or left/right adjustment using their native step and
+bounds, plus direct digit entry. W/S or up/down leaves the field for another
+control; Enter submits a valid amount form or selects its next action. Select
+fields use A/D for options and W/S to move between controls. Text fields reached
+with WASD remain in navigation mode until Enter starts editing; Escape returns
+to navigation. Clicking or tabbing into a text field retains normal typing.
+
+The stock table, venture grid, board movement, and free square cursor keep their
+existing directional behavior. Tab enters their native button controls so WASD
+can browse actions such as trade Continue, Max, and Cancel. Cycling Tab beyond
+the last spatial-screen control returns to the table/grid/cursor. Enter on a
+focused button activates that button, without also submitting the background
+selection. Generic modal button navigation stays inside the active dialog.
+
+The UI-wide pass was exercised in Chrome with protocol fixtures for all 22 input
+request types, including an investment submission, complete trade proposal,
+stock quantities, and held-key transitions. Rendered views were inspected at
+1280×720 and 1600×1000, including the 2D SVG fallback. The production build,
+109 frontend tests, 770 Python tests, and Ruff passed.
 
 A reference camera review compared the turn introduction around 40:46, the
 pre-roll menu around 40:48, and movement around 40:56 in the linked Wii video.
