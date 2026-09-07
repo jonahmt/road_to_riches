@@ -113,6 +113,16 @@ environment asset set.
   corresponds to visible directions after orbiting. The server still receives
   the original square IDs and undo values. Final stop/undo remains an explicit
   button action.
+- During local path selection, raised green arrows show the server's offered
+  destinations and an amber arrow identifies an available undo. Their cream
+  outlines follow the reference at 40:50. Native buttons projected over the
+  arrows support pointer and keyboard activation; their captions and accessible
+  names use the same camera-relative key mapping as movement input. A stationary
+  hit target and caption remain separate from the mesh's gentle floating motion.
+  The guides disappear while a response is pending, another modal owns input,
+  the reporter is open, or the player reaches final stop confirmation. Spectators
+  and other players never receive these controls. The original 2D path input
+  remains available when switching renderers.
 - Invisible DOM anchors project square and player locations into screen space
   for the existing suit-collection and payment effects. The minimap, dice,
   presentation queue, inspector, and action controls remain shared.
@@ -196,6 +206,16 @@ players. The rendered review at 1280 by 720 caught and corrected portrait
 positioning, missing selected-row contrast, and HUD overlap with the dividend
 panel. A 1000 by 800 payment view was also inspected. All 83 browser tests,
 type checking, Ruff, and the production build passed after the refinement.
+
+The movement-arrow pass was inspected at 1600 by 1000 and 1280 by 720 against
+the isolated Python server. A six-step roll exercised pointer movement,
+diagonal choices, undo through both click and keyboard focus/Enter, an orbited
+camera's revised key chord, 2D/3D switching during the same roll, reduced motion,
+and final stop confirmation. The arrows disappear at final stop and movement
+keys cannot confirm it. No browser runtime errors occurred. All 87 browser
+tests, type checking, Ruff, and the production build passed. The additional
+tests protect authoritative choice IDs, player eligibility, malformed payloads,
+undo availability, and placement on negative/fractional coordinates.
 
 A warm, stationary Trodain view at 1600 by 1000 with device pixel ratio 1 was
 sampled for 120 animation frames in headless Chrome on this machine's Apple M1

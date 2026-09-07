@@ -864,8 +864,9 @@ function App() {
     blockingPresentationActive
       ? null
       : clientState.pendingRequest;
+  const keyboardRequest = clientState.responsePending || reporterOpen ? null : standardKeyboardRequest;
   useWasdPromptControls(
-    clientState.responsePending || reporterOpen ? null : standardKeyboardRequest,
+    keyboardRequest,
     submitResponse,
     boardProjector,
   );
@@ -1007,6 +1008,8 @@ function App() {
           <section className="game-layout">
             <BoardPanel
               projectorRef={boardProjector}
+              movementRequest={keyboardRequest?.type === "CHOOSE_PATH" ? keyboardRequest : null}
+              onMovementChoice={submitResponse}
               state={clientState.gameState}
               assignedPlayerId={clientState.playerId}
               dice={clientState.dice}
@@ -1480,6 +1483,8 @@ type BoardPanelProps = Parameters<typeof SvgBoardPanel>[0] & {
   dice: DiceState | null;
   showDice: boolean;
   projectorRef: { current: BoardProjector | null };
+  movementRequest: InputRequest | null;
+  onMovementChoice: (value: number | "undo") => void;
 };
 
 function BoardPanel(props: BoardPanelProps) {
@@ -1495,6 +1500,7 @@ function BoardPanel(props: BoardPanelProps) {
     {threeDimensional && props.state && bounds ? <section className="board-panel" aria-label="3D game board">
       <Suspense fallback={<div className="board3d-error" role="status">Loading 3D board…</div>}>
         <BoardScene projectorRef={props.projectorRef} state={props.state} artwork={artwork} assignedPlayerId={props.assignedPlayerId}
+          movementRequest={props.movementRequest} onMovementChoice={props.onMovementChoice}
           selectedSquareId={props.selectedSquare?.id ?? null} focusDistrictId={props.focusDistrictId}
           temporaryFreeCamera={props.temporaryFreeCamera} selection={props.squareSelection}
           onSelectSquare={props.onSelectSquare} onFallback={() => setThreeDimensional(false)} />

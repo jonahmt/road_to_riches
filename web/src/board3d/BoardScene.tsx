@@ -9,13 +9,15 @@ import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { PLAYER_COLORS } from "../boardColors";
 import { adjacentStepAnimationDuration } from "../cameraTiming";
-import type { GameState, SquareInfo } from "../protocol";
+import type { GameState, InputRequest, SquareInfo } from "../protocol";
 import { boardExtent, boardPoint, canPickSquare, focusPoint, piecePositions, TILE_SIZE, TILE_SURFACE_SIZE, TILE_TOP, type Point3, type BoardProjector } from "./geometry";
 import { ShopModel, ShopSign } from "./ShopModels";
 import { useTileTexture } from "./textures";
 import { makeTileRim } from "./tileGeometry";
 import { PlayerFigure } from "./PlayerFigure";
 import { CivicBuilding } from "./CivicBuilding";
+import { MovementGuideButtons, MovementGuideMeshes, type MovementButtons } from "./MovementGuides";
+import { movementGuides } from "./movementPresentation";
 import "./board3d.css";
 
 const FOLLOW_CAMERA_OFFSET: Point3 = [0, 24, 24];
@@ -46,6 +48,8 @@ interface SceneProps {
   onSelectSquare: (id: number) => void;
   onFallback: () => void;
   projectorRef: { current: BoardProjector | null };
+  movementRequest: InputRequest | null;
+  onMovementChoice: (value: number | "undo") => void;
 }
 
 class RendererBoundary extends Component<{ children: ReactNode; onFallback: () => void }, { failed: boolean }> {
@@ -78,6 +82,9 @@ export default function BoardScene(props: SceneProps) {
   const reduced = useReducedMotion();
   const root = useRef<HTMLDivElement>(null);
   const anchors = useRef(new Map<string, HTMLSpanElement>());
+  const movementButtons = useRef<MovementButtons>(new Map());
+  const guides = useMemo(() => movementGuides(props.movementRequest, props.assignedPlayerId),
+    [props.movementRequest, props.assignedPlayerId]);
   const controls = useRef<OrbitControls | null>(null);
   const pieces = useMemo(() => piecePositions(props.state), [props.state]);
   const extent = useMemo(() => boardExtent(props.state.board.squares), [props.state.board.squares]);
@@ -138,7 +145,10 @@ export default function BoardScene(props: SceneProps) {
         {pieces.map((piece) => <PlayerPiece key={piece.player.player_id} {...piece}
           assignedPlayerId={props.assignedPlayerId} reduced={reduced} anchors={anchors.current} />)}
         <SquareAnchors squares={props.state.board.squares} anchors={anchors.current} />
+        {props.movementRequest && guides.length > 0 && <MovementGuideMeshes request={props.movementRequest}
+          guides={guides} buttons={movementButtons.current} projectorRef={props.projectorRef} reduced={reduced} />}
       </Canvas>
+      <MovementGuideButtons guides={contextLost ? [] : guides} buttons={movementButtons.current} onChoose={props.onMovementChoice} />
     </RendererBoundary>
     <div className="board3d-anchors" aria-hidden="true">
       {props.state.board.squares.map((square) => <span key={square.id} className="board-square-tile"

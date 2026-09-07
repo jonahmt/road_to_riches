@@ -15,4 +15,21 @@
   background: #0c1727df; border: 1px solid #ffffff30; font-size: 12px; padding: 7px 12px; }
 .board3d-error { position: absolute; z-index: 10; top: 40%; left: 50%; transform: translate(-50%, -50%);
   display: grid; gap: 12px; border-radius: 12px; padding: 24px; background: #182332; color: white; }
+.board3d-movement-guides { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.app-shell.theme-tabletop.layout-immersive .board3d-route-button,
+.app-shell.theme-tabletop.layout-immersive .board3d-route-button:hover:not(:disabled),
+.app-shell.theme-tabletop.layout-immersive .board3d-route-button:focus-visible {
+  position: absolute; left: 0; top: 0; width: 72px; height: 72px; min-height: 0;
+  visibility: hidden; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+  outline: none; filter: none; pointer-events: auto;
+}
+.board3d-route-key {
+  position: absolute; left: 50%; top: calc(50% + 18px); transform: translateX(-50%);
+  min-width: 25px; padding: 4px 7px; border: 1px solid #fff3bf; border-radius: 6px;
+  background: #17354bea; color: #fff5cd; font-size: 12px; font-weight: 900; line-height: 1; white-space: nowrap;
+  box-shadow: 0 2px 0 #0c223aaa;
+}
+.board3d-route-button:hover .board3d-route-key,
+.board3d-route-button:focus-visible .board3d-route-key { background: #fff0ad; color: #17354b; }
+.board3d-route-button:focus-visible .board3d-route-key { outline: 3px solid #fff0ad; outline-offset: 3px; }
 @media (max-width: 700px) { .board3d-controls { left: 8px; bottom: 8px; } .board-renderer-toggle { left: auto; right: 8px; transform: none; } }
