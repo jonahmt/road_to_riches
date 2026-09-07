@@ -1,7 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import {
-  type Camera, Group, MeshStandardMaterial, NeutralToneMapping, Object3D, Vector3,
+  type Camera, Group, MeshStandardMaterial, NeutralToneMapping, Object3D, Plane, Raycaster, Vector2, Vector3,
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
@@ -19,6 +19,7 @@ import { MovementGuideButtons, MovementGuideMeshes, type MovementButtons } from 
 import { movementGuides } from "./movementPresentation";
 import { MechanicalObject, type MechanicalObjectKind } from "./MechanicalObject";
 import { SvgReliefParts } from "./SvgReliefParts";
+import { nearbySquare, type BoardSquareSelection, type SquareCursorControl } from "../squarePickerNavigation";
 import "./board3d.css";
 
 const FOLLOW_CAMERA_OFFSET: Point3 = [0, 24, 24];
@@ -34,14 +35,11 @@ export interface TileArtwork {
   description: string;
 }
 
-export interface BoardSelection {
-  eligibleSquareIds: ReadonlySet<number>;
-  selectedSquareId: number | null;
-  chosenSquareIds?: ReadonlySet<number>;
-  onConfirmSquare: (squareId: number) => void;
-}
+export type BoardSelection = BoardSquareSelection;
 
 interface SceneProps {
+  squareCursor: SquareCursorControl;
+  onCursorSquareChange: (id: number | null) => void;
   state: GameState;
   artwork: Map<number, TileArtwork>;
   selectedSquareId: number | null;
@@ -87,6 +85,7 @@ export default function BoardScene(props: SceneProps) {
   const root = useRef<HTMLDivElement>(null);
   const anchors = useRef(new Map<string, HTMLSpanElement>());
   const movementButtons = useRef<MovementButtons>(new Map());
+  const selectionCursor = useRef<HTMLDivElement>(null);
   const guides = useMemo(() => movementGuides(props.movementRequest, props.assignedPlayerId),
     [props.movementRequest, props.assignedPlayerId]);
   const controls = useRef<OrbitControls | null>(null);
@@ -100,9 +99,12 @@ export default function BoardScene(props: SceneProps) {
   const isFree = free || props.temporaryFreeCamera;
   const shadowRadius = Math.hypot(extent.width, extent.depth) / 2 + 3;
   const select = (id: number, confirm = false) => {
-    if (!canPickSquare(id, props.selection?.eligibleSquareIds ?? null)) return;
+    if (props.selection) {
+      const square = props.state.board.squares.find((square) => square.id === id);
+      if (square) { props.squareCursor.jumpTo = square.position; props.squareCursor.reframe = true; }
+    }
     props.onSelectSquare(id);
-    if (confirm) props.selection?.onConfirmSquare(id);
+    if (confirm && canPickSquare(id, props.selection?.eligibleSquareIds ?? null)) props.selection?.onConfirmSquare(id);
   };
   const sendCommand = (action: string) => setCommand((previous) => ({ id: previous.id + 1, action }));
   useEffect(() => {
@@ -119,7 +121,7 @@ export default function BoardScene(props: SceneProps) {
     canvas.addEventListener("webglcontextrestored", restored);
     return () => { canvas.removeEventListener("webglcontextlost", lost); canvas.removeEventListener("webglcontextrestored", restored); };
   }, []);
-  return <div className="board3d-root" ref={root} data-camera-mode={isFree ? "free" : "follow"}>
+  return <div className="board3d-root" ref={root} data-camera-mode={props.selection ? "selection" : isFree ? "free" : "follow"}>
     <RendererBoundary onFallback={props.onFallback}>
       <Canvas shadows="percentage" dpr={[1, 1.75]} camera={{ fov: 38, near: 0.1, far: 1500, position: FOLLOW_CAMERA_OFFSET }}
         gl={{ antialias: true, powerPreference: "high-performance", toneMapping: NeutralToneMapping, toneMappingExposure: 0.92 }}
@@ -139,11 +141,12 @@ export default function BoardScene(props: SceneProps) {
           <meshStandardMaterial color="#315768" roughness={0.96} />
         </mesh>
         <CameraRig state={props.state} free={isFree} focusDistrictId={props.focusDistrictId}
-          command={command} controlsRef={controls} reduced={reduced} projectorRef={props.projectorRef} />
+          command={command} controlsRef={controls} reduced={reduced} projectorRef={props.projectorRef}
+          selection={props.selection} cursor={props.squareCursor} />
         {props.state.board.squares.map((square) => <BoardTile key={square.id} square={square}
-          artwork={props.artwork.get(square.id)!} selected={props.selectedSquareId === square.id}
+          artwork={props.artwork.get(square.id)!} selected={!props.selection && props.selectedSquareId === square.id}
           chosen={props.selection?.chosenSquareIds?.has(square.id) ?? false}
-          eligible={canPickSquare(square.id, props.selection?.eligibleSquareIds ?? null)}
+          eligible={true}
           focused={props.focusDistrictId !== null && square.property_district === props.focusDistrictId}
           activeOccupant={pieces.some((piece) => piece.active && piece.player.position === square.id)
             && pieces.filter((piece) => piece.player.position === square.id).length <= 4}
@@ -151,11 +154,17 @@ export default function BoardScene(props: SceneProps) {
         {pieces.map((piece) => <PlayerPiece key={piece.player.player_id} {...piece}
           assignedPlayerId={props.assignedPlayerId} reduced={reduced} anchors={anchors.current} />)}
         <SquareAnchors squares={props.state.board.squares} artwork={props.artwork} anchors={anchors.current} />
+        {props.selection && <SelectionCursor squares={props.state.board.squares} selection={props.selection}
+          cursor={props.squareCursor} onSnap={props.onCursorSquareChange} reduced={reduced} element={selectionCursor} />}
         {props.movementRequest && guides.length > 0 && <MovementGuideMeshes request={props.movementRequest}
           guides={guides} buttons={movementButtons.current} projectorRef={props.projectorRef} reduced={reduced} />}
       </Canvas>
       <MovementGuideButtons guides={contextLost ? [] : guides} buttons={movementButtons.current} onChoose={props.onMovementChoice} />
     </RendererBoundary>
+    {props.selection && <div ref={selectionCursor} className={`square-picker-cursor ${props.selectedSquareId === null ? "is-free" : props.selection.eligibleSquareIds.has(props.selectedSquareId) ? "" : "is-unavailable"}`}
+      style={{ color: PLAYER_COLORS[(props.assignedPlayerId ?? 0) % PLAYER_COLORS.length] }} aria-hidden="true">
+      <i /><i /><i /><i /><span>{props.selection.eligibleSquareIds.has(props.selectedSquareId ?? -1) ? "▼" : "×"}</span>
+    </div>}
     <div className="board3d-anchors" aria-hidden="true">
       {props.state.board.squares.map((square) => <span key={square.id} className="board-square-tile"
         data-square-id={square.id} ref={(node) => {
@@ -199,13 +208,18 @@ export default function BoardScene(props: SceneProps) {
   </div>;
 }
 
-function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced, projectorRef }: {
+function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced, projectorRef, selection, cursor }: {
   state: GameState; free: boolean; focusDistrictId: number | null;
   command: { id: number; action: string }; controlsRef: { current: OrbitControls | null }; reduced: boolean;
   projectorRef: { current: BoardProjector | null };
+  selection: BoardSelection | null;
+  cursor: SquareCursorControl;
 }) {
   const presentation = useContext(PresentationMotionContext);
-  const { camera, gl } = useThree();
+  const { camera, gl, size } = useThree();
+  const picking = selection !== null;
+  const savedView = useRef<{ position: Vector3; target: Vector3 } | null>(null);
+  const pickerMotion = useRef<{ from: Vector3; fromTarget: Vector3; to: Vector3; toTarget: Vector3; start: number; duration: number } | null>(null);
   const target = focusPoint(state, focusDistrictId);
   const targetRef = useRef(new Vector3(...target));
   const stepCamera = useRef({ from: new Vector3(...target), start: 0, duration: 0 });
@@ -238,11 +252,33 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
       start: performance.now(), duration: reduced ? 0 : adjacentStepAnimationDuration(-1, null) };
     targetRef.current.set(...target);
   }, [target[0], target[1], target[2]]);
+  useLayoutEffect(() => {
+    const orbit = controlsRef.current;
+    if (!orbit) return;
+    let to: Vector3, toTarget: Vector3;
+    if (picking) {
+      if (!savedView.current) savedView.current = { position: camera.position.clone(), target: orbit.target.clone() };
+      const square = state.board.squares.find((square) => square.id === selection.selectedSquareId);
+      const focus = square ? boardPoint(square.position) : target;
+      const distance = Math.max(44, Math.min(72, Math.max(extent.width, extent.depth) * 1.4));
+      // Keep the cursor in the board area to the left of the property/HUD column.
+      const reserved = Math.min(380, size.width * 0.34) / size.width;
+      const halfWidth = distance * Math.tan(38 * Math.PI / 360) * size.width / size.height;
+      toTarget = new Vector3(focus[0] + halfWidth * reserved, focus[1], focus[2]);
+      to = toTarget.clone().add(new Vector3(...FOLLOW_CAMERA_OFFSET).normalize().multiplyScalar(distance));
+    } else {
+      if (!savedView.current) return;
+      to = savedView.current.position; toTarget = savedView.current.target; savedView.current = null;
+    }
+    pickerMotion.current = { from: camera.position.clone(), fromTarget: orbit.target.clone(), to, toTarget,
+      start: performance.now(), duration: reduced ? 0 : 400 };
+  }, [picking, reduced, size.width, size.height]);
   useEffect(() => {
     const orbit = controlsRef.current;
     if (!orbit) return;
-    orbit.enableRotate = free;
-    orbit.enablePan = free;
+    orbit.enableRotate = free && !picking;
+    orbit.enablePan = free && !picking;
+    orbit.enableZoom = !picking;
     if (free && !previousFree.current) savedDistance.current = orbit.getDistance();
     if (!free && previousFree.current) {
       // Return to the board's original orientation so WASD remains intuitive.
@@ -250,7 +286,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
       orbit.update();
     }
     previousFree.current = free;
-  }, [free, camera, controlsRef, reduced]);
+  }, [free, picking, camera, controlsRef, reduced]);
   useEffect(() => {
     const orbit = controlsRef.current;
     if (!orbit || command.id === 0) return;
@@ -270,7 +306,39 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   useFrame((_, delta) => {
     const orbit = controlsRef.current;
     if (!orbit || !initialized.current) return;
-    if (!free) {
+    if (picking && !savedView.current) {
+      savedView.current = { position: camera.position.clone(), target: orbit.target.clone() };
+    }
+    if (picking && cursor.reframe && (cursor.jumpTo || cursor.position)) {
+      const focus = (cursor.jumpTo ?? cursor.position)!;
+      const distance = Math.max(44, Math.min(72, Math.max(extent.width, extent.depth) * 1.4));
+      const reserved = Math.min(380, size.width * 0.34) / size.width;
+      const halfWidth = distance * Math.tan(38 * Math.PI / 360) * size.width / size.height;
+      const toTarget = new Vector3(focus[0] + halfWidth * reserved, TILE_TOP, focus[1]);
+      pickerMotion.current = { from: camera.position.clone(), fromTarget: orbit.target.clone(), toTarget,
+        to: toTarget.clone().add(new Vector3(...FOLLOW_CAMERA_OFFSET).normalize().multiplyScalar(distance)),
+        start: performance.now(), duration: reduced ? 0 : 400 };
+      cursor.reframe = false;
+    }
+    const picker = pickerMotion.current;
+    if (picker) {
+      const progress = picker.duration ? Math.min(1, (performance.now() - picker.start) / picker.duration) : 1;
+      const blend = progress * progress * (3 - 2 * progress);
+      camera.position.lerpVectors(picker.from, picker.to, blend);
+      orbit.target.lerpVectors(picker.fromTarget, picker.toTarget, blend);
+      if (progress >= 1) pickerMotion.current = null;
+    } else if (picking && cursor.display) {
+      const point = new Vector3(cursor.display[0], TILE_TOP, cursor.display[1]);
+      const projected = point.clone().project(camera);
+      const x = (projected.x + 1) / 2, y = (1 - projected.y) / 2;
+      // Free cursor travel does not drag the board until it reaches a viewport edge.
+      if (x < 0.14 || x > 0.65 || y < 0.2 || y > 0.78) {
+        const distance = orbit.getDistance();
+        point.x += distance * Math.tan(38 * Math.PI / 360) * Math.min(380, size.width * 0.34) / size.height;
+        const shift = point.sub(orbit.target).multiplyScalar(reduced ? 1 : 1 - Math.exp(-delta * 5));
+        camera.position.add(shift); orbit.target.add(shift);
+      }
+    } else if (!free && !picking) {
       const step = stepCamera.current;
       const next = presentation.beat?.type === "piece_moved"
         ? step.from.clone().lerp(targetRef.current, step.duration ? Math.min(1, (performance.now() - step.start) / step.duration) : 1)
@@ -282,6 +350,70 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     if (free || orbit.target.distanceTo(targetRef.current) < 0.025) {
       presentation.complete("camera", presentation.beat?.requestId);
     }
+  });
+  return null;
+}
+
+function SelectionCursor({ squares, selection, cursor, onSnap, reduced, element }: {
+  squares: SquareInfo[]; selection: BoardSelection; cursor: SquareCursorControl;
+  onSnap: (id: number | null) => void; reduced: boolean; element: { current: HTMLDivElement | null };
+}) {
+  const { camera, size, gl } = useThree();
+  const pointer = useRef<[number, number] | null>(null);
+  const lastSnap = useRef<number | null | undefined>(undefined);
+  const ray = useMemo(() => new Raycaster(), []);
+  const plane = useMemo(() => new Plane(new Vector3(0, 1, 0), -TILE_TOP), []);
+  const extent = useMemo(() => boardExtent(squares), [squares]);
+  useEffect(() => {
+    cursor.attached = true;
+    const move = (event: PointerEvent) => {
+      if (!cursor.enabled || event.buttons) return;
+      const rect = gl.domElement.getBoundingClientRect();
+      pointer.current = [(event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2];
+    };
+    gl.domElement.addEventListener("pointermove", move);
+    return () => { cursor.attached = false; cursor.keys.clear(); gl.domElement.removeEventListener("pointermove", move); };
+  }, [gl]);
+  useFrame((_, delta) => {
+    if (!element.current) return;
+    if (cursor.jumpTo) { cursor.position = [...cursor.jumpTo]; cursor.jumpTo = null; pointer.current = null; }
+    if (!cursor.position) { element.current.style.visibility = "hidden"; return; }
+    const keys = cursor.keys;
+    const x = Number(keys.has("d") || keys.has("arrowright")) - Number(keys.has("a") || keys.has("arrowleft"));
+    const z = Number(keys.has("s") || keys.has("arrowdown")) - Number(keys.has("w") || keys.has("arrowup"));
+    if (cursor.enabled && (x || z)) {
+      const step = Math.min(delta, 0.05) * 12 / Math.hypot(x, z);
+      cursor.position = [cursor.position[0] + x * step, cursor.position[1] + z * step];
+      pointer.current = null;
+    } else if (cursor.enabled && pointer.current) {
+      ray.setFromCamera(new Vector2(...pointer.current), camera);
+      const hit = ray.ray.intersectPlane(plane, new Vector3());
+      if (hit) cursor.position = [hit.x, hit.z];
+      pointer.current = null;
+    }
+    cursor.position = [
+      Math.max(extent.center[0] - extent.width / 2, Math.min(extent.center[0] + extent.width / 2, cursor.position[0])),
+      Math.max(extent.center[2] - extent.depth / 2, Math.min(extent.center[2] + extent.depth / 2, cursor.position[1])),
+    ];
+    const candidates = squares.filter((square) => cursor.snapAll || square.type === "SHOP" || selection.eligibleSquareIds.has(square.id));
+    const snapped = nearbySquare(cursor.position, candidates);
+    const target = snapped?.position ?? cursor.position;
+    const blend = reduced || !cursor.display ? 1 : 1 - Math.exp(-delta * 28);
+    const from = cursor.display ?? target;
+    cursor.display = [from[0] + (target[0] - from[0]) * blend, from[1] + (target[1] - from[1]) * blend];
+    const id = snapped?.id ?? null;
+    if (id !== lastSnap.current) { lastSnap.current = id; onSnap(id); }
+    const points = [-1.9, 1.9].flatMap((dx) => [-1.9, 1.9].flatMap((dz) => [0.45, 2.7].map((y) =>
+      new Vector3(cursor.display![0] + dx, y, cursor.display![1] + dz).project(camera))));
+    const left = (Math.min(...points.map((p) => p.x)) + 1) * size.width / 2;
+    const right = (Math.max(...points.map((p) => p.x)) + 1) * size.width / 2;
+    const top = (1 - Math.max(...points.map((p) => p.y))) * size.height / 2;
+    const bottom = (1 - Math.min(...points.map((p) => p.y))) * size.height / 2;
+    Object.assign(element.current.style, { visibility: "visible", transform: `translate(${left}px,${top}px)`,
+      width: `${right - left}px`, height: `${bottom - top}px` });
+    element.current.dataset.cursorX = String(cursor.position[0]);
+    element.current.dataset.cursorZ = String(cursor.position[1]);
+    element.current.dataset.snappedSquare = id === null ? "" : String(id);
   });
   return null;
 }

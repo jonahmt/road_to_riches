@@ -140,6 +140,53 @@ human reading, coordinated legacy-client reconnect, authoritative rent stages,
 queue completion in either order, and AI timing negotiation. The existing large
 Vite chunk warning remains; the change adds no package dependencies.
 
+## Free square cursor and selection panel
+
+The selection pass follows the supplied Fortune Street Wii video at 43:35.
+Playback from 43:28 through 43:59 shows a freely movable bracket cursor, magnetic
+snapping near shops, a wider board view, a separate property-details column,
+district stock holdings, and previous/next-shop shortcuts. The user explicitly
+requested free cursor movement; square-by-square focus alone is insufficient.
+
+`SquarePicker` owns the shared instruction, details, confirmation and navigation
+controls for investment, buying, selling, auctioning, trade properties,
+liquidation shops and generic square destinations. Its eligible IDs and response
+values remain the existing server choices. Cannon targeting still selects a
+player rather than a square and keeps its existing flow. The existing amount,
+negotiation and trade-terms widgets retain their state while the selection panel
+replaces their selection-stage presentation.
+
+In the 3D view, held WASD/arrow keys move a continuous cursor on the board plane
+at 12 board units per second. Pointer motion raycasts to that same plane. Within
+1.35 units of a shop center, the displayed brackets ease onto its center; the
+underlying cursor remains free to leave the snap radius. Empty space clears the
+selected ID and disables confirmation. Unavailable shops remain inspectable with
+their original colors and an explicit unavailable message. Generic destination
+choices can snap to all square types. Q/E cycles legal choices and reframes them.
+Escape follows the existing cancellation or previous-step behavior; it does not
+cancel mandatory generic destination choices. Blur, hidden tabs and the reporter
+clear held input. The 2D fallback uses spatial square navigation and the same
+confirmation panel.
+
+The camera transitions into a wider selection view over 400 ms, reserving the
+right column for details and player balances. Continuous cursor movement only
+pans the board near viewport edges. Leaving selection restores the prior camera,
+including after reconnecting while a choice is pending. Reduced motion removes
+camera and magnetic easing. The miniature shop uses a persistent, demand-rendered
+canvas so crossing empty space does not continually recreate WebGL contexts; a
+failed preview renderer leaves the facts and controls usable.
+
+Rendered Chrome checks at 1600×1000 and 1280×720 covered free movement, magnetic
+snap, pointer inspection of unavailable shops, disabled confirmation in empty
+space, Q/E, switching renderers, reconnect, and reduced motion. Full private-game
+flows verified investment selection/change-shop and an authoritative 20 gold
+investment, buy/sell confirmation and back, auction cancellation, and trade
+selection limits with previous-phase preservation. Layout review corrected
+report-button overlap and kept the property panel above the player HUD. Tests
+cover snap boundaries, tie-breaking, legal-choice cycling, initial focus and 2D
+navigation. The existing rules, movement pacing and public preview sessions are
+unchanged by this pass.
+
 ## Immediate suits and camera-facing dice refinement
 
 On 2026-09-07 the user approved removing the delay when passing suit squares and
@@ -402,11 +449,11 @@ environment asset set.
   movement uses the existing local/AI timing distinction.
 - Free Cam supports orbit, right-drag pan, and scroll zoom. Reset frames the
   whole board in free mode and restores the normal distance in follow mode.
-- Existing shop-selection prompts temporarily enable free camera. Ineligible
-  tiles and their objects are dimmed and cannot be selected.
+- Square-selection prompts use the shared cursor and property card described
+  below. The camera widens for browsing and returns to its prior view afterward.
 - Click inspects a square; double-click confirms an eligible square in a prompt.
-  A native **Choose a square** control provides the same selection and
-  confirmation without raycasting.
+  Q/E and the Previous/Next buttons cycle through legal choices without raycasting;
+  Enter or the card's confirmation button chooses the highlighted square.
 - Movement keys are mapped through the current camera projection, so WASD
   corresponds to visible directions after orbiting. The server still receives
   the original square IDs and undo values. Final stop/undo remains an explicit

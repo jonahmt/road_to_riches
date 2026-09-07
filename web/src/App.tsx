@@ -100,6 +100,8 @@ import { type DiceState, type PresentationState, useGameClient } from "./useGame
 import { PresentationMotionContext } from "./usePresentationDirector";
 import { PACING } from "./presentationTiming";
 import { useMovementControls } from "./useMovementControls";
+import { SquarePicker } from "./SquarePicker";
+import { createSquareCursor, type BoardSquareSelection, type SquareCursorControl } from "./squarePickerNavigation";
 
 import { renderToStaticMarkup } from "react-dom/server";
 import "./board3d/theme.css";
@@ -232,12 +234,6 @@ type TradePhase = "target" | "offer" | "request" | "terms";
 type VentureCellOwner = number | null;
 type VentureCursor = readonly [number, number];
 
-interface BoardSquareSelection {
-  eligibleSquareIds: ReadonlySet<number>;
-  selectedSquareId: number | null;
-  chosenSquareIds?: ReadonlySet<number>;
-  onConfirmSquare: (squareId: number) => void;
-}
 
 type ActivePlayerFrame = {
   playerId: number;
@@ -663,7 +659,7 @@ function useWasdPromptControls(request: InputRequest | null, onSubmit: (value: u
 
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
-    isGameplayHotkeySuppressed() ||
+    isGameplayHotkeySuppressed() || document.body.dataset.squarePickerActive === "true" ||
     (target instanceof HTMLElement &&
       (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)))
   );
@@ -704,6 +700,7 @@ function App() {
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [reporterOpen, setReporterOpen] = useState(false);
   const [selectedSquareId, setSelectedSquareId] = useState<number | null>(null);
+  const squareCursor = useRef(createSquareCursor());
   const [confirmedInvestmentSquareId, setConfirmedInvestmentSquareId] = useState<number | null>(null);
   const [confirmedBuyShopSquareId, setConfirmedBuyShopSquareId] = useState<number | null>(null);
   const [confirmedSellShopSquareId, setConfirmedSellShopSquareId] = useState<number | null>(null);
@@ -941,6 +938,87 @@ function App() {
   });
   const isRollingOrMoving = rollPhaseVisibility.movementDie;
 
+  const squareSelection: BoardSquareSelection | null = investmentRequest && !clientState.responsePending && confirmedInvestmentSquareId === null
+    ? {
+        eligibleSquareIds: investmentSquareIds,
+        selectedSquareId,
+        onConfirmSquare: (squareId) => {
+          setSelectedSquareId(squareId);
+          setConfirmedInvestmentSquareId(squareId);
+        },
+      }
+    : buyShopRequest &&
+        !clientState.responsePending &&
+        confirmedBuyShopSquareId === null
+      ? {
+          eligibleSquareIds: buyShopSquareIds,
+          selectedSquareId,
+          onConfirmSquare: (squareId) => {
+            setSelectedSquareId(squareId);
+            setConfirmedBuyShopSquareId(squareId);
+          },
+        }
+    : sellShopRequest &&
+        !clientState.responsePending &&
+        confirmedSellShopSquareId === null
+      ? {
+          eligibleSquareIds: sellShopSquareIds,
+          selectedSquareId,
+          onConfirmSquare: (squareId) => {
+            setSelectedSquareId(squareId);
+            setConfirmedSellShopSquareId(squareId);
+          },
+        }
+    : tradeRequest &&
+        !clientState.responsePending &&
+        (tradePhase === "offer" || tradePhase === "request")
+      ? {
+          eligibleSquareIds: tradeEligibleSquareIds,
+          selectedSquareId,
+          chosenSquareIds: tradeChosenSquareIds,
+          onConfirmSquare: (squareId) => {
+            setSelectedSquareId(squareId);
+            if (tradePhase === "offer") {
+              setTradeOfferSquareIds((current) =>
+                toggleTradeSquare(current, squareId),
+              );
+            } else {
+              setTradeRequestSquareIds((current) =>
+                toggleTradeSquare(current, squareId),
+              );
+            }
+          },
+        }
+    : simpleSquareRequest && !clientState.responsePending
+      ? {
+          eligibleSquareIds: simpleSquareIds,
+          selectedSquareId,
+          onConfirmSquare: submitResponse,
+        }
+      : liquidationRequest &&
+          liquidationAssetMode === "shop" &&
+          !clientState.responsePending
+        ? {
+            eligibleSquareIds: liquidationSquareIds,
+            selectedSquareId,
+            onConfirmSquare: (squareId) =>
+              submitResponse(["shop", squareId, 0]),
+          }
+      : null;
+  const pickerBack = liquidationRequest ? () => { setSelectedSquareId(null); setLiquidationAssetMode("choose"); }
+    : tradeRequest ? () => { setSelectedSquareId(null); setTradePhase(tradePhase === "request" ? "offer" : "target"); }
+    : simpleSquareRequest?.type === "CHOOSE_ANY_SQUARE" ? null : () => { submitResponse(null); };
+  const pickerTitle = investmentRequest ? "Pick a shop to invest in."
+    : buyShopRequest ? "Pick a property to buy." : sellShopRequest ? "Pick a property to sell."
+    : tradeRequest ? (tradePhase === "offer" ? "Pick one or two properties to offer." : "Pick one or two properties to request.")
+    : liquidationRequest ? "Pick a shop to sell to the bank."
+    : simpleSquareRequest?.type === "CHOOSE_SHOP_AUCTION" ? "Pick a shop to auction."
+    : String(simpleSquareRequest?.data.prompt ?? "Pick a square.");
+  useEffect(() => {
+    document.body.dataset.squarePickerActive = String(squareSelection !== null);
+    return () => { delete document.body.dataset.squarePickerActive; };
+  }, [squareSelection !== null]);
+
   const selectedSquare = useMemo(() => {
     if (!clientState.gameState || selectedSquareId === null) {
       return null;
@@ -965,7 +1043,7 @@ function App() {
       data-pacing-type={activePresentation?.type}
       data-pacing-phase={activePresentation?.phase}
       data-pacing-id={activePresentation?.requestId}
-      className={`app-shell theme-tabletop layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""}`}
+      className={`app-shell theme-tabletop layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""} ${squareSelection ? "is-square-picking" : ""}`}
     >
       {rollPhaseVisibility.gameHeader && (
         <header className="game-header">
@@ -1021,6 +1099,7 @@ function App() {
           />
           <section className="game-layout">
             <BoardPanel
+              squareCursor={squareCursor.current} onCursorSquareChange={setSelectedSquareId}
               projectorRef={boardProjector}
               movementRequest={keyboardRequest?.type === "CHOOSE_PATH" ? keyboardRequest : null}
               onMovementChoice={submitResponse}
@@ -1046,75 +1125,7 @@ function App() {
                   (liquidationRequest && liquidationAssetMode === "shop")) &&
                   !clientState.responsePending,
               )}
-              squareSelection={
-                investmentRequest && !clientState.responsePending && confirmedInvestmentSquareId === null
-                  ? {
-                      eligibleSquareIds: investmentSquareIds,
-                      selectedSquareId,
-                      onConfirmSquare: (squareId) => {
-                        setSelectedSquareId(squareId);
-                        setConfirmedInvestmentSquareId(squareId);
-                      },
-                    }
-                  : buyShopRequest &&
-                      !clientState.responsePending &&
-                      confirmedBuyShopSquareId === null
-                    ? {
-                        eligibleSquareIds: buyShopSquareIds,
-                        selectedSquareId,
-                        onConfirmSquare: (squareId) => {
-                          setSelectedSquareId(squareId);
-                          setConfirmedBuyShopSquareId(squareId);
-                        },
-                      }
-                  : sellShopRequest &&
-                      !clientState.responsePending &&
-                      confirmedSellShopSquareId === null
-                    ? {
-                        eligibleSquareIds: sellShopSquareIds,
-                        selectedSquareId,
-                        onConfirmSquare: (squareId) => {
-                          setSelectedSquareId(squareId);
-                          setConfirmedSellShopSquareId(squareId);
-                        },
-                      }
-                  : tradeRequest &&
-                      !clientState.responsePending &&
-                      (tradePhase === "offer" || tradePhase === "request")
-                    ? {
-                        eligibleSquareIds: tradeEligibleSquareIds,
-                        selectedSquareId,
-                        chosenSquareIds: tradeChosenSquareIds,
-                        onConfirmSquare: (squareId) => {
-                          setSelectedSquareId(squareId);
-                          if (tradePhase === "offer") {
-                            setTradeOfferSquareIds((current) =>
-                              toggleTradeSquare(current, squareId),
-                            );
-                          } else {
-                            setTradeRequestSquareIds((current) =>
-                              toggleTradeSquare(current, squareId),
-                            );
-                          }
-                        },
-                      }
-                  : simpleSquareRequest && !clientState.responsePending
-                    ? {
-                        eligibleSquareIds: simpleSquareIds,
-                        selectedSquareId,
-                        onConfirmSquare: submitResponse,
-                      }
-                    : liquidationRequest &&
-                        liquidationAssetMode === "shop" &&
-                        !clientState.responsePending
-                      ? {
-                          eligibleSquareIds: liquidationSquareIds,
-                          selectedSquareId,
-                          onConfirmSquare: (squareId) =>
-                            submitResponse(["shop", squareId, 0]),
-                        }
-                    : null
-              }
+              squareSelection={squareSelection}
               onSelectSquare={setSelectedSquareId}
             />
             <aside className="game-side">
@@ -1252,6 +1263,27 @@ function App() {
               <SquarePanel square={focusSquare} state={clientState.gameState} />
             </aside>
           </section>
+          {squareSelection && <SquarePicker
+            cursor={squareCursor.current} snapAll={simpleSquareRequest?.type === "CHOOSE_ANY_SQUARE"}
+            state={clientState.gameState} selection={squareSelection} title={pickerTitle}
+            playerId={clientState.playerId} projector={boardProjector} suspended={reporterOpen || clientState.responsePending}
+            onSelect={setSelectedSquareId} onBack={pickerBack}
+            confirmLabel={tradeRequest ? (tradeChosenSquareIds.has(selectedSquareId ?? -1) ? "Remove property" : "Include property")
+              : liquidationRequest ? `Sell for ${formatGold(liquidationChoices.find((choice) => choice.squareId === selectedSquareId)?.sellValue)}`
+              : buyShopRequest ? "Make an offer" : investmentRequest ? "Choose this shop" : "Choose this square"}
+            confirmDisabled={Boolean(tradeRequest && tradeChosenSquareIds.size >= 2 && !tradeChosenSquareIds.has(selectedSquareId ?? -1))}
+            facts={{ value: selectedSquare?.shop_current_value ?? null,
+              rent: selectedSquare?.type === "SHOP" ? currentShopRent(clientState.gameState, selectedSquare) : null,
+              capital: investmentChoices.find((choice) => choice.squareId === selectedSquareId)?.maxCapital
+                ?? (selectedSquare?.type === "SHOP" ? remainingShopCapital(clientState.gameState, selectedSquare) : null),
+              note: liquidationRequest ? `Sale proceeds: ${formatGold(liquidationChoices.find((choice) => choice.squareId === selectedSquareId)?.sellValue)}` : undefined }}
+            extra={tradeRequest ? <div className="square-picker-trade">
+              <p>{tradeChosenSquareIds.size} of 2 properties included</p>
+              <button disabled={tradeChosenSquareIds.size === 0 || reporterOpen} onClick={() => {
+                setSelectedSquareId(null); setTradePhase(tradePhase === "offer" ? "request" : "terms");
+              }}>Continue with {tradeChosenSquareIds.size}</button>
+            </div> : undefined}
+          />}
           {/* Keep the board visible until the collected suit reaches its HUD slot. */}
           {ventureRequest && activePresentation?.type !== "suit_collected" && (
             <VentureGridOverlay
@@ -1517,6 +1549,8 @@ function StatusPill({
 }
 
 type BoardPanelProps = Parameters<typeof SvgBoardPanel>[0] & {
+  squareCursor: SquareCursorControl;
+  onCursorSquareChange: (id: number | null) => void;
   dice: DiceState | null;
   showDice: boolean;
   onDiceComplete?: (requestId: string) => void;
@@ -1538,6 +1572,7 @@ function BoardPanel(props: BoardPanelProps) {
     {threeDimensional && props.state && bounds ? <section className="board-panel" aria-label="3D game board">
       <Suspense fallback={<div className="board3d-error" role="status">Loading 3D board…</div>}>
         <BoardScene projectorRef={props.projectorRef} state={props.state} artwork={artwork} assignedPlayerId={props.assignedPlayerId}
+          squareCursor={props.squareCursor} onCursorSquareChange={props.onCursorSquareChange}
           movementRequest={props.movementRequest} onMovementChoice={props.onMovementChoice}
           selectedSquareId={props.selectedSquare?.id ?? null} focusDistrictId={props.focusDistrictId}
           temporaryFreeCamera={props.temporaryFreeCamera} selection={props.squareSelection}

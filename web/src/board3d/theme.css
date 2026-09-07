@@ -442,3 +442,77 @@
 @media (prefers-reduced-motion: reduce) {
   .app-shell.theme-tabletop .board-dice.is-rolling .physical-die-stage { animation: none; }
 }
+
+/* Board browsing follows the selected square, with the Wii-style facts column. */
+.app-shell.theme-tabletop.layout-immersive.is-square-picking .game-header,
+.app-shell.theme-tabletop.layout-immersive.is-square-picking .game-side,
+.app-shell.theme-tabletop.layout-immersive.is-square-picking .board3d-controls,
+.app-shell.theme-tabletop.layout-immersive.is-square-picking .board-dice { display: none; }
+.app-shell.theme-tabletop.layout-immersive.is-square-picking > .player-hud { width: 340px; bottom: 88px; right: 20px; }
+.app-shell.theme-tabletop.layout-immersive.is-square-picking .board-minimap { bottom: 88px; }
+.app-shell.theme-tabletop.layout-immersive.is-square-picking .board-renderer-toggle { bottom: 92px; left: 240px; transform: none; }
+.square-picker { position: fixed; inset: 0; z-index: 24; pointer-events: none; }
+.square-picker-prompt { position: absolute; left: 20px; top: 20px; max-width: calc(100vw - 420px); padding: 12px 20px;
+  border-left: 5px solid var(--picker-color); border-block: 1px solid #f7e6ad9c; background: #142435ee; box-shadow: 0 3px 10px #0005; }
+.square-picker-prompt span { display: block; margin-bottom: 4px; color: #e3cca0; text-transform: uppercase; font-size: 11px; letter-spacing: .14em; }
+.square-picker-prompt h1 { margin: 0; font-size: clamp(18px, 1.8vw, 25px); color: #fff7dd; }
+.square-picker-card { position: absolute; right: 20px; top: 20px; width: 340px; padding: 12px; max-height: calc(100dvh - 355px); overflow-y: auto;
+  pointer-events: auto; border: 1px solid #f8e0a39c; border-radius: 10px; background: #112338f5; box-shadow: 0 6px 20px #0005; }
+.square-picker-stock { display: grid; grid-template-columns: 1.2fr repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
+.square-picker-stock > div { display: grid; text-align: center; border-top: 4px solid var(--owner-color, #e3cc91); border-radius: 4px;
+  padding: 5px 2px; background: #071629; }
+.square-picker-stock small { color: #d6e4f0; font-size: 10px; }
+.square-picker-stock strong { color: #fff6dd; font-size: 18px; }
+.square-picker-district { display: flex; justify-content: space-between; padding: 7px 10px; border-left: 5px solid;
+  background: #eceddb; color: #203247; font-weight: 900; font-size: 18px; border-radius: 3px; }
+.square-picker-district span { font-size: 13px; align-self: center; }
+.square-picker-card h2 { margin: 10px 0 0; font-size: 20px; color: #fff4c7; }
+.square-picker-owner { margin: 3px 0 7px; color: #afc4d5; font-size: 12px; }
+.square-picker-facts[hidden], .square-picker-model[hidden] { display: none; }
+.square-picker-facts { display: flex; gap: 8px; align-items: center; }
+.square-picker-model { width: 132px; height: 128px; flex-shrink: 0; }
+.square-picker-model canvas { pointer-events: none; }
+.square-picker-facts dl { flex: 1; margin: 0; display: grid; gap: 7px; }
+.square-picker-facts dt { font-size: 12px; color: #c6d2db; }
+.square-picker-facts dd { margin: 0; text-align: right; font-size: 22px; line-height: 1.1; font-weight: 900; color: #fff9e9; }
+.square-picker-confirm { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 10px; padding: 9px 12px; }
+.square-picker-unavailable { color: #ffc2bc; font-size: 13px; margin: 9px 0; }
+.square-picker-note { color: #ffe0a0; font-size: 14px; margin: 8px 0; }
+.square-picker-trade { margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+.square-picker-trade p { font-size: 12px; flex: 1; margin: 0; }
+.square-picker-trade button { padding: 7px; }
+.square-picker-navigation { position: absolute; left: 20px; right: 20px; bottom: 20px; display: flex; align-items: center; gap: 20px;
+  min-height: 48px; padding: 8px 10px 8px 66px; border-top: 1px solid #f7e6ad80; background: #112338ee; pointer-events: auto; }
+.square-picker-navigation button { padding: 9px 14px; min-height: 38px; }
+.square-picker-cycle { display: flex; gap: 12px; align-items: center; }
+.square-picker-cycle > span { min-width: 42px; text-align: center; font-size: 13px; font-weight: bold; }
+.square-picker-help { color: #b5cad7; font-size: 13px; margin-left: auto; }
+.square-picker kbd { font: bold 11px "Trebuchet MS", sans-serif; display: inline-block; border: 1px solid currentColor; padding: 2px 4px; border-radius: 4px; opacity: .8; }
+.square-picker-cursor { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 6; visibility: hidden; }
+.square-picker-cursor i { position: absolute; width: 20px; height: 20px; border: 5px solid currentColor; border-radius: 4px;
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 1px 2px #0009); animation: square-cursor-pulse 1s ease-in-out infinite alternate; }
+.square-picker-cursor i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+.square-picker-cursor i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+.square-picker-cursor i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+.square-picker-cursor i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+.square-picker-cursor span { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 22px;
+  color: #fffbe2; text-shadow: 0 2px 0 var(--picker-color, #213c56); }
+.square-picker-cursor.is-unavailable { opacity: .55; }
+@keyframes square-cursor-pulse { to { filter: drop-shadow(0 0 3px #fff) drop-shadow(0 1px 2px #0009); } }
+@media (prefers-reduced-motion: reduce) { .square-picker-cursor i { animation: none; } }
+@media (max-height: 800px) {
+  .square-picker-card { padding: 10px; }
+  .square-picker-card h2 { margin-top: 7px; font-size: 18px; }
+  .square-picker-model { height: 90px; width: 115px; }
+  .square-picker-facts dl { gap: 5px; }
+  .square-picker-facts dd { font-size: 20px; }
+  .square-picker-stock { margin-bottom: 7px; }
+  .app-shell.theme-tabletop.layout-immersive.is-square-picking .hud-player-card { min-height: 55px; }
+}
+@media (max-width: 900px) {
+  .square-picker-card { width: 290px; right: 12px; }
+  .square-picker-prompt { left: 12px; max-width: calc(100vw - 330px); }
+  .square-picker-help { display: none; }
+  .square-picker-navigation { left: 12px; right: 12px; gap: 10px; }
+  .app-shell.theme-tabletop.layout-immersive.is-square-picking > .player-hud { width: 290px; right: 12px; }
+}
