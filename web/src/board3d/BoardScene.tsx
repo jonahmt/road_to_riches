@@ -1,8 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import {
-  type BufferGeometry, type Camera, Color, Curve, ExtrudeGeometry, Group, MeshStandardMaterial, Object3D, Shape,
-  SRGBColorSpace, Texture, TubeGeometry, Vector3,
+  type BufferGeometry, type Camera, Color, Curve, ExtrudeGeometry, Group, MeshStandardMaterial, NeutralToneMapping, Object3D, Shape,
+  TubeGeometry, Vector3,
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
@@ -10,7 +10,10 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { PLAYER_COLORS } from "../boardColors";
 import { adjacentStepAnimationDuration } from "../cameraTiming";
 import type { GameState, SquareInfo } from "../protocol";
-import { boardExtent, boardPoint, canPickSquare, focusPoint, piecePositions, TILE_TOP, type Point3, type BoardProjector } from "./geometry";
+import { boardExtent, boardPoint, canPickSquare, focusPoint, piecePositions, TILE_SIZE, TILE_SURFACE_SIZE, TILE_TOP, type Point3, type BoardProjector } from "./geometry";
+import { ShopModel, ShopSign } from "./ShopModels";
+import { useTileTexture } from "./textures";
+import { makeTileRim } from "./tileGeometry";
 import "./board3d.css";
 
 export interface TileArtwork {
@@ -80,6 +83,7 @@ export default function BoardScene(props: SceneProps) {
     return target;
   }, [extent.center[0], extent.center[2]]);
   const isFree = free || props.temporaryFreeCamera;
+  const shadowRadius = Math.hypot(extent.width, extent.depth) / 2 + 3;
   const select = (id: number, confirm = false) => {
     if (!canPickSquare(id, props.selection?.eligibleSquareIds ?? null)) return;
     props.onSelectSquare(id);
@@ -103,7 +107,7 @@ export default function BoardScene(props: SceneProps) {
   return <div className="board3d-root" ref={root} data-camera-mode={isFree ? "free" : "follow"}>
     <RendererBoundary onFallback={props.onFallback}>
       <Canvas shadows="percentage" dpr={[1, 1.75]} camera={{ fov: 38, near: 0.1, far: 1500, position: [0, 28, 19] }}
-        gl={{ antialias: true, powerPreference: "high-performance" }}
+        gl={{ antialias: true, powerPreference: "high-performance", toneMapping: NeutralToneMapping, toneMappingExposure: 0.92 }}
         fallback={<div className="board3d-error" aria-hidden="true">Your browser could not start WebGL.
           <button onClick={props.onFallback}>Use 2D view</button></div>}>
         <color attach="background" args={["#315768"]} />
@@ -111,9 +115,9 @@ export default function BoardScene(props: SceneProps) {
         <primitive object={lightTarget} />
         <directionalLight position={[extent.center[0] - 20, 45, extent.center[2] + 20]} intensity={1.8}
           target={lightTarget}
-          castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0003}
-          shadow-camera-left={-extent.width} shadow-camera-right={extent.width}
-          shadow-camera-top={extent.depth} shadow-camera-bottom={-extent.depth}
+          castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.00015} shadow-normalBias={0.015}
+          shadow-camera-left={-shadowRadius} shadow-camera-right={shadowRadius}
+          shadow-camera-top={shadowRadius} shadow-camera-bottom={-shadowRadius}
           shadow-camera-far={180} />
         <mesh position={[extent.center[0], -0.14, extent.center[2]]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[2000 + extent.width, 2000 + extent.depth]} />
@@ -252,33 +256,14 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   return null;
 }
 
-function useTileTexture(svg: string) {
-  const [texture, setTexture] = useState<Texture | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    let created: Texture | null = null;
-    const image = new Image();
-    image.onload = () => {
-      if (cancelled) return;
-      created = new Texture(image);
-      created.colorSpace = SRGBColorSpace;
-      created.anisotropy = 8;
-      created.needsUpdate = true;
-      setTexture(created);
-    };
-    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    return () => { cancelled = true; image.onload = null; created?.dispose(); };
-  }, [svg]);
-  return texture;
-}
-
 function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduced, onSelect }: {
   square: SquareInfo; artwork: TileArtwork; selected: boolean; chosen: boolean;
   eligible: boolean; focused: boolean; reduced: boolean; onSelect: (id: number, confirm: boolean) => void;
 }) {
   const texture = useTileTexture(artwork.surface);
   const base = useMemo(() => new RoundedBoxGeometry(4, 0.42, 4, 2, 0.1), []);
-  useEffect(() => () => base.dispose(), [base]);
+  const rim = useMemo(makeTileRim, []);
+  useEffect(() => () => { base.dispose(); rim.dispose(); }, [base, rim]);
   const [hovered, setHovered] = useState(false);
   const glow = useRef<MeshStandardMaterial>(null);
   const down = useRef<{ x: number; y: number } | null>(null);
@@ -299,11 +284,14 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduc
     onClick={(event) => click(event, false)} onDoubleClick={(event) => click(event, true)}
     onPointerOver={(event) => { event.stopPropagation(); setHovered(true); }} onPointerOut={() => setHovered(false)}>
     <mesh position={[0, 0.17, 0]} geometry={base} castShadow receiveShadow>
+      <meshStandardMaterial color={eligible ? artwork.border : "#28303a"} roughness={0.42} />
+    </mesh>
+    <mesh position={[0, 0.37, 0]} rotation={[-Math.PI / 2, 0, 0]} geometry={rim} castShadow receiveShadow>
       <meshStandardMaterial ref={glow} color={eligible ? artwork.border : "#28303a"}
-        emissive={artwork.border} roughness={0.45} />
+        emissive={artwork.border} roughness={0.32} metalness={0.12} />
     </mesh>
     <mesh position={[0, TILE_TOP, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <planeGeometry args={[3.8, 3.8]} />
+      <planeGeometry args={[TILE_SURFACE_SIZE, TILE_SURFACE_SIZE]} />
       <meshStandardMaterial key={texture?.uuid ?? "loading"} map={texture} color={eligible ? (hovered ? "#ffffff" : "#eeeeee") : "#49515a"}
         roughness={0.85} />
     </mesh>
@@ -321,38 +309,6 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduc
     {bank && <BankModel color={eligible ? (square.type === "BANK" ? "#d2a543" : "#359e78") : "#46505a"}
       stockbroker={square.type === "STOCKBROKER"} />}
     {!shop && !bank && artwork.symbol && <SymbolRelief markup={artwork.symbol} dimmed={!eligible} />}
-  </group>;
-}
-
-function ShopSign({ markup, dimmed }: { markup: string; dimmed: boolean }) {
-  const texture = useTileTexture(markup);
-  return <group position={[0, TILE_TOP, -0.15]}>
-    {[-0.78, 0.78].map((x) => <mesh key={x} position={[x, 0.52, 0]} castShadow>
-      <boxGeometry args={[0.14, 1.04, 0.16]} /><meshStandardMaterial color="#654327" />
-    </mesh>)}
-    <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[2.5, 1.23, 0.16]} /><meshStandardMaterial color="#895d3a" /></mesh>
-    <mesh position={[0, 1.1, 0.091]}>
-      <planeGeometry args={[2.5, 1.23]} />
-      <meshStandardMaterial key={texture?.uuid ?? "loading"} map={texture} color={dimmed ? "#505866" : "#ffffff"} roughness={0.8} />
-    </mesh>
-  </group>;
-}
-
-function ShopModel({ color, closed }: { color: string; closed: boolean }) {
-  return <group position={[0, TILE_TOP, -0.45]}>
-    <mesh position={[0, 0.58, 0]} castShadow receiveShadow>
-      <boxGeometry args={[1.75, 1.16, 1.4]} /><meshStandardMaterial color={closed ? "#879198" : "#f8dcb6"} />
-    </mesh>
-    <mesh position={[0, 1.36, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-      <coneGeometry args={[1.43, 0.7, 4]} /><meshStandardMaterial color={color} roughness={0.5} />
-    </mesh>
-    <mesh position={[0, 0.3, 0.71]}><boxGeometry args={[0.38, 0.6, 0.04]} /><meshStandardMaterial color="#354b5c" /></mesh>
-    {[-0.53, 0.53].map((x) => <mesh key={x} position={[x, 0.53, 0.715]}>
-      <boxGeometry args={[0.33, 0.36, 0.05]} /><meshStandardMaterial color={closed ? "#415261" : "#a3e1f1"} />
-    </mesh>)}
-    <mesh position={[0, 1.04, 0.82]} rotation={[-0.15, 0, 0]} castShadow>
-      <boxGeometry args={[1.76, 0.12, 0.55]} /><meshStandardMaterial color={color} />
-    </mesh>
   </group>;
 }
 
@@ -422,7 +378,8 @@ function SymbolRelief({ markup, dimmed }: { markup: string; dimmed: boolean }) {
     });
   }, [markup]);
   useEffect(() => () => parts.forEach((part) => part.geometry.dispose()), [parts]);
-  return <group position={[0, TILE_TOP + 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[1, -1, 1]}>
+  const scale = TILE_SURFACE_SIZE / TILE_SIZE;
+  return <group position={[0, TILE_TOP + 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[scale, -scale, 1]}>
     {parts.map((part, index) => <mesh key={index} geometry={part.geometry} position={[0, 0, index * 0.003]} castShadow receiveShadow>
       <meshStandardMaterial color={dimmed ? "#43505b" : part.color} roughness={0.46} metalness={0.08} />
     </mesh>)}

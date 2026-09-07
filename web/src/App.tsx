@@ -1531,7 +1531,26 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
     icon = <SquareIconLabel className={square.type === "STOCKBROKER" ? "stockbroker-icon-label" : ""}
       label={square.type} x={0} y={2.82} />;
   }
-  const sign = shop && square.property_owner === null ? renderToStaticMarkup(<svg xmlns="http://www.w3.org/2000/svg" width="512" height="256" viewBox="0 0 512 256"><rect width="512" height="256" rx="18" fill="#855431"/><rect x="12" y="12" width="488" height="232" rx="12" fill="#aa784c" stroke="#dfbc7e" strokeWidth="8"/><text x="256" y="163" textAnchor="middle" fontFamily="Arial,sans-serif" fontWeight="900" fontSize="140" fill="#fff7df" stroke="#563820" strokeWidth="3" paintOrder="stroke">{rawGold(square.shop_current_value ?? square.shop_base_value)}</text></svg>) : null;
+  const priceText = rawGold(square.shop_current_value ?? square.shop_base_value);
+  const sign = shop && square.property_owner === null ? renderToStaticMarkup(
+    <svg xmlns="http://www.w3.org/2000/svg" width="512" height="256" viewBox="0 0 512 256">
+      <defs><linearGradient id="oak" x2="0" y2="1">
+        <stop stopColor="#a57649" /><stop offset=".5" stopColor="#765032" /><stop offset="1" stopColor="#92603a" />
+      </linearGradient></defs>
+      <rect width="512" height="256" rx="18" fill="#57361f" />
+      <rect x="10" y="10" width="492" height="236" rx="12" fill="url(#oak)" stroke="#e2bd7c" strokeWidth="7" />
+      {[35, 68, 110, 156, 195, 220].map((y, index) => <path key={y}
+        d={`M16 ${y}Q140 ${y + (index % 2 ? -12 : 9)} 260 ${y}T496 ${y - 3}`}
+        fill="none" stroke={index % 2 ? "#422716" : "#e9c48e"} strokeOpacity=".2" strokeWidth="3" />)}
+      <path d="M22 25H490M22 231H490" stroke="#fff0c7" strokeOpacity=".5" strokeWidth="3" />
+      {[[28, 30], [484, 30], [28, 226], [484, 226]].map(([x, y]) =>
+        <circle key={`${x}:${y}`} cx={x} cy={y} r="5" fill="#f4d795" stroke="#5e4229" strokeWidth="2" />)}
+      <text x="256" y="173" textAnchor="middle" fontFamily="Arial,sans-serif" fontWeight="900"
+        fontSize={Math.min(140, 740 / priceText.length)} fill="#fff9e8" stroke="#342314" strokeWidth="5" paintOrder="stroke">
+        {priceText}
+      </text>
+    </svg>,
+  ) : null;
   const content = shop ? (sign ? null : <ShopTile square={square} state={state} x={0} y={0} closedTurns={closedShopTurns(square.statuses)} />)
     : icon ?? <><text className="square-type" x={0} y={-0.5}>{labelForSquare(square)}</text>
       <text className="square-value" x={0} y={0.4}>{valueLabelForSquare(square, state)}</text></>;
@@ -1545,9 +1564,14 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
       .closed-shop-turn-count{font-size:.78px}.closed-shop-turn-label{font-size:.3px}
       .suit-icon-shape{stroke:#080a0e;stroke-width:.12px;stroke-linejoin:round}
     `}</style>
-    <defs><pattern id="pavers" width="1" height="0.8" patternUnits="userSpaceOnUse">
-      <path d="M0 0H1V.8H0ZM.5 0V.8" fill="none" stroke={shop ? "#ffffff" : "#36526a"} strokeOpacity={shop ? 0.13 : 0.07} strokeWidth=".035" />
-      <path d="M.03 .06H.46M.55 .06H.96" stroke="#ffffff" strokeOpacity=".18" strokeWidth=".025" />
+    <defs><pattern id="pavers" width="1.2" height="1.2" patternUnits="userSpaceOnUse">
+      {[[0, 0], [0.6, 0], [-0.3, 0.6], [0.3, 0.6], [0.9, 0.6]].map(([x, y], index) => <g key={`${x}:${y}`}>
+        <rect x={x + 0.025} y={y + 0.025} width=".55" height=".55" rx=".045"
+          fill="#ffffff" fillOpacity={shop ? 0.035 + (index % 3) * 0.025 : 0.035}
+          stroke="#122a43" strokeOpacity={shop ? 0.38 : 0.06} strokeWidth=".025" />
+        <path d={`M${x + 0.075} ${y + 0.075}H${x + 0.52}`}
+          stroke="#ffffff" strokeOpacity={shop ? 0.18 : 0.1} strokeWidth=".02" />
+      </g>)}
     </pattern></defs>
     <rect x={-2} y={-2} width={4} height={4} fill={shop
       ? (square.property_owner === null ? "#374761" : getPlayerColor(square.property_owner))
@@ -1556,7 +1580,8 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
     <rect x={-2} y={-2} width={4} height={4} fill="url(#pavers)" />
     <style>{`.square-icon-label,.square-type,.square-value{fill:#263f5b;stroke:#fff9e0;stroke-width:.012px}`}</style>
     {content}
-    <rect x={-1.9} y={-1.9} width={3.8} height={3.8} rx={0.16} fill="none" stroke={shop ? border : "#fff6d9"} strokeWidth={0.14} />
+    <rect x={-1.94} y={-1.94} width={3.88} height={3.88} rx={0.1} fill="none"
+      stroke={shop ? "#0b2038" : "#cfc6ad"} strokeOpacity=".45" strokeWidth={0.045} />
   </svg>);
   return { surface, symbol, sign, border, description: `Square ${square.id}: ${displayTypeForSquare(square)}` };
 }

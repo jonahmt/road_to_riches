@@ -13,6 +13,36 @@ A detailed 3D environment is outside this experiment's requested scope. The
 models and textures here are generated from local geometry and existing project
 art; the video is a visual reference.
 
+The approved first playable version is preserved by the pushed annotated tag
+`codex/3d-first-pass` at `69aa138`. Detail refinement continues on the same
+experimental branch, so the tag remains a stable comparison and recovery point.
+
+## Detail refinement
+
+Closer inspection of the reference turn at 40:33 showed heavy rounded tile
+frames, clearly separated rent plaques, patterned shop roofs, striped awnings,
+and strong ownership colors. The next material/model pass follows those cues:
+
+- Raised beveled rim geometry surrounds an inset stone surface. The original
+  four-unit tile footprint is preserved, including the bevel. The texture plane
+  and SVG relief share one surface scale so icon edges remain aligned.
+- Staggered paving replaces the initial uniform grid. Unowned shops have framed
+  wood-grain price boards, slightly tilted for the follow camera, with readable
+  faces on both sides. Longer values reduce their type size to fit the board.
+- Owned shops have shingled gable roofs, ridge and eave trim, stone plinths,
+  framed windows on every side, glazed doors, chimneys, and striped awnings.
+  Ownership still comes exclusively from the authoritative owner ID.
+- Neutral tone mapping preserves the saturated material colors. The light's
+  shadow bounds follow the board diagonal, with a small normal bias to reduce
+  surface artifacts. Shingle and awning textures are painted locally in canvas;
+  no remote asset downloads are required.
+
+Models live in `board3d/ShopModels.tsx`, generated materials in `textures.ts`, and
+the rim geometry in `tileGeometry.ts`. All texture and geometry resources have
+explicit disposal on replacement or unmount. The pass is reviewed in a separate
+Python-server session containing a representative range of owned/unowned shops,
+so visual inspection does not take over another open game's player slot.
+
 ## Renderer and state boundary
 
 The browser uses Three.js 0.185 and React Three Fiber 9.7. `BoardScene.tsx` is a

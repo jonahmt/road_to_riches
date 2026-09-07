@@ -2,6 +2,7 @@ import type { GameState, InputRequest, SquareInfo } from "../protocol.ts";
 
 export const TILE_SIZE = 4;
 export const TILE_TOP = 0.4;
+export const TILE_SURFACE_SIZE = 3.59;
 export type Point3 = [number, number, number];
 export type BoardProjector = (position: readonly [number, number]) => [number, number];
 
