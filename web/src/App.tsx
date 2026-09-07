@@ -56,6 +56,7 @@ import {
 } from "./playerStatusPresentation";
 import { getPromptHelp, getPromptTitle } from "./promptMetadata";
 import { StopConfirmationControls } from "./StopConfirmationControls";
+import { PlayerPortrait } from "./board3d/PlayerPortrait";
 import { getRollPhaseVisibility } from "./rollPhaseVisibility";
 import { stockPriceChangeFacts } from "./stockPricePresentation";
 import {
@@ -3621,9 +3622,7 @@ function PlayerHud({
               </span>
             )}
             <div className="hud-player-title">
-              <span className="player-token large" style={{ backgroundColor: getPlayerColor(player.player_id) }}>
-                {player.player_id}
-              </span>
+              <PlayerPortrait color={getPlayerColor(player.player_id)} playerId={player.player_id} />
               <div>
                 <div className="hud-player-name-row">
                   <strong>Player {player.player_id}</strong>

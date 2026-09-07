@@ -43,6 +43,22 @@ explicit disposal on replacement or unmount. The pass is reviewed in a separate
 Python-server session containing a representative range of owned/unowned shops,
 so visual inspection does not take over another open game's player slot.
 
+The figure pass replaces the initial cone pieces with rounded merchant figures:
+caps, boots, gloves, collars, large eyes, smiles, and numbered chest badges. A
+small hop accompanies the existing movement interval, while turn changes ease
+between active and inactive scale. Payment anchors follow the animated scale
+and hop. Blinking, hopping, and interpolation respect reduced-motion settings.
+`PlayerFigure.tsx` owns the procedural model; `PlayerPortrait.tsx` provides a
+matching local SVG portrait without loading the Three.js bundle into the HUD.
+
+Player cards pair those portraits with bright angled name bands and a separate
+navy statistics row, following the reference's character-focused hierarchy.
+Dark name text keeps the yellow and cyan bands readable. Cash, worth, level,
+suits, commission indicators, and payment deltas keep their original data and
+behavior. The follow camera now uses a 45-degree elevation so faces and shop
+fronts are visible alongside the tile surfaces; reset and return-to-follow use
+the same orientation.
+
 ## Renderer and state boundary
 
 The browser uses Three.js 0.185 and React Three Fiber 9.7. `BoardScene.tsx` is a
@@ -133,12 +149,20 @@ orbit views, and switching renderers after a roll without replaying the dice.
 The HUD and stock layout were also
 inspected at 1280 by 720 CSS pixels.
 
+The detail pass was additionally rendered in an isolated headless Chrome session
+when the desktop was locked, using the separate QA backend. Screenshots at
+1600 by 1000 and 1280 by 720 were inspected for owned shops, figure faces,
+name/stat contrast, rent payment and cash deltas, and free/follow camera angles.
+The session exercised movement, undo, final stop, rent, AI turn handoffs, and
+reduced-motion mode without browser runtime errors. The browser regression suite
+still passed all 82 tests, along with type checking, Ruff, and production build.
+
 Automated coverage in `board3dGeometry.test.ts` protects board coordinates,
 district focus, co-located players, legal selections, and camera-relative input
 without changing protocol values. The existing browser tests and Python suite
 remain the regression gates. Build the client with `pnpm --dir web build`.
 
-The final verification passed 758 Python tests and 82 browser tests, Ruff, and
+The first-pass verification passed 758 Python tests and 82 browser tests, Ruff, and
 the production build. The Three.js scene is loaded as a separate chunk; its
 size still triggers Vite's default 500 kB advisory. React Three Fiber currently
 also emits a Three.js `Clock` deprecation warning. Neither prevented rendering

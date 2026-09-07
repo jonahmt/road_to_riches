@@ -56,16 +56,58 @@
 .app-shell.theme-tabletop.layout-immersive .turn-panel h2 { color: #ffe595; }
 .app-shell.theme-tabletop.layout-immersive > .player-hud { width: min(410px, calc(100vw - 32px)); gap: 6px; }
 .app-shell.theme-tabletop.layout-immersive .hud-player-card {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-height: 76px;
   border-width: 2px;
   border-radius: 11px;
-  background: linear-gradient(115deg, color-mix(in srgb, var(--player-color) 32%, #18304c), #152b4a 50%);
+  background: linear-gradient(100deg, #294762, #152b4a 60%);
   box-shadow: inset 0 1px 0 #ffffff55, 0 3px 0 #0d2038aa;
-  padding: 8px 11px;
+  padding: 5px 11px 7px 72px;
+}
+.app-shell.theme-tabletop.layout-immersive .hud-player-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 29px;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--player-color) 82%, #fff3cb), var(--player-color));
+  clip-path: polygon(0 0, 100% 0, 96% 100%, 0 100%);
+  box-shadow: inset 0 1px 0 #ffffff77;
+  content: "";
+}
+.app-shell.theme-tabletop.layout-immersive .hud-player-title { position: static; min-height: 20px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-title > div {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  text-shadow: 0 1px 0 #ffffff55;
+}
+.app-shell.theme-tabletop.layout-immersive .hud-player-title > div > span:last-child {
+  flex-shrink: 0;
+  color: #152d47;
+}
+.app-shell.theme-tabletop.layout-immersive .player-portrait {
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 62px;
+  height: 68px;
+  transform: translateY(-50%);
+  filter: drop-shadow(0 2px 1px #071e3766);
+}
+.player-portrait svg { display: block; width: 100%; height: 100%; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dl {
+  position: relative;
+  gap: 7px;
+  grid-template-columns: 1fr 1fr .48fr 1.2fr;
 }
 .app-shell.theme-tabletop.layout-immersive .hud-player-card.current {
   box-shadow: inset 0 1px 0 #ffffff77, 0 0 0 2px #fff0aa, 0 4px 12px #06192c77;
 }
-.app-shell.theme-tabletop.layout-immersive .hud-player-card strong { color: #fff8df; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card strong { color: #152d47; }
 .app-shell.theme-tabletop.layout-immersive .hud-player-card dd { color: #fffdf2; font-size: 15px; }
 .app-shell.theme-tabletop.layout-immersive .hud-player-card dt { color: #d4dfec; }
 .app-shell.theme-tabletop.layout-immersive .player-token.large {
@@ -110,8 +152,8 @@
   .app-shell.theme-tabletop.layout-immersive .game-header { width: 250px; }
   .app-shell.theme-tabletop.layout-immersive .turn-panel { width: 290px; }
   .app-shell.theme-tabletop.layout-immersive .action-panel { width: 270px; }
-  .app-shell.theme-tabletop.layout-immersive > .player-hud { width: 365px; }
-  .app-shell.theme-tabletop.layout-immersive .hud-player-card { padding: 6px 9px; }
+  .app-shell.theme-tabletop.layout-immersive > .player-hud { width: min(365px, calc(100vw - 32px)); }
+  .app-shell.theme-tabletop.layout-immersive .hud-player-card { padding-right: 9px; }
   .app-shell.theme-tabletop.layout-immersive .square-panel { width: 210px; }
 }
 @media (max-width: 700px) {

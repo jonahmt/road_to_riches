@@ -14,7 +14,10 @@ import { boardExtent, boardPoint, canPickSquare, focusPoint, piecePositions, TIL
 import { ShopModel, ShopSign } from "./ShopModels";
 import { useTileTexture } from "./textures";
 import { makeTileRim } from "./tileGeometry";
+import { PlayerFigure } from "./PlayerFigure";
 import "./board3d.css";
+
+const FOLLOW_CAMERA_OFFSET: Point3 = [0, 24, 24];
 
 export interface TileArtwork {
   surface: string;
@@ -106,7 +109,7 @@ export default function BoardScene(props: SceneProps) {
   }, []);
   return <div className="board3d-root" ref={root} data-camera-mode={isFree ? "free" : "follow"}>
     <RendererBoundary onFallback={props.onFallback}>
-      <Canvas shadows="percentage" dpr={[1, 1.75]} camera={{ fov: 38, near: 0.1, far: 1500, position: [0, 28, 19] }}
+      <Canvas shadows="percentage" dpr={[1, 1.75]} camera={{ fov: 38, near: 0.1, far: 1500, position: FOLLOW_CAMERA_OFFSET }}
         gl={{ antialias: true, powerPreference: "high-performance", toneMapping: NeutralToneMapping, toneMappingExposure: 0.92 }}
         fallback={<div className="board3d-error" aria-hidden="true">Your browser could not start WebGL.
           <button onClick={props.onFallback}>Use 2D view</button></div>}>
@@ -201,7 +204,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     orbit.maxPolarAngle = Math.PI / 2.8;
     orbit.screenSpacePanning = false;
     orbit.target.copy(targetRef.current);
-    camera.position.copy(targetRef.current).add(new Vector3(0, 28, 19));
+    camera.position.copy(targetRef.current).add(new Vector3(...FOLLOW_CAMERA_OFFSET));
     orbit.update();
     controlsRef.current = orbit;
     projectorRef.current = (point) => {
@@ -222,7 +225,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     if (free && !previousFree.current) savedDistance.current = orbit.getDistance();
     if (!free && previousFree.current) {
       // Return to the board's original orientation so WASD remains intuitive.
-      camera.position.copy(orbit.target).add(new Vector3(0, 28, 19).normalize().multiplyScalar(savedDistance.current));
+      camera.position.copy(orbit.target).add(new Vector3(...FOLLOW_CAMERA_OFFSET).normalize().multiplyScalar(savedDistance.current));
       orbit.update();
     }
     previousFree.current = free;
@@ -234,7 +237,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
       const center = free ? new Vector3(...extent.center) : targetRef.current;
       orbit.target.copy(center);
       const distance = free ? Math.max(extent.width, extent.depth) * 1.65 : 34;
-      camera.position.copy(center).add(new Vector3(0, 28, 19).normalize().multiplyScalar(distance));
+      camera.position.copy(center).add(new Vector3(...FOLLOW_CAMERA_OFFSET).normalize().multiplyScalar(distance));
     } else {
       const distance = camera.position.clone().sub(orbit.target);
       distance.multiplyScalar(command.action === "in" ? 0.8 : 1.25);
@@ -390,7 +393,9 @@ function PlayerPiece({ player, active, position, scale, assignedPlayerId, reduce
   assignedPlayerId: number | null; reduced: boolean; anchors: Map<string, HTMLSpanElement>;
 }) {
   const group = useRef<Group>(null);
+  const figure = useRef<Group>(null);
   const initialPosition = useRef(position);
+  const initialScale = useRef(scale);
   const { camera, size } = useThree();
   const destination = useRef(new Vector3(...position));
   const transition = useRef({ from: new Vector3(...position), start: 0, duration: 0 });
@@ -400,23 +405,22 @@ function PlayerPiece({ player, active, position, scale, assignedPlayerId, reduce
       duration: reduced ? 0 : adjacentStepAnimationDuration(player.player_id, assignedPlayerId) };
     destination.current.set(...position);
   }, [position[0], position[1], position[2], reduced, assignedPlayerId, player.player_id]);
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!group.current) return;
     const motion = transition.current;
     const progress = motion.duration ? Math.min(1, (performance.now() - motion.start) / motion.duration) : 1;
     group.current.position.lerpVectors(motion.from, destination.current, progress);
-    group.current.scale.setScalar(scale);
-    projectAnchor(anchors.get(`player:${player.player_id}`), group.current.position.clone().add(new Vector3(0, 1.2 * scale, 0)), camera, size);
+    group.current.scale.setScalar(reduced ? scale : group.current.scale.x +
+      (scale - group.current.scale.x) * (1 - Math.exp(-20 * delta)));
+    if (figure.current) figure.current.position.y = reduced ? 0 : Math.sin(progress * Math.PI) * 0.18;
+    projectAnchor(anchors.get(`player:${player.player_id}`), group.current.position.clone().add(
+      new Vector3(0, (1.2 + (figure.current?.position.y ?? 0)) * group.current.scale.y, 0)), camera, size);
   });
-  return <group ref={group} position={initialPosition.current} scale={scale}>
+  return <group ref={group} position={initialPosition.current} scale={initialScale.current}>
     <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
       <cylinderGeometry args={[0.72, 0.8, 0.22, 24]} /><meshStandardMaterial color={active ? "#fff4ce" : color} metalness={0.25} roughness={0.4} />
     </mesh>
-    <mesh position={[0, 0.85, 0]} castShadow><coneGeometry args={[0.55, 1.35, 24]} /><meshStandardMaterial color={color} roughness={0.3} /></mesh>
-    <mesh position={[0, 1.6, 0]} castShadow><sphereGeometry args={[0.49, 24, 16]} /><meshStandardMaterial color={color} roughness={0.3} /></mesh>
-    {[-0.16, 0.16].map((x) => <mesh key={x} position={[x, 1.65, 0.45]}>
-      <sphereGeometry args={[0.055, 8, 8]} /><meshStandardMaterial color="#203145" />
-    </mesh>)}
+    <group ref={figure}><PlayerFigure playerId={player.player_id} color={color} reduced={reduced} /></group>
   </group>;
 }
 
