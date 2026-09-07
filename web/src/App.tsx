@@ -4430,10 +4430,8 @@ function StockOverlay({
             <h2 id="stock-overlay-title">{title}</h2>
             <p>{instruction}</p>
           </div>
-          <div className="stock-player-summary">
-            <span className="player-token large" style={{ background: getPlayerColor(request.player_id) }}>
-              {request.player_id}
-            </span>
+          <div className="stock-player-summary" role="group" aria-label={`Player ${request.player_id} finances`}>
+            <PlayerPortrait color={getPlayerColor(request.player_id)} playerId={request.player_id} />
             <dl>
               <div><dt>Stocks</dt><dd>{Object.values(player?.owned_stock ?? {}).reduce((sum, held) => sum + held, 0)}</dd></div>
               <div><dt>Ready cash</dt><dd>{formatGold(cash)}</dd></div>
@@ -4906,12 +4904,12 @@ function RentPaymentOverlay({
         <div className="payment-card">
           <div className="payment-route" id="payment-title">
             <span className="payment-player" style={{ "--payment-player-color": getPlayerColor(payment.payerId) } as CSSProperties}>
-              <span className="payment-player-token">{payment.payerId}</span>
+              <PlayerPortrait color={getPlayerColor(payment.payerId)} playerId={payment.payerId} />
               <strong>Player {payment.payerId}</strong>
             </span>
             <span className="payment-arrow" aria-label="pays">→</span>
             <span className="payment-player" style={{ "--payment-player-color": getPlayerColor(payment.ownerId) } as CSSProperties}>
-              <span className="payment-player-token">{payment.ownerId}</span>
+              <PlayerPortrait color={getPlayerColor(payment.ownerId)} playerId={payment.ownerId} />
               <strong>Player {payment.ownerId}</strong>
             </span>
           </div>
@@ -4934,7 +4932,7 @@ function RentPaymentOverlay({
                     className={amount > 0 ? "has-payout" : ""}
                     style={{ "--payment-player-color": getPlayerColor(player.player_id) } as CSSProperties}
                   >
-                    <span className="payment-player-token">{player.player_id}</span>
+                    <PlayerPortrait color={getPlayerColor(player.player_id)} playerId={player.player_id} />
                     <span>Player {player.player_id}</span>
                     <strong>{amount > 0 ? "+" : ""}{formatGold(amount)}</strong>
                   </article>
@@ -5042,7 +5040,7 @@ function StockPriceChangeOverlay({
                 className={holding.valueChange !== 0 ? "has-impact" : ""}
                 style={{ "--stock-player-color": getPlayerColor(playerId) } as CSSProperties}
               >
-                <span className="stock-price-player-token">{playerId}</span>
+                <PlayerPortrait color={getPlayerColor(playerId)} playerId={playerId} />
                 <span>Player {playerId}</span>
                 <strong>{holding.quantity}</strong>
                 <small>shares</small>
@@ -5125,6 +5123,7 @@ function PromotionCeremony({
     >
       <section className="promotion-ceremony">
         <header className="promotion-header">
+          <PlayerPortrait color={getPlayerColor(playerId)} playerId={playerId} />
           <span className="promotion-eyebrow">Bank Promotion</span>
           <h2 id="promotion-title">{isAssignedPlayer ? "You Promoted!" : `Player ${playerId} Promoted!`}</h2>
         </header>

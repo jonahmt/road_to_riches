@@ -128,6 +128,24 @@ Tile textures and special-square backgrounds are intentionally part of this
 experimental art direction. The minimap keeps the established production icon
 and ownership conventions.
 
+The same local player portraits appear in rent transfers, dividend recipients,
+stock ownership summaries, stock-price changes, and promotion ceremonies. Their
+sizes and placement belong to each panel; the HUD's absolute positioning is
+scoped to HUD cards. Player names and an accessible stock-finance group retain
+the identity information independently of the decorative portrait.
+
+Stock-market rows use navy for ordinary districts and a gold fill for the
+selected district. The district-color edge remains visible in either state.
+This explicitly overrides the general button theme, which otherwise made all
+rows look selected. Selection and transaction behavior are unchanged.
+
+At desktop widths of at least 1100 pixels, rent presentations reserve space for
+the player HUD and its cash-delta bubbles, keeping every dividend recipient
+visible. Smaller layouts keep the HUD behind the modal presentation so it cannot
+cover the payment details. The shared HUD-width variable keeps the reservation
+consistent with its responsive size. Presentation acknowledgment and financial
+values continue to come from the existing client/engine flow.
+
 ## Local preview
 
 Install browser dependencies with `pnpm --dir web install`. Start an isolated
@@ -170,6 +188,14 @@ reduced-motion mode without browser runtime errors. The browser regression suite
 passed all 83 tests after adding crowded-square coverage, along with type
 checking, Ruff, and production build. The revised bank and stockbroker were also
 reviewed together on the all-square-types board.
+
+The event-panel refinement was reviewed against additional video frames at
+40:50 and 41:08. Actual Python-server fixtures exercised a four-suit bank
+promotion, a 99-share purchase and price rise, and rent with dividends to three
+players. The rendered review at 1280 by 720 caught and corrected portrait
+positioning, missing selected-row contrast, and HUD overlap with the dividend
+panel. A 1000 by 800 payment view was also inspected. All 83 browser tests,
+type checking, Ruff, and the production build passed after the refinement.
 
 A warm, stationary Trodain view at 1600 by 1000 with device pixel ratio 1 was
 sampled for 120 animation frames in headless Chrome on this machine's Apple M1
