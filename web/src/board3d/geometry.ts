@@ -48,6 +48,18 @@ export function focusPoint(state: GameState, districtId: number | null): Point3 
   return square ? boardPoint(square.position) : boardExtent(state.board.squares).center;
 }
 
+export function shopModelPose(activeOccupant: boolean) {
+  return activeOccupant
+    ? { position: [1.15, TILE_TOP, -1.08] as Point3, scale: 0.52 }
+    : { position: [0, TILE_TOP, -0.63] as Point3, scale: 1 };
+}
+
+export function pieceStepPosition(from: Point3, to: Point3, progress: number, frontArc: number): Point3 {
+  return [from[0] + (to[0] - from[0]) * progress,
+    from[1] + (to[1] - from[1]) * progress,
+    from[2] + (to[2] - from[2]) * progress + Math.sin(Math.PI * progress) * frontArc];
+}
+
 export function piecePositions(state: GameState) {
   const activeId = state.players[state.current_player_index]?.player_id;
   const squares = new Map(state.board.squares.map((square) => [square.id, square]));
@@ -61,14 +73,23 @@ export function piecePositions(state: GameState) {
     const sharedWithActive = others.length > 0 && state.players.some((other) =>
       !other.bankrupt && other.player_id === activeId && other.position === player.position);
     // A side row keeps the smaller figures clear of the active figure's base.
-    const offsetX = sharedWithActive ? (active ? -0.45 : 1.58)
+    let offsetX = sharedWithActive ? (active ? -0.45 : 1.58)
       : active ? 0 : (index - (others.length - 1) / 2) * 0.85;
-    const offsetZ = active ? 0.85
+    let offsetZ = active ? 0.85
       : sharedWithActive ? 1.35 - (others.length - 1 - index) * 0.82 : 1.35;
+    const ownedShop = square.type === "SHOP" && square.property_owner != null && others.length <= 3;
+    if (ownedShop) {
+      // Keep every base behind the front rent strip. The active shop moves
+      // into the rear-right corner, leaving space for all four figures.
+      if (active) [offsetX, offsetZ] = [-0.9, -0.35];
+      else if (sharedWithActive) {
+        [offsetX, offsetZ] = [[1.25, 0.12], [0.35, 0.12], [0.1, -1.37]][index]!;
+      } else [offsetX, offsetZ] = [1.58, 0.18 - index * 0.82];
+    }
     return [{ player, active, position: boardPoint([
       square.position[0] + offsetX,
       square.position[1] + offsetZ,
-    ]), scale: active ? 1.22 : 0.48 }];
+    ]), scale: active ? 1.22 : 0.48, baseRadius: ownedShop && active ? 0.65 : 0.8 }];
   });
 }
 

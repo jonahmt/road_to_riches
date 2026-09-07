@@ -8,7 +8,7 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { PLAYER_COLORS } from "../boardColors";
 import { adjacentStepAnimationDuration } from "../cameraTiming";
 import type { GameState, InputRequest, SquareInfo } from "../protocol";
-import { boardExtent, boardPoint, canPickSquare, focusPoint, piecePositions, TILE_SIZE, TILE_SURFACE_SIZE, TILE_TOP, type Point3, type BoardProjector } from "./geometry";
+import { boardExtent, boardPoint, canPickSquare, focusPoint, piecePositions, pieceStepPosition, TILE_SIZE, TILE_SURFACE_SIZE, TILE_TOP, type Point3, type BoardProjector } from "./geometry";
 import { ShopModel, ShopRentPlaque, ShopSign } from "./ShopModels";
 import { useTileTexture } from "./textures";
 import { makeTileRim } from "./tileGeometry";
@@ -144,6 +144,8 @@ export default function BoardScene(props: SceneProps) {
           chosen={props.selection?.chosenSquareIds?.has(square.id) ?? false}
           eligible={canPickSquare(square.id, props.selection?.eligibleSquareIds ?? null)}
           focused={props.focusDistrictId !== null && square.property_district === props.focusDistrictId}
+          activeOccupant={pieces.some((piece) => piece.active && piece.player.position === square.id)
+            && pieces.filter((piece) => piece.player.position === square.id).length <= 4}
           reduced={reduced} anchors={anchors.current} onSelect={select} />)}
         {pieces.map((piece) => <PlayerPiece key={piece.player.player_id} {...piece}
           assignedPlayerId={props.assignedPlayerId} reduced={reduced} anchors={anchors.current} />)}
@@ -273,9 +275,9 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   return null;
 }
 
-function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduced, anchors, onSelect }: {
+function BoardTile({ square, artwork, selected, chosen, eligible, focused, activeOccupant, reduced, anchors, onSelect }: {
   square: SquareInfo; artwork: TileArtwork; selected: boolean; chosen: boolean;
-  eligible: boolean; focused: boolean; reduced: boolean; onSelect: (id: number, confirm: boolean) => void;
+  eligible: boolean; focused: boolean; activeOccupant: boolean; reduced: boolean; onSelect: (id: number, confirm: boolean) => void;
   anchors: Map<string, HTMLSpanElement>;
 }) {
   const texture = useTileTexture(artwork.surface);
@@ -324,6 +326,7 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduc
     {shop && artwork.rentPlaque && <ShopRentPlaque markup={artwork.rentPlaque} dimmed={!eligible} />}
     {shop && square.property_owner !== null && <ShopModel color={eligible
       ? PLAYER_COLORS[square.property_owner % PLAYER_COLORS.length] : "#46505a"}
+      activeOccupant={activeOccupant} reduced={reduced}
       closed={square.statuses.some((status) => status.type === "closed")} />}
     {bank && <CivicBuilding color={eligible ? (square.type === "BANK" ? "#d2a543" : "#359e78") : "#46505a"}
       stockbroker={square.type === "STOCKBROKER"} />}
@@ -360,7 +363,7 @@ function SuitToken({ markup, dimmed, reduced, squareId, anchors }: {
   </group>;
 }
 
-function PlayerPiece({ player, active, position, scale, assignedPlayerId, reduced, anchors }: ReturnType<typeof piecePositions>[number] & {
+function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlayerId, reduced, anchors }: ReturnType<typeof piecePositions>[number] & {
   assignedPlayerId: number | null; reduced: boolean; anchors: Map<string, HTMLSpanElement>;
 }) {
   const group = useRef<Group>(null);
@@ -368,19 +371,26 @@ function PlayerPiece({ player, active, position, scale, assignedPlayerId, reduce
   const initialPosition = useRef(position);
   const initialScale = useRef(scale);
   const { camera, size } = useThree();
-  const destination = useRef(new Vector3(...position));
-  const transition = useRef({ from: new Vector3(...position), start: 0, duration: 0 });
+  const destination = useRef(position);
+  const previousSquare = useRef(player.position);
+  const previousBaseRadius = useRef(baseRadius);
+  const transition = useRef({ from: position, start: 0, duration: 0, frontArc: 0 });
   const color = PLAYER_COLORS[player.player_id % PLAYER_COLORS.length];
   useEffect(() => {
-    if (group.current) transition.current = { from: group.current.position.clone(), start: performance.now(),
-      duration: reduced ? 0 : adjacentStepAnimationDuration(player.player_id, assignedPlayerId) };
-    destination.current.set(...position);
-  }, [position[0], position[1], position[2], reduced, assignedPlayerId, player.player_id]);
+    if (group.current) transition.current = { from: group.current.position.toArray() as Point3, start: performance.now(),
+      duration: reduced ? 0 : adjacentStepAnimationDuration(player.player_id, assignedPlayerId),
+      frontArc: previousSquare.current !== player.position
+        && (baseRadius === 0.65 || previousBaseRadius.current === 0.65)
+        && Math.abs(position[0] - group.current.position.x) > 0.5 ? 1.3 : 0 };
+    destination.current = position;
+    previousSquare.current = player.position;
+    previousBaseRadius.current = baseRadius;
+  }, [position[0], position[1], position[2], reduced, assignedPlayerId, player.player_id, player.position, baseRadius]);
   useFrame((_, delta) => {
     if (!group.current) return;
     const motion = transition.current;
     const progress = motion.duration ? Math.min(1, (performance.now() - motion.start) / motion.duration) : 1;
-    group.current.position.lerpVectors(motion.from, destination.current, progress);
+    group.current.position.set(...pieceStepPosition(motion.from, destination.current, progress, motion.frontArc));
     group.current.scale.setScalar(reduced ? scale : group.current.scale.x +
       (scale - group.current.scale.x) * (1 - Math.exp(-20 * delta)));
     if (figure.current) figure.current.position.y = reduced ? 0 : Math.sin(progress * Math.PI) * 0.18;
@@ -389,7 +399,7 @@ function PlayerPiece({ player, active, position, scale, assignedPlayerId, reduce
   });
   return <group ref={group} position={initialPosition.current} scale={initialScale.current}>
     <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
-      <cylinderGeometry args={[0.72, 0.8, 0.22, 24]} /><meshStandardMaterial color={active ? "#fff4ce" : color} metalness={0.25} roughness={0.4} />
+      <cylinderGeometry args={[baseRadius * 0.9, baseRadius, 0.22, 24]} /><meshStandardMaterial color={active ? "#fff4ce" : color} metalness={0.25} roughness={0.4} />
     </mesh>
     <group ref={figure}><PlayerFigure playerId={player.player_id} color={color} reduced={reduced} /></group>
   </group>;

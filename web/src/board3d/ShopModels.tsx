@@ -1,7 +1,9 @@
-import { useEffect, useMemo } from "react";
-import { Color, DoubleSide, ExtrudeGeometry, Shape } from "three";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Color, DoubleSide, ExtrudeGeometry, Group, Shape } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { TILE_TOP } from "./geometry";
+import { AI_ADJACENT_STEP_ANIMATION_MS, HUMAN_ADJACENT_STEP_ANIMATION_MS } from "../cameraTiming";
+import { shopModelPose, TILE_TOP } from "./geometry";
 import { useAwningTexture, useRoofTexture, useTileTexture } from "./textures";
 
 export function ShopRentPlaque({ markup, dimmed }: { markup: string; dimmed: boolean }) {
@@ -58,7 +60,25 @@ function ShopWindow({ x, y, z, rotation = 0, closed }: {
   </group>;
 }
 
-export function ShopModel({ color, closed }: { color: string; closed: boolean }) {
+export function ShopModel({ color, closed, activeOccupant, reduced }: {
+  color: string; closed: boolean; activeOccupant: boolean; reduced: boolean;
+}) {
+  const group = useRef<Group>(null);
+  const pose = shopModelPose(activeOccupant);
+  const initialPose = useRef(pose);
+  const restoreAfter = useRef(0);
+  useEffect(() => {
+    restoreAfter.current = activeOccupant ? 0 : performance.now()
+      + Math.max(AI_ADJACENT_STEP_ANIMATION_MS, HUMAN_ADJACENT_STEP_ANIMATION_MS);
+  }, [activeOccupant]);
+  useFrame((_, delta) => {
+    if (!group.current) return;
+    if (!activeOccupant && !reduced && performance.now() < restoreAfter.current) return;
+    const blend = reduced ? 1 : 1 - Math.exp(-20 * delta);
+    group.current.position.x += (pose.position[0] - group.current.position.x) * blend;
+    group.current.position.z += (pose.position[2] - group.current.position.z) * blend;
+    group.current.scale.setScalar(group.current.scale.x + (pose.scale - group.current.scale.x) * blend);
+  });
   const shingles = useRoofTexture();
   const awning = useAwningTexture(color, closed);
   const roofColor = useMemo(() => new Color(closed ? "#69717c" : color).multiplyScalar(0.78), [color, closed]);
@@ -69,7 +89,7 @@ export function ShopModel({ color, closed }: { color: string; closed: boolean })
       bevelSegments: 1, steps: 1, bevelSize: 0.025, bevelThickness: 0.025 });
   }, []);
   useEffect(() => () => roof.dispose(), [roof]);
-  return <group position={[0, TILE_TOP, -0.63]}>
+  return <group ref={group} position={initialPose.current.position} scale={initialPose.current.scale}>
     <mesh position={[0, 0.08, 0]} receiveShadow><boxGeometry args={[1.97, 0.16, 1.7]} /><meshStandardMaterial color="#b8a27b" /></mesh>
     <mesh position={[0, 0.72, 0]} castShadow receiveShadow>
       <boxGeometry args={[1.8, 1.28, 1.5]} /><meshStandardMaterial color={closed ? "#a5aaa6" : "#f4d9a2"} roughness={0.9} />

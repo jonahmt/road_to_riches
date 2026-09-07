@@ -71,6 +71,26 @@ left and inactive figures form a separate row along the right edge. Two to four
 players retain non-overlapping bases inside the original tile footprint. A
 regression test checks those bounds and separation without mutating game state.
 
+Owned shops have a more specific occupied-tile arrangement. The active figure
+stands left of center, behind the rent strip, on a base fitted to its feet. The
+shop moves into the rear-right corner at 52% scale while the active player is
+there; all of its ownership and closure materials remain visible. Up to three
+inactive figures use separate positions around that miniature. Without an
+active occupant, the full-size shop remains and inactive figures stand along
+its right side behind the rent strip. This follows the readable occupied-shop
+price in the reference frame around 40:46; the particular miniature-house
+arrangement is an experimental interpretation. Custom parties that exceed the
+four-player arrangement retain the previous general layout.
+
+Shop transforms ease between these poses. Expansion waits until the longest
+existing adjacent step (135ms) has finished, avoiding growth into the departing
+figure. A step with horizontal travel into or out of an active owned-shop
+position curves through the front of the tile; pure vertical travel and
+rearrangement within one square retain the ordinary path. The existing 100ms
+human/135ms AI timing and hop are unchanged. Reduced motion applies final poses
+immediately. The live figure group remains the payment anchor, and both the
+miniature model and the plaque retain their parent tile's inspection handlers.
+
 `MechanicalObject.tsx` replaces the extruded flat drawings of Cannon, Roll On,
 and Switch with solid procedural objects. The cannon keeps its green barrel,
 grey carriage/muzzle and yellow wheels, with a recessed bore and wheel hubs.
@@ -283,6 +303,21 @@ this temporary preview server. This branch can also run against any compatible
 server using the connection form.
 
 ## Verification
+
+The occupied-shop pass was rendered with four figures on a closed shop whose
+rent was 4,135, and with three inactive figures beside its full-size model.
+Normal, close, overhead, and angled views were inspected at 1600 by 1000 and
+1280 by 720. The rent and two-turn closure marker remained visible, and clicking
+the miniature selected the correct square. Renderer switching and reduced
+motion retained the arrangement. A one-step rent fixture exposed premature
+building expansion during departure; recaptured movement after the delay/path
+refinement cleared the model. Arrival, undo, and reduced-motion arrival were
+also reviewed. The payment displayed the expected 89 rent, dividends of 7/5/3,
+and net HUD deltas of -82/+94/+3. All 94 browser tests, type check, build, and
+Ruff passed with no page errors in the final run. New geometry coverage checks
+tile bounds, separation from the rent plaque and house, each active-player
+assignment, finite fallback positions for larger parties, and both directions
+of the curved shop step.
 
 The financial-control pass was inspected in real offer, sale, stock, exchange,
 and investment flows. At 1280 by 720, the revised exchange review measured
