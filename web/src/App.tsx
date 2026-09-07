@@ -1231,7 +1231,8 @@ function App() {
               <SquarePanel square={focusSquare} state={clientState.gameState} />
             </aside>
           </section>
-          {ventureRequest && (
+          {/* Keep the board visible until the collected suit reaches its HUD slot. */}
+          {ventureRequest && activePresentation?.type !== "suit_collected" && (
             <VentureGridOverlay
               request={ventureRequest}
               responsePending={clientState.responsePending}
@@ -1520,6 +1521,9 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
   const shop = isShopSquare(square);
   const object: TileArtwork["object"] = square.type === "CANNON" ? "cannon"
     : square.type === "ROLL_ON" ? "die" : square.type === "SWITCH" ? "switch" : null;
+  const uprightSuit = isSuitIconSquare(square) ? renderToStaticMarkup(
+    <svg xmlns="http://www.w3.org/2000/svg"><SuitShape suit={square.suit} /></svg>,
+  ) : null;
   let icon = isSuitIconSquare(square) ? <SuitIcon suit={square.suit} squareType={square.type} x={0} y={0} />
     : isBankIconSquare(square) ? <BankIcon x={0} y={0} />
     : isStockbrokerIconSquare(square) ? <StockbrokerIcon x={0} y={0} />
@@ -1535,12 +1539,19 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
     : isSwitchIconSquare(square) ? <SwitchIcon x={0} y={0} />
     : isSuitYourselfIconSquare(square) ? <SuitYourselfIcon x={0} y={0} /> : null;
   const border = isMinimapShopLikeSquare(square) ? getDistrictBorderColor(square.property_district) : "#f7f7f2";
-  const symbol = icon ? renderToStaticMarkup(<svg xmlns="http://www.w3.org/2000/svg">{icon}</svg>) : null;
+  const relief = uprightSuit ? (square.type === "CHANGE_OF_SUIT" ? <SuitMiniRow x={0} y={0.85} /> : null) : icon;
+  const symbol = relief ? renderToStaticMarkup(<svg xmlns="http://www.w3.org/2000/svg">{relief}</svg>) : null;
   if (square.type === "BANK" || square.type === "STOCKBROKER") {
     icon = <SquareIconLabel className={square.type === "STOCKBROKER" ? "stockbroker-icon-label" : ""}
       label={square.type} x={0} y={2.82} />;
   } else if (object) {
     icon = <SquareIconLabel label={square.type.replaceAll("_", " ")} x={0} y={2.82} />;
+  } else if (uprightSuit) {
+    icon = <>
+      <SquareIconLabel label={suitLabel(square.suit)} x={0} y={2.82} />
+      <g transform="translate(-0.95 -1.06)" opacity={0.22}><SuitShape suit={square.suit} scale={0.58} /></g>
+      {square.type === "CHANGE_OF_SUIT" && <SuitMiniRow x={0} y={0.85} />}
+    </>;
   }
   const priceText = rawGold(square.shop_current_value ?? square.shop_base_value);
   const sign = shop && square.property_owner === null ? renderToStaticMarkup(
@@ -1594,7 +1605,7 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
     <rect x={-1.94} y={-1.94} width={3.88} height={3.88} rx={0.1} fill="none"
       stroke={shop ? "#0b2038" : "#cfc6ad"} strokeOpacity=".45" strokeWidth={0.045} />
   </svg>);
-  return { object, surface, symbol, sign, border, description: `Square ${square.id}: ${displayTypeForSquare(square)}` };
+  return { object, uprightSuit, surface, symbol, sign, border, description: `Square ${square.id}: ${displayTypeForSquare(square)}` };
 }
 
 function SvgBoardPanel({
@@ -3061,17 +3072,17 @@ function SuitIcon({
       <g transform={`translate(${x} ${y + (isChangeOfSuit ? -0.08 : 0.28)})`}>
         <SuitShape suit={suit} scale={isChangeOfSuit ? 0.62 : 0.72} />
       </g>
-      {isChangeOfSuit && (
-        <g className="suit-mini-row" transform={`translate(${x} ${y + 1.15})`}>
-          {SUIT_ORDER.map((miniSuit, index) => (
-            <g key={miniSuit} transform={`translate(${(index - 1.5) * 0.5} 0)`}>
-              <SuitShape suit={miniSuit} scale={0.15} />
-            </g>
-          ))}
-        </g>
-      )}
+      {isChangeOfSuit && <SuitMiniRow x={x} y={y + 1.15} />}
     </g>
   );
+}
+
+function SuitMiniRow({ x, y }: { x: number; y: number }) {
+  return <g className="suit-mini-row" transform={`translate(${x} ${y})`}>
+    {SUIT_ORDER.map((miniSuit, index) => <g key={miniSuit} transform={`translate(${(index - 1.5) * 0.5} 0)`}>
+      <SuitShape suit={miniSuit} scale={0.15} />
+    </g>)}
+  </g>;
 }
 
 function BankShape({ fill = "#ffd166" }: { fill?: string }) {

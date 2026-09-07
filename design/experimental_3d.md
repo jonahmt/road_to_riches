@@ -97,6 +97,23 @@ rows. The procedural mechanical models apply that physical style to the
 project's existing icon identities; these particular square types are not
 depicted in that Trodain frame.
 
+The standing suit visible in the same reference frame informs the next object
+pass. Suit and change-of-suit squares use a thick, rounded, upright extrusion of
+the existing `SuitShape`, with a faint matching mark on the tile beneath it.
+The fitted suit label stays on the front surface; change-of-suit retains its row
+of all four miniature suits. The token sits toward the rear left to leave room
+for the player figure and gently turns and floats. This motion is an experimental
+interpretation, since the reference player failed during the attempted motion
+review; its exact speed is not claimed to match the Wii game. Reduced-motion
+mode uses a stationary orientation.
+
+`SvgReliefParts.tsx` shares SVG parsing and geometry disposal between these
+upright tokens and the existing flat reliefs. Upright suits use a deeper bevel
+and smoother material; other reliefs retain their previous geometry defaults.
+Each suit's projected collection anchor follows the raised token, so the shared
+collection effect starts at the visible object rather than the tile center.
+The 2D renderer and minimap continue to use the original suit artwork.
+
 ## Renderer and state boundary
 
 The browser uses Three.js 0.185 and React Three Fiber 9.7. `BoardScene.tsx` is a
@@ -175,6 +192,15 @@ selected district. The district-color edge remains visible in either state.
 This explicitly overrides the general button theme, which otherwise made all
 rows look selected. Selection and transaction behavior are unchanged.
 
+Venture-grid cells likewise use navy for open squares and gold for the selected
+open square. Claimed cells retain their owner's color even under the cursor;
+gold outlines show a potential line bonus without replacing those colors.
+Coordinate labels inherit the appropriate light or dark foreground. After a
+suit landing, the venture grid waits for the existing local suit-collection
+presentation to finish before mounting, preserving the board-to-HUD animation
+and preventing the grid's keyboard handler from becoming active beneath it.
+This uses presentation completion, without an extra timer or protocol change.
+
 At desktop widths of at least 1100 pixels, rent presentations reserve space for
 the player HUD and its cash-delta bubbles, keeping every dividend recipient
 visible. Smaller layouts keep the HUD behind the modal presentation so it cannot
@@ -252,6 +278,17 @@ Additional fixtures at 18769 checked active and inactive figures on the new
 objects, including side views that exposed and corrected the initial overlap.
 All 87 browser tests, type checking, Ruff, and the production build passed with
 no browser runtime errors during the review.
+
+The standing-suit and venture pass was reviewed at 1600 by 1000 and 1280 by 720,
+including occupied tiles, an orbited camera, reduced motion, and switching back
+to the original 2D artwork. A private server fixture exercised an actual diamond
+landing and collection: the venture grid remained absent while the token flew
+to the HUD and appeared after the collection effect ended. A partly claimed
+grid verified all four owner colors, keyboard navigation, a disabled claim on
+an owned cell, and a four-cell line preview. Claiming that line awarded the
+expected 40, then the venture card and AI turns resolved normally. The same
+review observed a change-of-suit updating its raised token and tile artwork.
+All 87 browser tests, type checking, Ruff, and the production build passed.
 
 A warm, stationary Trodain view at 1600 by 1000 with device pixel ratio 1 was
 sampled for 120 animation frames in headless Chrome on this machine's Apple M1

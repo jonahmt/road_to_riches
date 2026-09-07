@@ -1,11 +1,9 @@
 import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import {
-  type BufferGeometry, type Camera, Color, Curve, ExtrudeGeometry, Group, MeshStandardMaterial, NeutralToneMapping, Object3D,
-  TubeGeometry, Vector3,
+  type Camera, Group, MeshStandardMaterial, NeutralToneMapping, Object3D, Vector3,
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { PLAYER_COLORS } from "../boardColors";
 import { adjacentStepAnimationDuration } from "../cameraTiming";
@@ -19,12 +17,14 @@ import { CivicBuilding } from "./CivicBuilding";
 import { MovementGuideButtons, MovementGuideMeshes, type MovementButtons } from "./MovementGuides";
 import { movementGuides } from "./movementPresentation";
 import { MechanicalObject, type MechanicalObjectKind } from "./MechanicalObject";
+import { SvgReliefParts } from "./SvgReliefParts";
 import "./board3d.css";
 
 const FOLLOW_CAMERA_OFFSET: Point3 = [0, 24, 24];
 
 export interface TileArtwork {
   object: MechanicalObjectKind | null;
+  uprightSuit: string | null;
   surface: string;
   symbol: string | null;
   sign: string | null;
@@ -143,10 +143,10 @@ export default function BoardScene(props: SceneProps) {
           chosen={props.selection?.chosenSquareIds?.has(square.id) ?? false}
           eligible={canPickSquare(square.id, props.selection?.eligibleSquareIds ?? null)}
           focused={props.focusDistrictId !== null && square.property_district === props.focusDistrictId}
-          reduced={reduced} onSelect={select} />)}
+          reduced={reduced} anchors={anchors.current} onSelect={select} />)}
         {pieces.map((piece) => <PlayerPiece key={piece.player.player_id} {...piece}
           assignedPlayerId={props.assignedPlayerId} reduced={reduced} anchors={anchors.current} />)}
-        <SquareAnchors squares={props.state.board.squares} anchors={anchors.current} />
+        <SquareAnchors squares={props.state.board.squares} artwork={props.artwork} anchors={anchors.current} />
         {props.movementRequest && guides.length > 0 && <MovementGuideMeshes request={props.movementRequest}
           guides={guides} buttons={movementButtons.current} projectorRef={props.projectorRef} reduced={reduced} />}
       </Canvas>
@@ -272,9 +272,10 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   return null;
 }
 
-function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduced, onSelect }: {
+function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduced, anchors, onSelect }: {
   square: SquareInfo; artwork: TileArtwork; selected: boolean; chosen: boolean;
   eligible: boolean; focused: boolean; reduced: boolean; onSelect: (id: number, confirm: boolean) => void;
+  anchors: Map<string, HTMLSpanElement>;
 }) {
   const texture = useTileTexture(artwork.surface);
   const base = useMemo(() => new RoundedBoxGeometry(4, 0.42, 4, 2, 0.1), []);
@@ -325,54 +326,35 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduc
     {bank && <CivicBuilding color={eligible ? (square.type === "BANK" ? "#d2a543" : "#359e78") : "#46505a"}
       stockbroker={square.type === "STOCKBROKER"} />}
     {artwork.object && <MechanicalObject kind={artwork.object} dimmed={!eligible} />}
+    {artwork.uprightSuit && <SuitToken markup={artwork.uprightSuit} dimmed={!eligible} reduced={reduced}
+      squareId={square.id} anchors={anchors} />}
     {!shop && !bank && !artwork.object && artwork.symbol && <SymbolRelief markup={artwork.symbol} dimmed={!eligible} />}
   </group>;
 }
 
 function SymbolRelief({ markup, dimmed }: { markup: string; dimmed: boolean }) {
-  const parts = useMemo(() => {
-    // SVGLoader does not resolve CSS currentColor inherited from nested groups.
-    const document = new DOMParser().parseFromString(markup, "image/svg+xml");
-    for (const element of document.querySelectorAll('[fill="currentColor"], [stroke="currentColor"]')) {
-      let ancestor: Element | null = element;
-      let color = "#f7f7f2";
-      while (ancestor) {
-        const match = ancestor.getAttribute("style")?.match(/(?:^|;)\s*color:\s*([^;]+)/);
-        const attributeColor = ancestor.getAttribute("color");
-        if (match || attributeColor) { color = match?.[1] ?? attributeColor!; break; }
-        ancestor = ancestor.parentElement;
-      }
-      for (const attribute of ["fill", "stroke"]) {
-        if (element.getAttribute(attribute) === "currentColor") element.setAttribute(attribute, color);
-      }
-    }
-    const data = new SVGLoader().parse(new XMLSerializer().serializeToString(document));
-    return data.paths.flatMap<{ geometry: BufferGeometry; color: Color }>((path) => {
-      const style = path.userData?.style as { fill?: string; stroke?: string; strokeWidth?: number } | undefined;
-      if (style?.fill === "none") {
-        if (!style.stroke || style.stroke === "none") return [];
-        return path.subPaths.map((subPath) => {
-          const curve = new class extends Curve<Vector3> {
-            constructor() { super(); }
-            getPoint(t: number) { const point = subPath.getPoint(t); return new Vector3(point.x, point.y, 0); }
-          }();
-          return { geometry: new TubeGeometry(curve, 48, (style.strokeWidth ?? 0.06) / 2, 6, subPath.autoClose),
-            color: new Color(style.stroke) };
-        });
-      }
-      return path.toShapes().map((shape) => ({
-        geometry: new ExtrudeGeometry(shape, { depth: 0.16, bevelEnabled: true,
-          bevelSegments: 1, steps: 1, bevelSize: 0.018, bevelThickness: 0.018, curveSegments: 10 }),
-        color: path.color.clone(),
-      }));
-    });
-  }, [markup]);
-  useEffect(() => () => parts.forEach((part) => part.geometry.dispose()), [parts]);
   const scale = TILE_SURFACE_SIZE / TILE_SIZE;
   return <group position={[0, TILE_TOP + 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[scale, -scale, 1]}>
-    {parts.map((part, index) => <mesh key={index} geometry={part.geometry} position={[0, 0, index * 0.003]} castShadow receiveShadow>
-      <meshStandardMaterial color={dimmed ? "#43505b" : part.color} roughness={0.46} metalness={0.08} />
-    </mesh>)}
+    <SvgReliefParts markup={markup} dimmed={dimmed} />
+  </group>;
+}
+
+function SuitToken({ markup, dimmed, reduced, squareId, anchors }: {
+  markup: string; dimmed: boolean; reduced: boolean; squareId: number; anchors: Map<string, HTMLSpanElement>;
+}) {
+  const group = useRef<Group>(null);
+  const point = useMemo(() => new Vector3(), []);
+  const { camera, size } = useThree();
+  useFrame(({ clock }) => {
+    if (!group.current) return;
+    group.current.position.y = TILE_TOP + 1.35 + (reduced ? 0 : Math.sin(clock.elapsedTime * 1.8 + squareId) * 0.06);
+    group.current.rotation.y = reduced ? 0.18 : clock.elapsedTime * 0.45 + squareId * 0.7;
+    projectAnchor(anchors.get(`square:${squareId}`), group.current.getWorldPosition(point), camera, size);
+  });
+  return <group ref={group} position={[-0.85, TILE_TOP + 1.35, -0.95]}>
+    <group position={[0, 0, -0.14]} scale={[0.72, -0.72, 1]}>
+      <SvgReliefParts markup={markup} dimmed={dimmed} depth={0.28} bevel={0.045} roughness={0.32} metalness={0.16} />
+    </group>
   </group>;
 }
 
@@ -417,10 +399,15 @@ function projectAnchor(element: HTMLSpanElement | undefined, position: Vector3, 
   element.style.transform = `translate(${(position.x + 1) * size.width / 2 - 1}px,${(1 - position.y) * size.height / 2 - 1}px)`;
 }
 
-function SquareAnchors({ squares, anchors }: { squares: SquareInfo[]; anchors: Map<string, HTMLSpanElement> }) {
+function SquareAnchors({ squares, artwork, anchors }: {
+  squares: SquareInfo[]; artwork: Map<number, TileArtwork>; anchors: Map<string, HTMLSpanElement>;
+}) {
   const { camera, size } = useThree();
   useFrame(() => {
-    for (const square of squares) projectAnchor(anchors.get(`square:${square.id}`), new Vector3(...boardPoint(square.position)), camera, size);
+    for (const square of squares) {
+      if (artwork.get(square.id)?.uprightSuit) continue;
+      projectAnchor(anchors.get(`square:${square.id}`), new Vector3(...boardPoint(square.position)), camera, size);
+    }
   });
   return null;
 }
