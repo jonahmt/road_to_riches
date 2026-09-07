@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, DoubleSide, ExtrudeGeometry, Group, Shape } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
@@ -66,18 +66,26 @@ export function ShopModel({ color, closed, activeOccupant, reduced }: {
   const group = useRef<Group>(null);
   const pose = shopModelPose(activeOccupant);
   const initialPose = useRef(pose);
-  const restoreAfter = useRef(0);
-  useEffect(() => {
-    restoreAfter.current = activeOccupant ? 0 : performance.now()
-      + Math.max(AI_ADJACENT_STEP_ANIMATION_MS, HUMAN_ADJACENT_STEP_ANIMATION_MS);
-  }, [activeOccupant]);
-  useFrame((_, delta) => {
+  const transition = useRef({ from: pose, start: 0, duration: 0 });
+  // Install the new motion before a frame can apply the new target pose.
+  useLayoutEffect(() => {
     if (!group.current) return;
-    if (!activeOccupant && !reduced && performance.now() < restoreAfter.current) return;
-    const blend = reduced ? 1 : 1 - Math.exp(-20 * delta);
-    group.current.position.x += (pose.position[0] - group.current.position.x) * blend;
-    group.current.position.z += (pose.position[2] - group.current.position.z) * blend;
-    group.current.scale.setScalar(group.current.scale.x + (pose.scale - group.current.scale.x) * blend);
+    transition.current = {
+      from: { position: [group.current.position.x, TILE_TOP, group.current.position.z], scale: group.current.scale.x },
+      start: performance.now() + (activeOccupant || reduced ? 0
+        : Math.max(AI_ADJACENT_STEP_ANIMATION_MS, HUMAN_ADJACENT_STEP_ANIMATION_MS)),
+      // Finish shrinking before an arriving figure completes its step.
+      duration: reduced ? 0 : activeOccupant ? 80 : 160,
+    };
+  }, [activeOccupant, reduced]);
+  useFrame(() => {
+    if (!group.current) return;
+    const motion = transition.current;
+    const progress = motion.duration ? Math.max(0, Math.min(1, (performance.now() - motion.start) / motion.duration)) : 1;
+    const blend = progress * progress * (3 - 2 * progress);
+    group.current.position.x = motion.from.position[0] + (pose.position[0] - motion.from.position[0]) * blend;
+    group.current.position.z = motion.from.position[2] + (pose.position[2] - motion.from.position[2]) * blend;
+    group.current.scale.setScalar(motion.from.scale + (pose.scale - motion.from.scale) * blend);
   });
   const shingles = useRoofTexture();
   const awning = useAwningTexture(color, closed);

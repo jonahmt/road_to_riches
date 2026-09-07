@@ -73,18 +73,22 @@ regression test checks those bounds and separation without mutating game state.
 
 Owned shops have a more specific occupied-tile arrangement. The active figure
 stands left of center, behind the rent strip, on a base fitted to its feet. The
-shop moves into the rear-right corner at 52% scale while the active player is
-there; all of its ownership and closure materials remain visible. Up to three
-inactive figures use separate positions around that miniature. Without an
-active occupant, the full-size shop remains and inactive figures stand along
-its right side behind the rent strip. This follows the readable occupied-shop
+shop moves toward the rear at 48% scale while the active player is there; all
+of its ownership and closure materials remain visible. Up to three inactive
+figures keep a stable row along its right side behind the rent strip, whether
+the active player is present or elsewhere. The compact footprint and its path
+to full size both clear that row, avoiding figures crossing the building during
+arrival or departure. This follows the readable occupied-shop
 price in the reference frame around 40:46; the particular miniature-house
 arrangement is an experimental interpretation. Custom parties that exceed the
 four-player arrangement retain the previous general layout.
 
-Shop transforms ease between these poses. Expansion waits until the longest
-existing adjacent step (135ms) has finished, avoiding growth into the departing
-figure. A step with horizontal travel into or out of an active owned-shop
+Shop transforms use smoothstep interpolation: 80ms to compact before an
+arriving figure completes its step, and 160ms to expand. Expansion waits until
+the longest existing adjacent step (135ms) has finished, avoiding growth into
+the departing figure. A layout effect installs each transition before the
+next rendered frame; a passive effect allowed one frame to apply the new target
+using the preceding transition. A step with horizontal travel into or out of an active owned-shop
 position curves through the front of the tile; pure vertical travel and
 rearrangement within one square retain the ordinary path. The existing 100ms
 human/135ms AI timing and hop are unchanged. Reduced motion applies final poses
@@ -303,6 +307,15 @@ this temporary preview server. This branch can also run against any compatible
 server using the connection form.
 
 ## Verification
+
+A frame-by-frame follow-up reviewed a four-figure shop as the active player
+left and undid the step. It caught inactive figures crossing the miniature
+and a premature first-frame expansion. The stable side row and synchronous
+transition setup removed those building overlaps in the recaptured sequence.
+The final arrangement was also inspected at 1280 by 720, from an overhead
+angled camera, and during reduced-motion departure and return. Geometry
+coverage verifies unchanged inactive positions and clearance throughout the
+house's size change. All 95 browser tests and the production build passed.
 
 The occupied-shop pass was rendered with four figures on a closed shop whose
 rent was 4,135, and with three inactive figures beside its full-size model.

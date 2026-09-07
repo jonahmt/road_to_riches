@@ -102,15 +102,37 @@ test("larger custom parties retain a finite layout when the four-player shop arr
   assert.ok(piecePositions(state).every((piece) => piece.position.every(Number.isFinite)));
 });
 
+test("inactive shop figures stay put and clear the house throughout arrival and departure", () => {
+  const shop = { ...squares[1], property_owner: 0 };
+  const state = { board: { squares: [squares[0], shop] },
+    players: Array.from({ length: 4 }, (_, player_id) => ({ player_id, position: shop.id, bankrupt: false })),
+    current_player_index: 0 } as GameState;
+  const occupied = piecePositions(state).filter((piece) => !piece.active);
+  state.players[0].position = 0;
+  const unoccupied = piecePositions(state).filter((piece) => !piece.active);
+  assert.deepEqual(occupied, unoccupied, "inactive figures need no rearrangement as the active figure moves");
+  const compact = shopModelPose(true), full = shopModelPose(false);
+  for (let frame = 0; frame <= 40; frame++) {
+    const t = frame / 40;
+    const right = compact.position[0] + (full.position[0] - compact.position[0]) * t
+      + 1.12 * (compact.scale + (full.scale - compact.scale) * t);
+    for (const piece of occupied) {
+      assert.ok(piece.position[0] - shop.position[0] - piece.baseRadius * piece.scale > right,
+        "the growing roof never reaches the inactive figures");
+    }
+  }
+});
+
 test("shop steps pass in front of the miniature house in either direction and keep exact endpoints", () => {
+  const pose = shopModelPose(true);
   for (const direction of [-1, 1]) {
     const from: [number, number, number] = [-0.9, 0.4, -0.35];
     const to: [number, number, number] = [from[0] + direction * 4, 0.4, -0.35];
-    const houseX = direction === 1 ? 1.15 : -4 + 1.15;
+    const houseX = (direction === 1 ? 0 : -4) + pose.position[0];
     for (let index = 0; index <= 20; index++) {
       const point = pieceStepPosition(from, to, index / 20, 1.3);
-      const distance = Math.hypot(Math.max(houseX - 1.12 * 0.52 - point[0], 0, point[0] - houseX - 1.12 * 0.52),
-        Math.max(-1.08 - 0.99 * 0.52 - point[2], 0, point[2] - (-1.08 + 1.24 * 0.52)));
+      const distance = Math.hypot(Math.max(houseX - 1.12 * pose.scale - point[0], 0, point[0] - houseX - 1.12 * pose.scale),
+        Math.max(pose.position[2] - 0.99 * pose.scale - point[2], 0, point[2] - (pose.position[2] + 1.24 * pose.scale)));
       assert.ok(distance > 0.65 * 1.22, "the moving base clears the miniature shop");
       assert.ok(point[2] + 0.65 * 1.22 < 2, "the path stays inside the row of tiles");
     }

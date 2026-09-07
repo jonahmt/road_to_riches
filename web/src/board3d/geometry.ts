@@ -50,7 +50,7 @@ export function focusPoint(state: GameState, districtId: number | null): Point3 
 
 export function shopModelPose(activeOccupant: boolean) {
   return activeOccupant
-    ? { position: [1.15, TILE_TOP, -1.08] as Point3, scale: 0.52 }
+    ? { position: [0.55, TILE_TOP, -1.25] as Point3, scale: 0.48 }
     : { position: [0, TILE_TOP, -0.63] as Point3, scale: 1 };
 }
 
@@ -80,11 +80,9 @@ export function piecePositions(state: GameState) {
     const ownedShop = square.type === "SHOP" && square.property_owner != null && others.length <= 3;
     if (ownedShop) {
       // Keep every base behind the front rent strip. The active shop moves
-      // into the rear-right corner, leaving space for all four figures.
+      // toward the rear, leaving a stable side row for inactive figures.
       if (active) [offsetX, offsetZ] = [-0.9, -0.35];
-      else if (sharedWithActive) {
-        [offsetX, offsetZ] = [[1.25, 0.12], [0.35, 0.12], [0.1, -1.37]][index]!;
-      } else [offsetX, offsetZ] = [1.58, 0.18 - index * 0.82];
+      else [offsetX, offsetZ] = [1.58, 0.18 - index * 0.82];
     }
     return [{ player, active, position: boardPoint([
       square.position[0] + offsetX,
