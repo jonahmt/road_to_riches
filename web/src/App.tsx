@@ -1518,6 +1518,8 @@ function BoardPanel(props: BoardPanelProps) {
 // values share the production artwork and formulas rather than a second ruleset.
 function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
   const shop = isShopSquare(square);
+  const object: TileArtwork["object"] = square.type === "CANNON" ? "cannon"
+    : square.type === "ROLL_ON" ? "die" : square.type === "SWITCH" ? "switch" : null;
   let icon = isSuitIconSquare(square) ? <SuitIcon suit={square.suit} squareType={square.type} x={0} y={0} />
     : isBankIconSquare(square) ? <BankIcon x={0} y={0} />
     : isStockbrokerIconSquare(square) ? <StockbrokerIcon x={0} y={0} />
@@ -1537,6 +1539,8 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
   if (square.type === "BANK" || square.type === "STOCKBROKER") {
     icon = <SquareIconLabel className={square.type === "STOCKBROKER" ? "stockbroker-icon-label" : ""}
       label={square.type} x={0} y={2.82} />;
+  } else if (object) {
+    icon = <SquareIconLabel label={square.type.replaceAll("_", " ")} x={0} y={2.82} />;
   }
   const priceText = rawGold(square.shop_current_value ?? square.shop_base_value);
   const sign = shop && square.property_owner === null ? renderToStaticMarkup(
@@ -1590,7 +1594,7 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
     <rect x={-1.94} y={-1.94} width={3.88} height={3.88} rx={0.1} fill="none"
       stroke={shop ? "#0b2038" : "#cfc6ad"} strokeOpacity=".45" strokeWidth={0.045} />
   </svg>);
-  return { surface, symbol, sign, border, description: `Square ${square.id}: ${displayTypeForSquare(square)}` };
+  return { object, surface, symbol, sign, border, description: `Square ${square.id}: ${displayTypeForSquare(square)}` };
 }
 
 function SvgBoardPanel({

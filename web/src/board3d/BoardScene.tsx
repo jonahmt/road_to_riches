@@ -18,11 +18,13 @@ import { PlayerFigure } from "./PlayerFigure";
 import { CivicBuilding } from "./CivicBuilding";
 import { MovementGuideButtons, MovementGuideMeshes, type MovementButtons } from "./MovementGuides";
 import { movementGuides } from "./movementPresentation";
+import { MechanicalObject, type MechanicalObjectKind } from "./MechanicalObject";
 import "./board3d.css";
 
 const FOLLOW_CAMERA_OFFSET: Point3 = [0, 24, 24];
 
 export interface TileArtwork {
+  object: MechanicalObjectKind | null;
   surface: string;
   symbol: string | null;
   sign: string | null;
@@ -322,7 +324,8 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, reduc
       closed={square.statuses.some((status) => status.type === "closed")} />}
     {bank && <CivicBuilding color={eligible ? (square.type === "BANK" ? "#d2a543" : "#359e78") : "#46505a"}
       stockbroker={square.type === "STOCKBROKER"} />}
-    {!shop && !bank && artwork.symbol && <SymbolRelief markup={artwork.symbol} dimmed={!eligible} />}
+    {artwork.object && <MechanicalObject kind={artwork.object} dimmed={!eligible} />}
+    {!shop && !bank && !artwork.object && artwork.symbol && <SymbolRelief markup={artwork.symbol} dimmed={!eligible} />}
   </group>;
 }
 

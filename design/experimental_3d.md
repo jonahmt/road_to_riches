@@ -71,6 +71,32 @@ left and inactive figures form a separate row along the right edge. Two to four
 players retain non-overlapping bases inside the original tile footprint. A
 regression test checks those bounds and separation without mutating game state.
 
+`MechanicalObject.tsx` replaces the extruded flat drawings of Cannon, Roll On,
+and Switch with solid procedural objects. The cannon keeps its green barrel,
+grey carriage/muzzle and yellow wheels, with a recessed bore and wheel hubs.
+Roll On uses a rounded six-sided die; its normal view retains the original
+1/2/3 face arrangement, and opposite faces total seven. The switch keeps a flat
+yellow circular face inside a dark separator and grey metal rim. Their shared
+tile descriptor selects these models without loading Three.js into the main
+application bundle. The 2D renderer and minimap retain the approved SVG artwork.
+
+These three models sit toward the back of their tile, with the fitted label on
+the front surface, following the established bank layout. The placement was
+corrected after an actual render showed the taller die and cannon covering the
+old label position. Model hits bubble through the existing tile inspection and
+eligibility handlers; the geometry does not add a new gameplay action.
+An occupied-tile fixture also exposed overlap with the full-size figure and its
+base. The final 1.35-unit die and the switch sit toward the rear left, while the
+cannon sits farther back. This reserves space for the existing figure positions
+without moving a player's authoritative square or changing the model at turn
+handoff.
+
+The additional reference frame at 41:55 reinforces the contrast between solid
+board objects, deep tile frames, compact player cards and gold selected menu
+rows. The procedural mechanical models apply that physical style to the
+project's existing icon identities; these particular square types are not
+depicted in that Trodain frame.
+
 ## Renderer and state boundary
 
 The browser uses Three.js 0.185 and React Three Fiber 9.7. `BoardScene.tsx` is a
@@ -216,6 +242,16 @@ keys cannot confirm it. No browser runtime errors occurred. All 87 browser
 tests, type checking, Ruff, and the production build passed. The additional
 tests protect authoritative choice IDs, player eligibility, malformed payloads,
 undo availability, and placement on negative/fractional coordinates.
+
+The mechanical objects were reviewed on the all-square-types board through the
+private server at 18768: a full-board view, a closer panned view, an orbited view
+showing the cannon's bore and alternate die faces, and a 1280 by 720 layout.
+Pointer hits on the cannon, switch, and die selected squares 17, 18, and 14
+respectively. Switching to 2D confirmed that the original icons remained intact.
+Additional fixtures at 18769 checked active and inactive figures on the new
+objects, including side views that exposed and corrected the initial overlap.
+All 87 browser tests, type checking, Ruff, and the production build passed with
+no browser runtime errors during the review.
 
 A warm, stationary Trodain view at 1600 by 1000 with device pixel ratio 1 was
 sampled for 120 animation frames in headless Chrome on this machine's Apple M1
