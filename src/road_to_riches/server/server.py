@@ -205,6 +205,26 @@ class GameServer:
                     await self._handle_join_game(ws, msg, host=host, port=port)
                 elif msg_type == "claim_player":
                     await self._handle_claim_player(ws, session, msg, host=host, port=port)
+                elif msg_type == "playback_speed":
+                    try:
+                        session.set_playback_speed(ws, msg.get("speed"))
+                    except SessionError as exc:
+                        await ws.send(encode(msg_error(str(exc), session.session_id)))
+                    await self._send_playback_settings(session)
+                elif msg_type == "claim_local_players":
+                    if not session.playback_settings(ws)["can_claim_all"]:
+                        await ws.send(
+                            encode(
+                                msg_error(
+                                    "Other human seats are already connected", session.session_id
+                                )
+                            )
+                        )
+                    else:
+                        for pid in session.open_human_player_ids():
+                            session.claim_human(ws, pid)
+                        await self._send_playback_settings(session)
+                        self._check_session_progress(session, host=host, port=port)
                 # AI clients identify themselves with a pre-assigned player_id
                 elif msg_type == "identify":
                     pid = msg["player_id"]
@@ -215,6 +235,7 @@ class GameServer:
                         )
                         continue
                     session.register_player(ws, pid)
+                    session.playback_clients.add(ws)
                     self._sessions.bind_connection(ws, session.session_id)
                     logger.info(
                         "AI player %d connected to %s (%d/%d total)",
@@ -223,6 +244,7 @@ class GameServer:
                         len(session.player_to_ws),
                         session.config.num_players,
                     )
+                    await self._send_playback_settings(session)
                     self._check_session_progress(session)
 
                 elif msg_type == "input_response":
@@ -264,6 +286,8 @@ class GameServer:
                 elif msg_type == "presentation_client":
                     assert session.player_input is not None
                     session.player_input.pacer.register(ws, msg.get("visible") is True)
+                    session.playback_clients.add(ws)
+                    await ws.send(encode(session.playback_settings(ws)))
 
                 elif msg_type == "presentation_ready":
                     assert session.player_input is not None
@@ -305,7 +329,15 @@ class GameServer:
                 pids = session.remove_connection(ws)
                 self._sessions.unbind_connection(ws, session_id)
                 logger.info("Client removed from %s (players %s)", session_id, pids)
+                await self._send_playback_settings(session)
                 self._retire_finished_session(session)
+
+    async def _send_playback_settings(self, session: GameSession) -> None:
+        for client in list(session.playback_clients & session.ws_to_players.keys()):
+            try:
+                await client.send(encode(session.playback_settings(client)))
+            except websockets.exceptions.ConnectionClosed:
+                pass
 
     def _retire_finished_session(self, session: GameSession) -> None:
         """Release completed lobby sessions after their final client leaves."""
@@ -323,6 +355,7 @@ class GameServer:
 
         # Tell the client which player they are
         await ws.send(encode(msg_assign_player(player_id, game_id=session.session_id)))
+        await self._send_playback_settings(session)
         logger.info(
             "Human player %d connected to %s (%d/%d humans)",
             player_id,
@@ -427,6 +460,7 @@ class GameServer:
                 reason=f"Player {player_id} was opened in another browser tab.",
             )
         await ws.send(encode(msg_assign_player(player_id, game_id=session.session_id)))
+        await self._send_playback_settings(session)
         logger.info(
             "Human player %d claimed in %s (%d/%d humans)",
             player_id,

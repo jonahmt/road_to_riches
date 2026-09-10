@@ -11,8 +11,8 @@ from road_to_riches.models.player_state import PlayerState
 
 def test_all_reel_outcomes_follow_approved_prizes():
     outcomes = [arcade_prize(list(reels), 3) for reels in product(SUITS, repeat=3)]
-    assert outcomes.count(150) == 4
-    assert outcomes.count(30) == 36
+    assert outcomes.count(300) == 4
+    assert outcomes.count(60) == 36
     assert outcomes.count(0) == 24
 
 
@@ -28,8 +28,8 @@ def test_arcade_starts_before_randomness_or_cash_change_and_replays_reels():
         [result] = spin.execute(state)
     assert rng.call_count == 3
     assert result.presentation_type == "arcade_result"
-    assert result.data["amount"] == 50
-    assert state.players[0].ready_cash == 150
+    assert result.data["amount"] == 100
+    assert state.players[0].ready_cash == 200
     replay = GameEvent.from_dict(spin.to_dict())
     assert isinstance(replay, ArcadeSpinEvent)
     assert replay.reels == ["HEART"] * 3

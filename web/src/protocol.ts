@@ -145,6 +145,7 @@ export interface SubmitReportMessage {
 }
 
 export type ServerMessage =
+  | { msg: "playback_settings"; speed: number; local: boolean; controlled_players: number[]; can_claim_all: boolean; game_id?: string }
   | { msg: "assign_player"; player_id: number; game_id?: string }
   | { msg: "state_sync"; state: GameState; game_id?: string; reset_presentation?: boolean }
   | { msg: "presentation_beat"; request_id: string; revision: number; type: string; player_id: number; data: Record<string, unknown>; before: GameState; after: GameState; requires_confirmation: boolean; generation: number; driver_player_id: number | null; game_id?: string }
@@ -167,6 +168,8 @@ export type ServerMessage =
   | { msg: "game_starting"; game_id: string; summary: Record<string, unknown> };
 
 export type ClientMessage =
+  | { msg: "playback_speed"; speed: number; game_id?: string }
+  | { msg: "claim_local_players"; game_id?: string }
   | { msg: "presentation_client"; visible: boolean; game_id?: string }
   | { msg: "presentation_ready"; request_id: string; generation: number; game_id?: string }
   | { msg: "input_response"; value: unknown; player_id?: number; game_id?: string }

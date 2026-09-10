@@ -162,7 +162,10 @@ export function BugReportControl({
         className="bug-report-fab"
         aria-label="Report a bug or request"
         title="Report a bug or request"
-        onClick={openReporter}
+        tabIndex={-1}
+        data-ui-pointer-only
+        onKeyDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+        onClick={(event) => { if (event.detail > 0) openReporter(); }}
       >
         <ReportBugIcon />
       </button>

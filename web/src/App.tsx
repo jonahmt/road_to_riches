@@ -1,3 +1,4 @@
+import { playbackNow } from "./playback";
 import { VentureCardReveal, VentureSelectionResult, VentureBack } from "./VenturePresentation";
 import { ArcadePresentation } from "./ArcadePresentation";
 import { statusResult } from "./statusResults";
@@ -597,6 +598,7 @@ function App() {
   const {
     clientState,
     presentationMotion,
+    playback, changePlaybackSpeed, claimLocalPlayers,
     connect,
     disconnect,
     submitResponse,
@@ -941,6 +943,7 @@ function App() {
   return (
     <PresentationMotionContext.Provider value={presentationMotion}>
     <main
+      data-stock-open={Boolean(stockRequest || (liquidationRequest && liquidationAssetMode === "stock"))}
       data-board-ready={boardReady}
       data-tools-open={devPanelOpen}
       data-request={clientState.pendingRequest?.type ?? ""}
@@ -951,6 +954,13 @@ function App() {
       className={`app-shell theme-tabletop layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""} ${squareSelection ? "is-square-picking" : ""}`}
     >
       <UiKeyboardNavigation />
+      {clientState.status === "connected" && (playback.local || playback.canClaimAll) && <div className="local-playback-controls">
+        {playback.local && <label>Game speed <select aria-label="Game speed" value={playback.speed} onChange={event => changePlaybackSpeed(Number(event.target.value))}>
+          <option value={1}>1×</option><option value={1.5}>1.5×</option><option value={2}>2×</option>
+        </select></label>}
+        {playback.canClaimAll && <button onClick={claimLocalPlayers}>Play all human seats here</button>}
+      </div>}
+      {activePresentation?.type === "dice_spinning" && <DiceSpin presentation={activePresentation} owner={activePresentation.playerId === clientState.playerId} onThrow={() => acknowledgePresentation(activePresentation.requestId)} /> }
       {clientState.gameState && !boardReady && <div className="board-loading" role="status">Preparing the board…</div>}
       {rollPhaseVisibility.gameHeader && (
         <header className="game-header">
@@ -1005,7 +1015,7 @@ function App() {
             cashDeltas={paymentCashDeltas}
           />
           <section className="game-layout">
-            <BoardPanel onReady={() => setBoardReady(true)}
+            <BoardPanel stockOpen={Boolean(stockRequest || (liquidationRequest && liquidationAssetMode === "stock"))} onReady={() => setBoardReady(true)}
               squareCursor={squareCursor.current} onCursorSquareChange={setSelectedSquareId}
               projectorRef={boardProjector}
               movementRequest={keyboardRequest?.type === "CHOOSE_PATH" ? keyboardRequest : null}
@@ -1286,7 +1296,7 @@ function App() {
           "rent_payment",
           "stock_price_changed",
           "suit_collected",
-          "dice_rolled",
+          "dice_rolled", "dice_spinning",
           "turn_started", "piece_moved", "venture_selected", "state_changed",
         ].includes(activePresentation.type) && (
           <GenericPresentation
@@ -1466,6 +1476,7 @@ function StatusPill({
 }
 
 type BoardPanelProps = Parameters<typeof SvgBoardPanel>[0] & {
+  stockOpen: boolean;
   squareCursor: SquareCursorControl;
   onCursorSquareChange: (id: number | null) => void;
   dice: DiceState | null;
@@ -1490,7 +1501,7 @@ function BoardPanel(props: BoardPanelProps) {
   return <>
     {threeDimensional && props.state && bounds ? <section className="board-panel" aria-label="3D game board">
       <Suspense fallback={<div className="board3d-error" role="status">Loading 3D board…</div>}>
-        <BoardScene onReady={props.onReady} projectorRef={props.projectorRef} state={props.state} artwork={artwork} assignedPlayerId={props.assignedPlayerId}
+        <BoardScene stockOpen={props.stockOpen} onReady={props.onReady} projectorRef={props.projectorRef} state={props.state} artwork={artwork} assignedPlayerId={props.assignedPlayerId}
           squareCursor={props.squareCursor} onCursorSquareChange={props.onCursorSquareChange}
           movementRequest={props.movementRequest} onMovementChoice={props.onMovementChoice}
           selectedSquareId={props.selectedSquare?.id ?? null} focusDistrictId={props.focusDistrictId}
@@ -1767,9 +1778,9 @@ function SvgBoardPanel({
         svg.dataset.cameraAnimating = "true";
         svg.dataset.cameraAnimationCurve = automaticAnimationCurve;
         svg.dataset.cameraAnimationDuration = String(automaticAnimationDuration);
-        const startedAt = window.performance.now();
+        const startedAt = playbackNow();
         const animate = (timestamp: number) => {
-          const progress = Math.min(1, (timestamp - startedAt) / automaticAnimationDuration);
+          const progress = Math.min(1, (playbackNow(timestamp) - startedAt) / automaticAnimationDuration);
           cameraRef.current = interpolateBoardCamera(
             from,
             target,
@@ -1888,9 +1899,9 @@ function SvgBoardPanel({
       return;
     }
 
-    const startedAt = window.performance.now();
+    const startedAt = playbackNow();
     const animate = (timestamp: number) => {
-      const progress = Math.min(1, (timestamp - startedAt) / automaticAnimationDuration);
+      const progress = Math.min(1, (playbackNow(timestamp) - startedAt) / automaticAnimationDuration);
       const easedProgress = animationProgress(progress, automaticAnimationCurve);
       for (const transition of transitions) {
         const visual = interpolateBoardToken(transition.from, transition.target, easedProgress);
@@ -2423,6 +2434,26 @@ function DieFace({ value, side }: { value: number; side: string }) {
   );
 }
 
+function DiceSpin({ presentation, owner, onThrow }: { presentation: PresentationState; owner: boolean; onThrow: () => void }) {
+  const [startedAt] = useState(playbackNow);
+  const enabled = owner && presentation.canContinue !== false && !presentation.acknowledgmentPending;
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if (isGameplayHotkeySuppressed() || !["Enter", " "].includes(event.key)) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (enabled && !event.repeat) onThrow();
+    };
+    window.addEventListener("keydown", key, true);
+    return () => window.removeEventListener("keydown", key, true);
+  }, [enabled, onThrow]);
+  return <div className="dice-spin-overlay" role="dialog" aria-label="Throw the die">
+    <div className="dice-spin-cube"><Suspense fallback={<span>🎲</span>}>
+      <PhysicalDie value={1} rolling spinning startedAt={startedAt} fallback={<span>🎲</span>} />
+    </Suspense></div>
+    {owner ? <button disabled={!enabled} data-ui-confirm onClick={onThrow}>Throw!</button> : <p>Player {presentation.playerId} is rolling…</p>}
+  </div>;
+}
+
 function BoardDice({ dice, showSettled, threeDimensional, onComplete }: {
   dice: DiceState | null; showSettled: boolean; threeDimensional: boolean;
   onComplete?: (requestId: string) => void;
@@ -2440,45 +2471,26 @@ function BoardDice({ dice, showSettled, threeDimensional, onComplete }: {
       return;
     }
     setPresentedRoll(dice);
-    setStartedAt(performance.now());
+    setStartedAt(playbackNow());
     setPhase("rolling");
 
-    const timers: number[] = [];
-    timers.push(
-      window.setTimeout(() => {
-        setPhase("event-hold");
-      }, DICE_ROLL_DURATION_MS),
-    );
-
-    if (dice.purpose === "movement") {
-      timers.push(window.setTimeout(() => setPhase("settling"), DICE_ROLL_DURATION_MS + EVENT_DICE_HOLD_DURATION_MS));
-      timers.push(
-        window.setTimeout(() => {
-          setPhase("settled");
-          setPresentedRoll(null);
-          if (dice.presentationId) onCompleteRef.current?.(dice.presentationId);
-        }, DICE_ROLL_DURATION_MS + EVENT_DICE_HOLD_DURATION_MS + DICE_SETTLE_DURATION_MS),
-      );
-    } else {
-      timers.push(
-        window.setTimeout(() => {
-          setPhase("event-fading");
-        }, DICE_ROLL_DURATION_MS + EVENT_DICE_HOLD_DURATION_MS),
-      );
-      timers.push(
-        window.setTimeout(() => {
-          setPhase("hidden");
-          setPresentedRoll(null);
-          if (dice.presentationId) onCompleteRef.current?.(dice.presentationId);
-        }, DICE_ROLL_DURATION_MS + EVENT_DICE_HOLD_DURATION_MS + EVENT_DICE_FADE_DURATION_MS),
-      );
-    }
-
-    return () => {
-      for (const timer of timers) {
-        window.clearTimeout(timer);
-      }
+    const start = playbackNow();
+    let frame = 0;
+    const tick = () => {
+      const elapsed = playbackNow() - start;
+      const tumbleEnd = DICE_ROLL_DURATION_MS;
+      const readEnd = tumbleEnd + EVENT_DICE_HOLD_DURATION_MS;
+      const end = readEnd + (dice.purpose === "movement" ? DICE_SETTLE_DURATION_MS : EVENT_DICE_FADE_DURATION_MS);
+      setPhase(elapsed < tumbleEnd ? "rolling" : elapsed < readEnd ? "event-hold" : elapsed < end
+        ? dice.purpose === "movement" ? "settling" : "event-fading"
+        : dice.purpose === "movement" ? "settled" : "hidden");
+      if (elapsed >= end) {
+        setPresentedRoll(null);
+        if (dice.presentationId) onCompleteRef.current?.(dice.presentationId);
+      } else frame = requestAnimationFrame(tick);
     };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
   }, [dice?.animationId]);
 
   const activeDice = presentedRoll ?? dice;
@@ -4270,6 +4282,7 @@ function StockOverlay({
   const requestKey = `${request.type}:${request.player_id}:${[...maximumByDistrict.entries()].map(([id, maximum]) => `${id}-${maximum}`).join("|")}`;
   const [selectedDistrictId, setSelectedDistrictId] = useState(firstDistrictId);
   const [quantity, setQuantity] = useState(1);
+  const [stage, setStage] = useState<"district" | "quantity">("district");
   const [usingKeyboardNavigation, setUsingKeyboardNavigation] = useState(false);
   const submittedRef = useRef(false);
   const overlayRef = useRef<HTMLElement | null>(null);
@@ -4315,6 +4328,7 @@ function StockOverlay({
     const maximum = maximumByDistrict.get(districtId) ?? 0;
     setUsingKeyboardNavigation(inputMode === "keyboard");
     setSelectedDistrictId(districtId);
+    setStage("district");
     setQuantity(defaultStockQuantity(mode, maximum, price, cashDeficit));
   }
 
@@ -4322,6 +4336,7 @@ function StockOverlay({
     if (!canSubmitStock || selectedStock === null) {
       return;
     }
+    if (stage === "district") { setStage("quantity"); return; }
     submittedRef.current = true;
     onSubmit(
       mode === "liquidate"
@@ -4334,6 +4349,7 @@ function StockOverlay({
     if (responsePending || submittedRef.current) {
       return;
     }
+    if (stage === "quantity") { setStage("district"); return; }
     if (mode === "liquidate") {
       onBack?.();
       return;
@@ -4344,6 +4360,7 @@ function StockOverlay({
 
   useEffect(() => {
     submittedRef.current = false;
+    setStage("district");
     setUsingKeyboardNavigation(false);
     setSelectedDistrictId(firstDistrictId);
     const firstStock = districts.find((stock) => stock.district_id === firstDistrictId);
@@ -4377,7 +4394,7 @@ function StockOverlay({
       const currentIndex = districts.findIndex(
         (stock) => stock.district_id === selectedDistrictId,
       );
-      if (["w", "arrowup", "s", "arrowdown"].includes(key) && districts.length > 0) {
+      if (stage === "district" && ["w", "arrowup", "s", "arrowdown"].includes(key) && districts.length > 0) {
         event.preventDefault();
         event.stopPropagation();
         setUsingKeyboardNavigation(true);
@@ -4392,7 +4409,7 @@ function StockOverlay({
         selectDistrict(districts[nextIndex].district_id, "keyboard");
         return;
       }
-      if (["a", "arrowleft", "d", "arrowright"].includes(key)) {
+      if (stage === "quantity" && ["a", "arrowleft", "d", "arrowright", "w", "arrowup", "s", "arrowdown"].includes(key)) {
         event.preventDefault();
         event.stopPropagation();
         setUsingKeyboardNavigation(true);
@@ -4402,7 +4419,7 @@ function StockOverlay({
         ) {
           document.activeElement.blur();
         }
-        const direction = key === "a" || key === "arrowleft" ? -1 : 1;
+        const direction = ["a", "arrowleft", "s", "arrowdown"].includes(key) ? -1 : 1;
         setQuantity((current) => clampStockQuantity(current + direction, selectedMaximum));
         return;
       }
@@ -4422,6 +4439,7 @@ function StockOverlay({
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [
+    stage,
     districts,
     mode,
     responsePending,
@@ -4448,7 +4466,7 @@ function StockOverlay({
   return (
     <section
       ref={overlayRef}
-      className={`stock-overlay stock-mode-${mode} ${usingKeyboardNavigation ? "is-keyboard-navigation" : ""} ${responsePending ? "is-resolving" : ""}`}
+      className={`stock-overlay stock-stage-${stage} stock-mode-${mode} ${usingKeyboardNavigation ? "is-keyboard-navigation" : ""} ${responsePending ? "is-resolving" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="stock-overlay-title"
@@ -4461,12 +4479,12 @@ function StockOverlay({
           <div>
             <p className="eyebrow">Stock Exchange</p>
             <h2 id="stock-overlay-title">{title}</h2>
-            <p>{instruction}</p>
+            <p>{stage === "district" ? instruction : `You can ${mode === "buy" ? "buy" : "sell"} up to ${selectedMaximum} stocks. How many?`}</p>
           </div>
           <div className="stock-player-summary" role="group" aria-label={`Player ${request.player_id} finances`}>
             <PlayerPortrait color={getPlayerColor(request.player_id)} playerId={request.player_id} />
             <dl>
-              <div><dt>Stocks</dt><dd>{Object.values(player?.owned_stock ?? {}).reduce((sum, held) => sum + held, 0)}</dd></div>
+              <div><dt>Stocks</dt><dd>{state.stock.stocks.reduce((sum, stock) => sum + (player?.owned_stock[String(stock.district_id)] ?? 0) * stockPrice(stock), 0)}</dd></div>
               <div><dt>Ready cash</dt><dd>{formatGold(cash)}</dd></div>
             </dl>
           </div>
@@ -4484,23 +4502,16 @@ function StockOverlay({
                 <span>District</span>
                 <span>Price</span>
                 {state.players.map((marketPlayer) => (
-                  <span key={marketPlayer.player_id} style={{ color: getPlayerColor(marketPlayer.player_id) }}>
-                    P{marketPlayer.player_id}
+                  <span key={marketPlayer.player_id} style={{ "--column-color": getPlayerColor(marketPlayer.player_id) } as CSSProperties}>
+                    <PlayerPortrait color={getPlayerColor(marketPlayer.player_id)} playerId={marketPlayer.player_id} />
                   </span>
                 ))}
-                <span>Shop value</span>
+
               </div>
               {districts.map((stock) => {
                 const districtId = stock.district_id;
                 const maximum = maximumByDistrict.get(districtId) ?? 0;
                 const selected = districtId === selectedStock?.district_id;
-                const shops = state.board.squares.filter(
-                  (square) => square.type === "SHOP" && square.property_district === districtId,
-                );
-                const shopValue = shops.reduce(
-                  (sum, shop) => sum + (shop.shop_current_value ?? shop.shop_base_value ?? 0),
-                  0,
-                );
                 return (
                   <button
                     key={districtId}
@@ -4515,9 +4526,9 @@ function StockOverlay({
                     <span>{formatGold(promptPriceByDistrict.get(districtId) ?? stockPrice(stock))}</span>
                     {state.players.map((marketPlayer) => {
                       const held = marketPlayer.owned_stock[String(districtId)] ?? 0;
-                      return <span key={marketPlayer.player_id}>{held > 0 ? held : "—"}</span>;
+                      return <span key={marketPlayer.player_id} style={{ "--column-color": getPlayerColor(marketPlayer.player_id) } as CSSProperties}>{held > 0 ? held : "—"}</span>;
                     })}
-                    <span>{formatGold(shopValue)}</span>
+
                   </button>
                 );
               })}
@@ -4532,6 +4543,7 @@ function StockOverlay({
                 <span>{selectedShops.length} shops</span>
               </header>
               <div className="stock-shop-strip">
+                <div className="stock-shop-labels"><span>Shop value</span><span>Shop price</span><span>Max capital</span></div>
                 {selectedShops.map((shop) => {
                   const ownerColor =
                     shop.property_owner === null ? "#70747d" : getPlayerColor(shop.property_owner);
@@ -4541,6 +4553,7 @@ function StockOverlay({
                       className="stock-shop-card"
                       style={{ "--shop-owner-color": ownerColor } as CSSProperties}
                     >
+                      <svg className="stock-shop-miniature" viewBox="0 0 80 70" aria-hidden="true"><path d="M16 28h48v35H16z" fill="#f5dfb5" stroke="#273644" strokeWidth="3"/><path d="M8 30L40 5l32 25z" fill={ownerColor} stroke="#273644" strokeWidth="3"/><path d="M33 63V44h14v19" fill="#303a51"/><path d="M22 37h8v11h-8zM51 37h8v11h-8z" fill="#8dddf1"/></svg>
                       <div className="stock-shop-owner">
                         <span>Shop #{shop.id}</span>
                         <strong>{shop.property_owner === null ? "Unowned" : `Player ${shop.property_owner}`}</strong>
@@ -4566,6 +4579,7 @@ function StockOverlay({
           </div>
 
           <aside className="stock-transaction-panel">
+            {stage === "district" && <div className="stock-map"><BoardMinimap state={state} bounds={getBoardBounds(state)} /></div>}
             <div className="stock-selection-summary">
               <span>Selected</span>
               <strong>{selectedStock ? districtLabel(selectedStock.district_id) : "—"}</strong>
@@ -4635,16 +4649,15 @@ function StockOverlay({
               disabled={!canSubmitStock}
               onClick={submitStock}
             >
-              {responsePending || submittedRef.current ? "Resolving..." : primaryLabel}
+              {responsePending || submittedRef.current ? "Resolving..." : stage === "district" ? "Choose district" : primaryLabel}
             </button>
             {(mode !== "liquidate" || onBack) && (
               <button type="button" className="secondary" onClick={cancel}>
-                {mode === "liquidate" ? "Back to Asset Choice" : "Cancel"}
+                {stage === "quantity" ? "Back to districts" : mode === "liquidate" ? "Back to Asset Choice" : "Cancel"}
               </button>
             )}
             <div className="stock-keyboard-help">
-              <p><strong>W/S or ↑/↓</strong> district</p>
-              <p><strong>A/D or ←/→</strong> quantity</p>
+              <p><strong>WASD / arrows</strong> {stage === "district" ? "choose district" : "change quantity"}</p>
               <p>
                 <strong>Enter</strong> confirm
                 {mode === "liquidate" ? " · Esc back" : " · Esc cancel"}

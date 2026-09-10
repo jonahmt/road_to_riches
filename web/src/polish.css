@@ -1,0 +1,79 @@
+/* Every menu uses gold for the current choice, dark for other choices. */
+.app-shell.theme-tabletop.layout-immersive :is(.action-grid,.turn-menu,.script-decision-options,.offer-response-actions,.counter-offer-actions,.financial-amount-stepper,.stock-transaction-panel) button:not(:disabled) {
+  background: linear-gradient(#24344c,#101828); color: #fff8e9;
+  border-color: #95a2b0; box-shadow: inset 0 1px #ffffff26,0 2px 2px #0008;
+}
+.app-shell.theme-tabletop.layout-immersive button:is([data-ui-selected="true"],:focus-visible,:hover):not(:disabled):not(.venture-card):not(.stock-district-row),
+.app-shell.theme-tabletop.layout-immersive .turn-menu button.is-selected {
+  background: linear-gradient(#fff8bf,#ffdc4f 58%,#edae24); color:#172333;
+  border-color:#fff4ba; box-shadow:inset 0 0 0 2px #ffe88a,0 2px 4px #0008;
+}
+.local-playback-controls { position:fixed; bottom:10px; left:12px; z-index:230; padding:6px 10px; border:1px solid #91a0ab; border-radius:7px; background:#101828ed; color:#fff; font-size:12px; }
+.local-playback-controls select { padding:3px 6px; margin-left:5px; background:#23334b; color:#fff; border:1px solid #aab4be; }
+.dice-spin-overlay { position:fixed; inset:0; z-index:180; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; pointer-events:none; }
+.dice-spin-cube { width:210px; height:210px; filter:drop-shadow(0 14px 10px #0007); }
+.dice-spin-overlay button { pointer-events:auto; min-width:170px; min-height:54px; font-size:26px; }
+.dice-spin-overlay p { background:#102039e8; color:white; padding:12px 24px; border-radius:8px; }
+.app-shell[data-pacing-type="dice_spinning"] .board-dice { visibility:hidden; }
+
+/* District then amount: keep the board and the same market table in view. */
+.app-shell.theme-tabletop.layout-immersive .stock-overlay { background:#07142640; padding:8vh 5vw 3vh; }
+.app-shell.theme-tabletop.layout-immersive .stock-overlay-shell { width:min(1280px,94vw); max-height:88vh; background:transparent; border:0; box-shadow:none; overflow:auto; }
+.app-shell.theme-tabletop.layout-immersive .stock-overlay-header { background:transparent; border:0; padding:0 0 24px; gap:30px; }
+.stock-overlay-header > div:first-child { background:#08101dbb; border-block:3px solid #e5e9e3; padding:8px 20px; }
+.stock-overlay-header .eyebrow { display:none; }
+.stock-overlay-header h2 { font-size:24px; }
+.stock-overlay-header p { font-size:19px; color:#fff; }
+.stock-player-summary { background:#10102ce8; border:4px solid #8ab06e; border-radius:8px; min-width:270px; }
+.app-shell.theme-tabletop.layout-immersive .stock-overlay-main { display:grid; grid-template-columns:minmax(230px,.75fr) minmax(400px,1.5fr); gap:32px; padding:0; background:transparent; align-items:start; }
+.stock-market-panel { grid-column:2; grid-row:1; }
+.app-shell.theme-tabletop.layout-immersive .stock-transaction-panel { grid-column:1; grid-row:1; padding:16px; background:#11102bea; border:3px solid #96a6bc; border-radius:10px; }
+.stock-district-header,.app-shell.theme-tabletop.layout-immersive .stock-district-row { display:grid; grid-template-columns:minmax(125px,1.5fr) minmax(75px,1fr) repeat(var(--stock-player-count),minmax(60px,1fr)); gap:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.stock-district-header > span,.stock-district-row > span { background:#090826ed; padding:12px 4px; text-align:center; font-size:22px; color:#fff; border-inline:4px solid var(--column-color,#bbc3ca); }
+.stock-district-header > span { border-radius:8px 8px 0 0; border-top:4px solid var(--column-color,#bbc3ca); height:68px; display:flex; align-items:center; justify-content:center; }
+.stock-district-header > span:first-child { background:transparent; border:0; }
+.stock-district-header .player-portrait { width:48px; height:48px; }
+.stock-district-row > strong { background:#050b15cb; margin:3px 6px 3px 0; border-block:2px solid #c2c6c7; padding:9px 5px; font-size:18px; color:#fff; }
+.stock-district-row:last-child > span { border-bottom:4px solid var(--column-color,#bbc3ca); border-radius:0 0 7px 7px; }
+.app-shell.theme-tabletop.layout-immersive .stock-district-row.is-selected { background:transparent; box-shadow:none; }
+.stock-district-row.is-selected > :is(strong,span) { background:linear-gradient(#fff4a4e8,#eabc44df); color:#101622; box-shadow:inset 0 2px #fff3bb,inset 0 -2px #fff3bb; }
+.app-shell.theme-tabletop.layout-immersive .stock-district-row:hover:not(.is-selected) { background:#ffe06622; }
+.stock-shop-section { margin-top:26px; background:transparent; border:0; padding:0; }
+.stock-shop-section > header { display:none; }
+.stock-shop-strip { display:flex; justify-content:center; align-items:end; gap:8px; overflow:auto; padding:6px 0; }
+.stock-shop-labels { display:flex; flex-direction:column; gap:8px; padding:10px 8px; white-space:nowrap; color:#fff; font-size:16px; text-align:right; background:#06131cc9; border:2px solid #ddd; border-radius:7px; }
+.stock-shop-card { position:relative; flex:1; min-width:85px; max-width:150px; padding:7px; margin-top:52px; border:3px solid var(--shop-owner-color); border-radius:7px; background:#090c20ed; }
+.stock-shop-miniature { position:absolute; width:68px; height:60px; top:-56px; left:50%; transform:translateX(-50%); }
+.stock-shop-owner { display:none; }
+.stock-shop-card dl { display:flex; flex-direction:column; gap:8px; margin:0; }
+.stock-shop-card dl > div { display:block; border:0; padding:0; }
+.stock-shop-card dt { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.stock-shop-card dd { margin:0; font-size:16px; text-align:center; color:white; }
+.stock-stage-district .stock-quantity-control,.stock-stage-district .stock-transaction-math { display:none; }
+.stock-quantity-control .financial-amount-stepper input { font:900 42px monospace; color:#111; background:linear-gradient(#aaa,#fff 48%,#bbb); }
+.stock-keyboard-help { font-size:12px; }
+@media(max-width:760px) {
+  .app-shell.theme-tabletop.layout-immersive .stock-overlay { padding:6vh 2vw; }
+  .app-shell.theme-tabletop.layout-immersive .stock-overlay-main { grid-template-columns:1fr; gap:16px; }
+  .stock-market-panel { grid-column:1; grid-row:1; }
+  .app-shell.theme-tabletop.layout-immersive .stock-transaction-panel { grid-row:2; }
+  .stock-overlay-header > div:first-child { padding:4px 8px; }
+  .stock-player-summary { min-width:180px; }
+  .stock-district-header,.app-shell.theme-tabletop.layout-immersive .stock-district-row { grid-template-columns:100px 65px repeat(var(--stock-player-count),minmax(40px,1fr)); }
+  .stock-district-row > span { font-size:17px; }
+}
+
+.app-shell.theme-tabletop.layout-immersive .stock-overlay { backdrop-filter:none; }
+.stock-district-table { gap:0; }
+.stock-district-header { background:transparent; }
+.stock-market-panel { padding:0; border:0; }
+.stock-district-row.is-unavailable { opacity:1; }
+.app-shell[data-stock-open="true"] :is(.player-hud,.board-panel > .board-minimap,.game-header,.board-camera-controls,.board-renderer-toggle) { visibility:hidden; }
+.app-shell.theme-tabletop.layout-immersive .stock-overlay-header p { font-size:21px; line-height:1.35; }
+.app-shell.theme-tabletop.layout-immersive .stock-overlay-header h2 { font-size:26px; }
+.app-shell.theme-tabletop.layout-immersive .stock-quantity-control .financial-amount-stepper input { font:900 42px monospace; background:linear-gradient(#aaa,#fff 48%,#bbb); color:#111; }
+.stock-map { height:210px; position:relative; display:grid; place-items:center; }
+.stock-map .board-minimap { position:static; width:200px; height:200px; max-width:100%; visibility:visible; }
+.local-playback-controls { left:84px; }
+.local-playback-controls label { display:flex; align-items:center; gap:5px; margin:0; font-size:12px; line-height:1.3; }
+.local-playback-controls { top:14px; right:84px; bottom:auto; left:auto; }

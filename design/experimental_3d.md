@@ -983,3 +983,56 @@ Replaying the original forced-auction fixture now opens the 190-value shop at
 777 Python tests, 114 TypeScript tests, three server-rendered React tests, Ruff,
 TypeScript checking, and the production build. The previous implementation
 remains available at commit `7f24320` on the same experimental branch.
+
+
+## Shared-browser presentation polish
+
+Square picking keeps its world-space cursor on the board plane at the viewport
+center. Keyboard motion and relative pointer motion move the raw world position;
+nearby shops magnetize its displayed position. The camera translates with that
+displayed point, preserving its pitch and distance, then restores the preceding
+view when selection ends. Occupied shop plaques keep their full footprint.
+Suit tokens are centered and enlarged when unoccupied, and move aside at a
+smaller size when the active piece occupies that square.
+
+Menu options use dark neutral surfaces; gold indicates the selected, focused,
+or hovered option. Feedback is excluded from keyboard navigation and Tab order,
+and requires a pointer click. Its modal remains keyboard-operable after opening.
+
+Rolling has two distinct server barriers. The existing Roll action enters
+`dice_spinning`, which carries no result value. The human's Throw confirmation
+releases `dice_rolled`; the authoritative result is then animated and read before
+movement. AI owners acknowledge automatically, with the render driver retaining
+the spin/read delays. The terminal also offers Enter/Space to throw.
+
+`playback_settings` describes the human seats controlled by a connection and
+whether every human seat shares it. That condition, rather than localhost or
+human count, gates 1×, 1.5× and 2× playback. A browser may explicitly claim all
+remaining human seats only if no other connection owns one. Response ownership
+tracks the current prompt while presentation readiness retains the registered
+connection identity. A second human connection disables accelerated playback;
+AI strategy, money, RNG, and network timeouts do not change. `playback.ts` supplies
+a continuous scaled animation clock so changing speed does not rewind movement.
+
+Stock trading uses district selection followed by quantity entry. The same table
+persists across both steps: player-colored columns and portraits, a highlighted
+district row, a price column, and shop metrics beneath it. The quantity step
+shows the transaction and cash consequences; Back returns to districts. Stocks
+in the finance header means market value, consistent with the Wii reference at
+41:04–41:05. The board camera widens and rises while this screen is open.
+
+SVG texture replacement keeps the previous GPU map alive until its replacement
+material commits, rather than disposing it as soon as ownership starts an
+asynchronous image load. Roof and awning material identity follows map identity.
+
+
+Validation for this pass: the production build was rendered at 1600×1000 and
+1280×720, including district/quantity navigation and a verified three-share sale.
+A four-human fixture exercised all seats from one browser, pointer-only feedback,
+keyboard and pointer selection, and a yellow-player purchase with both occupied
+and full-size house views. The selection's projected center stayed fixed (the
+perspective bracket bounding box was 3.4px below the exact world-plane center).
+Production dice result-to-movement times measured 2615ms at 1×, 1773ms at 1.5×,
+and 1317ms at 2×. Each four-second spinning sample rendered 241 frames, with
+median 16.7ms and p95 at most 16.8ms. These are local measurements, not a guarantee
+for other devices. Evidence remains in the ignored `.runtime/reviews/polish/`.

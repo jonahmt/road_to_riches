@@ -1,3 +1,4 @@
+import { playbackSpeed, syncAnimationSpeed } from "./playback";
 import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import type { PresentationState } from "./presentationQueue";
 import { automaticBeat, beatTiming, presentedState } from "./presentationTiming";
@@ -30,7 +31,7 @@ export function usePresentationDirector(beat: PresentationState | null, playerId
     };
     trace("enter");
     const tick = (now: number) => {
-      if (document.visibilityState !== "hidden" && latest.current.rendererReady) c.elapsed += Math.min(100, now - previous);
+      if (document.visibilityState !== "hidden" && latest.current.rendererReady) c.elapsed += Math.min(100, now - previous) * playbackSpeed();
       previous = now;
       const current = latest.current.beat;
       const owner = beat.playerId === playerId;
@@ -51,7 +52,7 @@ export function usePresentationDirector(beat: PresentationState | null, playerId
         latest.current.finish(c.id);
       }
       if (now - painted >= 40 || c.done) {
-        setFrame({ ...c }); painted = now;
+        syncAnimationSpeed(); setFrame({ ...c }); painted = now;
       }
       if (!c.done) raf = requestAnimationFrame(tick);
     };

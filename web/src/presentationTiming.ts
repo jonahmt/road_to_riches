@@ -11,6 +11,7 @@ export function beatTiming(beat: PresentationState) {
   switch (beat.type) {
     case "piece_moved": return { reveal: PACING.step + (beat.data.remaining === 0 ? PACING.arrival : 0), human: 0, auto: 0, exit: 0, motion: ["piece", "camera"] };
     case "turn_started": return { reveal: PACING.turn, human: 0, auto: 0, exit: 120, motion: ["camera"] };
+    case "dice_spinning": return { reveal: 180, human: 0, auto: 800, exit: 0, motion: [] };
     case "dice_rolled": return { reveal: PACING.dieTumble + PACING.dieRead + PACING.dieDock, human: 0, auto: 0, exit: 100, motion: ["dice"] };
     // Compatibility with an older experimental server: no collection delay.
     case "suit_collected": return { reveal: 0, human: 0, auto: 0, exit: 0, motion: [] };
@@ -39,7 +40,7 @@ export function presentedState(beat: PresentationState, elapsed: number): GameSt
   const { before, after } = beat;
   if (!before || !after) return after;
   if (["piece_moved", "turn_started"].includes(beat.type)) return after;
-  if (beat.type === "dice_rolled") return before;
+  if (beat.type === "dice_rolled" || beat.type === "dice_spinning") return before;
   if (beat.type === "suit_collected") return after;
   const release = beat.type === "arcade_result" ? 2200 : beat.type === "promotion_completed" ? 900 : beat.type === "stock_price_changed" ? 1000 : 550;
   const result = elapsed >= release ? after : before;

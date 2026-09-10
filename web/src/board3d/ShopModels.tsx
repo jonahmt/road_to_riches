@@ -1,3 +1,4 @@
+import { playbackNow } from "../playback";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, DoubleSide, ExtrudeGeometry, Group, Shape } from "three";
@@ -10,7 +11,7 @@ export function ShopRentPlaque({ markup, dimmed, activeOccupant }: { markup: str
   const texture = useTileTexture(markup);
   const base = useMemo(() => new RoundedBoxGeometry(3.3, 0.12, 1.08, 2, 0.05), []);
   useEffect(() => () => base.dispose(), [base]);
-  return <group position={[0, TILE_TOP + 0.045, activeOccupant ? 1.4 : 1.12]} scale={[1, 1, activeOccupant ? 0.7 : 1]}>
+  return <group position={[0, TILE_TOP + 0.045, activeOccupant ? 1.4 : 1.12]}>
     <mesh geometry={base} receiveShadow>
       <meshStandardMaterial color={dimmed ? "#28303a" : "#32415b"} roughness={0.5} metalness={0.12} />
     </mesh>
@@ -72,7 +73,7 @@ export function ShopModel({ color, closed, activeOccupant, reduced }: {
     if (!group.current) return;
     transition.current = {
       from: { position: [group.current.position.x, TILE_TOP, group.current.position.z], scale: group.current.scale.x },
-      start: performance.now() + (activeOccupant || reduced ? 0
+      start: playbackNow() + (activeOccupant || reduced ? 0
         : Math.max(AI_ADJACENT_STEP_ANIMATION_MS, HUMAN_ADJACENT_STEP_ANIMATION_MS)),
       // Finish shrinking before an arriving figure completes its step.
       duration: reduced ? 0 : activeOccupant ? 80 : 160,
@@ -81,7 +82,7 @@ export function ShopModel({ color, closed, activeOccupant, reduced }: {
   useFrame(() => {
     if (!group.current) return;
     const motion = transition.current;
-    const progress = motion.duration ? Math.max(0, Math.min(1, (performance.now() - motion.start) / motion.duration)) : 1;
+    const progress = motion.duration ? Math.max(0, Math.min(1, (playbackNow() - motion.start) / motion.duration)) : 1;
     const blend = progress * progress * (3 - 2 * progress);
     group.current.position.x = motion.from.position[0] + (pose.position[0] - motion.from.position[0]) * blend;
     group.current.position.z = motion.from.position[2] + (pose.position[2] - motion.from.position[2]) * blend;
@@ -107,7 +108,7 @@ export function ShopModel({ color, closed, activeOccupant, reduced }: {
     </mesh>))}
     <mesh position={[0, 0.17, 0.767]}><boxGeometry args={[1.8, 0.12, 0.065]} /><meshStandardMaterial color="#96704a" /></mesh>
     <mesh position={[0, 1.36, -0.91]} geometry={roof} castShadow>
-      <meshStandardMaterial color={roofColor} map={shingles} roughness={0.76} />
+      <meshStandardMaterial key={shingles.uuid} color={roofColor} map={shingles} roughness={0.76} />
     </mesh>
     <mesh position={[0, 2.14, 0]} castShadow><boxGeometry args={[0.12, 0.09, 1.96]} /><meshStandardMaterial color={roofColor} /></mesh>
     {[-1.07, 1.07].map((x) => <mesh key={x} position={[x, 1.36, 0]} castShadow>
@@ -128,10 +129,10 @@ export function ShopModel({ color, closed, activeOccupant, reduced }: {
     <ShopWindow x={0.92} y={0.72} z={-0.15} rotation={Math.PI / 2} closed={closed} />
     <ShopWindow x={0} y={0.72} z={-0.77} rotation={Math.PI} closed={closed} />
     <mesh position={[0, 1.18, 0.91]} rotation={[-Math.PI / 2 + 0.2, 0, 0]} castShadow>
-      <planeGeometry args={[1.97, 0.64]} /><meshStandardMaterial map={awning} roughness={0.95} side={DoubleSide} />
+      <planeGeometry args={[1.97, 0.64]} /><meshStandardMaterial key={awning.uuid} map={awning} roughness={0.95} side={DoubleSide} />
     </mesh>
     <mesh position={[0, 1.03, 1.215]}>
-      <planeGeometry args={[1.97, 0.2]} /><meshStandardMaterial map={awning} roughness={0.95} />
+      <planeGeometry args={[1.97, 0.2]} /><meshStandardMaterial key={awning.uuid} map={awning} roughness={0.95} />
     </mesh>
   </group>;
 }

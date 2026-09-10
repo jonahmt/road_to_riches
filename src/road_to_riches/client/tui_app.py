@@ -457,7 +457,9 @@ class GameApp(App):
         info.clear()
         info.display = True
         data = request.data
-        if request.presentation_type == "dice_rolled":
+        if request.presentation_type == "dice_spinning":
+            info.write("[bold]The die is spinning. Press Enter or Space to throw![/bold]")
+        elif request.presentation_type == "dice_rolled":
             info.write(f"[bold]Rolled {data.get('value', '?')}[/bold]")
         elif request.presentation_type == "lucky_roll_result":
             info.write("[bold gold1]LUCKY ROLL[/bold gold1]")

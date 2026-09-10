@@ -13,7 +13,7 @@ function visible(element: UiControl): boolean {
 }
 function enabled(element: UiControl): boolean {
   return visible(element) && getComputedStyle(element).opacity !== '0' && !element.matches(':disabled, [aria-disabled="true"]') &&
-    !element.closest('[aria-busy="true"], .is-resolving');
+    !element.closest('[aria-busy="true"], .is-resolving, [data-ui-pointer-only]');
 }
 function textField(element: UiControl): boolean {
   return (element instanceof HTMLElement && element.isContentEditable) || element instanceof HTMLTextAreaElement ||

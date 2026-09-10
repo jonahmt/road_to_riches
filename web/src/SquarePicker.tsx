@@ -54,6 +54,7 @@ export function SquarePicker({ state, selection, title, confirmLabel, onBack, on
     window.addEventListener("keyup", up); window.addEventListener("blur", stop);
     document.addEventListener("visibilitychange", visibility);
     return () => {
+      initialized.current = null;
       stop(); cursor.position = null; cursor.display = null; cursor.jumpTo = null;
       window.removeEventListener("keyup", up); window.removeEventListener("blur", stop);
       document.removeEventListener("visibilitychange", visibility);

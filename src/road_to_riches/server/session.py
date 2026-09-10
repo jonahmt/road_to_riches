@@ -64,6 +64,42 @@ class GameSession:
         self.finished = False
         self.game_thread: Any = None
         self.host_ws: Any | None = None
+        self.playback_speed = 1.0
+        self.playback_clients: set[Any] = set()
+
+    def local_controller(self) -> Any | None:
+        if not self.num_humans:
+            return None
+        owner = self.player_to_ws.get(0)
+        return (
+            owner
+            if owner is not None
+            and all(self.player_to_ws.get(pid) is owner for pid in range(self.num_humans))
+            else None
+        )
+
+    def playback_settings(self, ws: Any) -> dict:
+        owner = self.local_controller()
+        if owner is None:
+            self.playback_speed = 1.0
+        controlled = [pid for pid in self.ws_to_players.get(ws, []) if pid < self.num_humans]
+        return {
+            "msg": "playback_settings",
+            "game_id": self.session_id,
+            "speed": self.playback_speed,
+            "local": owner is ws and owner is not None,
+            "controlled_players": controlled,
+            "can_claim_all": bool(controlled)
+            and bool(self.open_human_slots())
+            and all(self.player_to_ws.get(pid) in (None, ws) for pid in range(self.num_humans)),
+        }
+
+    def set_playback_speed(self, ws: Any, speed: object) -> None:
+        if self.local_controller() is not ws or ws is None:
+            raise SessionError("Game speed is only available when all humans share this browser")
+        if isinstance(speed, bool) or speed not in (1, 1.5, 2):
+            raise SessionError("Game speed must be 1, 1.5 or 2")
+        self.playback_speed = float(speed)
 
     @property
     def config(self) -> GameConfig:
@@ -145,10 +181,13 @@ class GameSession:
 
     def remove_connection(self, ws: Any) -> list[int]:
         """Remove all player assignments for a connection."""
+        self.playback_clients.discard(ws)
         removed = list(self.ws_to_players.get(ws, []))
         for player_id in removed:
             self._remove_player_assignment(ws, player_id)
         self.ws_to_players.pop(ws, None)
+        if self.local_controller() is None:
+            self.playback_speed = 1.0
         return removed
 
     def _remove_player_assignment(self, ws: Any, player_id: int) -> None:

@@ -1,3 +1,4 @@
+import { playbackNow } from "./playback";
 import { useEffect, useState } from "react";
 import type { PresentationState } from "./presentationQueue";
 import { formatGold } from "./format";
@@ -14,7 +15,7 @@ export function ArcadePresentation({ presentation, assignedPlayerId, onContinue 
   const [legacyElapsed, setElapsed] = useState(0);
   useEffect(() => {
     if (presentation.coordinated) return;
-    const start = performance.now(); const timer = window.setInterval(() => setElapsed(performance.now()-start), 40);
+    const start = playbackNow(); const timer = window.setInterval(() => setElapsed(playbackNow()-start), 40);
     return () => clearInterval(timer);
   }, [presentation.requestId, presentation.coordinated]);
   const elapsed = presentation.elapsed ?? legacyElapsed;

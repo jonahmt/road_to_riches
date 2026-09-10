@@ -1,3 +1,4 @@
+import { playbackNow } from "../playback";
 import { Component, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Group, NeutralToneMapping } from "three";
@@ -8,6 +9,7 @@ import { DIE_FACES, physicalDieFaceValue, physicalDieRotation, physicalDieSpin }
 interface DieProps {
   value: number;
   rolling: boolean;
+  spinning?: boolean;
   startedAt: number;
   fallback: ReactNode;
 }
@@ -45,20 +47,25 @@ export default function PhysicalDie(props: DieProps) {
         <ambientLight intensity={1.5} />
         <directionalLight position={[-3, 5, 6]} intensity={2.4} />
         <directionalLight position={[4, -2, -2]} intensity={0.5} color="#8bbdce" />
-        <DieMesh value={props.value} rolling={props.rolling && !reduced} startedAt={props.startedAt} />
+        <DieMesh value={props.value} rolling={props.rolling && !reduced} startedAt={props.startedAt} spinning={props.spinning} />
       </Canvas>
     </div>
   </DieBoundary>;
 }
 
-function DieMesh({ value, rolling, startedAt }: Omit<DieProps, "fallback">) {
+function DieMesh({ value, rolling, startedAt, spinning }: Omit<DieProps, "fallback">) {
   const group = useRef<Group>(null);
   const geometry = useMemo(() => new RoundedBoxGeometry(2, 2, 2, 5, 0.10), []);
   const rotation = physicalDieRotation(value);
   useEffect(() => () => geometry.dispose(), [geometry]);
   useFrame(() => {
     if (!group.current) return;
-    const progress = rolling ? Math.min(1, Math.max(0, (performance.now() - startedAt) / DICE_ROLL_DURATION_MS)) : 1;
+    if (spinning) {
+      const time = (playbackNow() - startedAt) / 1000;
+      group.current.rotation.set(time * 4.8, time * 3.2, 0);
+      return;
+    }
+    const progress = rolling ? Math.min(1, Math.max(0, (playbackNow() - startedAt) / DICE_ROLL_DURATION_MS)) : 1;
     group.current.rotation.set(...physicalDieSpin(value, progress));
   });
   return <group ref={group} rotation={rotation}>

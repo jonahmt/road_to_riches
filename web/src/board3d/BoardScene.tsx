@@ -1,3 +1,4 @@
+import { playbackNow, playbackSpeed } from "../playback";
 import { Component, type ErrorInfo, type ReactNode, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import {
@@ -40,6 +41,7 @@ export interface TileArtwork {
 export type BoardSelection = BoardSquareSelection;
 
 interface SceneProps {
+  stockOpen: boolean;
   onReady: () => void;
   squareCursor: SquareCursorControl;
   onCursorSquareChange: (id: number | null) => void;
@@ -143,7 +145,7 @@ export default function BoardScene(props: SceneProps) {
           shadow-camera-top={shadowRadius} shadow-camera-bottom={-shadowRadius}
           shadow-camera-far={180} />
         <Courtyard squares={props.state.board.squares} />
-        <CameraRig state={props.state} free={isFree} focusDistrictId={props.focusDistrictId}
+        <CameraRig stockOpen={props.stockOpen} state={props.state} free={isFree} focusDistrictId={props.focusDistrictId}
           command={command} controlsRef={controls} reduced={reduced} projectorRef={props.projectorRef}
           selection={props.selection} cursor={props.squareCursor} />
         {props.state.board.squares.map((square) => <BoardTile key={square.id} square={square}
@@ -158,7 +160,7 @@ export default function BoardScene(props: SceneProps) {
           assignedPlayerId={props.assignedPlayerId} reduced={reduced} anchors={anchors.current} />)}
         <SquareAnchors squares={props.state.board.squares} artwork={props.artwork} anchors={anchors.current} />
         {props.selection && <SelectionCursor squares={props.state.board.squares} selection={props.selection}
-          cursor={props.squareCursor} onSnap={props.onCursorSquareChange} reduced={reduced} element={selectionCursor} />}
+          cursor={props.squareCursor} onSnap={props.onCursorSquareChange} reduced={reduced} element={selectionCursor} controlsRef={controls} />}
         {props.movementRequest && guides.length > 0 && <MovementGuideMeshes request={props.movementRequest}
           guides={guides} buttons={movementButtons.current} projectorRef={props.projectorRef} reduced={reduced} />}
         </TextureReadinessContext.Provider>
@@ -224,8 +226,8 @@ function SceneReady({ pending, onReady }: { pending: Set<object>; onReady: () =>
   return null;
 }
 
-function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced, projectorRef, selection, cursor }: {
-  state: GameState; free: boolean; focusDistrictId: number | null;
+function CameraRig({ stockOpen, state, free, focusDistrictId, command, controlsRef, reduced, projectorRef, selection, cursor }: {
+  stockOpen: boolean; state: GameState; free: boolean; focusDistrictId: number | null;
   command: { id: number; action: string }; controlsRef: { current: OrbitControls | null }; reduced: boolean;
   projectorRef: { current: BoardProjector | null };
   selection: BoardSelection | null;
@@ -239,18 +241,18 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   const intro = presentation.beat?.type === "turn_started";
   const shiftingLayout = presentation.beat?.type === "board_layout_changed";
   const layoutExtent = boardExtent(state.board.squares);
-  const pitch = (intro ? 32 : 52) * Math.PI / 180;
-  const distance = shiftingLayout ? Math.max(35, layoutExtent.depth * 1.4, layoutExtent.width * size.height / size.width * 1.6) : intro ? 25 : 28;
+  const pitch = (stockOpen ? 72 : intro ? 32 : 52) * Math.PI / 180;
+  const distance = (shiftingLayout || stockOpen) ? Math.max(35, layoutExtent.depth * 1.4, layoutExtent.width * size.height / size.width * 1.6) : intro ? 25 : 28;
   const followZoom = useRef(1);
   const offset = new Vector3(0, Math.sin(pitch) * distance, Math.cos(pitch) * distance);
   const profile = useRef({ from: offset.clone(), to: offset.clone(), start: 0 });
-  const target = shiftingLayout ? layoutExtent.center : focusPoint(state, focusDistrictId);
+  const target = (shiftingLayout || stockOpen) ? layoutExtent.center : focusPoint(state, focusDistrictId);
   target[1] += intro ? 2.5 : 0.6;
   useLayoutEffect(() => {
     const orbit = controlsRef.current;
     profile.current = { from: orbit ? camera.position.clone().sub(orbit.target) : offset.clone(),
-      to: offset.clone().multiplyScalar(followZoom.current), start: performance.now() };
-  }, [intro, shiftingLayout]);
+      to: offset.clone().multiplyScalar(followZoom.current), start: playbackNow() };
+  }, [intro, shiftingLayout, stockOpen]);
   const targetRef = useRef(new Vector3(...target));
   const stepCamera = useRef({ from: new Vector3(...target), start: 0, duration: 0 });
   const previousFree = useRef(free);
@@ -279,7 +281,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   }, [camera, gl, reduced]);
   useLayoutEffect(() => {
     stepCamera.current = { from: controlsRef.current?.target.clone() ?? targetRef.current.clone(),
-      start: performance.now(), duration: reduced ? 0 : adjacentStepAnimationDuration(-1, null) };
+      start: playbackNow(), duration: reduced ? 0 : adjacentStepAnimationDuration(-1, null) };
     targetRef.current.set(...target);
   }, [target[0], target[1], target[2]]);
   useLayoutEffect(() => {
@@ -291,17 +293,14 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
       const square = state.board.squares.find((square) => square.id === selection.selectedSquareId);
       const focus = square ? boardPoint(square.position) : target;
       const distance = Math.max(30, Math.min(38, Math.max(extent.width, extent.depth) * 0.85));
-      // Keep the cursor in the board area to the left of the property/HUD column.
-      const reserved = Math.min(380, size.width * 0.34) / size.width;
-      const halfWidth = distance * Math.tan(38 * Math.PI / 360) * size.width / size.height;
-      toTarget = new Vector3(focus[0] + halfWidth * reserved, focus[1], focus[2]);
+      toTarget = new Vector3(...focus);
       to = toTarget.clone().add(new Vector3(...FOLLOW_CAMERA_OFFSET).normalize().multiplyScalar(distance));
     } else {
       if (!savedView.current) return;
       to = savedView.current.position; toTarget = savedView.current.target; savedView.current = null;
     }
     pickerMotion.current = { from: camera.position.clone(), fromTarget: orbit.target.clone(), to, toTarget,
-      start: performance.now(), duration: reduced ? 0 : 400 };
+      start: playbackNow(), duration: reduced ? 0 : 400 };
   }, [picking, reduced, size.width, size.height]);
   useEffect(() => {
     const orbit = controlsRef.current;
@@ -325,7 +324,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
       if (free || picking) return;
       followZoom.current = orbit.getDistance() / distance;
       const current = camera.position.clone().sub(orbit.target);
-      profile.current = { from: current, to: current.clone(), start: performance.now() };
+      profile.current = { from: current, to: current.clone(), start: playbackNow() };
     };
     orbit.addEventListener("end", rememberZoom);
     return () => orbit.removeEventListener("end", rememberZoom);
@@ -337,7 +336,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
       followZoom.current = command.action === "reset" ? 1
         : Math.max(0.65, Math.min(2.5, followZoom.current * (command.action === "in" ? 0.8 : 1.25)));
       profile.current = { from: camera.position.clone().sub(orbit.target),
-        to: offset.clone().multiplyScalar(followZoom.current), start: performance.now() };
+        to: offset.clone().multiplyScalar(followZoom.current), start: playbackNow() };
       return;
     }
     if (command.action === "reset") {
@@ -362,41 +361,28 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     if (picking && cursor.reframe && (cursor.jumpTo || cursor.position)) {
       const focus = (cursor.jumpTo ?? cursor.position)!;
       const distance = Math.max(30, Math.min(38, Math.max(extent.width, extent.depth) * 0.85));
-      const reserved = Math.min(380, size.width * 0.34) / size.width;
-      const halfWidth = distance * Math.tan(38 * Math.PI / 360) * size.width / size.height;
-      const toTarget = new Vector3(focus[0] + halfWidth * reserved, TILE_TOP, focus[1]);
+      const toTarget = new Vector3(focus[0], TILE_TOP, focus[1]);
       pickerMotion.current = { from: camera.position.clone(), fromTarget: orbit.target.clone(), toTarget,
         to: toTarget.clone().add(new Vector3(...FOLLOW_CAMERA_OFFSET).normalize().multiplyScalar(distance)),
-        start: performance.now(), duration: reduced ? 0 : 400 };
+        start: playbackNow(), duration: reduced ? 0 : 400 };
       cursor.reframe = false;
     }
     const picker = pickerMotion.current;
     if (picker) {
-      const progress = picker.duration ? Math.min(1, (performance.now() - picker.start) / picker.duration) : 1;
+      const progress = picker.duration ? Math.min(1, (playbackNow() - picker.start) / picker.duration) : 1;
       const blend = progress * progress * (3 - 2 * progress);
       camera.position.lerpVectors(picker.from, picker.to, blend);
       orbit.target.lerpVectors(picker.fromTarget, picker.toTarget, blend);
       if (progress >= 1) pickerMotion.current = null;
-    } else if (picking && cursor.display) {
-      const point = new Vector3(cursor.display[0], TILE_TOP, cursor.display[1]);
-      const projected = point.clone().project(camera);
-      const x = (projected.x + 1) / 2, y = (1 - projected.y) / 2;
-      // Free cursor travel does not drag the board until it reaches a viewport edge.
-      if (x < 0.14 || x > 0.65 || y < 0.2 || y > 0.78) {
-        const distance = orbit.getDistance();
-        point.x += distance * Math.tan(38 * Math.PI / 360) * Math.min(380, size.width * 0.34) / size.height;
-        const shift = point.sub(orbit.target).multiplyScalar(reduced ? 1 : 1 - Math.exp(-delta * 5));
-        camera.position.add(shift); orbit.target.add(shift);
-      }
     } else if (!free && !picking) {
       const step = stepCamera.current;
       const next = presentation.beat?.type === "piece_moved"
-        ? step.from.clone().lerp(targetRef.current, step.duration ? Math.min(1, (performance.now() - step.start) / step.duration) : 1)
-        : orbit.target.clone().lerp(targetRef.current, reduced ? 1 : 1 - Math.exp(-delta * 14));
+        ? step.from.clone().lerp(targetRef.current, step.duration ? Math.min(1, (playbackNow() - step.start) / step.duration) : 1)
+        : orbit.target.clone().lerp(targetRef.current, reduced ? 1 : 1 - Math.exp(-delta * playbackSpeed() * 14));
       camera.position.add(next.clone().sub(orbit.target));
       orbit.target.copy(next);
       const p = profile.current;
-      const elapsed = reduced ? 1 : Math.min(1, (performance.now() - p.start) / 450);
+      const elapsed = reduced ? 1 : Math.min(1, (playbackNow() - p.start) / 450);
       const blend = elapsed * elapsed * (3 - 2 * elapsed);
       camera.position.copy(next).add(p.from.clone().lerp(p.to, blend));
     }
@@ -409,7 +395,8 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   return null;
 }
 
-function SelectionCursor({ squares, selection, cursor, onSnap, reduced, element }: {
+function SelectionCursor({ squares, selection, cursor, onSnap, reduced, element, controlsRef }: {
+  controlsRef: { current: OrbitControls | null };
   squares: SquareInfo[]; selection: BoardSelection; cursor: SquareCursorControl;
   onSnap: (id: number | null) => void; reduced: boolean; element: { current: HTMLDivElement | null };
 }) {
@@ -424,7 +411,8 @@ function SelectionCursor({ squares, selection, cursor, onSnap, reduced, element 
     const move = (event: PointerEvent) => {
       if (!cursor.enabled || event.buttons) return;
       const rect = gl.domElement.getBoundingClientRect();
-      pointer.current = [(event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2];
+      const prior = pointer.current ?? [0, 0];
+      pointer.current = [prior[0] + event.movementX / rect.width * 2, prior[1] - event.movementY / rect.height * 2];
     };
     gl.domElement.addEventListener("pointermove", move);
     return () => { cursor.attached = false; cursor.keys.clear(); gl.domElement.removeEventListener("pointermove", move); };
@@ -443,7 +431,9 @@ function SelectionCursor({ squares, selection, cursor, onSnap, reduced, element 
     } else if (cursor.enabled && pointer.current) {
       ray.setFromCamera(new Vector2(...pointer.current), camera);
       const hit = ray.ray.intersectPlane(plane, new Vector3());
-      if (hit) cursor.position = [hit.x, hit.z];
+      ray.setFromCamera(new Vector2(0, 0), camera);
+      const center = ray.ray.intersectPlane(plane, new Vector3());
+      if (hit && center) cursor.position = [cursor.position[0] + hit.x - center.x, cursor.position[1] + hit.z - center.z];
       pointer.current = null;
     }
     cursor.position = [
@@ -456,6 +446,14 @@ function SelectionCursor({ squares, selection, cursor, onSnap, reduced, element 
     const blend = reduced || !cursor.display ? 1 : 1 - Math.exp(-delta * 28);
     const from = cursor.display ?? target;
     cursor.display = [from[0] + (target[0] - from[0]) * blend, from[1] + (target[1] - from[1]) * blend];
+    const orbit = controlsRef.current;
+    if (orbit) {
+      const center = new Vector3(cursor.display[0], TILE_TOP + 0.05, cursor.display[1]);
+      camera.position.add(center.clone().sub(orbit.target));
+      orbit.target.copy(center);
+      orbit.update();
+      camera.updateMatrixWorld();
+    }
     const id = snapped?.id ?? null;
     if (id !== lastSnap.current) { lastSnap.current = id; onSnap(id); }
     // Project each bracket leg from one horizontal plane, rather than enclosing
@@ -493,7 +491,7 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, activ
   const destination = boardPoint(square.position, 0);
   const motion = useRef({ from: initial.current, start: 0 });
   useLayoutEffect(() => {
-    motion.current = { from: tile.current?.position.toArray() as Point3 ?? destination, start: performance.now() };
+    motion.current = { from: tile.current?.position.toArray() as Point3 ?? destination, start: playbackNow() };
   }, [square.position[0], square.position[1]]);
   const texture = useTileTexture(artwork.surface);
   const base = useMemo(() => new RoundedBoxGeometry(4, 0.42, 4, 2, 0.1), []);
@@ -509,7 +507,7 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, activ
     onSelect(square.id, confirm);
   };
   useFrame(({ clock }) => {
-    const progress = reduced ? 1 : Math.min(1, (performance.now() - motion.current.start) / 1200);
+    const progress = reduced ? 1 : Math.min(1, (playbackNow() - motion.current.start) / 1200);
     const eased = progress * progress * (3 - 2 * progress);
     tile.current?.position.set(...destination.map((value, i) => motion.current.from[i] + (value - motion.current.from[i]) * eased) as Point3);
     if (glow.current) glow.current.emissiveIntensity = focused
@@ -554,7 +552,7 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, activ
       <MechanicalObject kind={artwork.object} dimmed={!eligible} />
     </group>}
     {artwork.uprightSuit && <SuitToken markup={artwork.uprightSuit} dimmed={!eligible} reduced={reduced}
-      squareId={square.id} anchors={anchors} />}
+      squareId={square.id} anchors={anchors} activeOccupant={activeOccupant} />}
     {!shop && !bank && !artwork.object && artwork.symbol && <SymbolRelief markup={artwork.symbol} dimmed={!eligible} />}
   </group>;
 }
@@ -566,7 +564,8 @@ function SymbolRelief({ markup, dimmed }: { markup: string; dimmed: boolean }) {
   </group>;
 }
 
-function SuitToken({ markup, dimmed, reduced, squareId, anchors }: {
+function SuitToken({ markup, dimmed, reduced, squareId, anchors, activeOccupant }: {
+  activeOccupant: boolean;
   markup: string; dimmed: boolean; reduced: boolean; squareId: number; anchors: Map<string, HTMLSpanElement>;
 }) {
   const group = useRef<Group>(null);
@@ -574,12 +573,12 @@ function SuitToken({ markup, dimmed, reduced, squareId, anchors }: {
   const { camera, size } = useThree();
   useFrame(({ clock }) => {
     if (!group.current) return;
-    group.current.position.y = TILE_TOP + 1.35 + (reduced ? 0 : Math.sin(clock.elapsedTime * 1.8 + squareId) * 0.06);
+    group.current.position.y = (activeOccupant ? TILE_TOP + 1.15 : TILE_TOP + 1.6) + (reduced ? 0 : Math.sin(clock.elapsedTime * 1.8 + squareId) * 0.06);
     group.current.rotation.y = reduced ? 0.18 : clock.elapsedTime * 0.45 + squareId * 0.7;
     projectAnchor(anchors.get(`square:${squareId}`), group.current.getWorldPosition(point), camera, size);
   });
-  return <group ref={group} position={[-0.85, TILE_TOP + 1.35, -0.95]}>
-    <group position={[0, 0, -0.14]} scale={[0.72, -0.72, 1]}>
+  return <group ref={group} position={activeOccupant ? [-0.95, TILE_TOP + 1.15, -1] : [0, TILE_TOP + 1.6, 0]} scale={activeOccupant ? 0.65 : 1}>
+    <group position={[0, 0, -0.14]} scale={[0.95, -0.95, 1]}>
       <SvgReliefParts markup={markup} dimmed={dimmed} depth={0.28} bevel={0.045} roughness={0.32} metalness={0.16} />
     </group>
   </group>;
@@ -600,7 +599,7 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
   const transition = useRef({ from: position, start: 0, duration: 0, layout: false });
   const color = PLAYER_COLORS[player.player_id % PLAYER_COLORS.length];
   useLayoutEffect(() => {
-    if (group.current) transition.current = { from: group.current.position.toArray() as Point3, start: performance.now(),
+    if (group.current) transition.current = { from: group.current.position.toArray() as Point3, start: playbackNow(),
       duration: reduced ? 0 : presentation.beat?.type === "board_layout_changed" ? 1200 : adjacentStepAnimationDuration(player.player_id, assignedPlayerId),
       layout: presentation.beat?.type === "board_layout_changed" };
     const from = transition.current.from;
@@ -612,22 +611,22 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
   useFrame((_, delta) => {
     if (!group.current) return;
     const motion = transition.current;
-    const progress = motion.duration ? Math.min(1, (performance.now() - motion.start) / motion.duration) : 1;
+    const progress = motion.duration ? Math.min(1, (playbackNow() - motion.start) / motion.duration) : 1;
     group.current.position.set(...(motion.layout
       ? destination.current.map((value, i) => motion.from[i] + (value - motion.from[i]) * progress * progress * (3 - 2 * progress)) as Point3
       : pieceStepPosition(motion.from, destination.current, progress)));
     group.current.scale.setScalar(reduced ? scale : group.current.scale.x +
-      (scale - group.current.scale.x) * (1 - Math.exp(-20 * delta)));
+      (scale - group.current.scale.x) * (1 - Math.exp(-20 * delta * playbackSpeed())));
     const traveling = !motion.layout && Math.hypot(motion.from[0] - destination.current[0], motion.from[2] - destination.current[2]) > 0.1;
     stride.current = !reduced && traveling && progress < 1 ? progress : -1;
     if (figure.current) {
       if (presentation.beat?.type === "turn_started") heading.current = 0;
       const turn = Math.atan2(Math.sin(heading.current - figure.current.rotation.y), Math.cos(heading.current - figure.current.rotation.y));
-      figure.current.rotation.y += reduced ? turn : turn * (1 - Math.exp(-delta * 24));
+      figure.current.rotation.y += reduced ? turn : turn * (1 - Math.exp(-delta * playbackSpeed() * 24));
       const arc = !reduced && traveling ? Math.sin(progress * Math.PI) : 0;
       figure.current.position.y = arc * 0.7;
       const landing = !reduced && traveling && progress >= 1
-        ? Math.max(0, 1 - (performance.now() - motion.start - motion.duration) / 150) : 0;
+        ? Math.max(0, 1 - (playbackNow() - motion.start - motion.duration) / 150) : 0;
       figure.current.scale.set(1 + landing * 0.1, 1 - landing * 0.12 + arc * 0.035, 1 + landing * 0.1);
     }
     if (progress >= 1 && presentation.beat?.playerId === player.player_id) {

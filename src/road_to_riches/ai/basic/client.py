@@ -66,6 +66,7 @@ class BasicAIClient:
         presentation_delay: float = DEFAULT_PRESENTATION_DELAY,
     ) -> None:
         self.player_id = player_id
+        self.playback_speed = 1.0
         self.delay = delay
         self.presentation_delay = presentation_delay
         self.state: GameState | None = None
@@ -98,7 +99,7 @@ class BasicAIClient:
             return None
 
         if not req.data.get("_presentation_paced"):
-            time.sleep(self.delay)
+            time.sleep(self.delay / self.playback_speed)
 
         # Replan route before making path decisions
         if req.type in (InputRequestType.CHOOSE_PATH, InputRequestType.PRE_ROLL):
@@ -136,7 +137,7 @@ class BasicAIClient:
             minimum = 2.25 if (data or {}).get("purpose") == "event" else 1.35
             delay = max(delay, minimum)
         if not coordinated:
-            time.sleep(delay)
+            time.sleep(delay / self.playback_speed)
         return msg_presentation_ack(request_id, self.player_id, game_id=game_id)
 
 
@@ -567,6 +568,9 @@ async def run(
 
             if msg_type == "state_sync":
                 ai.state = game_state_from_dict(msg["state"])
+
+            elif msg_type == "playback_settings":
+                ai.playback_speed = float(msg.get("speed", 1))
 
             elif msg_type == "input_request":
                 req = InputRequest(

@@ -138,6 +138,11 @@ async def _drive_human_slot_through_tui(
         if app.game_over_event.is_set():
             return seen
 
+        if app._current_presentation is not None:
+            app._acknowledge_current_presentation()
+            await asyncio.sleep(0.005)
+            continue
+
         req = app._current_request
         if req is None:
             await asyncio.sleep(0.005)

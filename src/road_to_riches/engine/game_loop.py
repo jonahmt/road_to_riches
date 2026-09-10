@@ -717,6 +717,13 @@ class GameLoop:
         self._present_roll(player_id, roll, purpose="movement")
 
     def _present_roll(self, player_id: int, roll: int, *, purpose: str) -> None:
+        self._execute_event(
+            PresentationBarrierEvent(
+                player_id=player_id,
+                presentation_type="dice_spinning",
+                data={"purpose": purpose},
+            )
+        )
         # The barrier starts the animation and holds the engine at this result.
         # Publish static countdown state after the barrier so a new result does
         # not briefly flash in the movement corner before its center tumble.

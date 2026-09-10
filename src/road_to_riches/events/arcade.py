@@ -15,7 +15,7 @@ def arcade_prize(reels: list[str], level: int) -> int:
     if len(reels) != 3 or any(s not in SUITS for s in reels):
         raise ValueError("Arcade requires three standard suits")
     distinct = len(set(reels))
-    return level * (50 if distinct == 1 else 10 if distinct == 2 else 0)
+    return level * (100 if distinct == 1 else 20 if distinct == 2 else 0)
 
 
 @register_event
@@ -29,7 +29,7 @@ class ArcadeEvent(GameEvent):
             PresentationBarrierEvent(
                 player_id=self.player_id,
                 presentation_type="arcade_intro",
-                data={"level": level, "pair_prize": 10 * level, "triple_prize": 50 * level},
+                data={"level": level, "pair_prize": 20 * level, "triple_prize": 100 * level},
             ),
             ArcadeSpinEvent(player_id=self.player_id),
         ]

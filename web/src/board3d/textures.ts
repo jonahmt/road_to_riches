@@ -23,8 +23,11 @@ export function useTileTexture(svg: string) {
     };
     image.onerror = () => { pending?.delete(ticket); };
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    return () => { cancelled = true; pending?.delete(ticket); image.onload = null; image.onerror = null; created?.dispose(); };
+    return () => { cancelled = true; pending?.delete(ticket); image.onload = null; image.onerror = null; };
   }, [svg]);
+  // Retire the prior map only after React has committed its replacement material.
+  // Ownership changes load a new SVG asynchronously; the old map stays valid until then.
+  useEffect(() => () => texture?.dispose(), [texture]);
   return texture;
 }
 

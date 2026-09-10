@@ -250,9 +250,10 @@ Players, shops, and districts can all gain temporary status effects. This is a c
 
 The experimental branch uses a free three-reel suit game. Each reel independently
 selects one of the four standard suits with equal probability. Three matching
-suits pay 50 × the player's current level; exactly two matching suits pay
-10 × level; three different suits pay nothing. The introduction explains the
+suits pay 100 × the player's current level; exactly two matching suits pay
+20 × level; three different suits pay nothing. The introduction explains the
 prizes before the spin, and the result is acknowledged before the turn continues.
+Prizes were doubled at the user’s request in the subsequent presentation polish pass.
 These are experimental rules, not a claim to reproduce the Wii Arcade rules.
 
 The venture deck remains the existing five cards: Free Direction, Roll Again,

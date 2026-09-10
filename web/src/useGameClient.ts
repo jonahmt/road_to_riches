@@ -1,3 +1,4 @@
+import { setPlaybackSpeed } from "./playback";
 import { readCompletedMatch, writeCompletedMatch } from "./matchResults";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -92,6 +93,9 @@ function closeSocket(socket: WebSocket | null): Promise<void> {
 }
 
 export function useGameClient(defaultUri: string, rendererReady = true) {
+  const [playback, setPlayback] = useState({ speed: 1, local: false, canClaimAll: false });
+  const controlledPlayers = useRef<number[]>([]);
+  const pendingPlayer = useRef<number | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const connectionIdRef = useRef(0);
   const playerIdRef = useRef<number | null>(null);
@@ -157,6 +161,8 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
   const connect = useCallback(
     async (uri: string) => {
       writeCompletedMatch(null);
+      controlledPlayers.current = []; pendingPlayer.current = null;
+      setPlaybackSpeed(1); setPlayback({ speed: 1, local: false, canClaimAll: false });
       const connectionId = connectionIdRef.current + 1;
       connectionIdRef.current = connectionId;
       const previousSocket = socketRef.current;
@@ -216,6 +222,13 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
           return;
         }
         const message = decode(String(event.data));
+        if (message.msg === "playback_settings") {
+          controlledPlayers.current = message.controlled_players;
+          setPlaybackSpeed(message.local ? message.speed : 1);
+          setPlayback({ speed: message.speed, local: message.local, canClaimAll: message.can_claim_all });
+          setClientState(current => ({ ...current }));
+          return;
+        }
         if (message.msg === "input_rejected" && message.ownership_lost) {
           const reason = message.error || "This browser no longer controls the active player.";
           playerIdRef.current = null;
@@ -294,7 +307,8 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
                 player_id: message.player_id,
                 data: message.data ?? {},
               };
-              const isAssignedPrompt = playerIdRef.current === null || playerIdRef.current === message.player_id;
+              const isAssignedPrompt = playerIdRef.current === null || playerIdRef.current === message.player_id || controlledPlayers.current.includes(message.player_id);
+              if (isAssignedPrompt) pendingPlayer.current = message.player_id;
               return {
                 ...current,
                 pendingRequest: isAssignedPrompt ? request : null,
@@ -511,7 +525,7 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
       const sent = send({
         msg: "input_response",
         value,
-        player_id: playerIdRef.current ?? undefined,
+        player_id: pendingPlayer.current ?? playerIdRef.current ?? undefined,
         game_id: gameIdRef.current ?? undefined,
       });
       if (!sent) {
@@ -583,7 +597,7 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
     const sent = send({
       msg: "presentation_ack",
       request_id: requestId,
-      player_id: playerIdRef.current ?? undefined,
+      player_id: activePresentationRef.current?.playerId ?? playerIdRef.current ?? undefined,
       game_id: gameIdRef.current ?? undefined,
     });
     if (!sent) {
@@ -609,8 +623,10 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
     setClientState((current) => ({ ...current,
       presentations: completePresentation(current.presentations, requestId) }));
   }, []);
+  const acting = clientState.presentations[0]?.playerId ?? clientState.pendingRequest?.player_id;
+  const effectivePlayer = acting !== undefined && controlledPlayers.current.includes(acting) ? acting : clientState.playerId;
   const director = usePresentationDirector(clientState.presentations[0] ?? null,
-    clientState.playerId, finishPresentation, acknowledgePresentation, rendererReady);
+    effectivePlayer, finishPresentation, acknowledgePresentation, rendererReady);
   activePresentationRef.current = director.beat;
   const confirmPresentation = useCallback((requestId: string) => {
     const active = activePresentationRef.current;
@@ -650,7 +666,10 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
   }, []);
 
   return {
-    clientState: { ...clientState,
+    playback,
+    changePlaybackSpeed: (speed: number) => send({ msg: "playback_speed", speed, game_id: gameIdRef.current ?? undefined }),
+    claimLocalPlayers: () => send({ msg: "claim_local_players", game_id: gameIdRef.current ?? undefined }),
+    clientState: { ...clientState, playerId: effectivePlayer,
       gameState: director.displayState ?? clientState.gameState,
       presentations: director.beat ? [director.beat, ...clientState.presentations.slice(1)] : clientState.presentations,
       pendingRequest: director.beat?.coordinated ? null : clientState.pendingRequest,
