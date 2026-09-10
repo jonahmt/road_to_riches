@@ -158,8 +158,13 @@ def msg_dice(
     )
 
 
-def msg_game_over(winner: int | None, game_id: str | None = None) -> dict:
-    return _with_game_id({"msg": "game_over", "winner": winner}, game_id)
+def msg_game_over(
+    winner: int | None, game_id: str | None = None, state: dict | None = None
+) -> dict:
+    message = {"msg": "game_over", "winner": winner}
+    if state is not None:
+        message["state"] = state
+    return _with_game_id(message, game_id)
 
 
 def msg_state_sync(state_dict: dict, game_id: str | None = None) -> dict:

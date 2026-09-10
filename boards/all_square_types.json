@@ -196,7 +196,7 @@
       "id": 18,
       "type": "SWITCH",
       "position": [0, 8],
-      "switch_next_state": 0,
+      "switch_next_state": 1,
       "waypoints": [
         {"from_id": 17, "to_ids": [19]},
         {"from_id": 19, "to_ids": [17]}
@@ -210,6 +210,155 @@
       "waypoints": [
         {"from_id": 18, "to_ids": [0]},
         {"from_id": 0, "to_ids": [18]}
+      ]
+    }
+  ],
+  "layouts": [
+    {
+      "id": 1,
+      "name": "Reflected courtyard",
+      "squares": [
+        {
+          "id": 0,
+          "position": [
+            20,
+            0
+          ]
+        },
+        {
+          "id": 1,
+          "position": [
+            16,
+            0
+          ]
+        },
+        {
+          "id": 2,
+          "position": [
+            12,
+            0
+          ]
+        },
+        {
+          "id": 3,
+          "position": [
+            8,
+            0
+          ]
+        },
+        {
+          "id": 4,
+          "position": [
+            4,
+            0
+          ]
+        },
+        {
+          "id": 5,
+          "position": [
+            0,
+            0
+          ]
+        },
+        {
+          "id": 6,
+          "position": [
+            0,
+            4
+          ]
+        },
+        {
+          "id": 7,
+          "position": [
+            0,
+            8
+          ]
+        },
+        {
+          "id": 8,
+          "position": [
+            0,
+            12
+          ]
+        },
+        {
+          "id": 9,
+          "position": [
+            0,
+            16
+          ]
+        },
+        {
+          "id": 10,
+          "position": [
+            0,
+            20
+          ]
+        },
+        {
+          "id": 11,
+          "position": [
+            4,
+            20
+          ]
+        },
+        {
+          "id": 12,
+          "position": [
+            8,
+            20
+          ]
+        },
+        {
+          "id": 13,
+          "position": [
+            12,
+            20
+          ]
+        },
+        {
+          "id": 14,
+          "position": [
+            16,
+            20
+          ]
+        },
+        {
+          "id": 15,
+          "position": [
+            20,
+            20
+          ]
+        },
+        {
+          "id": 16,
+          "position": [
+            20,
+            16
+          ]
+        },
+        {
+          "id": 17,
+          "position": [
+            20,
+            12
+          ]
+        },
+        {
+          "id": 18,
+          "position": [
+            20,
+            8
+          ],
+          "switch_next_state": 0
+        },
+        {
+          "id": 19,
+          "position": [
+            20,
+            4
+          ]
+        }
       ]
     }
   ]

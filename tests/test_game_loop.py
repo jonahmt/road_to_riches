@@ -1346,14 +1346,14 @@ class TestLiquidation:
         p1_cash_before = p1.ready_cash
 
         loop.input.choose_liquidation.return_value = ("shop", 1, 0)
-        # p1 bids 50, p2 and p3 pass
-        loop.input.choose_auction_bid.side_effect = [50, None, None]
+        # p1 bids the 200 shop value; p2 and p3 pass
+        loop.input.choose_auction_bid.side_effect = [200, None, None]
 
         loop._handle_liquidation_phase(0)
 
         assert sq.property_owner == 1
         assert 1 in p1.owned_properties
-        assert p1.ready_cash == p1_cash_before - 50
+        assert p1.ready_cash == p1_cash_before - 200
         # Liquidating player only got the 75% — auction proceeds go to bank.
         assert p0.ready_cash == -100 + int(200 * 0.75)
 

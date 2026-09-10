@@ -281,3 +281,18 @@
 .app-shell.theme-tabletop.layout-immersive .hud-suit-slot.owned { opacity: 1; background: #09142f; }
 .app-shell.theme-tabletop .square-picker-help { background: #09192cdd; padding: 5px 9px; border-radius: 4px; }
 .app-shell.theme-tabletop:has(.board3d-error) .board-loading { display: none; }
+
+/* Keep the objective next to balances throughout ordinary play. */
+.layout-immersive .hud-match-goal{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:2px 10px;padding:8px 12px;background:#132e48;border:2px solid #dbbc6a;border-radius:8px;color:#fff;box-shadow:0 3px 8px #0005}
+.layout-immersive .hud-match-goal>span{font-size:13px;font-weight:700}.layout-immersive .hud-match-goal>strong{font-size:22px;color:#ffe39b;font-variant-numeric:tabular-nums}.layout-immersive .hud-match-goal>small{grid-column:1/-1;font-size:11px;color:#d8e4eb}
+.layout-immersive .hud-bank-ready{position:absolute;right:8px;bottom:3px;z-index:3;padding:2px 5px;background:#fff0b0;color:#493715;border:1px solid #9d7426;border-radius:4px;font-size:11px;font-weight:900;line-height:1.1}
+.layout-immersive.is-square-picking .hud-match-goal{display:none}
+.layout-immersive .state-change-result>span{max-width:100%;text-wrap:balance}
+
+.app-shell.theme-tabletop.layout-immersive .hud-player-card:has(.hud-bank-ready){padding-bottom:22px}
+.app-shell.theme-tabletop .layout-change-presentation{background:none;backdrop-filter:none;align-items:flex-start;padding-top:24px}
+.app-shell.theme-tabletop.layout-immersive .layout-change-presentation .venture-card{width:min(760px,90vw);min-height:0;padding:12px 24px;gap:5px;background:#fffefa;border:3px solid #aeb8bc;border-radius:10px;box-shadow:0 5px 0 #10253e66;animation:none}
+.app-shell.theme-tabletop .layout-change-presentation .venture-card-kicker{display:none}
+.app-shell.theme-tabletop .layout-change-presentation #presentation-title{font-size:28px}
+.app-shell.theme-tabletop .layout-change-presentation .venture-card>span{font-size:17px}
+.app-shell.theme-tabletop .layout-change-presentation .venture-card small{font-size:12px}

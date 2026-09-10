@@ -128,14 +128,14 @@ class TestLiquidationPhase:
         p0.ready_cash = -50
         _give_shop(loop.state, 0, 1)
         loop.input.choose_liquidation.return_value = ("shop", 1, 0)
-        # Player 1 bids 100, player 2 bids None → winner is 1
-        loop.input.choose_auction_bid.side_effect = [100, None]
+        # Player 1 bids the full 200 value; player 2 passes.
+        loop.input.choose_auction_bid.side_effect = [200, None]
 
         loop._handle_liquidation_phase(0)
 
         assert loop.state.board.squares[1].property_owner == 1
         assert 1 in loop.state.players[1].owned_properties
-        assert loop.state.players[1].ready_cash == 2000 - 100
+        assert loop.state.players[1].ready_cash == 2000 - 200
 
     def test_stock_quantity_zero_sells_all(self):
         loop = _make_loop()
@@ -179,3 +179,25 @@ class TestLiquidationPhase:
 
         # Shop was not awarded (bid exceeded cash and next bid was None)
         assert loop.state.board.squares[1].property_owner is None
+
+
+class TestForcedAuctionFloor:
+    def test_current_value_is_opening_floor_and_later_bids_must_raise(self):
+        loop = _make_loop(4)
+        shop = loop.state.board.squares[1]
+        shop.shop_current_value = 475
+        loop.input.choose_auction_bid.side_effect = [475, 475, 476]
+        loop._run_liquidation_auction(seller_id=0, square_id=1)
+        assert [c.args[3] for c in loop.input.choose_auction_bid.call_args_list] == [475, 476, 476]
+        assert shop.property_owner == 3
+        assert loop.state.players[3].ready_cash == 1524
+        assert loop.state.players[0].ready_cash == 2000
+
+    def test_underpriced_or_malformed_bids_do_not_award_shop(self):
+        for invalid in [1, 199, True, 200.5, "200"]:
+            loop = _make_loop()
+            loop.input.choose_auction_bid.side_effect = [invalid, None]
+            loop._run_liquidation_auction(seller_id=0, square_id=1)
+            assert loop.state.board.squares[1].property_owner is None
+            assert loop.state.players[1].ready_cash == 2000
+            assert [c.args[3] for c in loop.input.choose_auction_bid.call_args_list] == [200, 200]

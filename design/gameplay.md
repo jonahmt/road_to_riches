@@ -245,3 +245,16 @@ Players, shops, and districts can all gain temporary status effects. This is a c
 
 * (P3) Electrified X  
   * All shops in this district have prices increased by X%, until rent is paid to any shop in the district. Then that single transaction is increased by X%, and after this status effect is lost.
+
+## Experimental Arcade rules (approved September 9, 2026)
+
+The experimental branch uses a free three-reel suit game. Each reel independently
+selects one of the four standard suits with equal probability. Three matching
+suits pay 50 × the player's current level; exactly two matching suits pay
+10 × level; three different suits pay nothing. The introduction explains the
+prizes before the spin, and the result is acknowledged before the turn continues.
+These are experimental rules, not a claim to reproduce the Wii Arcade rules.
+
+The venture deck remains the existing five cards: Free Direction, Roll Again,
+Warp Anywhere, Lucky Roll, and Wild Card. The user deferred additional cards;
+the current work changes their presentation and sequencing only.

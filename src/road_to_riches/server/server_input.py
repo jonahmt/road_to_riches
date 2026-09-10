@@ -994,5 +994,11 @@ class WebSocketPlayerInput(PlayerInput):
     def retract_log(self, count: int) -> None:
         self._broadcast(msg_log_retract(count, game_id=self._game_id))
 
-    def send_game_over(self, winner: int | None) -> None:
-        self._broadcast(msg_game_over(winner, game_id=self._game_id))
+    def send_game_over(self, winner: int | None, state: GameState | None = None) -> None:
+        self._broadcast(
+            msg_game_over(
+                winner,
+                game_id=self._game_id,
+                state=game_state_to_dict(state) if state is not None else None,
+            )
+        )

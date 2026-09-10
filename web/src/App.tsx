@@ -1,3 +1,7 @@
+import { VentureCardReveal, VentureSelectionResult, VentureBack } from "./VenturePresentation";
+import { ArcadePresentation } from "./ArcadePresentation";
+import { statusResult } from "./statusResults";
+import { MatchResults } from "./MatchResultsScreen";
 import {
   type CSSProperties,
   lazy,
@@ -1219,6 +1223,7 @@ function App() {
         />
       )}
 
+      {activePresentation?.type === "venture_selected" && <VentureSelectionResult presentation={activePresentation} />}
       {activePresentation?.type === "venture_card_revealed" && (
         <VentureCardReveal
           presentation={activePresentation}
@@ -1229,6 +1234,11 @@ function App() {
               : dismissPresentation(activePresentation.requestId)
           }
         />
+      )}
+
+      {activePresentation && ["arcade_intro", "arcade_result"].includes(activePresentation.type) && (
+        <ArcadePresentation presentation={activePresentation} assignedPlayerId={clientState.playerId}
+          onContinue={() => acknowledgePresentation(activePresentation.requestId)} />
       )}
 
       {activePresentation?.type === "promotion_completed" && (
@@ -1271,7 +1281,7 @@ function App() {
 
       {activePresentation &&
         ![
-          "venture_card_revealed",
+          "venture_card_revealed", "arcade_intro", "arcade_result",
           "promotion_completed",
           "rent_payment",
           "stock_price_changed",
@@ -1316,8 +1326,8 @@ function App() {
         />
       )}
 
-      {clientState.gameOverWinner !== undefined && (
-        <div className="game-over-banner">Game over. Winner: Player {clientState.gameOverWinner ?? "none"}</div>
+      {clientState.gameOverWinner !== undefined && clientState.gameState && (
+        <MatchResults state={clientState.gameState} winner={clientState.gameOverWinner} onLeave={disconnect} />
       )}
     </main>
     </PresentationMotionContext.Provider>
@@ -1347,11 +1357,13 @@ function StateChangeResult({ presentation }: { presentation: PresentationState }
   const shop = after.board.squares.find((s, i) => s.property_owner !== before.board.squares[i]?.property_owner
     || s.shop_current_value !== before.board.squares[i]?.shop_current_value);
   const oldShop = shop && before.board.squares.find((s) => s.id === shop.id);
-  const title = shop ? shop.property_owner !== oldShop?.property_owner ? (shop.property_owner == null ? "Shop sold!" : "Shop acquired!") : "Shop investment"
+  const status = statusResult(before, after);
+  const title = status?.title ?? (shop ? shop.property_owner !== oldShop?.property_owner ? (shop.property_owner == null ? "Shop sold!" : "Shop acquired!") : "Shop investment"
     : changed.some((p, i) => JSON.stringify(p.owned_stock) !== JSON.stringify(before.players.find((old) => old.player_id === p.player_id)?.owned_stock))
-      ? "Stock transaction" : changed.length ? "Cash update" : "Board update";
+      ? "Stock transaction" : changed.length ? "Cash update" : "Board updated");
   return <div className="state-change-result" role="status">
     <strong>{title}</strong>
+    {status?.lines.map(line => <span key={line}>{line}</span>)}
     {shop && <span>Square #{shop.id}</span>}
     {shop && shop.shop_current_value !== oldShop?.shop_current_value && <span className="result-value">{formatGold(oldShop?.shop_current_value ?? 0)} → {formatGold(shop.shop_current_value ?? 0)}</span>}
     {changed.map((player) => <span key={player.player_id}>Player {player.player_id}
@@ -1469,7 +1481,7 @@ function BoardPanel(props: BoardPanelProps) {
   const [threeDimensional, setThreeDimensional] = useState(
     () => new URLSearchParams(window.location.search).get("renderer") !== "2d",
   );
-  useEffect(() => { if (!threeDimensional) props.onReady(); }, [threeDimensional]);
+  useEffect(() => { if (!threeDimensional && props.state) props.onReady(); }, [threeDimensional, props.state]);
   const artwork = useMemo(() => {
     if (!props.state) return new Map<number, TileArtwork>();
     return new Map(props.state.board.squares.map((square) => [square.id, boardTileArtwork(square, props.state!)]));
@@ -3618,6 +3630,7 @@ function PlayerHud({
       className={`player-hud ${cashDeltas ? "has-cash-deltas" : ""}`}
       aria-label="Players"
     >
+      <div className="hud-match-goal" aria-label="Match goal"><span>Target net worth</span><strong>{formatGold(state.board.target_networth)}</strong><small>Reach the target, then return to the bank</small></div>
       {state.players.map((player) => {
         const isCurrent = state.players[state.current_player_index]?.player_id === player.player_id;
         const isAssigned = assignedPlayerId === player.player_id;
@@ -3628,6 +3641,7 @@ function PlayerHud({
             className={`hud-player-card ${isCurrent ? "current" : ""} ${isAssigned ? "assigned" : ""}`}
             style={{ borderColor: getPlayerColor(player.player_id), "--player-color": getPlayerColor(player.player_id) } as CSSProperties}
           >
+            {!player.bankrupt && netWorth(state, player) >= state.board.target_networth && <span className="hud-bank-ready" title="Target reached. Return to the bank to win.">★ Bank to win</span>}
             {cashDelta !== 0 && (
               <span
                 className={`hud-cash-delta ${cashDelta > 0 ? "is-positive" : "is-negative"}`}
@@ -4084,8 +4098,6 @@ function VentureGridOverlay({
       aria-labelledby="venture-grid-title"
       tabIndex={-1}
     >
-      <div className="venture-grid-shell">
-        <div className="venture-grid-panel">
           <header className="venture-grid-header">
             <div>
               <p className="eyebrow">Venture Card</p>
@@ -4093,6 +4105,9 @@ function VentureGridOverlay({
             </div>
             <span className="venture-grid-available">{availableCount} open</span>
           </header>
+      <div className="venture-grid-shell">
+        <div className="venture-grid-panel">
+
 
           {cells.length > 0 ? (
             <div
@@ -4135,7 +4150,7 @@ function VentureGridOverlay({
                       }}
                     >
                       <span className="venture-cell-coordinate">{coordinate}</span>
-                      <span className="venture-cell-owner">{owner === null ? "·" : `P${owner}`}</span>
+                      <VentureBack small/><span className="venture-cell-owner">{owner === null ? "" : `P${owner}`}</span>
                     </button>
                   );
                 }),
@@ -4642,67 +4657,6 @@ function StockOverlay({
   );
 }
 
-function VentureCardReveal({
-  presentation,
-  assignedPlayerId,
-  onContinue,
-}: {
-  presentation: PresentationState;
-  assignedPlayerId: number | null;
-  onContinue: () => void;
-}) {
-  const name = String(presentation.data.name ?? "Venture Card");
-  const description = String(presentation.data.description ?? "");
-  const isOwner = !presentation.requiresAcknowledgment || presentation.playerId === assignedPlayerId;
-  const canContinue = isOwner && !presentation.acknowledgmentPending && presentation.canContinue !== false;
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (isGameplayHotkeySuppressed()) {
-        return;
-      }
-      if (
-        ["Escape", "Enter", " "].includes(event.key) ||
-        WASD_KEYS.has(event.key.toLowerCase()) ||
-        event.key.startsWith("Arrow")
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (canContinue && !event.repeat && ["Enter", " "].includes(event.key)) {
-          onContinue();
-        }
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [canContinue, onContinue]);
-
-  return (
-    <div className="venture-card-reveal" role="dialog" aria-modal="true" aria-labelledby="venture-card-title">
-      <button
-        type="button"
-        className="venture-card"
-        autoFocus={isOwner}
-        disabled={!canContinue}
-        onClick={onContinue}
-        aria-label={isOwner ? "Continue from Venture Card" : `Waiting for Player ${presentation.playerId}`}
-      >
-        <span className="venture-card-emblem" aria-hidden="true">✦</span>
-        <span className="venture-card-kicker">Venture Card</span>
-        <strong id="venture-card-title">{name}</strong>
-        {description && <span className="venture-card-description">{description}</span>}
-        <small>
-          {presentation.acknowledgmentPending
-            ? "Continuing..."
-            : isOwner
-              ? "Click or press Enter to continue"
-              : `Waiting for Player ${presentation.playerId}...`}
-        </small>
-      </button>
-    </div>
-  );
-}
-
 function GenericPresentation({
   presentation,
   assignedPlayerId,
@@ -4732,17 +4686,21 @@ function GenericPresentation({
   }, [canContinue, onContinue]);
 
   return (
-    <div className="venture-card-reveal" role="dialog" aria-modal="true" aria-labelledby="presentation-title">
+    <div className={`venture-card-reveal ${presentation.type === "board_layout_changed" ? "layout-change-presentation" : ""}`} role="dialog" aria-modal="true" aria-labelledby="presentation-title">
       <button
         type="button"
         className={`venture-card ${luckyRoll ? "lucky-roll-result" : ""}`}
         autoFocus={isOwner}
         disabled={!canContinue}
         onClick={onContinue}
-        aria-label={luckyRoll && isOwner ? "Continue from Lucky Roll winnings" : undefined}
+        aria-label={isOwner ? luckyRoll ? "Continue from Lucky Roll winnings" : "Continue from board change" : undefined}
       >
         <span className="venture-card-kicker">{luckyRoll ? "Venture Card · Result" : "Game Event"}</span>
-        <strong id="presentation-title">{luckyRoll ? "Lucky Roll!" : readableType(presentation.type)}</strong>
+        <strong id="presentation-title">{luckyRoll ? "Lucky Roll!" : presentation.type === "board_layout_changed" ? "Switch!" : readableType(presentation.type)}</strong>
+        {presentation.type === "board_layout_changed" && <>
+          <span>{String(presentation.data.name ?? "Switch")}</span>
+          <span>{String(presentation.data.message ?? "The board layout has changed.")}</span>
+        </>}
         {luckyRoll && <>
           <span className="lucky-roll-player">
             <PlayerPortrait color={getPlayerColor(presentation.playerId)} playerId={presentation.playerId} />

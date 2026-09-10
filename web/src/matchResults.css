@@ -1,0 +1,18 @@
+.match-results-backdrop{position:fixed;inset:0;z-index:110;display:grid;place-items:center;background:rgba(8,17,30,.73);padding:24px}
+.match-results{width:min(960px,100%);max-height:calc(100dvh - 48px);overflow:auto;background:#f5f1df;color:#183048;border:3px solid #e9c469;border-radius:20px;box-shadow:0 24px 80px #0008;animation:results-arrive .55s ease-out;text-align:center}
+.results-celebration{position:relative;padding:22px 20px 18px;background:#153550;color:#fff;border-bottom:3px solid #dcb65a}
+.results-stars{color:#f9d570;letter-spacing:16px;font-size:28px;line-height:1.2}
+.results-celebration .player-portrait{width:86px;height:86px;margin:4px auto;position:static;display:block}
+.results-celebration h1{font-size:clamp(32px,4vw,48px);margin:4px 0;color:#ffe395;text-shadow:0 3px #081d30}
+.results-celebration p{margin:6px 0;color:#e6edf2}
+.results-table-wrap{overflow-x:auto;padding:12px 24px 0}
+.match-results table{border-collapse:collapse;width:100%;font-size:18px;font-variant-numeric:tabular-nums}
+.match-results caption{text-align:left;font-size:21px;font-weight:800;padding:8px 0 12px}
+.match-results th,.match-results td{padding:12px 10px;text-align:right;border-bottom:1px solid #c7cfc8;white-space:nowrap}
+.match-results th:nth-child(2){text-align:left}.match-results thead th{font-size:13px;text-transform:uppercase;color:#526373}
+.match-results .results-winner{background:#ffe4a0}.match-results small{display:block;font-size:12px;color:#7b4343}
+.results-note{margin:14px 20px 18px;font-size:14px;color:#526373}.match-results footer{display:flex;justify-content:center;gap:12px;padding:0 20px 22px}
+.results-return{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:20px;padding:12px 18px;background:#153550;border:2px solid #e9c469;border-radius:12px;color:white;white-space:nowrap}
+@keyframes results-arrive{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
+@media(max-height:760px){.results-celebration{padding:12px}.results-celebration .player-portrait{width:60px;height:60px}.results-stars{font-size:22px}.match-results th,.match-results td{padding:9px}}
+@media(prefers-reduced-motion:reduce){.match-results{animation:none}}

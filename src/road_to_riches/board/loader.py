@@ -4,6 +4,7 @@ import json
 import logging
 from pathlib import Path
 
+from road_to_riches.board.layouts import build_layouts
 from road_to_riches.models.board_state import (
     BoardState,
     PromotionInfo,
@@ -141,6 +142,7 @@ def load_board(path: str | Path) -> tuple[BoardState, StockState]:
         squares=squares,
         num_districts=num_districts,
         starting_cash=data.get("starting_cash", 1500),
+        layouts=build_layouts(data),
     )
 
     # Initialize stock prices: value component = 4% of average shop value, rounded

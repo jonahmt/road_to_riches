@@ -237,18 +237,20 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   const savedView = useRef<{ position: Vector3; target: Vector3 } | null>(null);
   const pickerMotion = useRef<{ from: Vector3; fromTarget: Vector3; to: Vector3; toTarget: Vector3; start: number; duration: number } | null>(null);
   const intro = presentation.beat?.type === "turn_started";
+  const shiftingLayout = presentation.beat?.type === "board_layout_changed";
+  const layoutExtent = boardExtent(state.board.squares);
   const pitch = (intro ? 32 : 52) * Math.PI / 180;
-  const distance = intro ? 25 : 28;
+  const distance = shiftingLayout ? Math.max(35, layoutExtent.depth * 1.4, layoutExtent.width * size.height / size.width * 1.6) : intro ? 25 : 28;
   const followZoom = useRef(1);
   const offset = new Vector3(0, Math.sin(pitch) * distance, Math.cos(pitch) * distance);
   const profile = useRef({ from: offset.clone(), to: offset.clone(), start: 0 });
-  const target = focusPoint(state, focusDistrictId);
+  const target = shiftingLayout ? layoutExtent.center : focusPoint(state, focusDistrictId);
   target[1] += intro ? 2.5 : 0.6;
   useLayoutEffect(() => {
     const orbit = controlsRef.current;
     profile.current = { from: orbit ? camera.position.clone().sub(orbit.target) : offset.clone(),
       to: offset.clone().multiplyScalar(followZoom.current), start: performance.now() };
-  }, [intro]);
+  }, [intro, shiftingLayout]);
   const targetRef = useRef(new Vector3(...target));
   const stepCamera = useRef({ from: new Vector3(...target), start: 0, duration: 0 });
   const previousFree = useRef(free);
@@ -486,6 +488,13 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, activ
   eligible: boolean; focused: boolean; activeOccupant: boolean; reduced: boolean; onSelect: (id: number, confirm: boolean) => void;
   anchors: Map<string, HTMLSpanElement>;
 }) {
+  const tile = useRef<Group>(null);
+  const initial = useRef(boardPoint(square.position, 0));
+  const destination = boardPoint(square.position, 0);
+  const motion = useRef({ from: initial.current, start: 0 });
+  useLayoutEffect(() => {
+    motion.current = { from: tile.current?.position.toArray() as Point3 ?? destination, start: performance.now() };
+  }, [square.position[0], square.position[1]]);
   const texture = useTileTexture(artwork.surface);
   const base = useMemo(() => new RoundedBoxGeometry(4, 0.42, 4, 2, 0.1), []);
   const rim = useMemo(makeTileRim, []);
@@ -500,12 +509,15 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, activ
     onSelect(square.id, confirm);
   };
   useFrame(({ clock }) => {
+    const progress = reduced ? 1 : Math.min(1, (performance.now() - motion.current.start) / 1200);
+    const eased = progress * progress * (3 - 2 * progress);
+    tile.current?.position.set(...destination.map((value, i) => motion.current.from[i] + (value - motion.current.from[i]) * eased) as Point3);
     if (glow.current) glow.current.emissiveIntensity = focused
       ? (reduced ? 0.35 : 0.3 + Math.sin(clock.elapsedTime * 5) * 0.2) : 0;
   });
   const shop = square.type === "SHOP";
   const bank = ["BANK", "STOCKBROKER"].includes(square.type);
-  return <group position={boardPoint(square.position, 0)}
+  return <group ref={tile} position={initial.current}
     onPointerDown={(event) => { event.stopPropagation(); down.current = { x: event.clientX, y: event.clientY }; }}
     onClick={(event) => click(event, false)} onDoubleClick={(event) => click(event, true)}
     onPointerOver={(event) => { event.stopPropagation(); setHovered(true); }} onPointerOut={() => setHovered(false)}>
@@ -585,11 +597,12 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
   const initialScale = useRef(scale);
   const { camera, size } = useThree();
   const destination = useRef(position);
-  const transition = useRef({ from: position, start: 0, duration: 0 });
+  const transition = useRef({ from: position, start: 0, duration: 0, layout: false });
   const color = PLAYER_COLORS[player.player_id % PLAYER_COLORS.length];
   useLayoutEffect(() => {
     if (group.current) transition.current = { from: group.current.position.toArray() as Point3, start: performance.now(),
-      duration: reduced ? 0 : adjacentStepAnimationDuration(player.player_id, assignedPlayerId) };
+      duration: reduced ? 0 : presentation.beat?.type === "board_layout_changed" ? 1200 : adjacentStepAnimationDuration(player.player_id, assignedPlayerId),
+      layout: presentation.beat?.type === "board_layout_changed" };
     const from = transition.current.from;
     if (Math.hypot(position[0] - from[0], position[2] - from[2]) > 0.1) {
       heading.current = Math.atan2(position[0] - from[0], position[2] - from[2]);
@@ -600,10 +613,12 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
     if (!group.current) return;
     const motion = transition.current;
     const progress = motion.duration ? Math.min(1, (performance.now() - motion.start) / motion.duration) : 1;
-    group.current.position.set(...pieceStepPosition(motion.from, destination.current, progress));
+    group.current.position.set(...(motion.layout
+      ? destination.current.map((value, i) => motion.from[i] + (value - motion.from[i]) * progress * progress * (3 - 2 * progress)) as Point3
+      : pieceStepPosition(motion.from, destination.current, progress)));
     group.current.scale.setScalar(reduced ? scale : group.current.scale.x +
       (scale - group.current.scale.x) * (1 - Math.exp(-20 * delta)));
-    const traveling = Math.hypot(motion.from[0] - destination.current[0], motion.from[2] - destination.current[2]) > 0.1;
+    const traveling = !motion.layout && Math.hypot(motion.from[0] - destination.current[0], motion.from[2] - destination.current[2]) > 0.1;
     stride.current = !reduced && traveling && progress < 1 ? progress : -1;
     if (figure.current) {
       if (presentation.beat?.type === "turn_started") heading.current = 0;

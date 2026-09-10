@@ -80,3 +80,5 @@ class BoardState:
     squares: list[SquareInfo]
     num_districts: int = 0
     starting_cash: int = 1500
+    current_layout: int = 0
+    layouts: dict[int, dict[str, Any]] = field(default_factory=dict)

@@ -7,6 +7,8 @@ enums, tuples, and custom types cleanly.
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 from road_to_riches.models.board_state import (
     BoardState,
     PromotionInfo,
@@ -64,6 +66,8 @@ def _board_to_dict(board: BoardState) -> dict:
         "max_bankruptcies": board.max_bankruptcies,
         "num_districts": board.num_districts,
         "starting_cash": board.starting_cash,
+        "current_layout": board.current_layout,
+        "layouts": {str(k): deepcopy(v) for k, v in board.layouts.items()},
         "promotion_info": {
             "base_salary": board.promotion_info.base_salary,
             "salary_increment": board.promotion_info.salary_increment,
@@ -82,6 +86,8 @@ def _board_from_dict(d: dict) -> BoardState:
         max_bankruptcies=d["max_bankruptcies"],
         num_districts=d["num_districts"],
         starting_cash=d.get("starting_cash", 1500),
+        current_layout=d.get("current_layout", 0),
+        layouts={int(k): deepcopy(v) for k, v in d.get("layouts", {}).items()},
         promotion_info=PromotionInfo(
             base_salary=pi["base_salary"],
             salary_increment=pi["salary_increment"],

@@ -12,6 +12,8 @@ from enum import Enum
 
 from road_to_riches.engine.affordability import can_cover_with_cash_and_stock
 from road_to_riches.engine.property import current_rent, max_capital
+from road_to_riches.events.arcade import ArcadeEvent
+from road_to_riches.events.board_layout import SwitchLayoutEvent
 from road_to_riches.events.game_events import (
     CloseShopsEvent,
     CollectSuitEvent,
@@ -29,11 +31,6 @@ from road_to_riches.models.board_state import SquareInfo
 from road_to_riches.models.game_state import GameState
 from road_to_riches.models.square_type import SquareType
 from road_to_riches.models.suit import Suit
-
-_UNIMPLEMENTED_TYPES: set[SquareType] = {
-    SquareType.SWITCH,
-    SquareType.ARCADE,
-}
 
 
 class PlayerAction(str, Enum):
@@ -184,6 +181,12 @@ def handle_land(state: GameState, player_id: int, square: SquareInfo) -> SquareR
     elif square.type == SquareType.VENTURE:
         info["venture_card"] = True
 
+    elif square.type == SquareType.SWITCH:
+        auto_events.append(SwitchLayoutEvent(player_id=player_id, square_id=square.id))
+
+    elif square.type == SquareType.ARCADE:
+        auto_events.append(ArcadeEvent(player_id=player_id))
+
     elif square.type == SquareType.TAKE_A_BREAK:
         auto_events.append(CloseShopsEvent(player_id=player_id))
 
@@ -220,8 +223,6 @@ def handle_land(state: GameState, player_id: int, square: SquareInfo) -> SquareR
                 {"player_id": p.player_id, "position": p.position} for p in other_players
             ]
 
-    elif square.type in _UNIMPLEMENTED_TYPES:
-        info["unimplemented"] = square.type.value
 
     return SquareResult(auto_events=auto_events, available_actions=actions, info=info)
 

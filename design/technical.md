@@ -680,3 +680,44 @@ is that converting to/from json is super easy with the standard python library. 
 	  
 	  
 	
+
+## Experimental audit fixes (September 9, 2026)
+
+### Switch layout data
+
+Boards containing Switch squares author a `layouts` array. Layout 0 is the
+original board; each alternate has a distinct positive `id`, a display `name`,
+and `squares` containing partial overrides keyed by square ID. Overrides may
+change only `position`, `waypoints`, and `switch_next_state`. Each alternate
+inherits from layout 0 independently, rather than the preceding alternate.
+Every Switch must reference an existing layout in every configuration. The
+loader rejects missing routes, invalid square references, non-finite positions,
+and overrides of financial fields before play.
+
+`SwitchLayoutEvent` applies these fields to the existing square objects. Owners,
+values, investments, statuses, player square IDs, and stock holdings remain
+attached to their original identities. A direction lock is cleared only when
+it leaves a player with no legal route in the new layout. `BoardState` saves
+both `current_layout` and the complete layouts, so a resumed game can switch
+back. Legacy saves without definitions receive an explicit unavailable-layout
+explanation. The all-square showcase supplies a reversible reflected layout;
+Trodain itself has no Switch square.
+
+### Arcade and final-state delivery
+
+`ArcadeEvent` emits an introduction barrier before `ArcadeSpinEvent` draws the
+three independent results and awards cash. The spin stores the chosen reels as
+serializable event data. Its result barrier carries reels, prize, and level;
+the browser never draws authoritative outcomes or computes winnings.
+
+`game_over` includes the final serialized state, while accepting clients of
+older messages without that field. The browser retains the final results after
+a normal server shutdown and stores a completed snapshot in tab-scoped
+`sessionStorage`. Reloading restores results without reconnecting to a finished
+server. Leaving results or explicitly joining another game clears that snapshot.
+The declared bank winner ranks first even when another player has greater net
+worth. Remaining players are ordered by final net worth and then player ID.
+
+Forced liquidation auctions require integer bids at least equal to the shop's
+current value (including investments), greater than the previous bid, and
+within the bidder's cash. Seller proceeds retain the existing 75% rule.

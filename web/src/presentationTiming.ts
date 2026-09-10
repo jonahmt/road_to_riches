@@ -18,6 +18,9 @@ export function beatTiming(beat: PresentationState) {
     case "rent_payment": return { reveal: Array.isArray(beat.data.dividends) && beat.data.dividends.length ? PACING.dividendsEnd : PACING.rentTransferEnd, human: 800, auto: 1400, exit: PACING.exit, motion: [] };
     case "stock_price_changed": return { reveal: 1400, human: 800, auto: 1600, exit: PACING.exit, motion: ["camera"] };
     case "promotion_completed": return { reveal: 2400, human: 900, auto: 1800, exit: PACING.exit, motion: [] };
+    case "board_layout_changed": return { reveal: 1800, human: 800, auto: 1600, exit: PACING.exit, motion: ["camera"] };
+    case "arcade_intro": return { reveal: 500, human: 500, auto: 1800, exit: PACING.exit, motion: [] };
+    case "arcade_result": return { reveal: 2700, human: 800, auto: 1800, exit: PACING.exit, motion: [] };
     case "venture_card_revealed": return { reveal: 600, human: 800, auto: 2600, exit: PACING.exit, motion: [] };
     default: return { reveal: 1000, human: 800, auto: 1400, exit: PACING.exit, motion: [] };
   }
@@ -38,7 +41,7 @@ export function presentedState(beat: PresentationState, elapsed: number): GameSt
   if (["piece_moved", "turn_started"].includes(beat.type)) return after;
   if (beat.type === "dice_rolled") return before;
   if (beat.type === "suit_collected") return after;
-  const release = beat.type === "promotion_completed" ? 900 : beat.type === "stock_price_changed" ? 1000 : 550;
+  const release = beat.type === "arcade_result" ? 2200 : beat.type === "promotion_completed" ? 900 : beat.type === "stock_price_changed" ? 1000 : 550;
   const result = elapsed >= release ? after : before;
   const rentCash = beat.data.rent_cash as Record<string, number> | undefined;
   return { ...result, players: result.players.map((player) => {

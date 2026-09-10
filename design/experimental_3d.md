@@ -939,3 +939,47 @@ At 1280×720 and 1600×1000, before/after samples stayed near 16.7ms median and
 tracking and orbit. No interval exceeded 33.4ms in those 239-frame samples.
 High-DPI checks on Apple M1 Metal used a 2800×1750 render buffer and also remained
 near 16.7ms median. Texture caching and confirmation after orbit were verified.
+
+## Complete-match audit fixes and existing-card presentation (September 9, 2026)
+
+The latest pass keeps the five-card deck and basic AI strategy unchanged. The
+reference at 41:25–41:37 shows a centered card grid, a tall illustrated card over
+that grid, an independent explanation below it, and the effect after the card
+is dismissed. The experimental UI follows that sequence with original SVG art
+for the existing cards. Keyboard selection, line previews, ownership markers,
+and the explanation's explicit confirmation are retained. The card text is
+not published to the log before the reveal barrier.
+
+Arcade has a dedicated introduction, three reels settling in sequence, and a
+prize screen. Winnings start appearing in the HUD only after the final reel
+settles at 2.2 seconds. Reduced motion uses static unknown faces until each reel
+is revealed. Switch shows the wider board and slides tiles and their occupants
+together over 1.2 seconds, without walking or jumping between their old and new
+positions. These transitions use existing render frames and fixed geometry;
+they do not regenerate board textures on each animation frame.
+
+The HUD now includes the match target and a separate bank-to-win badge once a
+solvent player reaches it. Status receipts identify Boon/BOOM commissions,
+closed shops, reopening, and expiry rather than displaying a generic board
+update. Results show the winner and asset breakdown, permit final-board
+inspection, and survive the normal server shutdown and browser reload.
+
+Validation used a frozen production build and real local servers. A fresh
+Trodain match at target 1,500 finished in 26 player turns (4m33s), with Player 1
+winning at the bank at net worth 1,824 while Player 3 held 1,849. All 194 recorded
+presentation beats entered, became readable, exited, and completed in order,
+with zero overlaps and zero browser exceptions. Focused browser fixtures covered
+all five card reveals, Arcade, Switch, Boon, closure, bankruptcy results, bank
+victory, reload/inspection/leave, and 1280×720 and 1600×1000 layouts.
+An eight-second 1600×1000 frame sample during Arcade held 480 frames, median
+16.7 ms, p95 16.8 ms, and zero frames above 50 ms. This is a local measurement,
+not a guarantee for every device. Reduced-motion Arcade and a 2D card turn were
+checked separately. The latter exposed and fixed a pre-existing readiness
+reset: the SVG renderer must signal readiness when the joined state arrives,
+not only when the renderer component first mounts.
+
+Replaying the original forced-auction fixture now opens the 190-value shop at
+190 and sells it to Player 3 for 192, rather than 3. The automated gates pass:
+777 Python tests, 114 TypeScript tests, three server-rendered React tests, Ruff,
+TypeScript checking, and the production build. The previous implementation
+remains available at commit `7f24320` on the same experimental branch.

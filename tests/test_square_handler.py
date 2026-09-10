@@ -374,12 +374,12 @@ class TestLandCannon:
 
 
 class TestLandUnimplemented:
-    def test_switch_marked_unimplemented(self):
+    def test_switch_dispatches_layout_event(self):
         game = _make_game()
         res = handle_land(game, 0, _sq(SquareType.SWITCH))
-        assert res.info.get("unimplemented") == SquareType.SWITCH.value
+        assert res.auto_events[0].event_type == "SwitchLayoutEvent"
 
-    def test_arcade_marked_unimplemented(self):
+    def test_arcade_starts_minigame(self):
         game = _make_game()
         res = handle_land(game, 0, _sq(SquareType.ARCADE))
-        assert res.info.get("unimplemented") == SquareType.ARCADE.value
+        assert res.auto_events[0].event_type == "ArcadeEvent"

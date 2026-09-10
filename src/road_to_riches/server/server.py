@@ -839,7 +839,7 @@ class GameServer:
 
         winner = session.game_loop.run()
         logger.info("Game over. Winner: %s", winner)
-        session.player_input.send_game_over(winner)
+        session.player_input.send_game_over(winner, session.game_loop.state)
 
         # Terminate AI subprocesses
         for proc in session.ai_processes:

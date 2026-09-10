@@ -1,3 +1,4 @@
+import { readCompletedMatch, writeCompletedMatch } from "./matchResults";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   PLAYER_CONTROL_REPLACED_CLOSE_CODE,
@@ -99,23 +100,26 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
   const notificationIdRef = useRef(0);
   const presentationAckPendingRef = useRef(new Set<string>());
   const activePresentationRef = useRef<PresentationState | null>(null);
-  const [clientState, setClientState] = useState<GameClientState>({
+  const [clientState, setClientState] = useState<GameClientState>(() => {
+    const completed = readCompletedMatch();
+    return {
     status: "disconnected",
-    uri: defaultUri,
-    playerId: null,
+    uri: completed?.uri ?? defaultUri,
+    playerId: completed?.playerId ?? null,
     gameId: null,
-    gameState: null,
+    gameState: completed?.state ?? null,
     pendingRequest: null,
     logs: [],
     dice: null,
     presentations: [],
-    gameOverWinner: undefined,
+    gameOverWinner: completed ? completed.winner : undefined,
     responsePending: false,
     error: null,
     reportSubmission: { status: "idle" },
-  });
+  }; });
 
   const disconnect = useCallback(() => {
+    writeCompletedMatch(null);
     connectionIdRef.current += 1;
     void closeSocket(socketRef.current);
     socketRef.current = null;
@@ -152,6 +156,7 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
 
   const connect = useCallback(
     async (uri: string) => {
+      writeCompletedMatch(null);
       const connectionId = connectionIdRef.current + 1;
       connectionIdRef.current = connectionId;
       const previousSocket = socketRef.current;
@@ -356,15 +361,21 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
                 ...current,
                 dice: nextDiceState(current.dice, message),
               };
-            case "game_over":
+            case "game_over": {
               responsePendingRef.current = false;
+              const finalState = message.state ?? current.gameState;
+              if (finalState) writeCompletedMatch({ state: finalState, winner: message.winner,
+                uri: current.uri, playerId: current.playerId });
               return {
                 ...current,
                 gameOverWinner: message.winner,
+                gameState: finalState,
+                dice: null,
                 pendingRequest: null,
                 responsePending: false,
                 logs: appendLog(current.logs, `Game over. Winner: Player ${message.winner ?? "none"}`),
               };
+            }
             case "save_result":
               return {
                 ...current,
@@ -445,7 +456,17 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
         gameIdRef.current = null;
         responsePendingRef.current = false;
         presentationAckPendingRef.current.clear();
-        setClientState((current) => ({
+        setClientState((current) => current.gameOverWinner !== undefined && !closeReason ? {
+          ...current,
+          status: "disconnected",
+          pendingRequest: null,
+          responsePending: false,
+          dice: null,
+          // A server shutdown after completion is normal. Drain local presentation
+          // work, preserving its endpoints, then expose the durable final results.
+          presentations: current.presentations.filter(p => p.coordinated && !p.localComplete).map(p => ({ ...p, serverResolved: true, acknowledgmentPending: true })),
+          error: null,
+        } : ({
           ...current,
           status: "disconnected",
           playerId: null,
@@ -600,10 +621,10 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
   useEffect(() => {
     const beat = clientState.presentations[0];
     const key = `${connectionIdRef.current}:${beat?.requestId}:${beat?.generation}`;
-    if (beat?.coordinated && beat.localComplete && beat.driverPlayerId === clientState.playerId && readySent.current !== key) {
+    if (clientState.status === "connected" && beat?.coordinated && beat.localComplete && beat.driverPlayerId === clientState.playerId && readySent.current !== key) {
       if (send({ msg: "presentation_ready", request_id: beat.requestId, generation: beat.generation!, game_id: gameIdRef.current ?? undefined })) readySent.current = key;
     }
-  }, [clientState.presentations, clientState.playerId, send]);
+  }, [clientState.presentations, clientState.playerId, clientState.status, send]);
   useEffect(() => {
     if (clientState.status !== "connected" || clientState.playerId === null) return;
     let wasHidden = document.visibilityState === "hidden";
@@ -622,7 +643,11 @@ export function useGameClient(defaultUri: string, rendererReady = true) {
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", visibility); };
   }, [clientState.status, clientState.playerId, send, requestSync]);
 
-  useEffect(() => disconnect, [disconnect]);
+  useEffect(() => () => {
+    connectionIdRef.current += 1;
+    void closeSocket(socketRef.current);
+    socketRef.current = null;
+  }, []);
 
   return {
     clientState: { ...clientState,

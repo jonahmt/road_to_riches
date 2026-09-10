@@ -1314,9 +1314,9 @@ class GameLoop:
 
     def _run_liquidation_auction(self, seller_id: int, square_id: int) -> None:
         """Run a blind auction for a shop the bank is holding after liquidation."""
-        base_value = self.state.board.squares[square_id].shop_base_value or 0
+        opening_bid = max(1, self.state.board.squares[square_id].shop_current_value or 0)
         self.log.log(
-            f"Auctioning square {square_id} (base value: {base_value}G) — proceeds go to the bank."
+            f"Auctioning square {square_id} (minimum: {opening_bid}G) — proceeds go to the bank."
         )
         self.input.notify(self.state, self.log)
 
@@ -1326,9 +1326,14 @@ class GameLoop:
             if p.player_id == seller_id:
                 continue
             bid = self.input.choose_auction_bid(
-                self.state, p.player_id, square_id, best_bid + 1, self.log
+                self.state, p.player_id, square_id, max(opening_bid, best_bid + 1), self.log
             )
-            if bid is not None and bid > best_bid and bid <= p.ready_cash:
+            if (
+                type(bid) is int
+                and bid >= opening_bid
+                and bid > best_bid
+                and bid <= p.ready_cash
+            ):
                 best_bid = bid
                 best_bidder = p.player_id
 
@@ -1381,8 +1386,6 @@ class GameLoop:
 
         # Draw and execute the card
         card = deck.draw()
-        self.log.log(f"Venture Card: {card.name} — {card.description}")
-        self.input.notify(self.state, self.log)
         self._execute_event(
             PresentationBarrierEvent(
                 player_id=player_id,
@@ -1390,11 +1393,15 @@ class GameLoop:
                 data={
                     "player_id": player_id,
                     "card_id": card.card_id,
+                    "row": row,
+                    "col": col,
                     "name": card.name,
                     "description": card.description,
                 },
             )
         )
+        self.log.log(f"Venture Card: {card.name} — {card.description}")
+        self.input.notify(self.state, self.log)
         self.run_script(card.script_path, player_id)
 
     # ------------------------------------------------------------------
