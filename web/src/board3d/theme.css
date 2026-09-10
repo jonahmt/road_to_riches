@@ -484,17 +484,14 @@
 .square-picker-help { color: #b5cad7; font-size: 13px; margin-left: auto; }
 .square-picker kbd { font: bold 11px "Trebuchet MS", sans-serif; display: inline-block; border: 1px solid currentColor; padding: 2px 4px; border-radius: 4px; opacity: .8; }
 .square-picker-cursor { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 6; visibility: hidden; }
-.square-picker-cursor i { position: absolute; width: 20px; height: 20px; border: 5px solid currentColor; border-radius: 4px;
+.square-picker-cursor svg { width: 100%; height: 100%; overflow: visible; }
+.square-picker-cursor path { fill: none; stroke: currentColor; stroke-width: 5px; stroke-linecap: round; stroke-linejoin: round;
   filter: drop-shadow(0 0 1px #fff) drop-shadow(0 1px 2px #0009); animation: square-cursor-pulse 1s ease-in-out infinite alternate; }
-.square-picker-cursor i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; }
-.square-picker-cursor i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; }
-.square-picker-cursor i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; }
-.square-picker-cursor i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; }
 .square-picker-cursor span { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 22px;
   color: #fffbe2; text-shadow: 0 2px 0 var(--picker-color, #213c56); }
 .square-picker-cursor.is-unavailable { opacity: .55; }
 @keyframes square-cursor-pulse { to { filter: drop-shadow(0 0 3px #fff) drop-shadow(0 1px 2px #0009); } }
-@media (prefers-reduced-motion: reduce) { .square-picker-cursor i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .square-picker-cursor path { animation: none; } }
 @media (max-height: 800px) {
   .square-picker-card { padding: 10px; }
   .square-picker-card h2 { margin-top: 7px; font-size: 18px; }

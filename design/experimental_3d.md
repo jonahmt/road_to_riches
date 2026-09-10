@@ -894,3 +894,11 @@ size still triggers Vite's default 500 kB advisory. React Three Fiber currently
 also emits a Three.js `Clock` deprecation warning. Neither prevented rendering
 or interaction in the reviewed Chrome sessions. Low-end GPU and mobile-device
 performance have not been measured.
+
+### Board-plane selection brackets
+
+The selector projects all four corner brackets and their legs from the same
+horizontal plane, just above the tile surface. It no longer uses the screen
+bounding rectangle of a volume enclosing the building. SVG strokes preserve
+legibility while the projected vertices follow board perspective and camera
+motion. Free cursor travel, nearby-square snapping and confirmation are unchanged.

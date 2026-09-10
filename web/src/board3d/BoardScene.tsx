@@ -168,7 +168,7 @@ export default function BoardScene(props: SceneProps) {
     </RendererBoundary>
     {props.selection && <div ref={selectionCursor} className={`square-picker-cursor ${props.selectedSquareId === null ? "is-free" : props.selection.eligibleSquareIds.has(props.selectedSquareId) ? "" : "is-unavailable"}`}
       style={{ color: PLAYER_COLORS[(props.assignedPlayerId ?? 0) % PLAYER_COLORS.length] }} aria-hidden="true">
-      <i /><i /><i /><i /><span>{props.selection.eligibleSquareIds.has(props.selectedSquareId ?? -1) ? "▼" : "×"}</span>
+      <svg><path /></svg><span>{props.selection.eligibleSquareIds.has(props.selectedSquareId ?? -1) ? "▼" : "×"}</span>
     </div>}
     <div className="board3d-anchors" aria-hidden="true">
       {props.state.board.squares.map((square) => <span key={square.id} className="board-square-tile"
@@ -456,12 +456,22 @@ function SelectionCursor({ squares, selection, cursor, onSnap, reduced, element 
     cursor.display = [from[0] + (target[0] - from[0]) * blend, from[1] + (target[1] - from[1]) * blend];
     const id = snapped?.id ?? null;
     if (id !== lastSnap.current) { lastSnap.current = id; onSnap(id); }
-    const points = [-1.9, 1.9].flatMap((dx) => [-1.9, 1.9].flatMap((dz) => [0.45, 2.7].map((y) =>
-      new Vector3(cursor.display![0] + dx, y, cursor.display![1] + dz).project(camera))));
-    const left = (Math.min(...points.map((p) => p.x)) + 1) * size.width / 2;
-    const right = (Math.max(...points.map((p) => p.x)) + 1) * size.width / 2;
-    const top = (1 - Math.max(...points.map((p) => p.y))) * size.height / 2;
-    const bottom = (1 - Math.min(...points.map((p) => p.y))) * size.height / 2;
+    // Project each bracket leg from one horizontal plane, rather than enclosing
+    // the building in an axis-aligned screen rectangle. Keep the SVG overlay crisp.
+    const half = TILE_SIZE / 2 + 0.08;
+    const leg = 0.65;
+    const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sz) =>
+      [[sx * (half - leg), sz * half], [sx * half, sz * half], [sx * half, sz * (half - leg)]].map(([dx, dz]) => {
+        const point = new Vector3(cursor.display![0] + dx, TILE_TOP + 0.05, cursor.display![1] + dz).project(camera);
+        return [(point.x + 1) * size.width / 2, (1 - point.y) * size.height / 2];
+      })));
+    const points = corners.flat();
+    const left = Math.min(...points.map((p) => p[0]));
+    const right = Math.max(...points.map((p) => p[0]));
+    const top = Math.min(...points.map((p) => p[1]));
+    const bottom = Math.max(...points.map((p) => p[1]));
+    element.current.querySelector("path")?.setAttribute("d", corners.map((corner) =>
+      corner.map(([x, y], index) => `${index ? "L" : "M"}${x - left},${y - top}`).join(" ")).join(" "));
     Object.assign(element.current.style, { visibility: "visible", transform: `translate(${left}px,${top}px)`,
       width: `${right - left}px`, height: `${bottom - top}px` });
     element.current.dataset.cursorX = String(cursor.position[0]);
