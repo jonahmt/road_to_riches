@@ -902,3 +902,40 @@ horizontal plane, just above the tile surface. It no longer uses the screen
 bounding rectangle of a volume enclosing the building. SVG strokes preserve
 legibility while the projected vertices follow board perspective and camera
 motion. Free cursor travel, nearby-square snapping and confirmation are unchanged.
+
+### Basic experimental courtyard
+
+The approved background pass adds warm stone paving beneath the board, quiet
+lawns, low perimeter walls, clipped shrubs and a distant gatehouse with slate
+roofs. The layout derives from board bounds; all raised scenery stays outside
+the playable footprint. Paving only joins nearby squares that are actual board
+neighbors. Board coordinates, camera profiles and selection rules are unchanged.
+
+`Courtyard.tsx` generates one deterministic 2048px ground texture per board
+layout. It reuses that texture across ownership/cash/state snapshots and disposes
+it when the scene unmounts. Masonry, foliage and window details use three instanced
+batches; the background adds no lights, shadow maps, animation loops or downloaded
+assets. Existing board shadows fall on the ground. Scenery has no input handlers.
+
+Matched before/after renders and frame measurements are retained locally in
+`.runtime/reviews/courtyard/` in the main workspace. Baseline is `34247e0`.
+The checks use the same Trodain state and viewport, covering introduction, menus,
+square selection, camera tracking and free orbit. Measurements are local Chrome
+frame-interval samples, not a guarantee for every device or larger custom board.
+
+The follow-up skybox uses a static, generated 2048×1024 panoramic sky with soft
+clouds and a pale horizon. `SkyBackdrop.tsx` attaches it as a Three.js background;
+it is not an additional lighting environment. Distant fog blends the ground into
+the horizon beyond the normal board views. Normal downward-facing play cameras
+remain dominated by the courtyard; the panorama surrounds the scene for wider
+views. Sky resources are created once and disposed when the renderer unmounts.
+Free Cam can now tilt down to roughly five degrees above the ground, allowing
+inspection of the sky and horizon. Follow and square-selection camera profiles
+retain their existing limits and framing.
+
+Validation: 109 TypeScript tests, type checking and production build passed.
+At 1280×720 and 1600×1000, before/after samples stayed near 16.7ms median and
+16.8ms 95th-percentile frame intervals during ordinary play, cursor/camera
+tracking and orbit. No interval exceeded 33.4ms in those 239-frame samples.
+High-DPI checks on Apple M1 Metal used a 2800×1750 render buffer and also remained
+near 16.7ms median. Texture caching and confirmation after orbit were verified.

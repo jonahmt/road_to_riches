@@ -14,6 +14,8 @@ import { ShopModel, ShopRentPlaque, ShopSign } from "./ShopModels";
 import { TextureReadinessContext, useTileTexture } from "./textures";
 import { makeTileRim } from "./tileGeometry";
 import { PlayerFigure } from "./PlayerFigure";
+import { SkyBackdrop } from "./SkyBackdrop";
+import { Courtyard } from "./Courtyard";
 import { CivicBuilding } from "./CivicBuilding";
 import { MovementGuideButtons, MovementGuideMeshes, type MovementButtons } from "./MovementGuides";
 import { movementGuides } from "./movementPresentation";
@@ -131,7 +133,7 @@ export default function BoardScene(props: SceneProps) {
           <button onClick={props.onFallback}>Use 2D view</button></div>}>
         <TextureReadinessContext.Provider value={pendingTextures.current}>
         <SceneReady pending={pendingTextures.current} onReady={props.onReady} />
-        <color attach="background" args={["#315768"]} />
+        <SkyBackdrop />
         <hemisphereLight args={["#fff9ed", "#87a9b7", 1.6]} />
         <primitive object={lightTarget} />
         <directionalLight position={[extent.center[0] - 20, 45, extent.center[2] + 20]} intensity={1.8}
@@ -140,10 +142,7 @@ export default function BoardScene(props: SceneProps) {
           shadow-camera-left={-shadowRadius} shadow-camera-right={shadowRadius}
           shadow-camera-top={shadowRadius} shadow-camera-bottom={-shadowRadius}
           shadow-camera-far={180} />
-        <mesh position={[extent.center[0], -0.14, extent.center[2]]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[2000 + extent.width, 2000 + extent.depth]} />
-          <meshStandardMaterial color="#315768" roughness={0.96} />
-        </mesh>
+        <Courtyard squares={props.state.board.squares} />
         <CameraRig state={props.state} free={isFree} focusDistrictId={props.focusDistrictId}
           command={command} controlsRef={controls} reduced={reduced} projectorRef={props.projectorRef}
           selection={props.selection} cursor={props.squareCursor} />
@@ -306,6 +305,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     const orbit = controlsRef.current;
     if (!orbit) return;
     orbit.enableRotate = free && !picking;
+    orbit.maxPolarAngle = free && !picking ? Math.PI / 2 - 0.09 : Math.PI / 2.8;
     orbit.enablePan = free && !picking;
     orbit.enableZoom = !picking;
     if (free && !previousFree.current) savedDistance.current = orbit.getDistance();
