@@ -588,6 +588,7 @@ function App() {
     window.addEventListener("keydown", suppressRepeatedConfirm, true);
     return () => window.removeEventListener("keydown", suppressRepeatedConfirm, true);
   }, []);
+  const [boardReady, setBoardReady] = useState(false);
   const boardProjector = useRef<BoardProjector | null>(null);
   const {
     clientState,
@@ -601,7 +602,7 @@ function App() {
     clearReportSubmission,
     acknowledgePresentation,
     dismissPresentation,
-  } = useGameClient(DEFAULT_URI);
+  } = useGameClient(DEFAULT_URI, boardReady);
   const [uri, setUri] = useState(DEFAULT_URI);
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [reporterOpen, setReporterOpen] = useState(false);
@@ -908,6 +909,10 @@ function App() {
     return () => { delete document.body.dataset.squarePickerActive; };
   }, [squareSelection !== null]);
 
+  useEffect(() => {
+    setSelectedSquareId(null);
+  }, [clientState.pendingRequest?.type, activePresentation?.requestId]);
+
   const selectedSquare = useMemo(() => {
     if (!clientState.gameState || selectedSquareId === null) {
       return null;
@@ -916,19 +921,24 @@ function App() {
   }, [clientState.gameState, selectedSquareId]);
 
   const focusSquare =
-    selectedSquare ??
+    (stopConfirmationActive && currentPlayer
+      ? clientState.gameState?.board.squares.find((square) => square.id === currentPlayer.position)
+      : selectedSquare) ??
     (clientState.gameState && assignedPlayer
       ? clientState.gameState.board.squares.find((square) => square.id === assignedPlayer.position) ?? null
       : null);
 
   function handleConnect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setBoardReady(false);
     connect(uri);
   }
 
   return (
     <PresentationMotionContext.Provider value={presentationMotion}>
     <main
+      data-board-ready={boardReady}
+      data-tools-open={devPanelOpen}
       data-request={clientState.pendingRequest?.type ?? ""}
       data-inspecting={selectedSquareId !== null}
       data-pacing-type={activePresentation?.type}
@@ -937,6 +947,7 @@ function App() {
       className={`app-shell theme-tabletop layout-immersive ${clientState.gameState ? "is-playing" : "is-starting"} ${isRollingOrMoving ? "is-roll-active" : ""} ${stopConfirmationActive ? "is-stop-confirmation" : ""} ${rollActionPromptActive ? "is-roll-action-prompt" : ""} ${ventureRequest ? "has-venture-grid" : ""} ${squareSelection ? "is-square-picking" : ""}`}
     >
       <UiKeyboardNavigation />
+      {clientState.gameState && !boardReady && <div className="board-loading" role="status">Preparing the board…</div>}
       {rollPhaseVisibility.gameHeader && (
         <header className="game-header">
           <div className="brand-lockup">
@@ -990,7 +1001,7 @@ function App() {
             cashDeltas={paymentCashDeltas}
           />
           <section className="game-layout">
-            <BoardPanel
+            <BoardPanel onReady={() => setBoardReady(true)}
               squareCursor={squareCursor.current} onCursorSquareChange={setSelectedSquareId}
               projectorRef={boardProjector}
               movementRequest={keyboardRequest?.type === "CHOOSE_PATH" ? keyboardRequest : null}
@@ -1447,6 +1458,7 @@ type BoardPanelProps = Parameters<typeof SvgBoardPanel>[0] & {
   onCursorSquareChange: (id: number | null) => void;
   dice: DiceState | null;
   showDice: boolean;
+  onReady: () => void;
   onDiceComplete?: (requestId: string) => void;
   projectorRef: { current: BoardProjector | null };
   movementRequest: InputRequest | null;
@@ -1457,6 +1469,7 @@ function BoardPanel(props: BoardPanelProps) {
   const [threeDimensional, setThreeDimensional] = useState(
     () => new URLSearchParams(window.location.search).get("renderer") !== "2d",
   );
+  useEffect(() => { if (!threeDimensional) props.onReady(); }, [threeDimensional]);
   const artwork = useMemo(() => {
     if (!props.state) return new Map<number, TileArtwork>();
     return new Map(props.state.board.squares.map((square) => [square.id, boardTileArtwork(square, props.state!)]));
@@ -1465,7 +1478,7 @@ function BoardPanel(props: BoardPanelProps) {
   return <>
     {threeDimensional && props.state && bounds ? <section className="board-panel" aria-label="3D game board">
       <Suspense fallback={<div className="board3d-error" role="status">Loading 3D board…</div>}>
-        <BoardScene projectorRef={props.projectorRef} state={props.state} artwork={artwork} assignedPlayerId={props.assignedPlayerId}
+        <BoardScene onReady={props.onReady} projectorRef={props.projectorRef} state={props.state} artwork={artwork} assignedPlayerId={props.assignedPlayerId}
           squareCursor={props.squareCursor} onCursorSquareChange={props.onCursorSquareChange}
           movementRequest={props.movementRequest} onMovementChoice={props.onMovementChoice}
           selectedSquareId={props.selectedSquare?.id ?? null} focusDistrictId={props.focusDistrictId}
@@ -1558,14 +1571,14 @@ function boardTileArtwork(square: SquareInfo, state: GameState): TileArtwork {
     <defs><pattern id="pavers" width="1.2" height="1.2" patternUnits="userSpaceOnUse">
       {[[0, 0], [0.6, 0], [-0.3, 0.6], [0.3, 0.6], [0.9, 0.6]].map(([x, y], index) => <g key={`${x}:${y}`}>
         <rect x={x + 0.025} y={y + 0.025} width=".55" height=".55" rx=".045"
-          fill="#ffffff" fillOpacity={shop ? 0.035 + (index % 3) * 0.025 : 0.035}
-          stroke="#122a43" strokeOpacity={shop ? 0.38 : 0.06} strokeWidth=".025" />
+          fill="#ffffff" fillOpacity={shop ? 0.025 + (index % 3) * 0.015 : 0.035}
+          stroke="#122a43" strokeOpacity={shop ? 0.16 : 0.06} strokeWidth=".025" />
         <path d={`M${x + 0.075} ${y + 0.075}H${x + 0.52}`}
           stroke="#ffffff" strokeOpacity={shop ? 0.18 : 0.1} strokeWidth=".02" />
       </g>)}
     </pattern></defs>
     <rect x={-2} y={-2} width={4} height={4} fill={shop
-      ? (square.property_owner === null ? "#374761" : getPlayerColor(square.property_owner))
+      ? (square.property_owner === null ? "#354b76" : getPlayerColor(square.property_owner))
       : (square.suit ? getSuitColor(square.suit) : "#ebdab0")} />
     {!shop && <rect x={-2} y={-2} width={4} height={4} fill="#ffffff" opacity=".72" />}
     <rect x={-2} y={-2} width={4} height={4} fill="url(#pavers)" />
@@ -3636,15 +3649,15 @@ function PlayerHud({
             <dl>
               <div>
                 <dt>Cash</dt>
-                <dd>{formatGold(player.ready_cash)}</dd>
+                <dd title="Ready cash">{formatGold(player.ready_cash)}</dd>
               </div>
               <div>
                 <dt>Worth</dt>
-                <dd>{formatGold(netWorth(state, player))}</dd>
+                <dd title="Net worth">{formatGold(netWorth(state, player))}</dd>
               </div>
               <div>
                 <dt>Level</dt>
-                <dd>{player.level}</dd>
+                <dd title="Level">{player.level}</dd>
               </div>
               <div>
                 <dt>Suits</dt>
@@ -3799,6 +3812,16 @@ function TurnPanel({
 }
 
 function SquarePanel({ square, state }: { square: SquareInfo | null; state: GameState | null }) {
+  if (square?.type === "SHOP" && state) return <section className="panel square-panel shop-context" aria-label={`Shop ${square.id} details`}>
+    <header>District {String.fromCharCode(65 + (square.property_district ?? 0))}<span>#{square.id}</span></header>
+    <h2>Shop #{square.id}</h2>
+    <p>{square.property_owner === null ? "Available to buy" : `Owned by Player ${square.property_owner}`}</p>
+    <dl>
+      <div><dt>Shop value</dt><dd>{formatGold(square.shop_current_value)}</dd></div>
+      <div><dt>Shop price</dt><dd>{formatGold(currentShopRent(state, square))}</dd></div>
+      <div><dt>Max. capital</dt><dd>{formatGold(remainingShopCapital(state, square))}</dd></div>
+    </dl>
+  </section>;
   return (
     <section className="panel square-panel">
       <header className="panel-header">

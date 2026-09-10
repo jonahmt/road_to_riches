@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace, Texture } from "three";
 
+export const TextureReadinessContext = createContext<Set<object> | null>(null);
+
 export function useTileTexture(svg: string) {
+  const pending = useContext(TextureReadinessContext);
   const [texture, setTexture] = useState<Texture | null>(null);
   useEffect(() => {
+    const ticket = {};
+    pending?.add(ticket);
     let cancelled = false;
     let created: Texture | null = null;
     const image = new Image();
@@ -14,9 +19,11 @@ export function useTileTexture(svg: string) {
       created.anisotropy = 8;
       created.needsUpdate = true;
       setTexture(created);
+      pending?.delete(ticket);
     };
+    image.onerror = () => { pending?.delete(ticket); };
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    return () => { cancelled = true; image.onload = null; created?.dispose(); };
+    return () => { cancelled = true; pending?.delete(ticket); image.onload = null; image.onerror = null; created?.dispose(); };
   }, [svg]);
   return texture;
 }

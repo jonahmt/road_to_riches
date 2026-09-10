@@ -4,6 +4,11 @@ This records a review, not approved implementation changes. The user requested a
 fresh comparison before choosing the next polish work. Audit: `road_to_riches-uox3`.
 Reviewed build: `7d80b0b` on `codex/3d-experiment`.
 
+Subsequent approval: the user asked to implement this pass and provide
+Wii / before / after evidence. The implemented behavior and validation are
+recorded in `experimental_3d.md` under the September 9 composition pass. The
+findings below describe the original baseline, not the updated build.
+
 ## Evidence and scope
 
 Reference: [Fortune Street Wii, 40:45 onward](https://www.youtube.com/watch?v=mdQQH9CjDlE&t=2445s)

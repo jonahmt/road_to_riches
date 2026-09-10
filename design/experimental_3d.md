@@ -142,6 +142,58 @@ Vite chunk warning remains; the change adds no package dependencies.
 
 ## Unified screen framing and presentation refinement
 
+### Matched-reference composition pass (September 9)
+
+The user approved implementing the findings in `experimental_visual_review.md`
+and requested Wii / before / after evidence with a fixed comparison state.
+`7d80b0b` preserves the previous game source; `e8f7a7d` adds only its audit.
+
+Automatic framing now uses a 32-degree introduction view at distance 25 and a
+52-degree ordinary-play view at distance 28, interpolated over 450ms. These are
+our tuned values, not measurements of Wii internals. Yaw stays fixed for WASD;
+manual free-camera controls and wheel zoom remain available. Selection uses a
+30–38-unit distance with space reserved for the right facts column. The active
+figure is larger, turns toward its travel direction, raises its arms during a
+hop and settles with a short squash. Center-to-center traversal still uses the
+existing 300ms timeline; no extra square or suit wait is introduced.
+
+Ordinary menus use larger type in tighter rows. Stop confirmation uses vertical
+choices at left and current-square facts at right. Inspection clears when the
+owning request or presentation changes, so a canceled picker does not leave an
+unrelated property card in subsequent actions. The spent die is hidden during
+stop confirmation. Tumble size and arc are viewport-relative and the final face
+remains directly toward the camera. Cash and worth occupy most of each HUD row;
+semantic labels and hover descriptions remain. During shop selection, only the
+active player's strip remains beside the shared property/stock information.
+Camera and renderer controls are available through Tools. Brighter fill lighting
+and quieter grout increase ownership and board-symbol contrast.
+
+The initial board registers pending SVG image loads through a texture-readiness
+context. After they settle and two rendered frames can receive the materials,
+the board signals readiness. A preparing overlay covers initial loading, while
+the presentation director's elapsed clock is paused. The introduction therefore
+gets its full reading time after artwork appears. Image errors settle their
+ticket; renderer errors retain the explicit 2D fallback. Keyboard navigation
+tracks readiness/visibility changes and leaves fallback controls operable.
+
+Local three-way evidence lives at
+`.runtime/reviews/reference-comparison-2026-09-09/implemented/index.html` in the
+main workspace. The paired runs use the same 1280×720 viewport, saved Trodain
+state (including deck order), inputs and one-step route. Full authoritative
+before/after snapshots match at every captured beat. The report includes a
+fixture hash, capture script, timing records, unretouched stills and two local
+replays with action-alignment controls. Wii stills show corresponding phases
+from the supplied video; they are a different match. Background scenery is
+still outside this pass.
+
+Validation: 770 Python tests, 109 TypeScript tests, three SSR tests, Ruff and the
+production build passed. Chrome checks covered the real introduction → picker
+→ die → movement → stop → payment sequence, and keyboard flows through menus,
+investment, negotiation, trade, stocks, liquidation, venture, reporting, Tools
+and 2D fallback at 1280×720 and 1600×1000. Reduced-motion checks passed. Artificially
+delaying texture images verified that the introduction stays hidden while loading
+and then receives its 900ms reveal. The existing large-bundle warning remains.
+
 The next visual pass rechecked native playback of the reference from 40:27
 through 41:13. The observed pattern is a dark, vertical menu at upper left,
 bright framed receipts centered above the board, large outlined gold amounts,

@@ -190,3 +190,94 @@
   .app-shell.theme-tabletop :is(.action-panel,.payment-card,.payment-amount,.venture-card,.solid-die-canvas) { animation: none !important; }
   .app-shell.theme-tabletop .physical-die-stage::before { animation: none !important; opacity: 0; }
 }
+
+/* September composition pass: one layout scale for the board's ordinary phases. */
+.app-shell.theme-tabletop { --tabletop-hud-width: clamp(330px, 30vw, 430px); }
+.app-shell.theme-tabletop.layout-immersive .game-header { width: auto; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.app-shell.theme-tabletop.layout-immersive.is-playing .game-header :is(.brand-lockup,.match-summary) { display: none; }
+.app-shell.theme-tabletop.layout-immersive.is-playing .game-header button { min-height: 30px; padding: 5px 10px; font-size: 12px; opacity: .7; }
+.app-shell.theme-tabletop.layout-immersive.is-playing:not([data-tools-open="true"]) :is(.board3d-controls,.board-renderer-toggle) { display: none; }
+.app-shell.theme-tabletop.layout-immersive .board-minimap { bottom: 86px; width: clamp(145px,15vw,195px); height: clamp(145px,15vw,195px); border-color: #bdc9ce; background: #061321c9; }
+.app-shell.theme-tabletop.layout-immersive .action-panel { left: 4vw; top: 5vh; width: clamp(300px,28vw,410px); padding: 7px; max-height: calc(100dvh - 240px); }
+.app-shell.theme-tabletop.layout-immersive .action-panel button { font-size: clamp(21px,2vw,28px); min-height: 38px; }
+.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .action-panel .action-grid { gap: 1px; }
+.app-shell.theme-tabletop.layout-immersive[data-request="PRE_ROLL"] .action-grid button { padding: 4px 12px; line-height: 1.15; }
+.app-shell.theme-tabletop.layout-immersive .turn-menu-help { margin: 7px 8px 2px; font-size: 12px; }
+.app-shell.theme-tabletop.layout-immersive.is-playing.is-stop-confirmation .stop-confirmation-panel { left: 4vw; top: 5vh; width: clamp(300px,28vw,410px); transform: none; }
+.app-shell.theme-tabletop .stop-confirmation-panel .panel-header { margin-bottom: 6px; padding: 4px 8px 8px; }
+.app-shell.theme-tabletop .stop-confirmation-panel .panel-header :is(.eyebrow,p:last-child) { display: none; }
+.app-shell.theme-tabletop .stop-confirmation-panel .panel-header h2 { font-size: 24px; }
+.app-shell.theme-tabletop .stop-confirmation-panel .stop-action-list { grid-template-columns: 1fr; gap: 2px; }
+.app-shell.theme-tabletop .stop-confirmation-panel button { text-align: left; padding: 6px 12px; border-radius: 0; }
+.app-shell.theme-tabletop .stop-confirmation-panel button small { display: none; }
+.app-shell.theme-tabletop.layout-immersive .square-panel { left: auto; right: 2vw; top: 12vh; bottom: auto; width: var(--tabletop-hud-width); max-height: 38vh; border-radius: 3px; border: 0; padding: 0 14px 14px; background: #0b172bdc; }
+.app-shell.theme-tabletop.layout-immersive.is-stop-confirmation .square-panel { display: block; }
+.shop-context header { margin: 0 -14px 8px; padding: 6px 14px; display: flex; justify-content: space-between; background: linear-gradient(#f5f7f7,#84929e); color: #172c40; font-size: 22px; font-weight: bold; }
+.shop-context header span { font-size: 16px; }
+.app-shell.theme-tabletop .shop-context h2 { margin: 0; font-size: 22px; color: white; }
+.shop-context p { margin: 2px 0 12px; font-size: 14px; color: #cbd8e2; }
+.shop-context dl { margin: 0; display: grid; gap: 4px; }
+.shop-context dl > div { display: flex; align-items: baseline; justify-content: space-between; }
+.shop-context dt { font-size: 19px; }
+.shop-context dd { margin: 0; font-size: 27px; font-weight: 900; }
+.app-shell.theme-tabletop.layout-immersive > .player-hud { right: 2vw; bottom: 6vh; gap: 3px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card { min-height: 57px; padding: 3px 9px 4px 58px; gap: 0; border-radius: 4px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card::before { height: 24px; border-radius: 2px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-title { min-height: 21px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-title strong { font-size: 19px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-title > div > span:last-child { display: none; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dl { position: static; grid-template-columns: 1fr 1.1fr .4fr; gap: 8px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dt { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dd { font-size: clamp(23px,2.1vw,30px); line-height: 1.02; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dl > div:nth-child(3) dd { font-size: 16px; padding-top: 7px; color: #c5d8e7; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dl > div:nth-child(3) dd::before { content: "Lv "; font-size: 10px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card dl > div:last-child { position: absolute; top: 3px; right: 8px; }
+.app-shell.theme-tabletop.layout-immersive .hud-player-card .player-portrait { width: 48px; height: 53px; left: 5px; }
+.app-shell.theme-tabletop.layout-immersive .hud-suit-slot { width: 19px; height: 19px; }
+.app-shell.theme-tabletop.layout-immersive.is-square-picking > .player-hud { width: var(--tabletop-hud-width); bottom: 12vh; right: 2vw; }
+.app-shell.theme-tabletop.layout-immersive.is-square-picking .hud-player-card:not(.current) { display: none; }
+.app-shell.theme-tabletop .square-picker-card { right: 2vw; top: 12vh; width: var(--tabletop-hud-width); max-height: 62vh; border-radius: 3px; padding: 12px; }
+.app-shell.theme-tabletop .square-picker-stock { margin-bottom: 10px; }
+.app-shell.theme-tabletop .square-picker-stock small { font-size: 11px; }
+.app-shell.theme-tabletop .square-picker-prompt { left: 4vw; top: 5vh; padding: 8px 14px; }
+.app-shell.theme-tabletop .square-picker-prompt span { display: none; }
+.app-shell.theme-tabletop .square-picker-prompt h1 { font-size: 24px; }
+.app-shell.theme-tabletop .square-picker-facts dt { font-size: 16px; }
+.app-shell.theme-tabletop .square-picker-facts dd { font-size: 27px; }
+.app-shell.theme-tabletop .square-picker-card h2 { font-size: 22px; }
+.app-shell.theme-tabletop .square-picker-model { height: 130px; width: 145px; }
+.app-shell.theme-tabletop .square-picker-navigation { border: 0; background: transparent; padding-left: 66px; bottom: 15px; }
+.app-shell.theme-tabletop .square-picker-help { font-size: 12px; max-width: 290px; }
+.app-shell.theme-tabletop .ui-navigation-help { top: auto; bottom: 8px; font-size: 12px; }
+/* Toss height and size are viewport-relative: even its apex stays in view. */
+.app-shell.theme-tabletop.layout-immersive.is-playing .board-dice.has-solid-die:is(.is-rolling,.is-event-hold,.is-event-fading,.is-hidden) {
+  top: 65%; --die-size: clamp(125px,20vh,210px);
+}
+@keyframes tabletop-die-toss {
+  0% { transform: translate(8vw,-8vh) scale(.88); }
+  32% { transform: translate(5vw,-18vh) scale(1); }
+  70% { transform: translate(1.5vw,-6vh) scale(1); }
+  88% { transform: translate(0,.6vh) scale(.98); }
+  100% { transform: none; }
+}
+.app-shell.theme-tabletop .board-loading { position: fixed; inset: 0; z-index: 240; display: grid; place-items: center; background: #163f4d; color: #fff5d2; font-size: 24px; }
+.app-shell.theme-tabletop.is-playing[data-board-ready="false"] :is(.turn-announcement,.state-change-result,.board-dice,.payment-overlay,.promotion-overlay,.stock-price-change-overlay,.venture-card-reveal) { visibility: hidden; }
+.app-shell.theme-tabletop.is-playing[data-board-ready="false"] .turn-announcement { animation: none; }
+@media (max-width: 900px) {
+  .app-shell.theme-tabletop { --tabletop-hud-width: 300px; }
+  .app-shell.theme-tabletop.layout-immersive .hud-player-title strong { font-size: 16px; }
+  .app-shell.theme-tabletop.layout-immersive .hud-player-card dd { font-size: 22px; }
+  .app-shell.theme-tabletop.layout-immersive .action-panel { width: 270px; }
+}
+
+.app-shell.theme-tabletop.layout-immersive.is-stop-confirmation .board-dice { visibility: hidden; pointer-events: none; }
+.app-shell.theme-tabletop .board-dice { pointer-events: none; }
+.app-shell.theme-tabletop.layout-immersive .stop-confirmation-panel .stop-action-card strong { font-size: 23px; line-height: 1.2; }
+.app-shell.theme-tabletop.layout-immersive .square-panel.shop-context dt { font-size: 19px; text-transform: none; color: #e8eff5; }
+.app-shell.theme-tabletop.layout-immersive .square-panel.shop-context dd { font-size: 27px; line-height: 1.2; }
+.app-shell.theme-tabletop.layout-immersive .hud-suit-slot { background: #09142f; border: 0; border-radius: 2px; }
+.app-shell.theme-tabletop.layout-immersive .hud-suit-slot.missing { opacity: .72; }
+.app-shell.theme-tabletop.layout-immersive .hud-suit-slot.missing svg { opacity: .35; }
+.app-shell.theme-tabletop.layout-immersive .hud-suit-slot.owned { opacity: 1; background: #09142f; }
+.app-shell.theme-tabletop .square-picker-help { background: #09192cdd; padding: 5px 9px; border-radius: 4px; }
+.app-shell.theme-tabletop:has(.board3d-error) .board-loading { display: none; }

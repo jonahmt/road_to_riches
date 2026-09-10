@@ -87,7 +87,7 @@ export function piecePositions(state: GameState) {
     return [{ player, active, position: boardPoint([
       square.position[0] + offsetX,
       square.position[1] + offsetZ,
-    ]), scale: active ? 1.22 : 0.48, baseRadius: ownedShop && active ? 0.65 : 0.8 }];
+    ]), scale: active ? 1.42 : 0.48, baseRadius: ownedShop && active ? 0.65 : 0.8 }];
   });
 }
 

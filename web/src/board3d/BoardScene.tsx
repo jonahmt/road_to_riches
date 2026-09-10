@@ -11,7 +11,7 @@ import { PresentationMotionContext } from "../usePresentationDirector";
 import type { GameState, InputRequest, SquareInfo } from "../protocol";
 import { boardExtent, boardPoint, canPickSquare, focusPoint, piecePositions, pieceStepPosition, TILE_SIZE, TILE_SURFACE_SIZE, TILE_TOP, type Point3, type BoardProjector } from "./geometry";
 import { ShopModel, ShopRentPlaque, ShopSign } from "./ShopModels";
-import { useTileTexture } from "./textures";
+import { TextureReadinessContext, useTileTexture } from "./textures";
 import { makeTileRim } from "./tileGeometry";
 import { PlayerFigure } from "./PlayerFigure";
 import { CivicBuilding } from "./CivicBuilding";
@@ -38,6 +38,7 @@ export interface TileArtwork {
 export type BoardSelection = BoardSquareSelection;
 
 interface SceneProps {
+  onReady: () => void;
   squareCursor: SquareCursorControl;
   onCursorSquareChange: (id: number | null) => void;
   state: GameState;
@@ -78,6 +79,7 @@ function useReducedMotion() {
 }
 
 export default function BoardScene(props: SceneProps) {
+  const pendingTextures = useRef(new Set<object>());
   const [free, setFree] = useState(false);
   const [command, setCommand] = useState({ id: 0, action: "reset" });
   const [contextLost, setContextLost] = useState(false);
@@ -124,11 +126,13 @@ export default function BoardScene(props: SceneProps) {
   return <div className="board3d-root" ref={root} data-camera-mode={props.selection ? "selection" : isFree ? "free" : "follow"}>
     <RendererBoundary onFallback={props.onFallback}>
       <Canvas shadows="percentage" dpr={[1, 1.75]} camera={{ fov: 38, near: 0.1, far: 1500, position: FOLLOW_CAMERA_OFFSET }}
-        gl={{ antialias: true, powerPreference: "high-performance", toneMapping: NeutralToneMapping, toneMappingExposure: 0.92 }}
+        gl={{ antialias: true, powerPreference: "high-performance", toneMapping: NeutralToneMapping, toneMappingExposure: 1.08 }}
         fallback={<div className="board3d-error" aria-hidden="true">Your browser could not start WebGL.
           <button onClick={props.onFallback}>Use 2D view</button></div>}>
+        <TextureReadinessContext.Provider value={pendingTextures.current}>
+        <SceneReady pending={pendingTextures.current} onReady={props.onReady} />
         <color attach="background" args={["#315768"]} />
-        <hemisphereLight args={["#fff9e5", "#536d81", 1.1]} />
+        <hemisphereLight args={["#fff9ed", "#87a9b7", 1.6]} />
         <primitive object={lightTarget} />
         <directionalLight position={[extent.center[0] - 20, 45, extent.center[2] + 20]} intensity={1.8}
           target={lightTarget}
@@ -158,6 +162,7 @@ export default function BoardScene(props: SceneProps) {
           cursor={props.squareCursor} onSnap={props.onCursorSquareChange} reduced={reduced} element={selectionCursor} />}
         {props.movementRequest && guides.length > 0 && <MovementGuideMeshes request={props.movementRequest}
           guides={guides} buttons={movementButtons.current} projectorRef={props.projectorRef} reduced={reduced} />}
+        </TextureReadinessContext.Provider>
       </Canvas>
       <MovementGuideButtons guides={contextLost ? [] : guides} buttons={movementButtons.current} onChoose={props.onMovementChoice} />
     </RendererBoundary>
@@ -208,6 +213,18 @@ export default function BoardScene(props: SceneProps) {
   </div>;
 }
 
+function SceneReady({ pending, onReady }: { pending: Set<object>; onReady: () => void }) {
+  const frames = useRef(0);
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    frames.current = pending.size ? 0 : frames.current + 1;
+    // Allow React material updates and GPU uploads to reach two rendered frames.
+    if (frames.current >= 3) { done.current = true; onReady(); }
+  });
+  return null;
+}
+
 function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced, projectorRef, selection, cursor }: {
   state: GameState; free: boolean; focusDistrictId: number | null;
   command: { id: number; action: string }; controlsRef: { current: OrbitControls | null }; reduced: boolean;
@@ -220,7 +237,19 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
   const picking = selection !== null;
   const savedView = useRef<{ position: Vector3; target: Vector3 } | null>(null);
   const pickerMotion = useRef<{ from: Vector3; fromTarget: Vector3; to: Vector3; toTarget: Vector3; start: number; duration: number } | null>(null);
+  const intro = presentation.beat?.type === "turn_started";
+  const pitch = (intro ? 32 : 52) * Math.PI / 180;
+  const distance = intro ? 25 : 28;
+  const followZoom = useRef(1);
+  const offset = new Vector3(0, Math.sin(pitch) * distance, Math.cos(pitch) * distance);
+  const profile = useRef({ from: offset.clone(), to: offset.clone(), start: 0 });
   const target = focusPoint(state, focusDistrictId);
+  target[1] += intro ? 2.5 : 0.6;
+  useLayoutEffect(() => {
+    const orbit = controlsRef.current;
+    profile.current = { from: orbit ? camera.position.clone().sub(orbit.target) : offset.clone(),
+      to: offset.clone().multiplyScalar(followZoom.current), start: performance.now() };
+  }, [intro]);
   const targetRef = useRef(new Vector3(...target));
   const stepCamera = useRef({ from: new Vector3(...target), start: 0, duration: 0 });
   const previousFree = useRef(free);
@@ -237,7 +266,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     orbit.maxPolarAngle = Math.PI / 2.8;
     orbit.screenSpacePanning = false;
     orbit.target.copy(targetRef.current);
-    camera.position.copy(targetRef.current).add(new Vector3(...FOLLOW_CAMERA_OFFSET));
+    camera.position.copy(targetRef.current).add(offset);
     orbit.update();
     controlsRef.current = orbit;
     projectorRef.current = (point) => {
@@ -260,7 +289,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
       if (!savedView.current) savedView.current = { position: camera.position.clone(), target: orbit.target.clone() };
       const square = state.board.squares.find((square) => square.id === selection.selectedSquareId);
       const focus = square ? boardPoint(square.position) : target;
-      const distance = Math.max(44, Math.min(72, Math.max(extent.width, extent.depth) * 1.4));
+      const distance = Math.max(30, Math.min(38, Math.max(extent.width, extent.depth) * 0.85));
       // Keep the cursor in the board area to the left of the property/HUD column.
       const reserved = Math.min(380, size.width * 0.34) / size.width;
       const halfWidth = distance * Math.tan(38 * Math.PI / 360) * size.width / size.height;
@@ -282,14 +311,33 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     if (free && !previousFree.current) savedDistance.current = orbit.getDistance();
     if (!free && previousFree.current) {
       // Return to the board's original orientation so WASD remains intuitive.
-      camera.position.copy(orbit.target).add(new Vector3(...FOLLOW_CAMERA_OFFSET).normalize().multiplyScalar(savedDistance.current));
+      camera.position.copy(orbit.target).add(offset.clone().normalize().multiplyScalar(savedDistance.current));
       orbit.update();
     }
     previousFree.current = free;
   }, [free, picking, camera, controlsRef, reduced]);
   useEffect(() => {
     const orbit = controlsRef.current;
+    if (!orbit) return;
+    const rememberZoom = () => {
+      if (free || picking) return;
+      followZoom.current = orbit.getDistance() / distance;
+      const current = camera.position.clone().sub(orbit.target);
+      profile.current = { from: current, to: current.clone(), start: performance.now() };
+    };
+    orbit.addEventListener("end", rememberZoom);
+    return () => orbit.removeEventListener("end", rememberZoom);
+  }, [free, picking, intro, camera]);
+  useEffect(() => {
+    const orbit = controlsRef.current;
     if (!orbit || command.id === 0) return;
+    if (!free) {
+      followZoom.current = command.action === "reset" ? 1
+        : Math.max(0.65, Math.min(2.5, followZoom.current * (command.action === "in" ? 0.8 : 1.25)));
+      profile.current = { from: camera.position.clone().sub(orbit.target),
+        to: offset.clone().multiplyScalar(followZoom.current), start: performance.now() };
+      return;
+    }
     if (command.action === "reset") {
       const center = free ? new Vector3(...extent.center) : targetRef.current;
       orbit.target.copy(center);
@@ -311,7 +359,7 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
     }
     if (picking && cursor.reframe && (cursor.jumpTo || cursor.position)) {
       const focus = (cursor.jumpTo ?? cursor.position)!;
-      const distance = Math.max(44, Math.min(72, Math.max(extent.width, extent.depth) * 1.4));
+      const distance = Math.max(30, Math.min(38, Math.max(extent.width, extent.depth) * 0.85));
       const reserved = Math.min(380, size.width * 0.34) / size.width;
       const halfWidth = distance * Math.tan(38 * Math.PI / 360) * size.width / size.height;
       const toTarget = new Vector3(focus[0] + halfWidth * reserved, TILE_TOP, focus[1]);
@@ -345,9 +393,14 @@ function CameraRig({ state, free, focusDistrictId, command, controlsRef, reduced
         : orbit.target.clone().lerp(targetRef.current, reduced ? 1 : 1 - Math.exp(-delta * 14));
       camera.position.add(next.clone().sub(orbit.target));
       orbit.target.copy(next);
+      const p = profile.current;
+      const elapsed = reduced ? 1 : Math.min(1, (performance.now() - p.start) / 450);
+      const blend = elapsed * elapsed * (3 - 2 * elapsed);
+      camera.position.copy(next).add(p.from.clone().lerp(p.to, blend));
     }
     orbit.update(delta);
-    if (free || orbit.target.distanceTo(targetRef.current) < 0.025) {
+    if (free || (orbit.target.distanceTo(targetRef.current) < 0.025 &&
+      camera.position.clone().sub(orbit.target).distanceTo(profile.current.to) < 0.025)) {
       presentation.complete("camera", presentation.beat?.requestId);
     }
   });
@@ -455,7 +508,7 @@ function BoardTile({ square, artwork, selected, chosen, eligible, focused, activ
     </mesh>
     <mesh position={[0, TILE_TOP, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[TILE_SURFACE_SIZE, TILE_SURFACE_SIZE]} />
-      <meshStandardMaterial key={texture?.uuid ?? "loading"} map={texture} color={eligible ? (hovered ? "#ffffff" : "#eeeeee") : "#49515a"}
+      <meshStandardMaterial key={texture?.uuid ?? "loading"} map={texture} color={eligible ? (hovered ? "#ffffff" : "#fafafa") : "#49515a"}
         roughness={0.85} />
     </mesh>
     {eligible && (selected || chosen) && <group position={[0, 0.46, 0]}>
@@ -516,6 +569,8 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
   const presentation = useContext(PresentationMotionContext);
   const group = useRef<Group>(null);
   const figure = useRef<Group>(null);
+  const heading = useRef(0);
+  const stride = useRef(-1);
   const initialPosition = useRef(position);
   const initialScale = useRef(scale);
   const { camera, size } = useThree();
@@ -525,6 +580,10 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
   useLayoutEffect(() => {
     if (group.current) transition.current = { from: group.current.position.toArray() as Point3, start: performance.now(),
       duration: reduced ? 0 : adjacentStepAnimationDuration(player.player_id, assignedPlayerId) };
+    const from = transition.current.from;
+    if (Math.hypot(position[0] - from[0], position[2] - from[2]) > 0.1) {
+      heading.current = Math.atan2(position[0] - from[0], position[2] - from[2]);
+    }
     destination.current = position;
   }, [position[0], position[1], position[2], reduced, assignedPlayerId, player.player_id, player.position, baseRadius]);
   useFrame((_, delta) => {
@@ -534,7 +593,18 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
     group.current.position.set(...pieceStepPosition(motion.from, destination.current, progress));
     group.current.scale.setScalar(reduced ? scale : group.current.scale.x +
       (scale - group.current.scale.x) * (1 - Math.exp(-20 * delta)));
-    if (figure.current) figure.current.position.y = reduced ? 0 : Math.sin(progress * Math.PI) * 0.18;
+    const traveling = Math.hypot(motion.from[0] - destination.current[0], motion.from[2] - destination.current[2]) > 0.1;
+    stride.current = !reduced && traveling && progress < 1 ? progress : -1;
+    if (figure.current) {
+      if (presentation.beat?.type === "turn_started") heading.current = 0;
+      const turn = Math.atan2(Math.sin(heading.current - figure.current.rotation.y), Math.cos(heading.current - figure.current.rotation.y));
+      figure.current.rotation.y += reduced ? turn : turn * (1 - Math.exp(-delta * 24));
+      const arc = !reduced && traveling ? Math.sin(progress * Math.PI) : 0;
+      figure.current.position.y = arc * 0.7;
+      const landing = !reduced && traveling && progress >= 1
+        ? Math.max(0, 1 - (performance.now() - motion.start - motion.duration) / 150) : 0;
+      figure.current.scale.set(1 + landing * 0.1, 1 - landing * 0.12 + arc * 0.035, 1 + landing * 0.1);
+    }
     if (progress >= 1 && presentation.beat?.playerId === player.player_id) {
       presentation.complete("piece", presentation.beat.requestId);
     }
@@ -545,7 +615,7 @@ function PlayerPiece({ player, active, position, scale, baseRadius, assignedPlay
     <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
       <cylinderGeometry args={[baseRadius * 0.9, baseRadius, 0.22, 24]} /><meshStandardMaterial color={active ? "#fff4ce" : color} metalness={0.25} roughness={0.4} />
     </mesh>
-    <group ref={figure}><PlayerFigure playerId={player.player_id} color={color} reduced={reduced} /></group>
+    <group ref={figure}><PlayerFigure playerId={player.player_id} color={color} reduced={reduced} stride={stride} /></group>
   </group>;
 }
 

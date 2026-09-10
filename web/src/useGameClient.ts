@@ -90,7 +90,7 @@ function closeSocket(socket: WebSocket | null): Promise<void> {
   });
 }
 
-export function useGameClient(defaultUri: string) {
+export function useGameClient(defaultUri: string, rendererReady = true) {
   const socketRef = useRef<WebSocket | null>(null);
   const connectionIdRef = useRef(0);
   const playerIdRef = useRef<number | null>(null);
@@ -589,7 +589,7 @@ export function useGameClient(defaultUri: string) {
       presentations: completePresentation(current.presentations, requestId) }));
   }, []);
   const director = usePresentationDirector(clientState.presentations[0] ?? null,
-    clientState.playerId, finishPresentation, acknowledgePresentation);
+    clientState.playerId, finishPresentation, acknowledgePresentation, rendererReady);
   activePresentationRef.current = director.beat;
   const confirmPresentation = useCallback((requestId: string) => {
     const active = activePresentationRef.current;

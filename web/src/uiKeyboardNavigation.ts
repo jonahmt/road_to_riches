@@ -105,6 +105,9 @@ export function installUiKeyboardNavigation(root: HTMLElement, onHelp: (help: st
     const key = event.key.toLowerCase();
     const direction = navigationDirection(key);
     const confirm = key === 'enter' || key === ' ';
+    if (root.classList.contains('is-playing') && root.dataset.boardReady === 'false' && !root.querySelector('.board3d-error button') && (direction || confirm)) {
+      consume(event); return;
+    }
     const current = scope();
     const active = isUiControl(document.activeElement) ? document.activeElement : null;
     if (confirm) {
@@ -217,9 +220,16 @@ export function installUiKeyboardNavigation(root: HTMLElement, onHelp: (help: st
   }
   const up = (event: KeyboardEvent) => { held.delete(event.key.toLowerCase()); };
   const blur = () => { held.clear(); directionScope = null; };
-  const observer = new MutationObserver(refresh);
+  let refreshFrame = 0;
+  const scheduleRefresh = () => {
+    refresh();
+    cancelAnimationFrame(refreshFrame);
+    // Visibility can change through an ancestor's CSS after the DOM mutation.
+    refreshFrame = requestAnimationFrame(refresh);
+  };
+  const observer = new MutationObserver(scheduleRefresh);
   observer.observe(root, { subtree: true, childList: true, attributes: true,
-    attributeFilter: ['disabled', 'hidden', 'class', 'aria-busy', 'aria-hidden', 'data-request'] });
+    attributeFilter: ['disabled', 'hidden', 'class', 'aria-busy', 'aria-hidden', 'data-request', 'data-board-ready', 'data-pacing-type', 'data-tools-open'] });
   window.addEventListener('keydown', keyDown, true);
   window.addEventListener('keyup', up, true);
   window.addEventListener('blur', blur);
@@ -227,7 +237,7 @@ export function installUiKeyboardNavigation(root: HTMLElement, onHelp: (help: st
   root.addEventListener('pointermove', onPointer);
   refresh();
   return () => {
-    observer.disconnect(); selected?.removeAttribute('data-ui-selected');
+    observer.disconnect(); cancelAnimationFrame(refreshFrame); selected?.removeAttribute('data-ui-selected');
     window.removeEventListener('keydown', keyDown, true); window.removeEventListener('keyup', up, true);
     window.removeEventListener('blur', blur); root.removeEventListener('focusin', onFocus);
     root.removeEventListener('pointermove', onPointer);

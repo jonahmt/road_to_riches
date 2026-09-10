@@ -3,8 +3,9 @@ import { useFrame } from "@react-three/fiber";
 import { Color, Group, QuadraticBezierCurve3, TubeGeometry, Vector3 } from "three";
 import { useTileTexture } from "./textures";
 
-export function PlayerFigure({ playerId, color, reduced }: { playerId: number; color: string; reduced: boolean }) {
+export function PlayerFigure({ playerId, color, reduced, stride }: { playerId: number; color: string; reduced: boolean; stride?: { current: number } }) {
   const eyes = useRef<Group>(null);
+  const arms = useRef<Array<Group | null>>([]);
   const shade = useMemo(() => new Color(color).multiplyScalar(0.48), [color]);
   const highlight = useMemo(() => new Color(color).lerp(new Color("#ffffff"), 0.2), [color]);
   const smile = useMemo(() => new TubeGeometry(new QuadraticBezierCurve3(
@@ -14,6 +15,8 @@ export function PlayerFigure({ playerId, color, reduced }: { playerId: number; c
   const badge = useTileTexture(`<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><circle cx="64" cy="64" r="57" fill="#fff2c4" stroke="#997142" stroke-width="7"/><text x="64" y="91" font-family="Arial,sans-serif" font-weight="900" font-size="81" text-anchor="middle" fill="#284660">${playerId}</text></svg>`);
   useFrame(({ clock }) => {
     if (!eyes.current) return;
+    arms.current.forEach((arm, index) => { if (arm) arm.rotation.x = !reduced && stride && stride.current >= 0
+      ? Math.sin(stride.current * Math.PI) * (index ? -0.8 : 0.8) : 0; });
     const cycle = (clock.elapsedTime + playerId * 0.83) % 4.7;
     eyes.current.scale.y = !reduced && cycle > 4.53 ? 0.09 : 1;
   });
@@ -24,7 +27,7 @@ export function PlayerFigure({ playerId, color, reduced }: { playerId: number; c
     <mesh position={[0, 0.81, 0]} scale={[0.58, 0.62, 0.45]} castShadow receiveShadow>
       <sphereGeometry args={[1, 24, 16]} /><meshStandardMaterial color={color} roughness={0.62} />
     </mesh>
-    {[-1, 1].map((side) => <group key={side} position={[side * 0.52, 0.85, 0.035]} rotation={[0, 0, side * 0.22]}>
+    {[-1, 1].map((side) => <group key={side} ref={(node) => { arms.current[side === -1 ? 0 : 1] = node; }} position={[side * 0.52, 0.85, 0.035]} rotation={[0, 0, side * 0.22]}>
       <mesh castShadow><capsuleGeometry args={[0.13, 0.25, 4, 10]} /><meshStandardMaterial color={shade} roughness={0.6} /></mesh>
       <mesh position={[0, -0.21, 0.025]} castShadow><sphereGeometry args={[0.16, 14, 10]} /><meshStandardMaterial color="#ffedc8" roughness={0.65} /></mesh>
     </group>)}

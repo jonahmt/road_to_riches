@@ -7,9 +7,9 @@ export const PresentationMotionContext = createContext<{
 }>({ beat: null, complete: () => {} });
 
 export function usePresentationDirector(beat: PresentationState | null, playerId: number | null,
-  finish: (requestId: string) => void, acknowledge: (requestId: string) => void) {
-  const latest = useRef({ beat, finish, acknowledge });
-  latest.current = { beat, finish, acknowledge };
+  finish: (requestId: string) => void, acknowledge: (requestId: string) => void, rendererReady = true) {
+  const latest = useRef({ beat, finish, acknowledge, rendererReady });
+  latest.current = { beat, finish, acknowledge, rendererReady };
   const clock = useRef({ id: "", elapsed: 0, readableAt: -1, exitAt: -1, done: false, motion: new Set<string>() });
   const [frame, setFrame] = useState({ id: "", elapsed: 0, readableAt: -1, exitAt: -1, done: false });
   const complete = useCallback((part: string, requestId?: string) => {
@@ -30,7 +30,7 @@ export function usePresentationDirector(beat: PresentationState | null, playerId
     };
     trace("enter");
     const tick = (now: number) => {
-      if (document.visibilityState !== "hidden") c.elapsed += Math.min(100, now - previous);
+      if (document.visibilityState !== "hidden" && latest.current.rendererReady) c.elapsed += Math.min(100, now - previous);
       previous = now;
       const current = latest.current.beat;
       const owner = beat.playerId === playerId;
