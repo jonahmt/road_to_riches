@@ -1,0 +1,18 @@
+{
+  "model_sha256": "99247847dd1138f5ccc30688a4c557a88f713223b7c9bc7546908299ad074319",
+  "samples": 2,
+  "horizon": 4,
+  "seed_start": 90000,
+  "seeds": 4,
+  "max_turns": 600,
+  "profiles": [
+    "basic",
+    "strategic",
+    "rollout",
+    "learned"
+  ],
+  "architecture": "20\u219232\u21921 value; state+action\u219232\u21921 policy",
+  "workers": 1,
+  "python": "3.12.6",
+  "machine": "arm64"
+}

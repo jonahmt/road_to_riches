@@ -1,0 +1,113 @@
+{
+  "matches": 48,
+  "finished": 48,
+  "profiles": {
+    "basic": {
+      "games": 48,
+      "wins": 4,
+      "win_rate": 0.08333333333333333,
+      "wilson95": [
+        0.03288322434995555,
+        0.19553565161066291
+      ],
+      "bankruptcies": 0,
+      "median_ms": 0.11970801278948784,
+      "p95_ms": 0.5882499972358346,
+      "max_ms": 7.958917005453259,
+      "searched_decisions": 0,
+      "search_p95_ms": null
+    },
+    "strategic": {
+      "games": 48,
+      "wins": 8,
+      "win_rate": 0.16666666666666666,
+      "wilson95": [
+        0.08695410039453222,
+        0.29578100037396254
+      ],
+      "bankruptcies": 1,
+      "median_ms": 0.14433299656957388,
+      "p95_ms": 0.9401250281371176,
+      "max_ms": 8.481374999973923,
+      "searched_decisions": 0,
+      "search_p95_ms": null
+    },
+    "rollout": {
+      "games": 48,
+      "wins": 18,
+      "win_rate": 0.375,
+      "wilson95": [
+        0.2521507240406812,
+        0.5163749387475043
+      ],
+      "bankruptcies": 0,
+      "median_ms": 0.15279202489182353,
+      "p95_ms": 58.24529199162498,
+      "max_ms": 298.800292017404,
+      "searched_decisions": 2939,
+      "search_p95_ms": 88.82483397610486
+    },
+    "learned": {
+      "games": 48,
+      "wins": 18,
+      "win_rate": 0.375,
+      "wilson95": [
+        0.2521507240406812,
+        0.5163749387475043
+      ],
+      "bankruptcies": 1,
+      "median_ms": 0.16237498493865132,
+      "p95_ms": 61.481667042244226,
+      "max_ms": 322.3577919998206,
+      "searched_decisions": 2892,
+      "search_p95_ms": 93.37183396564797
+    }
+  },
+  "note": "Wilson intervals are descriptive; seat-rotated games share seeds and are correlated.",
+  "scenarios": {
+    "trodain / 2500G": {
+      "games": 16,
+      "finished": 16,
+      "wins": {
+        "basic": 1,
+        "strategic": 4,
+        "rollout": 9,
+        "learned": 2
+      }
+    },
+    "trodain / 10000G": {
+      "games": 16,
+      "finished": 16,
+      "wins": {
+        "basic": 1,
+        "strategic": 3,
+        "rollout": 2,
+        "learned": 10
+      }
+    },
+    "large_test_board / 12000G": {
+      "games": 16,
+      "finished": 16,
+      "wins": {
+        "basic": 2,
+        "strategic": 1,
+        "rollout": 7,
+        "learned": 6
+      }
+    }
+  },
+  "win_rate_difference_vs_basic_seed_bootstrap95": {
+    "strategic": [
+      -0.08333333333333333,
+      0.2916666666666667
+    ],
+    "rollout": [
+      0.25,
+      0.3333333333333333
+    ],
+    "learned": [
+      0.1875,
+      0.4375
+    ]
+  }
+}

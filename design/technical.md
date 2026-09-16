@@ -721,3 +721,12 @@ worth. Remaining players are ordered by final net worth and then player ID.
 Forced liquidation auctions require integer bids at least equal to the shop's
 current value (including investments), greater than the previous bid, and
 within the bidder's cash. Seller proceeds retain the existing 75% rule.
+
+## Experimental AI laboratory
+
+The opt-in `road_to_riches.ai.lab` package compares transparent strategic rules,
+real-engine Monte Carlo planning, and trained policy/value planning. See
+[ai_lab.md](ai_lab.md) for the decision snapshot contract, public-information
+boundary, training procedure, tournament protocol and isolated live launcher.
+The ordinary server and its basic AI remain the default; the experiment uses an
+overridable game-loop factory rather than altering game rules.

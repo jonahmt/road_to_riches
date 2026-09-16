@@ -1,0 +1,1831 @@
+{
+  "seed": 31000,
+  "architecture": "graph",
+  "requested_seconds": 900,
+  "elapsed_seconds": 425.07135666697286,
+  "games": [
+    {
+      "seed": 31000,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 101,
+      "seconds": 3.320246916031465
+    },
+    {
+      "seed": 31001,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 77,
+      "seconds": 2.418503667053301
+    },
+    {
+      "seed": 31002,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 51,
+      "seconds": 1.6942769580055028
+    },
+    {
+      "seed": 31003,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 99,
+      "seconds": 3.534682249999605
+    },
+    {
+      "seed": 31004,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 86,
+      "seconds": 2.778191458026413
+    },
+    {
+      "seed": 31005,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 55,
+      "seconds": 1.6323500839644112
+    },
+    {
+      "seed": 31006,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 132,
+      "seconds": 4.545981916948222
+    },
+    {
+      "seed": 31007,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 67,
+      "seconds": 2.318779041990638
+    },
+    {
+      "seed": 31008,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 50,
+      "seconds": 1.7780770829995163
+    },
+    {
+      "seed": 31009,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 111,
+      "seconds": 3.562711832986679
+    },
+    {
+      "seed": 31010,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 68,
+      "seconds": 2.101444750034716
+    },
+    {
+      "seed": 31011,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 79,
+      "seconds": 2.8329488749732263
+    },
+    {
+      "seed": 31012,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 94,
+      "seconds": 3.477204041031655
+    },
+    {
+      "seed": 31013,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 56,
+      "seconds": 1.883718958008103
+    },
+    {
+      "seed": 31014,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 73,
+      "seconds": 2.891369750024751
+    },
+    {
+      "seed": 31015,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 110,
+      "seconds": 4.112050125026144
+    },
+    {
+      "seed": 31016,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 73,
+      "seconds": 2.3841243329807185
+    },
+    {
+      "seed": 31017,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 78,
+      "seconds": 2.484069791971706
+    },
+    {
+      "seed": 31018,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 126,
+      "seconds": 4.025189041043632
+    },
+    {
+      "seed": 31019,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 87,
+      "seconds": 2.7543992080027238
+    },
+    {
+      "seed": 31020,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 50,
+      "seconds": 1.7508245410281233
+    },
+    {
+      "seed": 31021,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 102,
+      "seconds": 3.518776290991809
+    },
+    {
+      "seed": 31022,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 95,
+      "seconds": 2.9072715840302408
+    },
+    {
+      "seed": 31023,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 39,
+      "seconds": 1.3184303339803591
+    },
+    {
+      "seed": 31024,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 89,
+      "seconds": 2.73881429200992
+    },
+    {
+      "seed": 31025,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 59,
+      "seconds": 1.7735044169821776
+    },
+    {
+      "seed": 31026,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 59,
+      "seconds": 2.0160522080259398
+    },
+    {
+      "seed": 31027,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 135,
+      "seconds": 5.0109803340164945
+    },
+    {
+      "seed": 31028,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 51,
+      "seconds": 1.6644455830100924
+    },
+    {
+      "seed": 31029,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 81,
+      "seconds": 2.666483209002763
+    },
+    {
+      "seed": 31030,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 112,
+      "seconds": 3.4040440829703584
+    },
+    {
+      "seed": 31031,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 64,
+      "seconds": 2.0665115420124494
+    },
+    {
+      "seed": 31032,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 63,
+      "seconds": 1.9322461249539629
+    },
+    {
+      "seed": 31033,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 105,
+      "seconds": 3.7744974580127746
+    },
+    {
+      "seed": 31034,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 45,
+      "seconds": 1.6785448339651339
+    },
+    {
+      "seed": 31035,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 42,
+      "seconds": 1.2170814580167644
+    },
+    {
+      "seed": 31036,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 94,
+      "seconds": 3.144234667008277
+    },
+    {
+      "seed": 31037,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 54,
+      "seconds": 2.377284458023496
+    },
+    {
+      "seed": 31038,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 43,
+      "seconds": 1.290524291980546
+    },
+    {
+      "seed": 31039,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 110,
+      "seconds": 3.474095584009774
+    },
+    {
+      "seed": 31040,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 58,
+      "seconds": 1.8647914169705473
+    },
+    {
+      "seed": 31041,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 53,
+      "seconds": 1.7902905409573577
+    },
+    {
+      "seed": 31042,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 100,
+      "seconds": 3.589227833028417
+    },
+    {
+      "seed": 31043,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 76,
+      "seconds": 2.350622250000015
+    },
+    {
+      "seed": 31044,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 39,
+      "seconds": 1.3686834999825805
+    },
+    {
+      "seed": 31045,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 153,
+      "seconds": 5.097329541982617
+    },
+    {
+      "seed": 31046,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 49,
+      "seconds": 1.8072937919641845
+    },
+    {
+      "seed": 31047,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 58,
+      "seconds": 1.829832915973384
+    },
+    {
+      "seed": 31048,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 109,
+      "seconds": 3.770735834026709
+    },
+    {
+      "seed": 31049,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 73,
+      "seconds": 2.434232958999928
+    },
+    {
+      "seed": 31050,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 96,
+      "seconds": 2.972429584013298
+    },
+    {
+      "seed": 31051,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 114,
+      "seconds": 3.8507396670174785
+    },
+    {
+      "seed": 31052,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 82,
+      "seconds": 2.611695375002455
+    },
+    {
+      "seed": 31053,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 63,
+      "seconds": 1.72170129197184
+    },
+    {
+      "seed": 31054,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 92,
+      "seconds": 3.3459831249783747
+    },
+    {
+      "seed": 31055,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 63,
+      "seconds": 1.9769139579730108
+    },
+    {
+      "seed": 31056,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 55,
+      "seconds": 1.7636999999522232
+    },
+    {
+      "seed": 31057,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 111,
+      "seconds": 4.241771749977488
+    },
+    {
+      "seed": 31058,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 45,
+      "seconds": 1.5051518750260584
+    },
+    {
+      "seed": 31059,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 66,
+      "seconds": 2.1775753329857253
+    },
+    {
+      "seed": 41000,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 133,
+      "seconds": 5.638134083012119
+    },
+    {
+      "seed": 41001,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 59,
+      "seconds": 1.9833559589460492
+    },
+    {
+      "seed": 41002,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 55,
+      "seconds": 2.346845292020589
+    },
+    {
+      "seed": 41003,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 127,
+      "seconds": 5.612519125046674
+    },
+    {
+      "seed": 41004,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 44,
+      "seconds": 1.968955707969144
+    },
+    {
+      "seed": 41005,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 66,
+      "seconds": 3.0156772910268046
+    },
+    {
+      "seed": 41006,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 145,
+      "seconds": 6.17522591695888
+    },
+    {
+      "seed": 41007,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 43,
+      "seconds": 2.0941113330191
+    },
+    {
+      "seed": 41008,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 61,
+      "seconds": 2.3724330000113696
+    },
+    {
+      "seed": 41009,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 148,
+      "seconds": 7.6328751249820925
+    },
+    {
+      "seed": 41010,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 85,
+      "seconds": 3.3266881669987924
+    },
+    {
+      "seed": 41011,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 49,
+      "seconds": 1.925103957997635
+    },
+    {
+      "seed": 41012,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 109,
+      "seconds": 5.178416125010699
+    },
+    {
+      "seed": 41013,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 72,
+      "seconds": 2.464271583012305
+    },
+    {
+      "seed": 41014,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 93,
+      "seconds": 3.377731207991019
+    },
+    {
+      "seed": 41015,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 127,
+      "seconds": 5.068504000024404
+    },
+    {
+      "seed": 41016,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 54,
+      "seconds": 2.000704834004864
+    },
+    {
+      "seed": 41017,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 48,
+      "seconds": 1.828888374962844
+    },
+    {
+      "seed": 41018,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 143,
+      "seconds": 7.006599250016734
+    },
+    {
+      "seed": 41019,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 78,
+      "seconds": 3.317494874994736
+    },
+    {
+      "seed": 41020,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 57,
+      "seconds": 2.3769379580044188
+    },
+    {
+      "seed": 41021,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 87,
+      "seconds": 3.7522045410005376
+    },
+    {
+      "seed": 41022,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 86,
+      "seconds": 3.354949333006516
+    },
+    {
+      "seed": 41023,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 59,
+      "seconds": 2.259734291001223
+    },
+    {
+      "seed": 41024,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 113,
+      "seconds": 4.652957291982602
+    },
+    {
+      "seed": 41025,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 85,
+      "seconds": 3.1743203749647364
+    },
+    {
+      "seed": 41026,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 60,
+      "seconds": 2.74099441600265
+    },
+    {
+      "seed": 41027,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 113,
+      "seconds": 4.561118875048123
+    },
+    {
+      "seed": 41028,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 68,
+      "seconds": 3.2384405419579707
+    },
+    {
+      "seed": 41029,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 80,
+      "seconds": 3.5374032499967143
+    },
+    {
+      "seed": 41030,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 109,
+      "seconds": 4.355568083003163
+    },
+    {
+      "seed": 41031,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 86,
+      "seconds": 3.5339352500159293
+    },
+    {
+      "seed": 41032,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 57,
+      "seconds": 2.0589042080100626
+    },
+    {
+      "seed": 41033,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 142,
+      "seconds": 7.345292124955449
+    },
+    {
+      "seed": 41034,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 51,
+      "seconds": 1.8049480419722386
+    },
+    {
+      "seed": 41035,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 71,
+      "seconds": 3.277257959009148
+    },
+    {
+      "seed": 41036,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 87,
+      "seconds": 3.3528567909961566
+    },
+    {
+      "seed": 41037,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 64,
+      "seconds": 2.1432382499915548
+    },
+    {
+      "seed": 41038,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 38,
+      "seconds": 1.4347439170232974
+    },
+    {
+      "seed": 41039,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 153,
+      "seconds": 6.906574333028402
+    },
+    {
+      "seed": 41040,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 114,
+      "seconds": 4.398548999975901
+    },
+    {
+      "seed": 41041,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 64,
+      "seconds": 2.8337752500083297
+    },
+    {
+      "seed": 41042,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 131,
+      "seconds": 5.713475209020544
+    },
+    {
+      "seed": 41043,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 70,
+      "seconds": 2.608670208021067
+    },
+    {
+      "seed": 41044,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 79,
+      "seconds": 3.3193903749925084
+    },
+    {
+      "seed": 41045,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 121,
+      "seconds": 6.728431958996225
+    },
+    {
+      "seed": 41046,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 42,
+      "seconds": 1.787986290990375
+    },
+    {
+      "seed": 41047,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 68,
+      "seconds": 3.2274541669758037
+    },
+    {
+      "seed": 41048,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 102,
+      "seconds": 4.628827666980214
+    },
+    {
+      "seed": 41049,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 69,
+      "seconds": 3.456745375005994
+    },
+    {
+      "seed": 41050,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 67,
+      "seconds": 3.5969726250041276
+    },
+    {
+      "seed": 41051,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 98,
+      "seconds": 5.048649500007741
+    },
+    {
+      "seed": 41052,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 57,
+      "seconds": 2.4041288339649327
+    },
+    {
+      "seed": 41053,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 66,
+      "seconds": 2.5554732920136303
+    },
+    {
+      "seed": 41054,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 76,
+      "seconds": 3.8330480419681408
+    },
+    {
+      "seed": 41055,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 81,
+      "seconds": 3.9631954170181416
+    },
+    {
+      "seed": 41056,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 61,
+      "seconds": 2.4844446670031175
+    },
+    {
+      "seed": 41057,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 132,
+      "seconds": 6.934523499978241
+    },
+    {
+      "seed": 41058,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 59,
+      "seconds": 2.7646007090224884
+    },
+    {
+      "seed": 41059,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 58,
+      "seconds": 3.1179912500083447
+    }
+  ],
+  "stages": [
+    {
+      "stage": 0,
+      "games": 60,
+      "value_loss": [
+        0.5902109993139749,
+        0.5477668439524694,
+        0.5261108895315525,
+        0.5126020936312464,
+        0.5069870969937476,
+        0.5037376585116726,
+        0.5021529488517696,
+        0.501108553325155,
+        0.49999579461321997,
+        0.5010490327716519,
+        0.4996152552431297,
+        0.49834208500967525,
+        0.49689116900982716,
+        0.4971430341674213,
+        0.4953090753356703,
+        0.49465010937591913,
+        0.4936659228828813,
+        0.492181290123722,
+        0.4896929778140462,
+        0.48823400604160333,
+        0.48770871425080636,
+        0.4847735078016814,
+        0.48392032606524293,
+        0.4810294939754467,
+        0.4796447876044484,
+        0.4766436469514998,
+        0.47479259990821926,
+        0.4715215349558009,
+        0.46927460183470604,
+        0.46912915357716917
+      ],
+      "policy_loss": [
+        0.5357413987718203,
+        0.4563329280038781,
+        0.4456814267057657,
+        0.44200613515738024,
+        0.43739569860536504,
+        0.434455980812951,
+        0.4298189510714277,
+        0.425984283457939,
+        0.4225243849785515,
+        0.417766191063683,
+        0.414418633711381,
+        0.4125339631886542,
+        0.4076236636749439,
+        0.403882788755678,
+        0.4014784274651675,
+        0.3970749658016388,
+        0.39414143482842084,
+        0.3907065203625367,
+        0.38945387484733257,
+        0.3855347242785341,
+        0.3824477552891399,
+        0.38008455644700284,
+        0.37830609187425135,
+        0.37401786984596214,
+        0.37391548094553506,
+        0.37103704566880485,
+        0.36838909299734474,
+        0.36587229644175057,
+        0.36360875430771405,
+        0.3611366061323162
+      ]
+    },
+    {
+      "stage": 1,
+      "games": 120,
+      "value_loss": [
+        0.5426010863626581,
+        0.5279024114201739,
+        0.5231081193145787,
+        0.5207763698229322,
+        0.5182311557101122,
+        0.5172583552882746,
+        0.5150934805284009,
+        0.5132978701923091,
+        0.5112595018926308,
+        0.5103889135207135,
+        0.5068005992695631,
+        0.5060970034379804,
+        0.5053847535859182,
+        0.5041759677668038,
+        0.5034778837540881,
+        0.5014967987878173,
+        0.5003875534476919,
+        0.49790812933390266,
+        0.49632746539213135,
+        0.4982142176352749,
+        0.4941873028777357,
+        0.49302057620332385,
+        0.4919001993769696,
+        0.49310125820995626,
+        0.48965215211647667,
+        0.4877004979651629,
+        0.48735546371979566,
+        0.485270680465451,
+        0.4838694089259157,
+        0.48313414461045834
+      ],
+      "policy_loss": [
+        0.385257972241536,
+        0.38216663288149655,
+        0.3811975432218753,
+        0.3795441301730569,
+        0.376471942492682,
+        0.37547848211290147,
+        0.3742785389449513,
+        0.3737481755711931,
+        0.37186469612516854,
+        0.3702214851595686,
+        0.3694734844768053,
+        0.36940502629924654,
+        0.36635837232827567,
+        0.36606552176053675,
+        0.36537262336008036,
+        0.3647587571259103,
+        0.3624350108493799,
+        0.3619484464122825,
+        0.36293584990632166,
+        0.36083303245148024,
+        0.35961332176211425,
+        0.35894317443647467,
+        0.3576167586433261,
+        0.3568915266813054,
+        0.3566858328658312,
+        0.3550319376404603,
+        0.35441895531494366,
+        0.35428951228441247,
+        0.3532653984589512,
+        0.35220741619802975
+      ]
+    }
+  ],
+  "value_rows": 21801,
+  "policy_rows": 34334,
+  "method": "search imitation, terminal win labels, mixed checkpoint self-play",
+  "training_board": "boards/conversion_tests/trodain/trodain.json",
+  "evaluation_seeds": "reserved >= 90000"
+}

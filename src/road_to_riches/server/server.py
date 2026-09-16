@@ -853,16 +853,17 @@ class GameServer:
         session.player_input._send_state(session.game_loop.state)
         logger.info("Dev event executed: %s", msg["event_type"])
 
+    def _create_game_loop(self, session: GameSession) -> GameLoop:
+        """Construct the authoritative loop (overridable by opt-in experiments)."""
+        assert session.player_input is not None
+        return GameLoop(session.config, session.player_input, saved_state=session.saved_state)
+
     def _run_game(self, session: GameSession) -> None:
         """Run the game loop (blocking, called from game thread)."""
         assert session.player_input is not None
         assert self._loop is not None
 
-        session.game_loop = GameLoop(
-            session.config,
-            session.player_input,
-            saved_state=session.saved_state,
-        )
+        session.game_loop = self._create_game_loop(session)
         logger.info(
             "Game started: %s, %d players (%d human, %d AI)",
             session.config.board_path,
