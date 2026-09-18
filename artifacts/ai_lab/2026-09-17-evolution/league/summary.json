@@ -1,0 +1,114 @@
+{
+  "matches": 72,
+  "finished": 72,
+  "profiles": {
+    "strategic": {
+      "games": 72,
+      "wins": 7,
+      "win_rate": 0.09722222222222222,
+      "wilson95": [
+        0.04789571126116793,
+        0.18735249025356804
+      ],
+      "bankruptcies": 6,
+      "median_ms": 0.20954199135303497,
+      "p95_ms": 1.7173750093206763,
+      "max_ms": 97.03329199692234,
+      "searched_decisions": 0,
+      "search_p95_ms": null
+    },
+    "rollout": {
+      "games": 72,
+      "wins": 25,
+      "win_rate": 0.3472222222222222,
+      "wilson95": [
+        0.2475326163175922,
+        0.4623891152914456
+      ],
+      "bankruptcies": 4,
+      "median_ms": 0.24445803137496114,
+      "p95_ms": 101.27574997022748,
+      "max_ms": 855.8305409969762,
+      "searched_decisions": 5839,
+      "search_p95_ms": 145.8103750483133
+    },
+    "evolved_strategic": {
+      "games": 72,
+      "wins": 10,
+      "win_rate": 0.1388888888888889,
+      "wilson95": [
+        0.07722647811471899,
+        0.23713397841573391
+      ],
+      "bankruptcies": 4,
+      "median_ms": 0.21016597747802734,
+      "p95_ms": 1.8097500433214009,
+      "max_ms": 19.43858398590237,
+      "searched_decisions": 0,
+      "search_p95_ms": null
+    },
+    "evolved_rollout": {
+      "games": 72,
+      "wins": 30,
+      "win_rate": 0.4166666666666667,
+      "wilson95": [
+        0.30985038222496447,
+        0.5319251077436017
+      ],
+      "bankruptcies": 3,
+      "median_ms": 0.243541959207505,
+      "p95_ms": 99.72266596741974,
+      "max_ms": 718.1852910434827,
+      "searched_decisions": 5898,
+      "search_p95_ms": 144.02795798378065
+    }
+  },
+  "note": "Wilson intervals are descriptive; seat-rotated games share seeds and are correlated.",
+  "scenarios": {
+    "trodain / 10000G": {
+      "games": 24,
+      "finished": 24,
+      "wins": {
+        "strategic": 4,
+        "rollout": 8,
+        "evolved_strategic": 4,
+        "evolved_rollout": 8
+      }
+    },
+    "large_test_board / 12000G": {
+      "games": 24,
+      "finished": 24,
+      "wins": {
+        "strategic": 3,
+        "rollout": 8,
+        "evolved_strategic": 2,
+        "evolved_rollout": 11
+      }
+    },
+    "bobomb / 10000G": {
+      "games": 24,
+      "finished": 24,
+      "wins": {
+        "strategic": 0,
+        "rollout": 9,
+        "evolved_strategic": 4,
+        "evolved_rollout": 11
+      }
+    }
+  },
+  "bootstrap_reference": "strategic",
+  "win_rate_difference_vs_strategic_seed_bootstrap95": {
+    "rollout": [
+      0.1111111111111111,
+      0.3611111111111111
+    ],
+    "evolved_strategic": [
+      -0.05555555555555555,
+      0.125
+    ],
+    "evolved_rollout": [
+      0.19444444444444445,
+      0.4722222222222222
+    ]
+  }
+}

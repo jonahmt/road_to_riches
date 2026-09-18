@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Road to Riches · Evolution results</title><style>
+*{box-sizing:border-box}body{margin:0;background:#101927;color:#e6edf7;font:17px/1.65 system-ui}
+main{max-width:1080px;margin:auto;padding:40px 24px}h1{font-size:38px;line-height:1.15}h2{margin-top:36px}
+a{color:#80e1d0}p,small{color:#b8c8da}.tag{letter-spacing:2px;color:#80e1d0;font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}article{padding:20px;background:#1a2a40;border-radius:12px}
+article span,article strong,article small{display:block}strong{font-size:29px}small{font-size:13px}.panel{background:#1a2a40;padding:20px;border-radius:12px}
+li{overflow-wrap:anywhere}code{font-size:14px}nav{display:flex;gap:20px;flex-wrap:wrap}
+@media(max-width:700px){main{padding:24px 16px}h1{font-size:30px}.cards{grid-template-columns:1fr 1fr}article{padding:14px}article strong{font-size:25px}}
+</style><main><div class="tag">NON-NEURAL EXPERIMENT · 17 SEPTEMBER 2026</div><h1>Evolution, then a fair match.</h1>
+<p>__TOTAL__ completed experiment games. __CANDIDATES__ versioned candidates across __GENERATIONS_COUNT__ generations; the finalists were frozen before evaluation.</p>
+<nav><a href="http://127.0.0.1:15213/">Play the experimental opponents</a><a href="league/index.html">Watch the actual match replays</a><a href="summary.json">Full results</a></nav>
+<h2>Direct comparison · __LEAGUE_MATCHES__ games</h2><div class="cards">__CARDS__</div>
+<p>Largest win total in this league: <b>__WINNER__</b>. All seats rotate on normal Trodain, the large board, and Bob-omb. Same search budget: two samples, four individual player turns. No neural network participates.</p>
+<p>Shared four-player games measure this lineup, not universal strength. Seed groups and seat rotations are correlated; intervals and scenario results are in the full report. Timing was measured under concurrent evaluation load.</p>
+<p>Evolved versus original rollout: the seed-block bootstrap interval for the win-rate difference is <b>__ROLLOUT_LO__ to __ROLLOUT_HI__ percentage points</b>. A small lead is not proof of superiority.</p>
+<h2>Strategic bot · matched independent test</h2><div class="panel">
+<p>Original: <b>__BASE_WINS__/__BASE_GAMES__</b> wins. Evolved: <b>__NEW_WINS__/__NEW_GAMES__</b> wins.</p>
+<p>Same boards, seeds, seats and fixed opponents. Paired win-rate difference interval: __LO__ to __HI__ percentage points, using __PAIR_BLOCKS__ seed blocks. This test is separate from the direct league.</p></div>
+<h2>Rollout bot · fresh matched smoke test</h2><div class="panel"><p>Original: <b>__ROLLOUT_BASE_WINS__/__ROLLOUT_GAMES__</b> wins. Evolved: <b>__ROLLOUT_NEW_WINS__/__ROLLOUT_GAMES__</b> wins.</p><p>Separate fresh seeds, identical fixed opponents and all seat rotations. Only two seed blocks: useful as a cross-check, insufficient for a reliable strength estimate. No checkpoint was changed after seeing these results.</p></div>
+<h2>What changed</h2><p>Evolution tuned reserves, district value, rent risk, investment preferences and negotiation thresholds. The rollout phase then tuned position scoring. Rules and victory conditions stayed the same. Every rejected candidate is retained.</p>
+<p>The playable preview uses P0 human, P1 original rollout, P2 evolved strategic, and P3 evolved rollout. It is isolated from your previous match; the original default AI remains available.</p>
+<h2>Checkpoint history</h2>__GENERATIONS__
+<nav><a href="strategic/champion.json">Strategic finalist</a><a href="rollout/champion.json">Rollout finalist</a><a href="README.md">Method and reproduction</a></nav></main>

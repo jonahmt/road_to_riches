@@ -308,7 +308,7 @@ def main():
     p.add_argument("--seeds", type=int, default=4)
     p.add_argument("--samples", type=int, default=2)
     p.add_argument("--horizon", type=int, default=4)
-    p.add_argument("--deadline", default="2026-09-18T04:48:00+00:00")
+    p.add_argument("--deadline", help="Optional UTC ISO timestamp; finish the current generation")
     args = p.parse_args()
     if not 1 <= args.workers <= 4 or args.seeds < 1 or args.generations < 1:
         p.error("Positive seeds/generations and 1..4 workers required")
@@ -320,7 +320,7 @@ def main():
             args.seed,
             args.generations,
             args.workers,
-            datetime.fromisoformat(args.deadline).timestamp(),
+            datetime.fromisoformat(args.deadline).timestamp() if args.deadline else float("inf"),
         )
     else:
         if not args.checkpoint:

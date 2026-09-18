@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "kind": "strategic_parameters",
+  "parameters": {
+    "reserve": 1.0,
+    "synergy": 1.320983976470797,
+    "rent_risk": 0.8321802726943182,
+    "rival_stock": 0.4297457601415005,
+    "rent_growth": 0.1799830294315517,
+    "external_growth": 0.16521675167703323,
+    "offer_premium": 1.08,
+    "trade_margin": 26.34343986579708,
+    "leaf": [
+      2.4,
+      0.7,
+      0.3,
+      1.0,
+      0.2,
+      0.4,
+      0.55,
+      2.0,
+      0.9
+    ]
+  },
+  "generation": 3,
+  "phase": "strategic",
+  "parents": [
+    "82720716f91e",
+    "c5061460ec74"
+  ]
+}

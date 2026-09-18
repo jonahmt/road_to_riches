@@ -1,0 +1,22 @@
+{
+  "checkpoint_sha256": "e307b194e65c35acb97d52da2d441015448502968dd578919a716ac1a2efe6b1",
+  "mode": "rollout",
+  "seeds": 2,
+  "seed_start": 350000,
+  "settings": [
+    [
+      "boards/conversion_tests/trodain/trodain.json",
+      10000
+    ],
+    [
+      "boards/large_test_board.json",
+      12000
+    ],
+    [
+      "boards/conversion_tests/bobomb/bobomb.json",
+      10000
+    ]
+  ],
+  "samples": 2,
+  "horizon": 4
+}

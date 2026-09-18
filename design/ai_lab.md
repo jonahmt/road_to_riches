@@ -182,3 +182,22 @@ never based on a partially evaluated population. `serve --policy SEAT=FILE`
 loads an optional parameter checkpoint into a strategic/rollout seat; repeat
 that option to compare different checkpoints. No default or active match is
 changed by the experiment.
+
+### Evolution outcome and preserved controls
+
+The completed run contains 864 actual game endings, 54 candidate snapshots and
+nine generations. Direct league wins were original strategic7, original rollout25,
+evolved strategic10, evolved rollout30 across72 games. Separate matched tests
+were strategic original10/48 versus evolved4/48, and rollout6/24 for both.
+The rollout league difference interval crosses zero, and the strategic result
+does not generalize from the training selection. Original defaults stay in place.
+Full evidence, checkpoint hashes, methods, timing and limitations are preserved
+in `artifacts/ai_lab/2026-09-17-evolution/`.
+
+`evolution_report` packages the completed runs, rejects unfinished game records,
+checks finalist hashes against held-out and league manifests, and reports paired
+seed-block uncertainty. A separate `league` CLI rotates frozen and evolved
+strategic/rollout opponents through all seats, with recorded terminal replays.
+Before any future promotion, increase independent seed coverage and repeat
+selection across runs; the current twelve-case generations are deliberately
+exploratory, not a reliable promotion gate.

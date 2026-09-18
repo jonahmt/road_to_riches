@@ -1,0 +1,302 @@
+[
+  {
+    "generation": 0,
+    "seed": 210000,
+    "ranking": [
+      {
+        "checkpoint": "g00-c00-82720716f91e",
+        "games": 12,
+        "wins": 6,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.2338583333333333,
+        "median_game_p95_ms": 0.5989170167595148
+      },
+      {
+        "checkpoint": "g00-c03-9cab8c945828",
+        "games": 12,
+        "wins": 4,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.19475833333333334,
+        "median_game_p95_ms": 0.6955409771762788
+      },
+      {
+        "checkpoint": "g00-c01-520de75ee921",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.11894166666666667,
+        "median_game_p95_ms": 0.4993329639546573
+      },
+      {
+        "checkpoint": "g00-c05-e034b3be126b",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.244,
+        "median_game_p95_ms": 0.5365000106394291
+      },
+      {
+        "checkpoint": "g00-c02-7a3898ce0bee",
+        "games": 12,
+        "wins": 2,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.25993333333333335,
+        "median_game_p95_ms": 0.49745896831154823
+      },
+      {
+        "checkpoint": "g00-c04-0bce494a22a3",
+        "games": 12,
+        "wins": 2,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.45965833333333334,
+        "median_game_p95_ms": 0.5260829930193722
+      }
+    ]
+  },
+  {
+    "generation": 1,
+    "seed": 210100,
+    "ranking": [
+      {
+        "checkpoint": "g01-c03-47e38c02da9c",
+        "games": 12,
+        "wins": 7,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.289925,
+        "median_game_p95_ms": 0.5220830207690597
+      },
+      {
+        "checkpoint": "g01-c00-82720716f91e",
+        "games": 12,
+        "wins": 6,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.19514166666666666,
+        "median_game_p95_ms": 0.5568339838646352
+      },
+      {
+        "checkpoint": "g01-c05-7bc3dec2f7ce",
+        "games": 12,
+        "wins": 6,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.28657499999999997,
+        "median_game_p95_ms": 0.5528750480152667
+      },
+      {
+        "checkpoint": "g01-c01-9cab8c945828",
+        "games": 12,
+        "wins": 5,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.21586666666666668,
+        "median_game_p95_ms": 0.5784580134786665
+      },
+      {
+        "checkpoint": "g01-c02-fdeea0879984",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.13961666666666667,
+        "median_game_p95_ms": 0.5519999540410936
+      },
+      {
+        "checkpoint": "g01-c04-af201dd2f60c",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.31093333333333334,
+        "median_game_p95_ms": 0.5581669975072145
+      }
+    ]
+  },
+  {
+    "generation": 2,
+    "seed": 210200,
+    "ranking": [
+      {
+        "checkpoint": "g02-c00-82720716f91e",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 1,
+        "mean_relative_wealth": -0.7674416666666667,
+        "median_game_p95_ms": 0.4791249521076679
+      },
+      {
+        "checkpoint": "g02-c04-c5061460ec74",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 1,
+        "mean_relative_wealth": -0.7674416666666667,
+        "median_game_p95_ms": 0.5593330133706331
+      },
+      {
+        "checkpoint": "g02-c05-9ebcb57476dd",
+        "games": 12,
+        "wins": 2,
+        "finished": 12,
+        "bankruptcies": 1,
+        "mean_relative_wealth": -0.7780083333333333,
+        "median_game_p95_ms": 0.5111670470796525
+      },
+      {
+        "checkpoint": "g02-c03-bdda411a5da0",
+        "games": 12,
+        "wins": 1,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.6092916666666667,
+        "median_game_p95_ms": 0.523333961609751
+      },
+      {
+        "checkpoint": "g02-c02-ee9d491445f9",
+        "games": 12,
+        "wins": 1,
+        "finished": 12,
+        "bankruptcies": 1,
+        "mean_relative_wealth": -1.0974833333333334,
+        "median_game_p95_ms": 0.5550000350922346
+      },
+      {
+        "checkpoint": "g02-c01-47e38c02da9c",
+        "games": 12,
+        "wins": 1,
+        "finished": 12,
+        "bankruptcies": 2,
+        "mean_relative_wealth": -1.1744999999999999,
+        "median_game_p95_ms": 0.5335000460036099
+      }
+    ]
+  },
+  {
+    "generation": 3,
+    "seed": 210300,
+    "ranking": [
+      {
+        "checkpoint": "g03-c03-6d54510bdf35",
+        "games": 12,
+        "wins": 6,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.6461416666666667,
+        "median_game_p95_ms": 0.6562920170836151
+      },
+      {
+        "checkpoint": "g03-c05-442c9e26914a",
+        "games": 12,
+        "wins": 4,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.5163833333333333,
+        "median_game_p95_ms": 0.66016596974805
+      },
+      {
+        "checkpoint": "g03-c00-82720716f91e",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.3757833333333333,
+        "median_game_p95_ms": 0.6892079836688936
+      },
+      {
+        "checkpoint": "g03-c01-c5061460ec74",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.3757833333333333,
+        "median_game_p95_ms": 0.6941670435480773
+      },
+      {
+        "checkpoint": "g03-c02-9dacbfd47d56",
+        "games": 12,
+        "wins": 2,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.8042083333333333,
+        "median_game_p95_ms": 0.7084169774316251
+      },
+      {
+        "checkpoint": "g03-c04-df8d420c1a79",
+        "games": 12,
+        "wins": 2,
+        "finished": 12,
+        "bankruptcies": 1,
+        "mean_relative_wealth": -0.6959,
+        "median_game_p95_ms": 0.7618329836986959
+      }
+    ]
+  },
+  {
+    "generation": 4,
+    "seed": 210400,
+    "ranking": [
+      {
+        "checkpoint": "g04-c03-db251b66cf97",
+        "games": 12,
+        "wins": 4,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.42772499999999997,
+        "median_game_p95_ms": 0.5187090137042105
+      },
+      {
+        "checkpoint": "g04-c02-442c9e26914a",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.244775,
+        "median_game_p95_ms": 0.6675409968011081
+      },
+      {
+        "checkpoint": "g04-c05-9c2c9eef5e5b",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.27601666666666663,
+        "median_game_p95_ms": 0.7064159726724029
+      },
+      {
+        "checkpoint": "g04-c01-6d54510bdf35",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.27875,
+        "median_game_p95_ms": 0.7419580360874534
+      },
+      {
+        "checkpoint": "g04-c00-82720716f91e",
+        "games": 12,
+        "wins": 3,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.38375000000000004,
+        "median_game_p95_ms": 0.7779169827699661
+      },
+      {
+        "checkpoint": "g04-c04-e9bc5c634d57",
+        "games": 12,
+        "wins": 2,
+        "finished": 12,
+        "bankruptcies": 0,
+        "mean_relative_wealth": -0.4449083333333333,
+        "median_game_p95_ms": 0.6716249627061188
+      }
+    ]
+  }
+]

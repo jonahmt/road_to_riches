@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Road to Riches · Evolution results</title><style>
+*{box-sizing:border-box}body{margin:0;background:#101927;color:#e6edf7;font:17px/1.65 system-ui}
+main{max-width:1080px;margin:auto;padding:40px 24px}h1{font-size:38px;line-height:1.15}h2{margin-top:36px}
+a{color:#80e1d0}p,small{color:#b8c8da}.tag{letter-spacing:2px;color:#80e1d0;font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}article{padding:20px;background:#1a2a40;border-radius:12px}
+article span,article strong,article small{display:block}strong{font-size:29px}small{font-size:13px}.panel{background:#1a2a40;padding:20px;border-radius:12px}
+li{overflow-wrap:anywhere}code{font-size:14px}nav{display:flex;gap:20px;flex-wrap:wrap}
+@media(max-width:700px){main{padding:24px 16px}h1{font-size:30px}.cards{grid-template-columns:1fr 1fr}article{padding:14px}article strong{font-size:25px}}
+</style><main><div class="tag">NON-NEURAL EXPERIMENT · 17 SEPTEMBER 2026</div><h1>Evolution, then a fair match.</h1>
+<p>864 completed experiment games. 54 versioned candidates across 9 generations; the finalists were frozen before evaluation.</p>
+<nav><a href="http://127.0.0.1:15213/">Play the experimental opponents</a><a href="league/index.html">Watch the actual match replays</a><a href="summary.json">Full results</a></nav>
+<h2>Direct comparison · 72 games</h2><div class="cards"><article><span>Evolved rollout</span><strong>30 / 72</strong><small>wins · decision p95 99.7 ms</small></article><article><span>Original rollout</span><strong>25 / 72</strong><small>wins · decision p95 101.3 ms</small></article><article><span>Evolved strategic</span><strong>10 / 72</strong><small>wins · decision p95 1.8 ms</small></article><article><span>Original strategic</span><strong>7 / 72</strong><small>wins · decision p95 1.7 ms</small></article></div>
+<p>Largest win total in this league: <b>Evolved rollout</b>. All seats rotate on normal Trodain, the large board, and Bob-omb. Same search budget: two samples, four individual player turns. No neural network participates.</p>
+<p>Shared four-player games measure this lineup, not universal strength. Seed groups and seat rotations are correlated; intervals and scenario results are in the full report. Timing was measured under concurrent evaluation load.</p>
+<p>Evolved versus original rollout: the seed-block bootstrap interval for the win-rate difference is <b>-8.3 to 22.2 percentage points</b>. A small lead is not proof of superiority.</p>
+<h2>Strategic bot · matched independent test</h2><div class="panel">
+<p>Original: <b>10/48</b> wins. Evolved: <b>4/48</b> wins.</p>
+<p>Same boards, seeds, seats and fixed opponents. Paired win-rate difference interval: -27.1 to 2.1 percentage points, using 4 seed blocks. This test is separate from the direct league.</p></div>
+<h2>Rollout bot · fresh matched smoke test</h2><div class="panel"><p>Original: <b>6/24</b> wins. Evolved: <b>6/24</b> wins.</p><p>Separate fresh seeds, identical fixed opponents and all seat rotations. Only two seed blocks: useful as a cross-check, insufficient for a reliable strength estimate. No checkpoint was changed after seeing these results.</p></div>
+<h2>What changed</h2><p>Evolution tuned reserves, district value, rent risk, investment preferences and negotiation thresholds. The rollout phase then tuned position scoring. Rules and victory conditions stayed the same. Every rejected candidate is retained.</p>
+<p>The playable preview uses P0 human, P1 original rollout, P2 evolved strategic, and P3 evolved rollout. It is isolated from your previous match; the original default AI remains available.</p>
+<h2>Checkpoint history</h2><h3>Strategic evolution · 360 games</h3><ul><li>Generation 1: selected g00-c00-82720716f91e, 6/12 training wins.</li><li>Generation 2: selected g01-c03-47e38c02da9c, 7/12 training wins.</li><li>Generation 3: selected g02-c00-82720716f91e, 3/12 training wins.</li><li>Generation 4: selected g03-c03-6d54510bdf35, 6/12 training wins.</li><li>Generation 5: selected g04-c03-db251b66cf97, 4/12 training wins.</li></ul><h3>Rollout evolution · 288 games</h3><ul><li>Generation 1: selected g00-c04-028132d89cca, 5/12 training wins.</li><li>Generation 2: selected g01-c01-028132d89cca, 4/12 training wins.</li><li>Generation 3: selected g02-c05-d9a7b06f9a07, 5/12 training wins.</li><li>Generation 4: selected g03-c04-a3e73b1f3542, 4/12 training wins.</li></ul>
+<nav><a href="strategic/champion.json">Strategic finalist</a><a href="rollout/champion.json">Rollout finalist</a><a href="README.md">Method and reproduction</a></nav></main>

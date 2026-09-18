@@ -1,0 +1,10 @@
+{
+  "strategic_sha256": "4f42c379fe35ab7492b4a878b3b035177d9764e5a04f3b6241c051097ecc29ea",
+  "rollout_sha256": "e307b194e65c35acb97d52da2d441015448502968dd578919a716ac1a2efe6b1",
+  "seed_start": 330000,
+  "seeds": 6,
+  "samples": 2,
+  "horizon": 4,
+  "description": "Frozen strategic and rollout bots compete directly against their evolved counterparts. No neural network participates.",
+  "context": "All four seats rotate. Checkpoints were frozen before these matches; unseen Bob-omb and large boards are included."
+}

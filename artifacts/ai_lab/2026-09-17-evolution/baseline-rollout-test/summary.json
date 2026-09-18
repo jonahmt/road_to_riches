@@ -1,0 +1,34 @@
+{
+  "games": 24,
+  "wins": 6,
+  "finished": 24,
+  "bankruptcies": 0,
+  "mean_relative_wealth": -0.25033472222222225,
+  "median_game_p95_ms": 83.72937503736466,
+  "scenarios": {
+    "boards/conversion_tests/trodain/trodain.json/10000": {
+      "games": 8,
+      "wins": 3,
+      "finished": 8,
+      "bankruptcies": 0,
+      "mean_relative_wealth": -0.4085375,
+      "median_game_p95_ms": 58.72349999845028
+    },
+    "boards/large_test_board.json/12000": {
+      "games": 8,
+      "wins": 2,
+      "finished": 8,
+      "bankruptcies": 0,
+      "mean_relative_wealth": -0.13729166666666667,
+      "median_game_p95_ms": 89.3068749574013
+    },
+    "boards/conversion_tests/bobomb/bobomb.json/10000": {
+      "games": 8,
+      "wins": 1,
+      "finished": 8,
+      "bankruptcies": 0,
+      "mean_relative_wealth": -0.205175,
+      "median_game_p95_ms": 95.38420801982284
+    }
+  }
+}

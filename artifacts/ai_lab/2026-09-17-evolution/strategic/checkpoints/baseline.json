@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "kind": "strategic_parameters",
+  "parameters": {
+    "reserve": 1.0,
+    "synergy": 1.0,
+    "rent_risk": 1.0,
+    "rival_stock": 0.6,
+    "rent_growth": 0.12,
+    "external_growth": 0.15,
+    "offer_premium": 1.08,
+    "trade_margin": 30.0,
+    "leaf": [
+      2.4,
+      0.7,
+      0.3,
+      1.0,
+      0.2,
+      0.4,
+      0.55,
+      2.0,
+      0.9
+    ]
+  },
+  "phase": "strategic",
+  "origin": "frozen starting checkpoint"
+}
