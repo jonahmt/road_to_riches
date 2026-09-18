@@ -1,0 +1,483 @@
+{
+  "modes": {
+    "off": {
+      "matches": 48,
+      "finished": 48,
+      "profiles": {
+        "basic": {
+          "games": 48,
+          "wins": 5,
+          "win_rate": 0.10416666666666667,
+          "wilson95": [
+            0.045321050901178245,
+            0.2216768812614093
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.11462497059255838,
+          "p95_ms": 0.593333039432764,
+          "max_ms": 6.094041978940368,
+          "searched_decisions": 0,
+          "search_p95_ms": null
+        },
+        "strategic": {
+          "games": 48,
+          "wins": 12,
+          "win_rate": 0.25,
+          "wilson95": [
+            0.1492048880971003,
+            0.3878464374792707
+          ],
+          "bankruptcies": 1,
+          "median_ms": 0.13812503311783075,
+          "p95_ms": 0.9120419854298234,
+          "max_ms": 10.991875024046749,
+          "searched_decisions": 0,
+          "search_p95_ms": null
+        },
+        "rollout": {
+          "games": 48,
+          "wins": 15,
+          "win_rate": 0.3125,
+          "wilson95": [
+            0.19945512167731494,
+            0.4533333725049633
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.14679203741252422,
+          "p95_ms": 58.423458016477525,
+          "max_ms": 517.1510829823092,
+          "searched_decisions": 2818,
+          "search_p95_ms": 93.27220800332725
+        },
+        "learned": {
+          "games": 48,
+          "wins": 16,
+          "win_rate": 0.3333333333333333,
+          "wilson95": [
+            0.2167660137089678,
+            0.47460153667527943
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.149125000461936,
+          "p95_ms": 60.559332952834666,
+          "max_ms": 645.0418749591336,
+          "searched_decisions": 2919,
+          "search_p95_ms": 92.85504196304828
+        }
+      },
+      "note": "Wilson intervals are descriptive; seat-rotated games share seeds and are correlated.",
+      "scenarios": {
+        "trodain / 2500G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 2,
+            "strategic": 4,
+            "rollout": 6,
+            "learned": 4
+          }
+        },
+        "trodain / 10000G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 1,
+            "strategic": 3,
+            "rollout": 5,
+            "learned": 7
+          }
+        },
+        "large_test_board / 12000G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 2,
+            "strategic": 5,
+            "rollout": 4,
+            "learned": 5
+          }
+        }
+      },
+      "win_rate_difference_vs_basic_seed_bootstrap95": {
+        "strategic": [
+          0.041666666666666664,
+          0.2708333333333333
+        ],
+        "rollout": [
+          0.08333333333333333,
+          0.3333333333333333
+        ],
+        "learned": [
+          0.125,
+          0.3333333333333333
+        ]
+      }
+    },
+    "ranking": {
+      "matches": 48,
+      "finished": 48,
+      "profiles": {
+        "basic": {
+          "games": 48,
+          "wins": 6,
+          "win_rate": 0.125,
+          "wilson95": [
+            0.05856971750400844,
+            0.24700727086054822
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.12458302080631256,
+          "p95_ms": 0.6162499776110053,
+          "max_ms": 17.13275001384318,
+          "searched_decisions": 0,
+          "search_p95_ms": null
+        },
+        "strategic": {
+          "games": 48,
+          "wins": 3,
+          "win_rate": 0.0625,
+          "wilson95": [
+            0.021482843131227225,
+            0.1683569766274222
+          ],
+          "bankruptcies": 1,
+          "median_ms": 0.14408404240384698,
+          "p95_ms": 0.9599589975550771,
+          "max_ms": 25.67195799201727,
+          "searched_decisions": 0,
+          "search_p95_ms": null
+        },
+        "rollout": {
+          "games": 48,
+          "wins": 19,
+          "win_rate": 0.3958333333333333,
+          "wilson95": [
+            0.2702062649595057,
+            0.5368984540306487
+          ],
+          "bankruptcies": 2,
+          "median_ms": 0.15179096953943372,
+          "p95_ms": 62.33874999452382,
+          "max_ms": 510.0310000125319,
+          "searched_decisions": 2813,
+          "search_p95_ms": 102.2207920323126
+        },
+        "learned": {
+          "games": 48,
+          "wins": 20,
+          "win_rate": 0.4166666666666667,
+          "wilson95": [
+            0.28849459734577015,
+            0.5571891778463536
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.15487498603761196,
+          "p95_ms": 68.42537503689528,
+          "max_ms": 502.8515830053948,
+          "searched_decisions": 2873,
+          "search_p95_ms": 116.09937500907108
+        }
+      },
+      "note": "Wilson intervals are descriptive; seat-rotated games share seeds and are correlated.",
+      "scenarios": {
+        "trodain / 2500G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 1,
+            "strategic": 3,
+            "rollout": 6,
+            "learned": 6
+          }
+        },
+        "trodain / 10000G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 2,
+            "strategic": 0,
+            "rollout": 6,
+            "learned": 8
+          }
+        },
+        "large_test_board / 12000G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 3,
+            "strategic": 0,
+            "rollout": 7,
+            "learned": 6
+          }
+        }
+      },
+      "win_rate_difference_vs_basic_seed_bootstrap95": {
+        "strategic": [
+          -0.14583333333333334,
+          0.041666666666666664
+        ],
+        "rollout": [
+          0.08333333333333333,
+          0.4791666666666667
+        ],
+        "learned": [
+          0.125,
+          0.4791666666666667
+        ]
+      }
+    },
+    "value": {
+      "matches": 48,
+      "finished": 48,
+      "profiles": {
+        "basic": {
+          "games": 48,
+          "wins": 3,
+          "win_rate": 0.0625,
+          "wilson95": [
+            0.021482843131227225,
+            0.1683569766274222
+          ],
+          "bankruptcies": 2,
+          "median_ms": 0.10720797581598163,
+          "p95_ms": 0.580916996113956,
+          "max_ms": 7.911583001259714,
+          "searched_decisions": 0,
+          "search_p95_ms": null
+        },
+        "strategic": {
+          "games": 48,
+          "wins": 15,
+          "win_rate": 0.3125,
+          "wilson95": [
+            0.19945512167731494,
+            0.4533333725049633
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.13029202818870544,
+          "p95_ms": 0.9617920150049031,
+          "max_ms": 20.03762498497963,
+          "searched_decisions": 0,
+          "search_p95_ms": null
+        },
+        "rollout": {
+          "games": 48,
+          "wins": 17,
+          "win_rate": 0.3541666666666667,
+          "wilson95": [
+            0.23433457112685735,
+            0.4956120354593591
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.13333297101780772,
+          "p95_ms": 55.48275000182912,
+          "max_ms": 199.14524996420369,
+          "searched_decisions": 3006,
+          "search_p95_ms": 80.1172920037061
+        },
+        "learned": {
+          "games": 48,
+          "wins": 13,
+          "win_rate": 0.2708333333333333,
+          "wilson95": [
+            0.16565803561632889,
+            0.40997234616201117
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.15308300498872995,
+          "p95_ms": 58.70520800817758,
+          "max_ms": 279.7644999809563,
+          "searched_decisions": 2566,
+          "search_p95_ms": 88.64295796956867
+        }
+      },
+      "note": "Wilson intervals are descriptive; seat-rotated games share seeds and are correlated.",
+      "scenarios": {
+        "trodain / 2500G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 3,
+            "strategic": 3,
+            "rollout": 6,
+            "learned": 4
+          }
+        },
+        "trodain / 10000G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 0,
+            "strategic": 9,
+            "rollout": 5,
+            "learned": 2
+          }
+        },
+        "large_test_board / 12000G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 0,
+            "strategic": 3,
+            "rollout": 6,
+            "learned": 7
+          }
+        }
+      },
+      "win_rate_difference_vs_basic_seed_bootstrap95": {
+        "strategic": [
+          0.020833333333333332,
+          0.3958333333333333
+        ],
+        "rollout": [
+          0.14583333333333334,
+          0.4375
+        ],
+        "learned": [
+          0.08333333333333333,
+          0.3333333333333333
+        ]
+      }
+    },
+    "both": {
+      "matches": 48,
+      "finished": 48,
+      "profiles": {
+        "basic": {
+          "games": 48,
+          "wins": 5,
+          "win_rate": 0.10416666666666667,
+          "wilson95": [
+            0.045321050901178245,
+            0.2216768812614093
+          ],
+          "bankruptcies": 2,
+          "median_ms": 0.09691697778180242,
+          "p95_ms": 0.548749987501651,
+          "max_ms": 3.3909579506143928,
+          "searched_decisions": 0,
+          "search_p95_ms": null
+        },
+        "strategic": {
+          "games": 48,
+          "wins": 15,
+          "win_rate": 0.3125,
+          "wilson95": [
+            0.19945512167731494,
+            0.4533333725049633
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.12279202928766608,
+          "p95_ms": 0.9145829826593399,
+          "max_ms": 6.151416979264468,
+          "searched_decisions": 0,
+          "search_p95_ms": null
+        },
+        "rollout": {
+          "games": 48,
+          "wins": 15,
+          "win_rate": 0.3125,
+          "wilson95": [
+            0.19945512167731494,
+            0.4533333725049633
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.1253749942407012,
+          "p95_ms": 53.079582983627915,
+          "max_ms": 142.4176250002347,
+          "searched_decisions": 2958,
+          "search_p95_ms": 77.15770800132304
+        },
+        "learned": {
+          "games": 48,
+          "wins": 13,
+          "win_rate": 0.2708333333333333,
+          "wilson95": [
+            0.16565803561632889,
+            0.40997234616201117
+          ],
+          "bankruptcies": 0,
+          "median_ms": 0.1473749871365726,
+          "p95_ms": 59.933624987024814,
+          "max_ms": 213.31387502141297,
+          "searched_decisions": 2618,
+          "search_p95_ms": 96.45762498257682
+        }
+      },
+      "note": "Wilson intervals are descriptive; seat-rotated games share seeds and are correlated.",
+      "scenarios": {
+        "trodain / 2500G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 4,
+            "strategic": 3,
+            "rollout": 5,
+            "learned": 4
+          }
+        },
+        "trodain / 10000G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 1,
+            "strategic": 8,
+            "rollout": 5,
+            "learned": 2
+          }
+        },
+        "large_test_board / 12000G": {
+          "games": 16,
+          "finished": 16,
+          "wins": {
+            "basic": 0,
+            "strategic": 4,
+            "rollout": 5,
+            "learned": 7
+          }
+        }
+      },
+      "win_rate_difference_vs_basic_seed_bootstrap95": {
+        "strategic": [
+          0.020833333333333332,
+          0.375
+        ],
+        "rollout": [
+          0.041666666666666664,
+          0.3958333333333333
+        ],
+        "learned": [
+          0.0625,
+          0.25
+        ]
+      }
+    }
+  },
+  "paired_vs_off": {
+    "ranking": {
+      "win_difference": 4,
+      "seed_block_bootstrap95": [
+        0.0,
+        0.1875
+      ],
+      "seed_blocks": 4
+    },
+    "value": {
+      "win_difference": -3,
+      "seed_block_bootstrap95": [
+        -0.16666666666666666,
+        0.041666666666666664
+      ],
+      "seed_blocks": 4
+    },
+    "both": {
+      "win_difference": -3,
+      "seed_block_bootstrap95": [
+        -0.16666666666666666,
+        0.041666666666666664
+      ],
+      "seed_blocks": 4
+    }
+  },
+  "note": "The learned seat is the challenger. Off is an identical second rollout bot. Same seeds, seats, opponents and search budgets; trajectories diverge after different actions. Few seed blocks: exploratory, not proof of universal strength."
+}

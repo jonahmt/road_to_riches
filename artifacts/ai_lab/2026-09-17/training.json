@@ -1,0 +1,4134 @@
+{
+  "seed": 51000,
+  "architecture": "graph",
+  "requested_seconds": 1800,
+  "elapsed_seconds": 760.0856790830148,
+  "games": [
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51000,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 91,
+      "seconds": 2.7393884159973823,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51001,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 118,
+      "seconds": 3.4290827499935403,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51002,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 150,
+      "seconds": 5.184518041962292,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51003,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 49,
+      "seconds": 1.029345834045671,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51004,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 55,
+      "seconds": 1.1886458750232123,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51005,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 78,
+      "seconds": 1.8322164159617387,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51006,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 76,
+      "seconds": 2.4563391670235433,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51007,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 140,
+      "seconds": 4.56220670795301,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51008,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 173,
+      "seconds": 5.626209457986988,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51009,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 33,
+      "seconds": 0.706225500034634,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51010,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 68,
+      "seconds": 1.453538750007283,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51011,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 79,
+      "seconds": 1.8612887500203215,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51012,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 69,
+      "seconds": 2.6091223749681376,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51013,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 124,
+      "seconds": 7.614586042007431,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51014,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 148,
+      "seconds": 6.531151875038631,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51015,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 27,
+      "seconds": 0.748167208977975,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51016,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 41,
+      "seconds": 1.056122291018255,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51017,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 101,
+      "seconds": 2.716354083037004,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51018,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 95,
+      "seconds": 3.241266832977999,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51019,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 109,
+      "seconds": 3.7191262090345845,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51020,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 190,
+      "seconds": 6.130270208988804,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51021,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 39,
+      "seconds": 0.7595223750104196,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51022,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 57,
+      "seconds": 1.2547127910074778,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51023,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 69,
+      "seconds": 1.676558125007432,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51024,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 48,
+      "seconds": 1.454721249989234,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51025,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 109,
+      "seconds": 3.3747609590063803,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51026,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 149,
+      "seconds": 5.167140375007875,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51027,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 36,
+      "seconds": 1.0742274999502115,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51028,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 55,
+      "seconds": 1.123224749986548,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51029,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 101,
+      "seconds": 2.6722386250039563,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51030,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 81,
+      "seconds": 2.509414875006769,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51031,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 87,
+      "seconds": 2.7925639169989154,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51032,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 181,
+      "seconds": 5.922446041018702,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51033,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 24,
+      "seconds": 0.49841687496518716,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51034,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 60,
+      "seconds": 1.6190828750259243,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51035,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 94,
+      "seconds": 2.0575557500123978,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51036,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 57,
+      "seconds": 1.9180277499835938,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51037,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 124,
+      "seconds": 4.487482500029728,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51038,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 151,
+      "seconds": 5.170569917012472,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51039,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 32,
+      "seconds": 0.7350997920148075,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51040,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 58,
+      "seconds": 1.1853459580452181,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51041,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 90,
+      "seconds": 2.386617625015788,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51042,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 58,
+      "seconds": 1.7342359170434065,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51043,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 83,
+      "seconds": 3.003024000034202,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51044,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 150,
+      "seconds": 5.621663166966755,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51045,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 41,
+      "seconds": 0.8424345839885063,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51046,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 53,
+      "seconds": 1.3688258330221288,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51047,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 83,
+      "seconds": 1.5954597500385717,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51048,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 61,
+      "seconds": 1.7780243330053054,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51049,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 95,
+      "seconds": 3.156838583003264,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51050,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 172,
+      "seconds": 6.041142042027786,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51051,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 28,
+      "seconds": 0.7890530829899944,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51052,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 63,
+      "seconds": 1.4350977919530123,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51053,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 108,
+      "seconds": 2.226934375008568,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51054,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 59,
+      "seconds": 1.8303942080237903,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51055,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 155,
+      "seconds": 5.786113209032919,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51056,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 166,
+      "seconds": 5.305839666980319,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51057,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 36,
+      "seconds": 0.8029056250234134,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51058,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 49,
+      "seconds": 0.9388546249829233,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51059,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 88,
+      "seconds": 1.7777725839987397,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51060,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 85,
+      "seconds": 2.632286375039257,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51061,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 122,
+      "seconds": 3.9001247080159374,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51062,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 117,
+      "seconds": 4.047592499991879,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51063,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 46,
+      "seconds": 1.029760500008706,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51064,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 69,
+      "seconds": 1.282220957975369,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51065,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 78,
+      "seconds": 1.9682624170091003,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51066,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 81,
+      "seconds": 2.784931709000375,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51067,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 136,
+      "seconds": 5.8086216659867205,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51068,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 141,
+      "seconds": 8.951331167016178,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51069,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 17,
+      "seconds": 0.5540371250244789,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51070,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 53,
+      "seconds": 2.045611416979227,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51071,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 75,
+      "seconds": 2.2248564590117894,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51072,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 72,
+      "seconds": 2.3647409160039388,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51073,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 98,
+      "seconds": 3.431909999984782,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51074,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 171,
+      "seconds": 7.567984665976837,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51075,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 30,
+      "seconds": 1.004777333990205,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51076,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 51,
+      "seconds": 1.8980446250061505,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51077,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 84,
+      "seconds": 4.044024500006344,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51078,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 83,
+      "seconds": 3.5070819170214236,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51079,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 99,
+      "seconds": 4.079307584033813,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51080,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 174,
+      "seconds": 5.626319915987551,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51081,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 26,
+      "seconds": 0.5976196670089848,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51082,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 33,
+      "seconds": 0.6176361670368351,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51083,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 100,
+      "seconds": 1.9862482500029728,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51084,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 71,
+      "seconds": 1.9728981659864075,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51085,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 109,
+      "seconds": 4.095945291977841,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51086,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 193,
+      "seconds": 8.270217665995006,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51087,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 38,
+      "seconds": 0.8191760000190698,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51088,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 71,
+      "seconds": 1.48514179099584,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51089,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 84,
+      "seconds": 2.0268234580289572,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51090,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 48,
+      "seconds": 1.9650858749519102,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51091,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 123,
+      "seconds": 4.3018957920139655,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51092,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 127,
+      "seconds": 5.609405542025343,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51093,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 31,
+      "seconds": 0.723056374990847,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51094,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 68,
+      "seconds": 1.5761105410056189,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51095,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 102,
+      "seconds": 2.5312020420096815,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51096,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 46,
+      "seconds": 1.445440708019305,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51097,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 137,
+      "seconds": 3.8679640000336803,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51098,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 161,
+      "seconds": 5.219536291027907,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51099,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 30,
+      "seconds": 0.5818045840132982,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51100,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 66,
+      "seconds": 1.4145651659928262,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51101,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 94,
+      "seconds": 1.8635842500370927,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51102,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 75,
+      "seconds": 2.0562732919934206,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51103,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 98,
+      "seconds": 2.9382989580044523,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51104,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 139,
+      "seconds": 4.518029458005913,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51105,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 40,
+      "seconds": 0.9722726669861004,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51106,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 56,
+      "seconds": 1.1538275420316495,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51107,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 84,
+      "seconds": 1.8315650830045342,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51108,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 85,
+      "seconds": 2.3374563329853117,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51109,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 89,
+      "seconds": 2.757476291968487,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51110,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 200,
+      "seconds": 6.822356040996965,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51111,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 26,
+      "seconds": 0.5300322500406764,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51112,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 69,
+      "seconds": 1.2526012500165962,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51113,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 76,
+      "seconds": 1.603765250009019,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51114,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 61,
+      "seconds": 1.5340898330323398,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51115,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 83,
+      "seconds": 2.7417244999669492,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 51116,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "strategic",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 173,
+      "seconds": 5.585009582981002,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51117,
+      "profiles": [
+        "rollout",
+        "strategic",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 30,
+      "seconds": 0.7133950409479439,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51118,
+      "profiles": [
+        "strategic",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 48,
+      "seconds": 0.9391087089898065,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 51119,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 84,
+      "seconds": 1.8009412090177648,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61000,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 22,
+      "seconds": 0.45281520899152383,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61001,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 74,
+      "seconds": 1.7403874169685878,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61002,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 91,
+      "seconds": 2.168162666959688,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61003,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 81,
+      "seconds": 2.3593947920016944,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61004,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 97,
+      "seconds": 3.6070809999946505,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61005,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 154,
+      "seconds": 5.410786124994047,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61006,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 28,
+      "seconds": 0.7506361670093611,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61007,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 59,
+      "seconds": 1.3930401250254363,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61008,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 73,
+      "seconds": 1.9025559580186382,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61009,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 113,
+      "seconds": 3.5169730419875123,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61010,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 110,
+      "seconds": 3.9879679160076194,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61011,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 195,
+      "seconds": 7.465541874989867,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61012,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 21,
+      "seconds": 0.4360052080010064,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61013,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 53,
+      "seconds": 1.235462374985218,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61014,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 88,
+      "seconds": 1.8266852499800734,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61015,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 68,
+      "seconds": 2.487222958006896,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61016,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 118,
+      "seconds": 5.326951167022344,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61017,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 204,
+      "seconds": 7.594245665997732,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61018,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 37,
+      "seconds": 0.8471678749774583,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61019,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 58,
+      "seconds": 1.3302664579823613,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61020,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 97,
+      "seconds": 2.5605293749831617,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61021,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 65,
+      "seconds": 1.929842457990162,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61022,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 84,
+      "seconds": 2.758862832968589,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61023,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 205,
+      "seconds": 7.386021459009498,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61024,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 39,
+      "seconds": 0.8319962089881301,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61025,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 66,
+      "seconds": 1.723075375019107,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61026,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 100,
+      "seconds": 3.0516480420483276,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61027,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 51,
+      "seconds": 1.5816834999714047,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61028,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 147,
+      "seconds": 5.684666375047527,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61029,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 121,
+      "seconds": 4.480444124958012,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61030,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 36,
+      "seconds": 0.7389947079936974,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61031,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 59,
+      "seconds": 1.3794360409956425,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61032,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 86,
+      "seconds": 2.14909445901867,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61033,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 56,
+      "seconds": 2.0393414159771055,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61034,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 105,
+      "seconds": 3.5337289999588393,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61035,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 171,
+      "seconds": 6.510487416991964,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61036,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 31,
+      "seconds": 0.6572422499884851,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61037,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 94,
+      "seconds": 2.2350742499693297,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61038,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 86,
+      "seconds": 2.126410666969605,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61039,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 68,
+      "seconds": 2.3501822920516133,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61040,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 109,
+      "seconds": 4.373295833996963,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61041,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 192,
+      "seconds": 7.235931833973154,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61042,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 35,
+      "seconds": 0.8267780829919502,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61043,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 58,
+      "seconds": 1.4862484999466687,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61044,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 89,
+      "seconds": 2.27204808301758,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61045,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 67,
+      "seconds": 2.096862707985565,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61046,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 103,
+      "seconds": 4.435060625022743,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61047,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 128,
+      "seconds": 4.622220750025008,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61048,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 28,
+      "seconds": 0.654717041994445,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61049,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 65,
+      "seconds": 1.499499041994568,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61050,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 71,
+      "seconds": 1.649408042023424,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61051,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 66,
+      "seconds": 2.343179458985105,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61052,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 104,
+      "seconds": 3.465776958037168,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61053,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 153,
+      "seconds": 5.922248582995962,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61054,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 25,
+      "seconds": 0.5719943750300445,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61055,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 47,
+      "seconds": 1.2280344170285389,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61056,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 83,
+      "seconds": 2.2974025000003166,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61057,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 75,
+      "seconds": 2.574284792004619,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61058,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 110,
+      "seconds": 4.431556541007012,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61059,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 186,
+      "seconds": 7.058968500001356,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61060,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 29,
+      "seconds": 0.7435243749641813,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61061,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 64,
+      "seconds": 2.1157561669824645,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61062,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 80,
+      "seconds": 1.8978145419969223,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61063,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 46,
+      "seconds": 1.6252756670000963,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61064,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 142,
+      "seconds": 5.158617125009187,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61065,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 181,
+      "seconds": 6.837782707996666,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61066,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 35,
+      "seconds": 0.7721542079816572,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61067,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 73,
+      "seconds": 1.6475180829875171,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61068,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 73,
+      "seconds": 1.9623926660278812,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61069,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 45,
+      "seconds": 2.5356340419966727,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61070,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 145,
+      "seconds": 4.984364333038684,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61071,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 179,
+      "seconds": 6.580914625024889,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61072,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 50,
+      "seconds": 1.0704473329824395,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61073,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 57,
+      "seconds": 1.3025642079883255,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61074,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 80,
+      "seconds": 2.7853759999852628,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61075,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 50,
+      "seconds": 2.3007692910032347,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61076,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 106,
+      "seconds": 5.894816166954115,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61077,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 185,
+      "seconds": 7.808795500022825,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61078,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 32,
+      "seconds": 0.804916582943406,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61079,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 60,
+      "seconds": 1.5812834999524057,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61080,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 73,
+      "seconds": 1.6751081670518033,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61081,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 77,
+      "seconds": 2.843291458033491,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61082,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 130,
+      "seconds": 4.821306207973976,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61083,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 175,
+      "seconds": 9.204385832999833,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61084,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 30,
+      "seconds": 0.7056606250116602,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61085,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 50,
+      "seconds": 1.3880917910137214,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61086,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 112,
+      "seconds": 3.041642750031315,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61087,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 67,
+      "seconds": 2.5129885420319624,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61088,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 125,
+      "seconds": 4.39568070799578,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61089,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 155,
+      "seconds": 6.680290292017162,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61090,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 24,
+      "seconds": 0.5234027080005035,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61091,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 63,
+      "seconds": 1.8122372499783523,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61092,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 85,
+      "seconds": 2.2252026249771006,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61093,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 88,
+      "seconds": 4.35612133302493,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61094,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 124,
+      "seconds": 5.705863790994044,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61095,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 138,
+      "seconds": 6.715702290995978,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61096,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 39,
+      "seconds": 0.9822112090187147,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61097,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 51,
+      "seconds": 1.274651207961142,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61098,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 86,
+      "seconds": 2.50563524995232,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61099,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 95,
+      "seconds": 3.9537534590344876,
+      "validation": true
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61100,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 121,
+      "seconds": 4.523917291953694,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61101,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 182,
+      "seconds": 8.103715582983568,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61102,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 23,
+      "seconds": 0.5814153749961406,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61103,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 2,
+      "finished": true,
+      "turns": 47,
+      "seconds": 1.1171205830178224,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61104,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 89,
+      "seconds": 2.5109396670013666,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61105,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 84,
+      "seconds": 3.022635250003077,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61106,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 3,
+      "finished": true,
+      "turns": 104,
+      "seconds": 4.333029750036076,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61107,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 160,
+      "seconds": 6.29314374999376,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61108,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 2500,
+      "winner": 1,
+      "finished": true,
+      "turns": 34,
+      "seconds": 0.7251404169946909,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61109,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 73,
+      "seconds": 1.7880498330341652,
+      "validation": true
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61110,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 10000,
+      "winner": 3,
+      "finished": true,
+      "turns": 80,
+      "seconds": 2.2880365420132875,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61111,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 2500,
+      "winner": 0,
+      "finished": true,
+      "turns": 89,
+      "seconds": 4.8528924160054885,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61112,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 145,
+      "seconds": 5.49656929099001,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61113,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 10000,
+      "winner": 0,
+      "finished": true,
+      "turns": 130,
+      "seconds": 5.344079040980432,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61114,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 2500,
+      "winner": 3,
+      "finished": true,
+      "turns": 36,
+      "seconds": 0.8698673750041053,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61115,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 5000,
+      "winner": 1,
+      "finished": true,
+      "turns": 74,
+      "seconds": 1.795347707986366,
+      "validation": false
+    },
+    {
+      "board": "boards/test_board.json",
+      "seed": 61116,
+      "profiles": [
+        "strategic",
+        "rollout",
+        "learned",
+        "basic"
+      ],
+      "target": 10000,
+      "winner": 1,
+      "finished": true,
+      "turns": 74,
+      "seconds": 2.0001726250047795,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61117,
+      "profiles": [
+        "rollout",
+        "learned",
+        "basic",
+        "strategic"
+      ],
+      "target": 2500,
+      "winner": 2,
+      "finished": true,
+      "turns": 87,
+      "seconds": 2.701678292010911,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61118,
+      "profiles": [
+        "learned",
+        "basic",
+        "strategic",
+        "rollout"
+      ],
+      "target": 5000,
+      "winner": 0,
+      "finished": true,
+      "turns": 89,
+      "seconds": 2.85862333298428,
+      "validation": false
+    },
+    {
+      "board": "boards/conversion_tests/trodain/trodain.json",
+      "seed": 61119,
+      "profiles": [
+        "basic",
+        "strategic",
+        "rollout",
+        "learned"
+      ],
+      "target": 10000,
+      "winner": 2,
+      "finished": true,
+      "turns": 171,
+      "seconds": 7.974582292023115,
+      "validation": true
+    }
+  ],
+  "stages": [
+    {
+      "stage": 0,
+      "games": 120,
+      "value_loss": [
+        0.5807037817280106,
+        0.5546119158464673,
+        0.5474746792834035,
+        0.5444655563506205,
+        0.5415793707042874,
+        0.5388242740996976,
+        0.5363741198039997,
+        0.5331094543351204,
+        0.5312734335978034,
+        0.526279545604568,
+        0.5227219670085973,
+        0.5194892237769935,
+        0.5138356683573118,
+        0.5104898210166288,
+        0.5070129073454124,
+        0.5019205288390975,
+        0.4993699153759656,
+        0.4936195054938805,
+        0.4909627291707612,
+        0.487028850599233,
+        0.483315081788279,
+        0.48089235192468394,
+        0.4773969420236689,
+        0.47355158657633084,
+        0.47190622233927726,
+        0.46842047626884104,
+        0.4659193937478244,
+        0.46072275517836736,
+        0.4615773598462727,
+        0.4549806052390905
+      ],
+      "policy_loss": [
+        0.4636542851918536,
+        0.3915416681160252,
+        0.38412321566643554,
+        0.3780552512699533,
+        0.3720837781644147,
+        0.36588684650311065,
+        0.3610453885246889,
+        0.3550956567358354,
+        0.3504041322726957,
+        0.3465201757894918,
+        0.34450134417345246,
+        0.3427197127948055,
+        0.3413414443979153,
+        0.3389156601574186,
+        0.33824042792547093,
+        0.3354384235531166,
+        0.33551254153136867,
+        0.33351770412750253,
+        0.33257470203220535,
+        0.33208896379706165,
+        0.3299150143140116,
+        0.3294422009204478,
+        0.32981884819570956,
+        0.32864668677061476,
+        0.3271491519030189,
+        0.3268077211111638,
+        0.32610027048997,
+        0.32634646330640665,
+        0.3246133185000584,
+        0.3249334247114067
+      ],
+      "validation": {
+        "value_rows": 2076,
+        "value_brier": 0.1767466064028799,
+        "value_log_loss": 0.5301224694418565,
+        "policy": {
+          "CHOOSE_PATH": {
+            "decisions": 78,
+            "teacher_agreement": 0.6794871794871795
+          },
+          "BUY_SHOP": {
+            "decisions": 47,
+            "teacher_agreement": 1.0
+          },
+          "BUY_STOCK": {
+            "decisions": 40,
+            "teacher_agreement": 0.575
+          },
+          "CHOOSE_ANY_SQUARE": {
+            "decisions": 17,
+            "teacher_agreement": 0.5294117647058824
+          },
+          "CHOOSE_SHOP_BUY": {
+            "decisions": 68,
+            "teacher_agreement": 0.8970588235294118
+          },
+          "ACCEPT_OFFER": {
+            "decisions": 31,
+            "teacher_agreement": 0.5806451612903226
+          },
+          "INVEST": {
+            "decisions": 25,
+            "teacher_agreement": 0.32
+          },
+          "TRADE": {
+            "decisions": 47,
+            "teacher_agreement": 0.48936170212765956
+          },
+          "FORCED_BUYOUT": {
+            "decisions": 8,
+            "teacher_agreement": 1.0
+          },
+          "AUCTION_BID": {
+            "decisions": 1,
+            "teacher_agreement": 0.0
+          }
+        }
+      }
+    },
+    {
+      "stage": 1,
+      "games": 240,
+      "value_loss": [
+        0.5064546810839277,
+        0.4984989814151635,
+        0.49297497136435414,
+        0.4895896821015581,
+        0.4872039333628657,
+        0.48504782975597927,
+        0.48179027930466706,
+        0.47965524055223896,
+        0.47710654179608175,
+        0.47524716577226656,
+        0.47363753624892124,
+        0.47114380649151055,
+        0.4691970407738445,
+        0.46654349354233693,
+        0.4648381642764018,
+        0.46297638366318733,
+        0.46055671248866403,
+        0.4586732340379588,
+        0.4563181968615081,
+        0.4544748743900589,
+        0.4515292503743183,
+        0.4493840299773923,
+        0.44853328310910195,
+        0.445439968403342,
+        0.44445472218160365,
+        0.4415661569134152,
+        0.4399677081580199,
+        0.43782398504579506,
+        0.4367978573789812,
+        0.4349587403834169
+      ],
+      "policy_loss": [
+        0.33246078431511056,
+        0.33087732225625216,
+        0.33052789464024646,
+        0.3295802041494661,
+        0.32844753347747546,
+        0.32824604954772363,
+        0.32679860929710686,
+        0.3267055370710845,
+        0.3266940265434692,
+        0.32534691065019056,
+        0.3253309643672203,
+        0.3244248995612358,
+        0.3239412307924018,
+        0.3228588365654623,
+        0.3237969088008153,
+        0.3226989725830386,
+        0.3222953973062101,
+        0.3232196265357111,
+        0.3215936550671606,
+        0.32103462985967973,
+        0.3215442653978949,
+        0.3202395383100495,
+        0.3197713151622603,
+        0.3203510531603393,
+        0.319822031599426,
+        0.31929578548728615,
+        0.31944581029949537,
+        0.3187519379888028,
+        0.3189957747555538,
+        0.3181798989975031
+      ],
+      "validation": {
+        "value_rows": 5172,
+        "value_brier": 0.2116392115067109,
+        "value_log_loss": 0.6299071860403361,
+        "policy": {
+          "CHOOSE_PATH": {
+            "decisions": 215,
+            "teacher_agreement": 0.7069767441860465
+          },
+          "BUY_SHOP": {
+            "decisions": 104,
+            "teacher_agreement": 0.9615384615384616
+          },
+          "BUY_STOCK": {
+            "decisions": 84,
+            "teacher_agreement": 0.5357142857142857
+          },
+          "CHOOSE_ANY_SQUARE": {
+            "decisions": 34,
+            "teacher_agreement": 0.6176470588235294
+          },
+          "CHOOSE_SHOP_BUY": {
+            "decisions": 155,
+            "teacher_agreement": 0.8580645161290322
+          },
+          "ACCEPT_OFFER": {
+            "decisions": 79,
+            "teacher_agreement": 0.5316455696202531
+          },
+          "INVEST": {
+            "decisions": 62,
+            "teacher_agreement": 0.3548387096774194
+          },
+          "TRADE": {
+            "decisions": 102,
+            "teacher_agreement": 0.4411764705882353
+          },
+          "FORCED_BUYOUT": {
+            "decisions": 22,
+            "teacher_agreement": 1.0
+          },
+          "AUCTION_BID": {
+            "decisions": 1,
+            "teacher_agreement": 0.0
+          }
+        }
+      }
+    }
+  ],
+  "value_rows": 47004,
+  "policy_rows": 36296,
+  "method": "rollout-teacher imitation, terminal win labels, mixed self-play; 10% entire games withheld",
+  "training_settings": [
+    [
+      "boards/conversion_tests/trodain/trodain.json",
+      2500
+    ],
+    [
+      "boards/conversion_tests/trodain/trodain.json",
+      5000
+    ],
+    [
+      "boards/conversion_tests/trodain/trodain.json",
+      10000
+    ],
+    [
+      "boards/test_board.json",
+      2500
+    ],
+    [
+      "boards/test_board.json",
+      5000
+    ],
+    [
+      "boards/test_board.json",
+      10000
+    ]
+  ],
+  "policy_prompt_counts": {
+    "CHOOSE_PATH": 1934,
+    "BUY_SHOP": 940,
+    "ACCEPT_OFFER": 750,
+    "CHOOSE_SHOP_BUY": 1360,
+    "BUY_STOCK": 731,
+    "INVEST": 589,
+    "FORCED_BUYOUT": 162,
+    "TRADE": 1107,
+    "CHOOSE_ANY_SQUARE": 231,
+    "AUCTION_BID": 17
+  },
+  "policy_prompts": [
+    "ACCEPT_OFFER",
+    "BUY_SHOP",
+    "BUY_STOCK",
+    "CHOOSE_ANY_SQUARE",
+    "CHOOSE_PATH",
+    "CHOOSE_SHOP_BUY",
+    "FORCED_BUYOUT",
+    "INVEST",
+    "TRADE"
+  ],
+  "minimum_policy_decisions": 32,
+  "evaluation_seeds": "reserved >= 90000"
+}

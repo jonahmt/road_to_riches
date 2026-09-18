@@ -55,14 +55,25 @@ def candidate_features(state, req, candidate):
 
 
 class Network:
-    def __init__(self, data):
+    def __init__(self, data, *, guidance="both"):
         if data.get("version") != 1 or data.get("state_dim") != STATE_DIM:
             raise ValueError("Unsupported AI checkpoint format")
+        if guidance not in ("off", "ranking", "value", "both"):
+            raise ValueError("Unknown neural guidance mode")
+        self.guidance = guidance
         self.data = data
 
     @classmethod
-    def load(cls, path):
-        return cls(json.loads(Path(path).read_text()))
+    def load(cls, path, *, guidance="both"):
+        return cls(json.loads(Path(path).read_text()), guidance=guidance)
+
+    def ranks(self, prompt):
+        covered = self.data.get("policy_prompts")
+        return self.guidance in ("ranking", "both") and (covered is None or prompt in covered)
+
+    @property
+    def value_weight(self):
+        return 2.0 if self.guidance in ("value", "both") else 0.0
 
     @property
     def uses_graph(self):

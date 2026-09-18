@@ -19,6 +19,7 @@ def main():
     train.add_argument("--output", required=True)
     train.add_argument("--seconds", type=int, default=900)
     train.add_argument("--games", type=int, default=160)
+    train.add_argument("--seed", type=int, default=51000)
     train.add_argument("--architecture", choices=["graph", "mlp"], default="graph")
     tournament = sub.add_parser("tournament")
     tournament.add_argument("--model", default=checkpoint)
@@ -34,11 +35,21 @@ def main():
     serve.add_argument("--port", type=int, default=18810)
     serve.add_argument("--target", type=int, default=5000)
     serve.add_argument("--seed", type=int, default=91234)
+    for command in (tournament, serve):
+        command.add_argument(
+            "--guidance", choices=["off", "ranking", "value", "both"], default="both"
+        )
     args = parser.parse_args()
     if args.command == "train":
         from road_to_riches.ai.lab.training import train
 
-        train(args.output, seconds=args.seconds, games=args.games, architecture=args.architecture)
+        train(
+            args.output,
+            seconds=args.seconds,
+            games=args.games,
+            architecture=args.architecture,
+            seed=args.seed,
+        )
     elif args.command == "tournament":
         from road_to_riches.ai.lab.network import Network
 
@@ -48,6 +59,7 @@ def main():
         manifest = {
             "model_sha256": hashlib.sha256(Path(args.model).read_bytes()).hexdigest(),
             "architecture": model.data.get("architecture"),
+            "guidance": args.guidance,
             "workers": args.workers,
             "samples": args.samples,
             "horizon": args.horizon,
@@ -85,6 +97,7 @@ def main():
                             args.samples,
                             args.horizon,
                             seed == args.seed_start and rotation == 0,
+                            args.guidance,
                         )
                     )
         if not 1 <= args.workers <= 4:
@@ -102,7 +115,14 @@ def main():
     else:
         from road_to_riches.ai.lab.live import serve
 
-        serve(args.model, args.profiles.split(","), args.port, args.target, args.seed)
+        serve(
+            args.model,
+            args.profiles.split(","),
+            args.port,
+            args.target,
+            args.seed,
+            guidance=args.guidance,
+        )
 
 
 if __name__ == "__main__":

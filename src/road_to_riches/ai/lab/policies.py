@@ -60,21 +60,33 @@ class RolloutPolicy(StrategicPolicy):
             best = -float("inf")
             for c in shortlist:
                 total = 0
+                heuristic_total = neural_total = 0
                 for seed in seeds:
                     outcome, winner = context.rollout(req, c.action, seed, self.horizon)
                     value = evaluate(outcome, self.pid, winner)
-                    if self.model is not None and winner is None:
+                    heuristic_total += value
+                    if self.model is not None and self.model.value_weight and winner is None:
                         # Learned value complements the short rollout; terminal
                         # results always dominate any network estimate.
-                        value += 2 * self.model.value(
+                        bonus = self.model.value_weight * self.model.value(
                             features(outcome, self.pid),
                             graph_input(outcome, self.pid) if self.model.uses_graph else None,
                         )
+                        neural_total += bonus
+                        value += bonus
                     total += value
                 score = total / len(seeds)
                 # Tiny prior breaks exact ties; it cannot swamp rollout outcomes.
                 score += 0.001 * c.score
-                self.last_search.append({"action": c.action, "score": score, "reason": c.reason})
+                self.last_search.append(
+                    {
+                        "action": c.action,
+                        "score": score,
+                        "reason": c.reason,
+                        "heuristic_mean": heuristic_total / len(seeds),
+                        "neural_bonus_mean": neural_total / len(seeds),
+                    }
+                )
                 if score > best:
                     best, chosen = score, c.action
         self.record(req, chosen)
@@ -86,7 +98,7 @@ class LearnedPolicy(RolloutPolicy):
 
     def candidates(self, state, req):
         candidates = super().candidates(state, req)
-        if self.model is not None and len(candidates) > 1:
+        if self.model is not None and self.model.ranks(req.type.value) and len(candidates) > 1:
             base = features(state, self.pid)
             graph = graph_input(state, self.pid) if self.model.uses_graph else None
             ranked = [

@@ -1,0 +1,31 @@
+{
+  "model_sha256": "496926c4958803aa6af8cfaaf34a5d0c0466a1fcd6a584b4ef9e97021bb381a8",
+  "modes": [
+    "ranking"
+  ],
+  "seed_start": 94000,
+  "seeds": 4,
+  "settings": [
+    [
+      "boards/conversion_tests/trodain/trodain.json",
+      2500
+    ],
+    [
+      "boards/conversion_tests/trodain/trodain.json",
+      10000
+    ],
+    [
+      "boards/large_test_board.json",
+      12000
+    ]
+  ],
+  "samples": 2,
+  "horizon": 4,
+  "width": 3,
+  "opponents": [
+    "basic",
+    "strategic",
+    "rollout"
+  ],
+  "max_turns": 600
+}

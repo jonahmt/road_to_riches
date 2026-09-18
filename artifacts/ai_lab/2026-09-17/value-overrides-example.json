@@ -1,0 +1,322 @@
+{
+  "note": "Diagnostic replay of one old value-only match; added score instrumentation reproduced the original actions and terminal state exactly. Overrides demonstrate influence, not that each changed action was wrong.",
+  "seed": 92000,
+  "board": "boards/conversion_tests/trodain/trodain.json",
+  "target": 2500,
+  "searched_decisions": 22,
+  "overrides": [
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "CHOOSE_ANY_SQUARE",
+      "action": 20,
+      "ms": 32.31662500184029,
+      "search": [
+        {
+          "action": 20,
+          "score": 2.3892935587845603,
+          "reason": "Warp toward bank or missing suits",
+          "heuristic_mean": 1.33545,
+          "neural_bonus_mean": 1.0550435587845604
+        },
+        {
+          "action": 26,
+          "score": 2.332935926552632,
+          "reason": "Warp toward bank or missing suits",
+          "heuristic_mean": 1.33545,
+          "neural_bonus_mean": 0.9986859265526318
+        },
+        {
+          "action": 19,
+          "score": 1.693715531965959,
+          "reason": "Warp toward bank or missing suits",
+          "heuristic_mean": 1.1082899999999998,
+          "neural_bonus_mean": 0.586725531965959
+        }
+      ]
+    },
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "BUY_STOCK",
+      "action": [
+        3,
+        49
+      ],
+      "ms": 38.5567499906756,
+      "search": [
+        {
+          "action": [
+            3,
+            99
+          ],
+          "score": 2.8747257737543364,
+          "reason": "Expected development and purchase price effect",
+          "heuristic_mean": 1.5660699999999999,
+          "neural_bonus_mean": 1.303567173754336
+        },
+        {
+          "action": [
+            3,
+            49
+          ],
+          "score": 2.935790184362684,
+          "reason": "Expected development and purchase price effect",
+          "heuristic_mean": 1.5820699999999999,
+          "neural_bonus_mean": 1.3512015843626841
+        },
+        {
+          "action": null,
+          "score": 2.9175273631782277,
+          "reason": "Save cash for shops",
+          "heuristic_mean": 1.59775,
+          "neural_bonus_mean": 1.3197773631782277
+        }
+      ]
+    },
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "CHOOSE_SHOP_BUY",
+      "action": null,
+      "ms": 18.50595901487395,
+      "search": [
+        {
+          "action": [
+            1,
+            7,
+            159
+          ],
+          "score": 1.92035745661996,
+          "reason": "Consolidate district at a fair premium",
+          "heuristic_mean": 1.55478,
+          "neural_bonus_mean": 0.36545245661996006
+        },
+        {
+          "action": null,
+          "score": 2.1869998026387742,
+          "reason": "No beneficial purchase",
+          "heuristic_mean": 1.5458000000000003,
+          "neural_bonus_mean": 0.641199802638774
+        }
+      ]
+    },
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "CHOOSE_PATH",
+      "action": 14,
+      "ms": 18.95833294838667,
+      "search": [
+        {
+          "action": 14,
+          "score": 1.9353407911348042,
+          "reason": "Legal route progress and landing cost",
+          "heuristic_mean": 1.5322500000000001,
+          "neural_bonus_mean": 0.405690791134804
+        },
+        {
+          "action": 18,
+          "score": 1.9249799685175286,
+          "reason": "Legal route progress and landing cost",
+          "heuristic_mean": 1.5326500000000003,
+          "neural_bonus_mean": 0.39492996851752826
+        }
+      ]
+    },
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "BUY_SHOP",
+      "action": false,
+      "ms": 20.430957956705242,
+      "search": [
+        {
+          "action": true,
+          "score": 1.8876012140197025,
+          "reason": "Property value and district synergy",
+          "heuristic_mean": 1.5322500000000001,
+          "neural_bonus_mean": 0.35527121401970213
+        },
+        {
+          "action": false,
+          "score": 1.9375136286834262,
+          "reason": "Keep liquidity",
+          "heuristic_mean": 1.5190500000000002,
+          "neural_bonus_mean": 0.4184636286834261
+        }
+      ]
+    },
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "CHOOSE_SHOP_BUY",
+      "action": null,
+      "ms": 27.621999965049326,
+      "search": [
+        {
+          "action": [
+            1,
+            7,
+            159
+          ],
+          "score": 2.0232180975759197,
+          "reason": "Consolidate district at a fair premium",
+          "heuristic_mean": 1.60651,
+          "neural_bonus_mean": 0.4165830975759197
+        },
+        {
+          "action": null,
+          "score": 2.1356720156966356,
+          "reason": "No beneficial purchase",
+          "heuristic_mean": 1.56181,
+          "neural_bonus_mean": 0.5738620156966356
+        }
+      ]
+    },
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "TRADE",
+      "action": {
+        "target_player_id": 0,
+        "offer_shops": [
+          7
+        ],
+        "request_shops": [
+          4
+        ],
+        "gold_offer": 672
+      },
+      "ms": 43.38495904812589,
+      "search": [
+        {
+          "action": {
+            "target_player_id": 0,
+            "offer_shops": [
+              7
+            ],
+            "request_shops": [
+              4
+            ],
+            "gold_offer": 672
+          },
+          "score": 2.364865073322889,
+          "reason": "Exchange isolated shops for stronger districts",
+          "heuristic_mean": 1.55716,
+          "neural_bonus_mean": 0.8069350733228888
+        },
+        {
+          "action": {
+            "target_player_id": 0,
+            "offer_shops": [
+              7
+            ],
+            "request_shops": [
+              8
+            ],
+            "gold_offer": 320
+          },
+          "score": 2.162105940676632,
+          "reason": "Exchange isolated shops for stronger districts",
+          "heuristic_mean": 1.44614,
+          "neural_bonus_mean": 0.7151959406766322
+        },
+        {
+          "action": null,
+          "score": 2.362592612350319,
+          "reason": "No mutually beneficial exchange",
+          "heuristic_mean": 1.8727999999999998,
+          "neural_bonus_mean": 0.48979261235031935
+        }
+      ]
+    },
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "TRADE",
+      "action": {
+        "target_player_id": 0,
+        "offer_shops": [
+          7
+        ],
+        "request_shops": [
+          8
+        ],
+        "gold_offer": 320
+      },
+      "ms": 23.177416995167732,
+      "search": [
+        {
+          "action": {
+            "target_player_id": 0,
+            "offer_shops": [
+              7
+            ],
+            "request_shops": [
+              8
+            ],
+            "gold_offer": 320
+          },
+          "score": 2.794883416533777,
+          "reason": "Exchange isolated shops for stronger districts",
+          "heuristic_mean": 1.90286,
+          "neural_bonus_mean": 0.8912534165337764
+        },
+        {
+          "action": null,
+          "score": 2.6196640480545224,
+          "reason": "No mutually beneficial exchange",
+          "heuristic_mean": 1.90606,
+          "neural_bonus_mean": 0.7136040480545223
+        }
+      ]
+    },
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "BUY_SHOP",
+      "action": false,
+      "ms": 29.00158299598843,
+      "search": [
+        {
+          "action": true,
+          "score": 2.736739401795966,
+          "reason": "Property value and district synergy",
+          "heuristic_mean": 2.0748900000000003,
+          "neural_bonus_mean": 0.6617994017959656
+        },
+        {
+          "action": false,
+          "score": 3.0695671397443665,
+          "reason": "Keep liquidity",
+          "heuristic_mean": 2.0612900000000005,
+          "neural_bonus_mean": 1.0082771397443664
+        }
+      ]
+    },
+    {
+      "player": 3,
+      "profile": "learned",
+      "prompt": "CHOOSE_PATH",
+      "action": 14,
+      "ms": 30.445041018538177,
+      "search": [
+        {
+          "action": 16,
+          "score": 2.815379316507275,
+          "reason": "Legal route progress and landing cost",
+          "heuristic_mean": 2.106287272727273,
+          "neural_bonus_mean": 0.7092920437800024
+        },
+        {
+          "action": 14,
+          "score": 2.886714344450691,
+          "reason": "Legal route progress and landing cost",
+          "heuristic_mean": 2.10263,
+          "neural_bonus_mean": 0.7854843444506908
+        }
+      ]
+    }
+  ]
+}

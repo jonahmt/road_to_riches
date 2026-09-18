@@ -112,13 +112,13 @@ def match(
 def tournament_game(job):
     from road_to_riches.ai.lab.network import Network
 
-    board, names, seed, target, model_path, path, samples, horizon, replay = job
+    board, names, seed, target, model_path, path, samples, horizon, replay, *guidance = job
     result = match(
         board,
         names,
         seed,
         target=target,
-        model=Network.load(model_path),
+        model=Network.load(model_path, guidance=guidance[0] if guidance else "both"),
         samples=samples,
         horizon=horizon,
         replay=replay,

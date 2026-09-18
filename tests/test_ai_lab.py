@@ -343,3 +343,98 @@ def test_graph_training_and_portable_inference_agree():
     hidden = np.tanh(all_x @ np.array(head["w1"]).T + head["b1"])
     expected = 1 / (1 + np.exp(-(hidden @ head["w2"] + head["b2"])))
     assert model.value(x[0], graph) == pytest.approx(float(expected), abs=1e-10)
+
+
+def test_disabled_neural_guidance_exactly_reproduces_rollout():
+    from pathlib import Path
+
+    from road_to_riches.ai.lab.network import Network
+
+    model = Network.load(Path("src/road_to_riches/ai/lab/checkpoints/trained.json"), guidance="off")
+    common = dict(target=2500, samples=1, horizon=2)
+    control = match(BOARD, ["basic", "strategic", "rollout", "rollout"], 92111, **common)
+    disabled = match(
+        BOARD, ["basic", "strategic", "rollout", "learned"], 92111, model=model, **common
+    )
+    assert control["finished"] and disabled["finished"]
+    assert control["final"] == disabled["final"]
+    assert [(r["action"], r["search"]) for r in control["decisions"]] == [
+        (r["action"], r["search"]) for r in disabled["decisions"]
+    ]
+
+
+@pytest.mark.parametrize(
+    "mode,ranking,value",
+    [("off", False, False), ("ranking", True, False), ("value", False, True), ("both", True, True)],
+)
+def test_guidance_modes_call_only_enabled_heads(mode, ranking, value, monkeypatch):
+    from pathlib import Path
+    from unittest.mock import Mock
+
+    from road_to_riches.ai.lab.network import Network
+    from road_to_riches.ai.lab.policies import LearnedPolicy
+
+    model = Network.load(Path("src/road_to_riches/ai/lab/checkpoints/trained.json"), guidance=mode)
+    policy_spy, value_spy = Mock(wraps=model.policy), Mock(wraps=model.value)
+    monkeypatch.setattr(model, "policy", policy_spy)
+    monkeypatch.setattr(model, "value", value_spy)
+    loop, lab = setup_loop()
+    sq = next(s for s in loop.state.board.squares if s.type == SquareType.SHOP)
+    event = InitBuyShopEvent(player_id=0, square_id=sq.id, cost=sq.shop_current_value)
+    event.execute(loop.state)
+    loop.pipeline.enqueue(TurnEvent(player_id=1))
+    req = InputRequest(
+        T.BUY_SHOP, 0, {"square_id": sq.id, "cost": sq.shop_current_value, "cash": 1200}
+    )
+    context = DecisionContext(loop, event, lab.policies, random.getstate())
+    LearnedPolicy(0, model=model, samples=1, horizon=1).choose(loop.state, req, context)
+    assert bool(policy_spy.call_count) == ranking
+    assert bool(value_spy.call_count) == value
+
+
+def test_checkpoint_coverage_prevents_untrained_prompt_ranking():
+    from pathlib import Path
+
+    from road_to_riches.ai.lab.network import Network
+
+    model = Network.load(Path("src/road_to_riches/ai/lab/checkpoints/trained.json"))
+    model.data["policy_prompts"] = ["BUY_SHOP"]
+    assert model.ranks("BUY_SHOP")
+    assert not model.ranks("AUCTION_BID")
+
+
+def test_training_covers_search_decisions_without_self_imitation():
+    from types import SimpleNamespace
+
+    from road_to_riches.ai.lab.strategy import Candidate, features
+    from road_to_riches.ai.lab.training import policy_examples
+
+    loop, _ = setup_loop()
+    # The chosen action must survive even when it falls beyond the old 12-row cap.
+    candidates = [Candidate(n * 10, n / 10, "bid") for n in range(15)]
+    req = InputRequest(T.AUCTION_BID, 0, {})
+    teacher = SimpleNamespace(name="rollout", last_candidates=candidates)
+    rows = policy_examples(loop.state, req, teacher, {"action": 140}, features(loop.state, 0), None)
+    assert len(rows) == 15 and sum(row[1] for row in rows) == 1
+    teacher.name = "learned"
+    assert not policy_examples(
+        loop.state, req, teacher, {"action": 140}, features(loop.state, 0), None
+    )
+    assert not policy_examples(
+        loop.state, req, object(), {"action": 140}, features(loop.state, 0), None
+    )
+
+
+def test_graph_training_pads_different_boards_without_affecting_inference():
+    pytest.importorskip("numpy")
+    from road_to_riches.ai.lab.network import Network
+    from road_to_riches.ai.lab.training import fit_mlp
+
+    graph = ([[0.2] * 24], [[1.0], [1.0], [0.0]])
+    padded = (graph[0] + [[0.0] * 24] * 3, [r + [0.0] * 3 for r in graph[1]])
+    head, losses = fit_mlp(
+        [[0.1] * 20] * 16, [1.0] * 16, seed=1, epochs=5, graphs=[graph, padded] * 8
+    )
+    model = Network({"version": 1, "state_dim": 20, "value": head, "policy": head})
+    assert losses[-1] < losses[0]
+    assert model.value([0.1] * 20, graph) == pytest.approx(model.value([0.1] * 20, padded))

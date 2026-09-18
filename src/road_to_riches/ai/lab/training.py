@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import math
 import time
+from collections import Counter
 from pathlib import Path
 
 from road_to_riches.ai.lab.graph import graph_input
 from road_to_riches.ai.lab.network import Network, candidate_features
+from road_to_riches.ai.lab.policies import SEARCH_TYPES
 from road_to_riches.ai.lab.runner import match
 from road_to_riches.ai.lab.strategy import features
 
@@ -86,7 +89,62 @@ def fit_mlp(x, y, *, seed, epochs=80, initial=None, deadline=float("inf"), graph
     return result, losses
 
 
-def train(output, *, seconds=900, games=160, seed=31000, architecture="graph"):
+TRAIN_SETTINGS = [
+    ("boards/conversion_tests/trodain/trodain.json", 2500),
+    ("boards/conversion_tests/trodain/trodain.json", 5000),
+    ("boards/conversion_tests/trodain/trodain.json", 10000),
+    ("boards/test_board.json", 2500),
+    ("boards/test_board.json", 5000),
+    ("boards/test_board.json", 10000),
+]
+MIN_POLICY_DECISIONS = 32
+
+
+def policy_examples(state, req, policy, record, base, graph):
+    """Only search-teacher decisions supervise ranking; keep every legal candidate.
+
+    Unsupported/rare types remain on the heuristic order at inference. Self-play
+    contributes value outcomes, never labels that teach the policy its own mistakes.
+    """
+    candidates = getattr(policy, "last_candidates", [])
+    if (
+        getattr(policy, "name", None) != "rollout"
+        or req.type not in SEARCH_TYPES
+        or len(candidates) < 2
+    ):
+        return []
+    return [
+        (base + candidate_features(state, req, c), float(c.action == record["action"]), graph)
+        for c in candidates
+    ]
+
+
+def validation_metrics(model, values, decisions):
+    brier = loss = 0.0
+    for x, y, graph in values:
+        pred = model.value(x, graph)
+        brier += (pred - y) ** 2
+        pred = max(1e-9, min(1 - 1e-9, pred))
+        loss -= y * math.log(pred) + (1 - y) * math.log(1 - pred)
+    accuracy = Counter()
+    counts = Counter()
+    for prompt, rows in decisions:
+        scores = [model.forward(x, "policy", graph) for x, _, graph in rows]
+        chosen = max(range(len(rows)), key=scores.__getitem__)
+        accuracy[prompt] += int(rows[chosen][1] == 1)
+        counts[prompt] += 1
+    n = max(1, len(values))
+    return {
+        "value_rows": len(values),
+        "value_brier": brier / n,
+        "value_log_loss": loss / n,
+        "policy": {
+            p: {"decisions": c, "teacher_agreement": accuracy[p] / c} for p, c in counts.items()
+        },
+    }
+
+
+def train(output, *, seconds=900, games=160, seed=51000, architecture="graph"):
     if not 1 <= seconds <= 3600:
         raise ValueError("Training wall-clock budget must be 1..3600 seconds")
     output = Path(output)
@@ -96,16 +154,21 @@ def train(output, *, seconds=900, games=160, seed=31000, architecture="graph"):
     value_x, value_y, policy_x, policy_y = [], [], [], []
     value_graphs, policy_graphs = [], []
     records = []
+    prompt_counts = Counter()
+    validation_values, validation_decisions = [], []
     model = None
     stages = []
-    board = "boards/conversion_tests/trodain/trodain.json"
     # First half teaches decisions from rules/search. Second half is mixed
     # self-play against frozen basic/strategic/search teachers and a checkpoint.
     for stage in range(2):
+        stage_deadline = start + seconds * (stage + 1) / 2
+        collection_deadline = stage_deadline - min(120, seconds / 8)
         for game in range(games // 2):
-            if time.monotonic() > deadline - 20:
+            if time.monotonic() > collection_deadline:
                 break
             pending_values, pending_policy = [], []
+            board, target = TRAIN_SETTINGS[(game + stage * 3) % len(TRAIN_SETTINGS)]
+            is_validation = game % 10 == 9
             profiles = [
                 "strategic",
                 "rollout",
@@ -116,28 +179,24 @@ def train(output, *, seconds=900, games=160, seed=31000, architecture="graph"):
             profiles = profiles[rotation:] + profiles[:rotation]
 
             def collect(state, req, policy, record):
-                if time.monotonic() >= deadline - 10:
+                if time.monotonic() >= collection_deadline:
                     raise TrainingDeadline()
-                if req.type.value in ("PRE_ROLL", "INVEST", "BUY_STOCK", "BUY_SHOP", "CHOOSE_PATH"):
-                    candidates = getattr(policy, "last_candidates", [])
-                    if req.type.value == "CHOOSE_PATH" and len(candidates) <= 1:
-                        return
-                    base = features(state, req.player_id)
-                    graph = graph_input(state, req.player_id) if architecture == "graph" else None
-                    pending_values.append((base, req.player_id, graph))
-                    if len(candidates) > 1:
-                        for candidate in candidates[:12]:
-                            row = base + candidate_features(state, req, candidate)
-                            pending_policy.append(
-                                (row, float(candidate.action == record["action"]), graph)
-                            )
+                candidates = getattr(policy, "last_candidates", [])
+                if len(candidates) < 2 and req.type.value != "PRE_ROLL":
+                    return
+                base = features(state, req.player_id)
+                graph = graph_input(state, req.player_id) if architecture == "graph" else None
+                pending_values.append((base, req.player_id, graph))
+                rows = policy_examples(state, req, policy, record, base, graph)
+                if rows:
+                    pending_policy.append((req.type.value, rows))
 
             try:
                 r = match(
                     board,
                     profiles,
                     seed + stage * 10000 + game,
-                    target=2500 if game % 3 else 5000,
+                    target=target,
                     model=model,
                     on_decision=collect,
                     samples=1,
@@ -150,6 +209,7 @@ def train(output, *, seconds=900, games=160, seed=31000, architecture="graph"):
                 {
                     k: r[k]
                     for k in (
+                        "board",
                         "seed",
                         "profiles",
                         "target",
@@ -160,15 +220,25 @@ def train(output, *, seconds=900, games=160, seed=31000, architecture="graph"):
                     )
                 }
             )
+            records[-1]["validation"] = is_validation
             if r["finished"]:
                 for x, pid, graph in pending_values:
-                    value_x.append(x)
-                    value_y.append(float(pid == r["winner"]))
-                    value_graphs.append(graph)
-                for x, y, graph in pending_policy:
-                    policy_x.append(x)
-                    policy_y.append(y)
-                    policy_graphs.append(graph)
+                    y = float(pid == r["winner"])
+                    if is_validation:
+                        validation_values.append((x, y, graph))
+                    else:
+                        value_x.append(x)
+                        value_y.append(y)
+                        value_graphs.append(graph)
+                for prompt, rows in pending_policy:
+                    if is_validation:
+                        validation_decisions.append((prompt, rows))
+                    else:
+                        prompt_counts[prompt] += 1
+                        for x, y, graph in rows:
+                            policy_x.append(x)
+                            policy_y.append(y)
+                            policy_graphs.append(graph)
             if game % 10 == 0:
                 print(
                     json.dumps(
@@ -190,7 +260,7 @@ def train(output, *, seconds=900, games=160, seed=31000, architecture="graph"):
             value_y,
             seed=seed + stage,
             initial=previous.get("value"),
-            deadline=deadline,
+            deadline=min(deadline, (time.monotonic() + stage_deadline) / 2),
             graphs=value_graphs if architecture == "graph" else None,
             epochs=30,
         )
@@ -199,7 +269,7 @@ def train(output, *, seconds=900, games=160, seed=31000, architecture="graph"):
             policy_y,
             seed=seed + 100 + stage,
             initial=previous.get("policy"),
-            deadline=deadline,
+            deadline=stage_deadline,
             graphs=policy_graphs if architecture == "graph" else None,
             epochs=30,
         )
@@ -209,10 +279,22 @@ def train(output, *, seconds=900, games=160, seed=31000, architecture="graph"):
             "architecture": architecture + " policy/value: 32-unit tanh heads",
             "value": value,
             "policy": policy,
+            "policy_prompts": sorted(
+                p for p, n in prompt_counts.items() if n >= MIN_POLICY_DECISIONS
+            ),
+            "policy_prompt_counts": dict(prompt_counts),
         }
         model = Network(data)
         (output / f"stage-{stage}.json").write_text(json.dumps(data))
-        stages.append({"stage": stage, "games": len(records), "value_loss": vl, "policy_loss": pl})
+        stages.append(
+            {
+                "stage": stage,
+                "games": len(records),
+                "value_loss": vl,
+                "policy_loss": pl,
+                "validation": validation_metrics(model, validation_values, validation_decisions),
+            }
+        )
         if time.monotonic() >= deadline - 20:
             break
     (output / "model.json").write_text(json.dumps(model.data))
@@ -225,8 +307,14 @@ def train(output, *, seconds=900, games=160, seed=31000, architecture="graph"):
         "stages": stages,
         "value_rows": len(value_x),
         "policy_rows": len(policy_x),
-        "method": "search imitation, terminal win labels, mixed checkpoint self-play",
-        "training_board": board,
+        "method": (
+            "rollout-teacher imitation, terminal win labels, mixed self-play; "
+            "10% entire games withheld"
+        ),
+        "training_settings": TRAIN_SETTINGS,
+        "policy_prompt_counts": dict(prompt_counts),
+        "policy_prompts": model.data["policy_prompts"],
+        "minimum_policy_decisions": MIN_POLICY_DECISIONS,
         "evaluation_seeds": "reserved >= 90000",
     }
     (output / "training.json").write_text(json.dumps(metadata, indent=2))

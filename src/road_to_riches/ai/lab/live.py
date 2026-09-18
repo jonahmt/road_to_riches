@@ -99,9 +99,9 @@ class LabServer(GameServer):
         return loop
 
 
-def serve(model_path, profiles, port, target, seed):
+def serve(model_path, profiles, port, target, seed, *, guidance="both"):
     random.seed(seed)
-    model = Network.load(model_path)
+    model = Network.load(model_path, guidance=guidance)
     server = LabServer(
         GameConfig("boards/conversion_tests/trodain/trodain.json", starting_player_index=0),
         profiles,

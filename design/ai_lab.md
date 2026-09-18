@@ -93,3 +93,55 @@ human seats must precede AI seats. Presentation-only socket peers handle present
 acknowledgments while decisions execute through the same lab policies used in
 tournaments. This preserves browser animation pacing. The live server accepts
 only the one experimental default session.
+
+## Follow-up: controlled neural guidance diagnosis
+
+The 17 September follow-up preserves the original graph/MLP checkpoints and
+adds `python -m road_to_riches.ai.lab.ablation --model PATH --output DIR`.
+Four modes change only the learned seat: `off` is ordinary rollout, `ranking`
+uses the policy head only, `value` uses the value head only, and `both` preserves
+the original combination. Other seats are basic, strategic and rollout. All
+modes share the same four seat rotations, board/target settings, seeds and
+search budgets. Turning both heads off is tested to reproduce rollout's exact
+actions, search scores and terminal state. Changing an action can change future
+random consumption; matching seeds does not imply identical subsequent dice.
+Reports retain actual game endings, replays, checkpoint hashes, and paired
+seed-block bootstrap intervals. Small seed counts remain exploratory evidence.
+Diagnostic seeds start at 92000; fresh confirmation seeds start at 94000.
+
+Revised training uses Trodain and the small test board, each at 2,500G, 5,000G
+and 10,000G; the large board remains unseen. Training seeds start at 51000 and
+61000, separate from evaluation. Every tenth whole game is withheld from fitting
+for value calibration and policy teacher-agreement diagnostics. Only rollout
+teacher decisions supervise the policy head. Mixed self-play still contributes
+terminal value labels, but the learner's own choices are not imitation targets.
+All candidates are kept, including chosen actions beyond the old twelve-row cap.
+Collection covers every searched decision type encountered. A checkpoint records
+per-type training counts and only ranks types with at least 32 teacher decisions;
+other types preserve strategic ordering. This also avoids applying learned
+ranking to unsupported non-search menus. Legacy checkpoints without this metadata
+retain their old behavior for honest comparisons.
+
+The graph encoder and search budget are unchanged in this follow-up. Retraining
+is a combined data/coverage intervention, not an isolated architecture test.
+Each of the two training stages reserves time for fitting. The revised run is
+capped at 30 minutes, keeping combined training with the previous 18.52 minutes
+below the user's one-hour allowance. New results/checkpoints are stored separately;
+no default opponent or existing live game is replaced automatically.
+
+`serve` and `tournament` also accept `--guidance off|ranking|value|both` so the
+measured configuration can be played explicitly. The default remains `both`
+with the original checkpoint; selecting a recommended deployment is separate
+from running this experiment. `train --seed N` makes collection seeds explicit.
+
+### Paused for architecture review
+
+The user paused this follow-up before the revised checkpoint finished evaluation.
+The completed first diagnostic was off16/ranking20/value13/both13 wins per48
+cases. Fresh ranking-only confirmation was8/48; its matching baseline was still
+partial when stopped, so it does not establish a paired advantage or deficit.
+Revised training finished240 games in760.09 seconds, with216 fitting and24
+whole-game validation games. Its checkpoint is `checkpoints/covered.json`.
+Further runs and any promotion await discussion of the learning objective,
+representation, search/learning interface, and evaluation protocol. Completed
+and clearly labeled partial evidence is in `artifacts/ai_lab/2026-09-17/`.
