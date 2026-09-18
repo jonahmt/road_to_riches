@@ -28,8 +28,8 @@ SEARCH_TYPES = {
 class RolloutPolicy(StrategicPolicy):
     name = "rollout"
 
-    def __init__(self, pid, *, samples=2, horizon=4, width=3, model=None, seed=0):
-        super().__init__(pid)
+    def __init__(self, pid, *, samples=2, horizon=4, width=3, model=None, seed=0, params=None):
+        super().__init__(pid, params=params)
         if samples < 1 or horizon < 1 or width < 2:
             raise ValueError("Search requires positive samples/horizon and width >= 2")
         self.samples, self.horizon, self.width = samples, horizon, width
@@ -63,7 +63,7 @@ class RolloutPolicy(StrategicPolicy):
                 heuristic_total = neural_total = 0
                 for seed in seeds:
                     outcome, winner = context.rollout(req, c.action, seed, self.horizon)
-                    value = evaluate(outcome, self.pid, winner)
+                    value = evaluate(outcome, self.pid, winner, self.params)
                     heuristic_total += value
                     if self.model is not None and self.model.value_weight and winner is None:
                         # Learned value complements the short rollout; terminal
@@ -110,15 +110,18 @@ class LearnedPolicy(RolloutPolicy):
 
 
 class Lab:
-    def __init__(self, profiles, *, model=None, seed=0, samples=2, horizon=4, width=3):
+    def __init__(
+        self, profiles, *, model=None, seed=0, samples=2, horizon=4, width=3, parameters=None
+    ):
         from road_to_riches.ai.basic.client import BasicAIClient
 
         self.policies = []
+        parameters = parameters or {}
         for pid, name in enumerate(profiles):
             if name == "basic":
                 p = BasicAIClient(pid, delay=0, presentation_delay=0)
             elif name in ("strategic", "human"):
-                p = StrategicPolicy(pid)
+                p = StrategicPolicy(pid, params=parameters.get(pid))
             elif name in ("rollout", "learned"):
                 cls = LearnedPolicy if name == "learned" else RolloutPolicy
                 if name == "learned" and model is None:
@@ -130,6 +133,7 @@ class Lab:
                     width=width,
                     model=model if name == "learned" else None,
                     seed=seed,
+                    params=parameters.get(pid),
                 )
             else:
                 raise ValueError(f"Unknown AI profile: {name}")

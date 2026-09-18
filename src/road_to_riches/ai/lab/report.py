@@ -78,7 +78,9 @@ def build_report(directory):
         blocks[g["seed"]].append(g)
     rng = random.Random(744)
     keys = sorted(blocks)
-    bootstrap = {name: [] for name in stats if name != "basic"}
+    reference = "basic" if "basic" in stats else next(iter(stats))
+    summary["bootstrap_reference"] = reference
+    bootstrap = {name: [] for name in stats if name != reference}
     for _ in range(2000):
         sample = [g for _ in keys for g in blocks[rng.choice(keys)]]
         wins = {name: 0 for name in stats}
@@ -86,8 +88,8 @@ def build_report(directory):
             if g["winner"] is not None:
                 wins[g["profiles"][g["winner"]]] += 1
         for name in bootstrap:
-            bootstrap[name].append((wins[name] - wins["basic"]) / len(sample))
-    summary["win_rate_difference_vs_basic_seed_bootstrap95"] = {
+            bootstrap[name].append((wins[name] - wins[reference]) / len(sample))
+    summary[f"win_rate_difference_vs_{reference}_seed_bootstrap95"] = {
         name: [sorted(vals)[50], sorted(vals)[1949]] for name, vals in bootstrap.items()
     }
     (directory / "summary.json").write_text(json.dumps(summary, indent=2))

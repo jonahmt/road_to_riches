@@ -11,6 +11,7 @@ from collections import deque
 from dataclasses import dataclass
 
 from road_to_riches.ai.basic.client import BasicAIClient
+from road_to_riches.ai.lab.parameters import DEFAULT_PARAMETERS
 from road_to_riches.board.pathfinding import get_next_squares
 from road_to_riches.engine.property import current_rent, max_capital
 from road_to_riches.models.square_type import SquareType
@@ -64,8 +65,9 @@ def route_distance(state, pid, position=None, previous=None):
     return len(state.board.squares) * 4
 
 
-def shop_value(state, pid, sid):
+def shop_value(state, pid, sid, params=None):
     """Reservation value includes the marginal benefit of district consolidation."""
+    params = params or DEFAULT_PARAMETERS
     sq = state.board.squares[sid]
     value = sq.shop_current_value or 0
     peers = [
@@ -75,13 +77,22 @@ def shop_value(state, pid, sid):
     ]
     owned = sum(s.property_owner == pid and s.id != sid for s in peers)
     shares = state.players[pid].owned_stock.get(sq.property_district, 0)
+    if params.synergy == 1.0:
+        return (
+            value * (1.05 + 0.55 * owned + (0.6 if owned == len(peers) - 1 and owned else 0))
+            + shares * 0.5
+        )
     return (
-        value * (1.05 + 0.55 * owned + (0.6 if owned == len(peers) - 1 and owned else 0))
+        value
+        * (
+            1.05
+            + params.synergy * (0.55 * owned + (0.6 if owned == len(peers) - 1 and owned else 0))
+        )
         + shares * 0.5
     )
 
 
-def reserve(state, pid):
+def reserve(state, pid, params=None):
     p = state.players[pid]
     rents = [
         current_rent(state.board, sq)
@@ -89,7 +100,9 @@ def reserve(state, pid):
         if sq.property_owner not in (None, pid) and sq.type == SquareType.SHOP
     ]
     # Avoid immobilizing all cash because of one far-away expensive shop.
-    return min(500, max(100, (sum(rents) / max(1, len(rents))) * 2, p.level * 40))
+    return (params or DEFAULT_PARAMETERS).reserve * min(
+        500, max(100, (sum(rents) / max(1, len(rents))) * 2, p.level * 40)
+    )
 
 
 def features(state, pid):
@@ -132,13 +145,29 @@ def features(state, pid):
     ]
 
 
-def evaluate(state, pid, winner=None):
+def evaluate(state, pid, winner=None, params=None):
     if winner is not None:
         return 12.0 if winner == pid else -12.0
     p = state.players[pid]
     if p.bankrupt:
         return -12.0
     f = features(state, pid)
+    if params is not None:
+        f[16] = max(0, reserve(state, pid, params) - p.ready_cash) / max(
+            1, state.board.target_networth
+        )
+        w = params.leaf
+        score = (
+            w[0] * f[0]
+            + w[1] * f[4]
+            + w[2] * f[1]
+            + w[3] * f[9]
+            + w[4] * f[10]
+            + w[5] * f[11]
+            - (w[7] if f[13] else w[6]) * f[12]
+            - w[8] * f[16]
+        )
+        return max(-10.0, min(10.0, score))
     # Net worth alone must not encourage an eligible player to wander forever.
     return (
         2.4 * f[0]
@@ -152,22 +181,22 @@ def evaluate(state, pid, winner=None):
     )
 
 
-def offer_surplus(state, pid, offer):
+def offer_surplus(state, pid, offer, params=None):
     p = state.players[pid]
     if offer.get("type") == "trade":
         proposer = offer["proposer_id"]
         giving = offer["offer_shops"] if pid == proposer else offer["request_shops"]
         taking = offer["request_shops"] if pid == proposer else offer["offer_shops"]
         gold = offer.get("gold_offer", 0) * (1 if pid == proposer else -1)
-        surplus = sum(shop_value(state, pid, s) for s in taking)
-        surplus -= sum(shop_value(state, pid, s) for s in giving) + gold
+        surplus = sum(shop_value(state, pid, s, params) for s in taking)
+        surplus -= sum(shop_value(state, pid, s, params) for s in giving) + gold
     else:
         sid, price = offer["square_id"], offer["price"]
         gold = price if pid == offer["buyer_id"] else -price
-        surplus = shop_value(state, pid, sid) - price
+        surplus = shop_value(state, pid, sid, params) - price
         if pid == offer["seller_id"]:
             surplus = -surplus
-    if gold > max(0, p.ready_cash - reserve(state, pid) / 2):
+    if gold > max(0, p.ready_cash - reserve(state, pid, params) / 2):
         return -100000.0
     return surplus
 
@@ -175,7 +204,8 @@ def offer_surplus(state, pid, offer):
 class StrategicPolicy:
     name = "strategic"
 
-    def __init__(self, pid):
+    def __init__(self, pid, *, params=None):
+        self.params = None if params == DEFAULT_PARAMETERS else params
         self.pid = pid
         self.basic = BasicAIClient(pid, delay=0, presentation_delay=0)
         self.deal_attempted = False
@@ -183,8 +213,9 @@ class StrategicPolicy:
 
     def candidates(self, state, req):
         pid, p, d, t = self.pid, state.players[self.pid], req.data, req.type
+        params = self.params or DEFAULT_PARAMETERS
         cash = p.ready_cash
-        safe = max(0, cash - reserve(state, pid))
+        safe = max(0, cash - reserve(state, pid, self.params))
         choices = []
 
         def add(action, score, why):
@@ -198,7 +229,11 @@ class StrategicPolicy:
                     offers = self.candidates(state, InputRequest(prompt, pid))
                     if any(c.action is not None and c.score > 0 for c in offers):
                         add(action, 0.1, "One district-consolidation negotiation this turn")
-            if cash < reserve(state, pid) / 2 and p.owned_stock and not self.deal_attempted:
+            if (
+                cash < reserve(state, pid, self.params) / 2
+                and p.owned_stock
+                and not self.deal_attempted
+            ):
                 add("sell_stock", 0.2, "Restore cash reserve")
         elif t == T.CHOOSE_PATH:
             remaining = d.get("remaining", 1)
@@ -208,7 +243,11 @@ class StrategicPolicy:
                 dist = route_distance(state, pid, sid, p.position)
                 rent = current_rent(state.board, sq) if sq.property_owner not in (None, pid) else 0
                 cost = (rent / max(100, cash + 1)) if remaining == 1 else 0
-                add(sid, -dist / 10 - cost, "Legal route progress and landing cost")
+                add(
+                    sid,
+                    -dist / 10 - params.rent_risk * cost,
+                    "Legal route progress and landing cost",
+                )
         elif t == T.CHOOSE_ANY_SQUARE:
             for row in d.get("squares", []):
                 sid = row["square_id"]
@@ -228,8 +267,8 @@ class StrategicPolicy:
             cost = d["cost"]
             add(False, 0, "Keep liquidity")
             if cost <= cash:
-                benefit = shop_value(state, pid, d["square_id"]) - cost
-                penalty = max(0, reserve(state, pid) / 2 - (cash - cost)) * 0.5
+                benefit = shop_value(state, pid, d["square_id"], self.params) - cost
+                penalty = max(0, reserve(state, pid, self.params) / 2 - (cash - cost)) * 0.5
                 add(True, (benefit - penalty) / 100, "Property value and district synergy")
         elif t == T.INVEST:
             add(None, 0, "Keep cash available")
@@ -242,7 +281,9 @@ class StrategicPolicy:
                 )
                 for amount in sorted({limit // 2, limit}):
                     if amount > 0:
-                        gain = amount * (0.04 * (own - 0.6 * opponent) + 0.12)
+                        gain = amount * (
+                            0.04 * (own - params.rival_stock * opponent) + params.rent_growth
+                        )
                         add(
                             (shop["square_id"], amount),
                             gain / 100,
@@ -265,7 +306,7 @@ class StrategicPolicy:
                 limit = min(99, int(safe // max(1, price)))
                 for qty in sorted({min(10, limit), limit // 2, limit}):
                     if qty > 0:
-                        growth = 0.04 * (owncap * 0.5 + (cap - owncap) * 0.15)
+                        growth = 0.04 * (owncap * 0.5 + (cap - owncap) * params.external_growth)
                         add(
                             (district, qty),
                             qty * (growth + (price // 16 + 1 if qty >= 10 else 0)) / 100,
@@ -275,12 +316,14 @@ class StrategicPolicy:
             add(None, 0, "Retain investments")
             for district, held in p.owned_stock.items():
                 price = state.stock.get_price(district).current_price
-                qty = min(held, math.ceil(max(0, reserve(state, pid) - cash) / max(1, price)))
+                qty = min(
+                    held, math.ceil(max(0, reserve(state, pid, self.params) - cash) / max(1, price))
+                )
                 if qty:
                     add((district, qty), 1, "Sell enough to restore reserve")
         elif t == T.AUCTION_BID:
             add(None, 0, "Pass auction")
-            limit = min(safe, shop_value(state, pid, d["square_id"]))
+            limit = min(safe, shop_value(state, pid, d["square_id"], self.params))
             if 0 < d["min_bid"] <= limit:
                 add(
                     d["min_bid"],
@@ -293,8 +336,8 @@ class StrategicPolicy:
                 if sq.property_owner in (None, pid) or sq.shop_current_value is None:
                     continue
                 seller = sq.property_owner
-                value = shop_value(state, pid, sq.id)
-                ask = math.ceil(shop_value(state, seller, sq.id) * 1.08)
+                value = shop_value(state, pid, sq.id, self.params)
+                ask = math.ceil(shop_value(state, seller, sq.id) * params.offer_premium)
                 if value > ask and ask <= safe:
                     add(
                         (seller, sq.id, ask),
@@ -308,14 +351,16 @@ class StrategicPolicy:
                     if other.player_id == pid:
                         continue
                     for take in other.owned_properties:
-                        mine = shop_value(state, pid, take) - shop_value(state, pid, give)
+                        mine = shop_value(state, pid, take, self.params) - shop_value(
+                            state, pid, give, self.params
+                        )
                         theirs = shop_value(state, other.player_id, give) - shop_value(
                             state, other.player_id, take
                         )
                         gold = round((mine - theirs) / 2)
                         if (
-                            mine - gold > 30
-                            and theirs + gold > 30
+                            mine - gold > params.trade_margin
+                            and theirs + gold > params.trade_margin
                             and gold <= safe
                             and -gold <= other.ready_cash / 2
                         ):
@@ -330,7 +375,7 @@ class StrategicPolicy:
                                 "Exchange isolated shops for stronger districts",
                             )
         elif t == T.ACCEPT_OFFER:
-            surplus = offer_surplus(state, pid, d["offer"])
+            surplus = offer_surplus(state, pid, d["offer"], self.params)
             add("reject", 0, "Terms below reservation value")
             add("accept", surplus / 100, "Evaluate property synergy and cash transfer")
             if -500 < surplus < 0:
@@ -338,11 +383,11 @@ class StrategicPolicy:
         elif t == T.COUNTER_PRICE:
             offer = d.get("offer", {})
             if offer.get("type") == "trade":
-                surplus = offer_surplus(state, pid, offer)
+                surplus = offer_surplus(state, pid, offer, self.params)
                 sign = 1 if pid == offer["proposer_id"] else -1
                 price = round(offer["gold_offer"] + sign * surplus)
             elif "square_id" in offer:
-                price = max(1, round(shop_value(state, pid, offer["square_id"])))
+                price = max(1, round(shop_value(state, pid, offer["square_id"], self.params)))
             else:
                 price = d.get("original_price", 0)
             add(price, 0, "Reservation counteroffer")

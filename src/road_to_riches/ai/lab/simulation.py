@@ -83,7 +83,10 @@ class ReplayInput(BasicAIPlayerInput):
         super().__init__(list(range(len(source_policies))), delay=0, presentation_delay=0)
         self.prefix, self.index, self.decisions = prefix, 0, 0
         self.seed = seed
-        self.policies = [StrategicPolicy(i) for i in range(len(source_policies))]
+        self.policies = [
+            StrategicPolicy(i, params=getattr(p, "params", None))
+            for i, p in enumerate(source_policies)
+        ]
         for p, source in zip(self.policies, source_policies):
             p.deal_attempted = getattr(source, "deal_attempted", False)
 
@@ -126,7 +129,10 @@ class PlanningGameLoop(GameLoop):
     def _dispatch(self, event):
         outer = self._lab_depth == 0 and self.lab is not None
         if outer:
-            policies = [StrategicPolicy(i) for i in range(len(self.lab.policies))]
+            policies = [
+                StrategicPolicy(i, params=getattr(p, "params", None))
+                for i, p in enumerate(self.lab.policies)
+            ]
             for p, source in zip(policies, self.lab.policies):
                 p.deal_attempted = getattr(source, "deal_attempted", False)
             self.lab.context = DecisionContext(

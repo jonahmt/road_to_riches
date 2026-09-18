@@ -35,6 +35,13 @@ def main():
     serve.add_argument("--port", type=int, default=18810)
     serve.add_argument("--target", type=int, default=5000)
     serve.add_argument("--seed", type=int, default=91234)
+    serve.add_argument(
+        "--policy",
+        action="append",
+        default=[],
+        metavar="SEAT=CHECKPOINT",
+        help="Use a non-neural parameter checkpoint for a strategic/rollout seat",
+    )
     for command in (tournament, serve):
         command.add_argument(
             "--guidance", choices=["off", "ranking", "value", "both"], default="both"
@@ -114,7 +121,16 @@ def main():
         build_report(out)
     else:
         from road_to_riches.ai.lab.live import serve
+        from road_to_riches.ai.lab.parameters import PolicyParameters
 
+        parameters = {}
+        profiles = args.profiles.split(",")
+        for entry in args.policy:
+            seat, path = entry.split("=", 1)
+            seat = int(seat)
+            if not 0 <= seat < len(profiles) or profiles[seat] not in ("strategic", "rollout"):
+                parser.error("Parameter checkpoints require a strategic or rollout seat")
+            parameters[seat] = PolicyParameters.load(path)
         serve(
             args.model,
             args.profiles.split(","),
@@ -122,6 +138,7 @@ def main():
             args.target,
             args.seed,
             guidance=args.guidance,
+            parameters=parameters,
         )
 
 

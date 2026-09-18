@@ -46,12 +46,12 @@ class LabSocketInput(WebSocketPlayerInput):
 
 
 class LabServer(GameServer):
-    def __init__(self, config, profiles, model, *, target=None, seed=0, **kwargs):
+    def __init__(self, config, profiles, model, *, target=None, seed=0, parameters=None, **kwargs):
         # The production launcher assumes humans occupy a prefix of seats.
         humans = sum(p == "human" for p in profiles)
         if profiles[:humans] != ["human"] * humans or len(profiles) != 4:
             raise ValueError("Use four profiles, with any human seats first")
-        self.lab = Lab(profiles, model=model, seed=seed)
+        self.lab = Lab(profiles, model=model, seed=seed, parameters=parameters)
         self.target = target
         super().__init__(
             config,
@@ -99,7 +99,7 @@ class LabServer(GameServer):
         return loop
 
 
-def serve(model_path, profiles, port, target, seed, *, guidance="both"):
+def serve(model_path, profiles, port, target, seed, *, guidance="both", parameters=None):
     random.seed(seed)
     model = Network.load(model_path, guidance=guidance)
     server = LabServer(
@@ -108,6 +108,7 @@ def serve(model_path, profiles, port, target, seed, *, guidance="both"):
         model,
         target=target,
         seed=seed,
+        parameters=parameters,
         shutdown_when_default_finished=False,
     )
     print(

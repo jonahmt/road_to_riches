@@ -145,3 +145,40 @@ whole-game validation games. Its checkpoint is `checkpoints/covered.json`.
 Further runs and any promotion await discussion of the learning objective,
 representation, search/learning interface, and evaluation protocol. Completed
 and clearly labeled partial evidence is in `artifacts/ai_lab/2026-09-17/`.
+
+## Non-neural evolution experiment
+
+The user redirected work to strategic and rollout bots, authorizing genetic
+parameter evolution and repeated matches through 10pm Pacific local time on
+17 September. Neural training and its unfinished evaluations remain paused.
+
+`PolicyParameters` is a versioned, immutable JSON checkpoint. The strategic
+phase mutates eight bounded economic preferences: reserve size, district
+synergy, landing-rent risk, rival stock exposure during investment, rent growth,
+external district growth, offer premium, and minimum trade surplus. The rollout
+phase keeps the selected economic preferences and mutates nine leaf evaluation
+weights. Real wins/losses dominate bounded evolved leaf values. Existing bots
+retain their original scoring; a regression test compares the default bot with
+an archived pre-evolution game, including every action and the terminal state.
+Parameter values follow the acting bot into hypothetical continuations without
+changing other seats' parameters or revealing hidden future randomness.
+
+Each generation retains a frozen starting policy and two elites, fills six
+unique candidates by crossover/log-normal mutation, and evaluates them on the
+same twelve cases (three board/target settings, all four seat rotations).
+Training uses Trodain at 2500/10000 and the small test board at5000. Seeds change
+between generations. Selection sorts by actual wins, then completed games,
+fewer bankruptcies, and relative terminal wealth only as a tie-breaker.
+Unfinished games never count as synthetic wins. Every candidate, ancestry,
+generation ranking and full terminal game state is checkpointed. Sampled games
+also retain decision traces and actual final-frame replays. Low sample counts
+make generation winners provisional; held-out tests use normal Trodain, the
+large board, and previously unseen Bob-omb board with separate seed ranges.
+
+Run `python -m road_to_riches.ai.lab.evolution evolve --mode strategic --output DIR`
+or `... evaluate --checkpoint FILE --mode rollout --output DIR --seed N`.
+Deadline checks apply between complete generations so checkpoint selection is
+never based on a partially evaluated population. `serve --policy SEAT=FILE`
+loads an optional parameter checkpoint into a strategic/rollout seat; repeat
+that option to compare different checkpoints. No default or active match is
+changed by the experiment.

@@ -41,9 +41,12 @@ def match(
     horizon=4,
     on_decision=None,
     replay=False,
+    parameters=None,
 ):
     random.seed(seed)
-    lab = Lab(profiles, model=model, seed=seed, samples=samples, horizon=horizon)
+    lab = Lab(
+        profiles, model=model, seed=seed, samples=samples, horizon=horizon, parameters=parameters
+    )
     lab.on_decision = on_decision
     inp = LabInput(lab)
     loop = PlanningGameLoop(
